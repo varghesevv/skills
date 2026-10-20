@@ -1,0 +1,6 @@
+# Default reviewer; add more owners as contributors join.
+*                         @varghesevv
+/infra/                   @varghesevv
+/.github/                 @varghesevv
+/docs/adr/                @varghesevv
+/backend/migrations/      @varghesevv

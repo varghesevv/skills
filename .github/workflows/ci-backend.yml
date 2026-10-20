@@ -1,0 +1,66 @@
+name: ci-backend
+
+on:
+  pull_request:
+    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
+  push:
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: skills
+          POSTGRES_PASSWORD: skills
+          POSTGRES_DB: skills
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U skills -d skills"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://skills:skills@localhost:5432/skills
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: uv sync --python 3.12
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Type check
+        run: uv run mypy app
+      - name: Tests (includes migration up/down on PostgreSQL)
+        run: uv run pytest --cov=app --cov-report=term-missing
+      - name: Export OpenAPI schema
+        run: uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))" > openapi.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi-schema
+          path: backend/openapi.json
+
+  audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --python 3.12
+      - name: Dependency vulnerability audit
+        run: uv run pip-audit

@@ -8,7 +8,7 @@ Skills is a marketplace for finding skilled freelancers. Three kinds of users ta
 | **Work host** | Searches for freelancers, offers work, rates freelancers. |
 | **Organisation** | Vouches for freelancers by linking them to the organisation. |
 
-**Status:** planning. No application code yet. Start with the specification.
+**Status:** phase 1 (scaffold) in progress. Start with the specification.
 
 ## Documentation
 
@@ -19,6 +19,17 @@ Skills is a marketplace for finding skilled freelancers. Three kinds of users ta
 | [docs/specification/09-infrastructure.md](docs/specification/09-infrastructure.md) | Demo deployment on AWS Lightsail, Terraform, GitHub Actions |
 | [docs/open-questions.md](docs/open-questions.md) | Decisions still needed from the product owner |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute: workflow, conventions, definition of done |
+
+## Quick start (local)
+
+```bash
+cp .env.example .env
+docker compose up --build      # db, api (http://localhost:8000/docs), worker, web (http://localhost:5173)
+```
+
+Backend and frontend details: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
+
+**Lockfiles still to generate:** the scaffold was written without access to PyPI/npm, so `backend/uv.lock` and `frontend/package-lock.json` do not exist yet. Run `cd backend && uv lock` and `cd frontend && npm install` once, then commit both files. Until then CI and Docker builds resolve versions fresh (not reproducible).
 
 ## Planned stack
 

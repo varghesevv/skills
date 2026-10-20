@@ -1,0 +1,32 @@
+name: ci-docs
+
+on:
+  pull_request:
+    paths: ["docs/**", "**/*.md", ".github/workflows/ci-docs.yml"]
+  push:
+    branches: [main]
+    paths: ["docs/**", "**/*.md"]
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every ADR file is listed in the ADR index
+        run: |
+          status=0
+          for f in docs/adr/[0-9][0-9][0-9][0-9]-*.md; do
+            name=$(basename "$f")
+            if ! grep -q "($name)" docs/adr/README.md; then
+              echo "Missing from docs/adr/README.md: $name"; status=1
+            fi
+          done
+          exit $status
+      - name: Check relative Markdown links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress --include-fragments "./**/*.md"
+          fail: true
