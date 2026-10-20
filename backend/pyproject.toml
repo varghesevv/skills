@@ -46,6 +46,11 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+# APScheduler 3.x ships no type information.
+module = ["apscheduler.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["db: needs a running PostgreSQL (DATABASE_URL)"]
