@@ -10,7 +10,7 @@ Work in phases. Each phase ends with passing tests, updated docs and a reviewed 
 | 4 Core APIs | Profiles, labels, unavailability, vouching, ratings | FR-F, FR-W, FR-O tested |
 | 5 Search | Filters, sorting, pagination, indexes | FR-S tested, performance target checked |
 | 6 Reports | Report registry, standard reports, worker, scheduled daily report, run history | RP-01 to RP-07 and the daily report run on schedule |
-| 7 Frontend | Shell and auth, then each portal, report pages | All portals cover their functional requirements |
+| 7 Frontend | Shell and auth, then each portal, report pages | All portals cover their functional requirements and meet the responsive criteria in [06 Frontend](06-frontend.md) on phone, tablet and desktop |
 | 7b Infrastructure | Terraform bootstrap and `envs/demo`, server compose file, cloud-init, backup scripts, `build-images`, `terraform-apply`, `deploy-demo` workflows (see [09](09-infrastructure.md)). Can start in parallel with phase 4 | Demo URL reachable over HTTPS; deploy from `main` works; backup restore drill done |
 | 9 Production readiness | Decide production architecture (ADR), add `envs/prod`, production checklist (infrastructure spec section 12). Planned 1 to 2 months after the demo | Production ADR accepted; checklist complete |
 | 8 Hardening | Security review, rate limits, docs, deployment guide | Non-functional requirements met |
