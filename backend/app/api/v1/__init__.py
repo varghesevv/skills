@@ -1,11 +1,9 @@
 from fastapi import APIRouter
 
-from app.api.v1 import admin, auth, me
+from app.api.v1 import admin, auth, freelancers, labels, me, organisations, ratings, workhosts
 
 api_v1_router = APIRouter(prefix="/api/v1")
-api_v1_router.include_router(auth.router)
-api_v1_router.include_router(me.router)
-api_v1_router.include_router(admin.router)
+for module in (auth, me, admin, freelancers, workhosts, organisations, labels, ratings):
+    api_v1_router.include_router(module.router)
 
-# Routers for freelancers, work hosts, organisations, labels, search, ratings and reports
-# are added in later phases (see docs/specification/08-delivery-plan.md).
+# Search and reports are added in later phases (see docs/specification/08-delivery-plan.md).

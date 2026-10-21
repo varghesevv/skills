@@ -50,6 +50,14 @@ Auth behaviour:
 | GET | /freelancers/{id} | workhost, organisation, admin (public profile) |
 | GET | /freelancers/{id}/ratings | any authenticated |
 
+Behaviour of the core APIs:
+
+- `PUT /freelancers/me/labels` replaces the whole label set. A skill may carry a `level_label_id` (a `skill_level` label); languages, timings and nativity take no level. Inactive labels cannot be selected.
+- Unavailability periods need timezone-aware timestamps and cannot overlap (`409 unavailability_overlaps`).
+- Vouching: an approved organisation creates a `pending` vouch; the freelancer accepts (`approved`) or rejects (`revoked`). Only approved and active vouches are shown on the public profile. Revoking sets the vouch inactive; vouching again starts over as `pending`.
+- Public profile never contains the email. The mobile number is shown to work hosts and admins only.
+- Ratings: one per work host and freelancer (`409 already_rated`; change it with `PUT /ratings/{id}`). The ratings list does not show who rated.
+
 ### Work hosts
 GET, PUT `/workhosts/me`; GET `/workhosts/me/ratings`.
 
