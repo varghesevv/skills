@@ -42,8 +42,14 @@ jobs:
         env:
           CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
         run: |
-          if [ -z "$CI_DB_PASSWORD" ]; then
-            echo "::error::Repository secret CI_DB_PASSWORD is not set (Settings, Secrets and variables, Actions)"
+          # Letters and digits only, at least 16: safe inside a connection URL. Prints no value.
+          bad=0
+          case "$CI_DB_PASSWORD" in
+            ''|*[!A-Za-z0-9]*) bad=1 ;;
+          esac
+          [ "${#CI_DB_PASSWORD}" -ge 16 ] || bad=1
+          if [ "$bad" -ne 0 ]; then
+            echo "::error::Repository secret CI_DB_PASSWORD is missing or invalid. It must be at least 16 letters and digits, with no spaces, newline or symbols. Recreate it with: openssl rand -hex 24 | tr -d '\n' | pbcopy"
             exit 1
           fi
       - uses: actions/checkout@v4
