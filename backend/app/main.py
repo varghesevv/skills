@@ -4,9 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import health
 from app.api.v1 import api_v1_router
 from app.core.config import get_settings
+from app.core.logging_config import configure_logging
 
 
 def create_app() -> FastAPI:
+    configure_logging()
     settings = get_settings()
     app = FastAPI(title="Skills API", version="0.1.0")
     app.add_middleware(

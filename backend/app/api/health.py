@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
-from app.core.db import get_session
+from app.core.db import get_engine
 
 router = APIRouter(tags=["health"])
 
@@ -14,10 +13,12 @@ def health() -> dict[str, str]:
 
 
 @router.get("/health/ready")
-def ready(session: Session = Depends(get_session)) -> dict[str, str]:  # noqa: B008
+def ready() -> dict[str, str]:
     """Readiness: the database answers."""
     try:
-        session.execute(text("SELECT 1"))
+        with get_engine().connect() as connection:
+            connection.execute(text("SELECT 1"))
     except Exception as exc:
+        # The detail is deliberately generic: connection errors can mention hosts and users.
         raise HTTPException(status_code=503, detail="database unavailable") from exc
     return {"status": "ready"}

@@ -8,5 +8,5 @@
 ## Checklist
 - [ ] Tests added or updated and passing
 - [ ] Migration included and reversible (if schema changed)
-- [ ] No secrets committed
+- [ ] No secrets committed, logged or given a default value; `ci-secrets` passes
 - [ ] OpenAPI still valid; no breaking change to `/api/v1`

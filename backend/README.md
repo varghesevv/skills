@@ -5,9 +5,28 @@ FastAPI + SQLAlchemy 2 + Alembic on PostgreSQL. See `docs/specification/` at the
 ```bash
 uv sync                      # install (Python 3.12)
 docker compose up -d db      # from the repo root: PostgreSQL
-export DATABASE_URL=postgresql+psycopg://skills:skills@localhost:5432/skills
+make -C .. env                # once: creates ../.env with a random database password
+set -a; . ../.env; set +a
+export DATABASE_URL="postgresql+psycopg://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB"
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 uv run pytest                # DB tests run when DATABASE_URL is set
 uv run ruff check . && uv run ruff format --check . && uv run mypy app
 ```
+
+## Secrets
+
+Settings come from environment variables only: `ENVIRONMENT`, `CORS_ORIGINS` and `REPORT_TIMEZONE` are required and have no defaults (see `.env.example`), and `DATABASE_URL` is required for anything that touches the database. Secrets are `SecretStr`,
+log output is redacted by `app/core/logging_config.py`, and when `ENVIRONMENT` is `demo` or `prod` a weak or short
+database password stops the application at startup. See ADR-0011.
+
+## Database tests
+
+`uv run pytest` runs the database tests when `DATABASE_URL` points at a PostgreSQL server whose user may
+create databases. The tests create and use their own databases (`skills_test`, `skills_migration_test`) and
+never touch the development database. If you edit a migration that you already ran, drop them:
+`docker compose exec db psql -U skills -d postgres -c 'DROP DATABASE skills_test' -c 'DROP DATABASE skills_migration_test'`.
+
+New migration after changing a model: `uv run alembic revision --autogenerate -m "describe change"`, then review it
+(Alembic does not detect trigger, exclusion or CHECK changes). `tests/test_migrations.py` fails if models and
+migrations drift apart.

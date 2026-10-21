@@ -38,13 +38,22 @@ Several people will work on this project. These rules keep the work consistent.
 - Never commit secrets, `.env` or `*.tfvars`. Add new settings to the GitHub Environment and document them in `docs/specification/09-infrastructure.md`.
 - Pin versions of Terraform providers, GitHub Actions and base images.
 
+## Secrets (strict)
+
+- **Never** put a password, token, key or connection string with a password in code, tests, docs, Docker/compose files, workflows or Terraform. Read secrets from environment variables; give them no default value.
+- **Never** log a secret, a password hash, a token or a full database URL. Do not add `print` or debug logging around credentials. Use `SecretStr` for secret settings.
+- `make env` creates your local `.env` with a random password. `.env` is git-ignored. Run `make install-hooks` once so `scripts/check-secrets.sh` runs before every commit.
+- CI runs `ci-secrets` (repository rules plus Gitleaks). A pull request that fails it cannot merge.
+- If a secret was ever committed, tell the maintainers at once. It must be rotated; deleting it from the latest commit is not enough.
+- Details and reasoning: [ADR-0011](docs/adr/0011-secrets-from-environment-only.md).
+
 ## Definition of done
 
 - Code follows the specification; spec updated if behaviour changed.
 - Tests added or updated and passing in CI.
 - Migration included and reversible if the schema changed.
 - OpenAPI schema still valid; no breaking change to `/api/v1` once the mobile app has shipped.
-- No secrets committed. Configuration through environment variables.
+- No secrets committed or logged (see Secrets above); `ci-secrets` passes. Configuration through environment variables.
 - Reviewed and approved.
 
 ## Security

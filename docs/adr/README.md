@@ -24,3 +24,4 @@ An ADR records one significant technical decision: the context, the choice, and 
 | [0008](0008-aws-lightsail-single-instance-demo-deployment.md) | AWS Lightsail single-instance deployment for the demo | Proposed |
 | [0009](0009-terraform-for-infrastructure.md) | Terraform for infrastructure | Proposed |
 | [0010](0010-github-actions-ci-cd.md) | GitHub Actions for CI/CD and GHCR for images | Proposed |
+| [0011](0011-secrets-from-environment-only.md) | Secrets come from the environment only, and are checked before merge | Accepted |

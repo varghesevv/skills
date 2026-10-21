@@ -4,11 +4,15 @@ import logging
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+from app.core.config import get_settings
+from app.core.logging_config import configure_logging
+
 log = logging.getLogger("skills.worker")
 
 
 def main() -> None:
+    configure_logging()
+    get_settings()  # fails fast when a secret is missing or too weak
     scheduler = BlockingScheduler()
     log.info("Worker started; no report jobs registered yet")
     scheduler.start()
