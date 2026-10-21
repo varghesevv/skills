@@ -8,7 +8,8 @@ from app.models import Base
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Keep application loggers (and their handlers) alive when migrations run inside the app/tests.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # target_metadata also supplies the constraint naming convention to op.create_table().
 target_metadata = Base.metadata

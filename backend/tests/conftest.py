@@ -5,8 +5,10 @@ server and credentials are used). The user must be allowed to CREATE DATABASE.
 """
 
 import os
+import secrets
 from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from alembic import command
@@ -15,14 +17,25 @@ from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
+
 # Non-secret settings the application requires from the environment. Tests supply them here;
 # real environments get them from .env / the deployment. No secrets belong in this block.
 for _name, _value in {
     "ENVIRONMENT": "ci",
     "CORS_ORIGINS": "http://localhost:5173",
     "REPORT_TIMEZONE": "Asia/Dubai",
+    "FRONTEND_BASE_URL": "http://localhost:5173",
+    "ACCESS_TOKEN_MINUTES": "15",
+    "REFRESH_TOKEN_DAYS": "30",
+    "RESET_TOKEN_MINUTES": "60",
+    "LOGIN_MAX_FAILURES": "5",
+    "LOGIN_WINDOW_MINUTES": "15",
 }.items():
     os.environ.setdefault(_name, _value)
+# A random signing key for this test run only; nothing secret is stored in the source.
+os.environ.setdefault("JWT_SECRET", secrets.token_hex(32))
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 TEST_DB_NAME = "skills_test"
@@ -82,3 +95,24 @@ def session(engine: Engine) -> Iterator[Session]:
     db_session.close()
     transaction.rollback()
     connection.close()
+
+
+@pytest.fixture
+def client(session: Session) -> Iterator["TestClient"]:
+    """An API client whose requests use the rolled-back test session."""
+    from fastapi.testclient import TestClient
+
+    from app.core.config import get_settings
+    from app.core.db import get_session
+    from app.main import app
+
+    get_settings.cache_clear()
+
+    def override() -> Iterator[Session]:
+        yield session
+
+    app.dependency_overrides[get_session] = override
+    # A fixed client address, so login throttling (per email and IP) is predictable.
+    with TestClient(app, client=("203.0.113.7", 50000)) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()

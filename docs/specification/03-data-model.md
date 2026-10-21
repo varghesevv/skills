@@ -58,6 +58,8 @@ Delete behaviour: deleting a freelancer removes their labels, unavailability, vo
 |---|---|---|
 | id | uuid PK | |
 | org_name | text NOT NULL | |
+| approval_status | text NOT NULL | `pending` (default), `approved`, `rejected`. Only approved organisations can log in |
+| approved_at, approved_by_admin_id | timestamptz, uuid FK admins | set when an admin decides |
 | user_email | text NOT NULL | unique, lowercase |
 | mobile_number | text NOT NULL | |
 | password_hash | text NOT NULL | |

@@ -10,6 +10,7 @@ from app.core.logging_config import register_secret
 # Environments where secrets must be strong. "local" and "ci" accept anything non-empty.
 STRICT_ENVIRONMENTS = frozenset({"demo", "prod"})
 MIN_STRICT_SECRET_LENGTH = 16
+MIN_STRICT_JWT_SECRET_LENGTH = 32
 WEAK_SECRETS = frozenset(
     {"password", "postgres", "changeme", "admin", "secret", "skills", "123456", "123456789"}
 )
@@ -42,6 +43,14 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None  # required by the API; checked by require_database_url()
     cors_origins: str
     report_timezone: str
+    frontend_base_url: str  # used to build password reset links
+    access_token_minutes: int
+    refresh_token_days: int
+    reset_token_minutes: int
+    login_max_failures: int  # failed logins allowed per email and IP ...
+    login_window_minutes: int  # ... within this many minutes
+    jwt_secret: SecretStr | None = None  # required by the API; checked by require_jwt_secret()
+    demo_user_password: SecretStr | None = None  # only used by `python -m app.cli seed-demo`
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -52,9 +61,17 @@ class Settings(BaseSettings):
             raise RuntimeError("DATABASE_URL is not set")
         return self.database_url.get_secret_value()
 
+    def require_jwt_secret(self) -> str:
+        if self.jwt_secret is None or not self.jwt_secret.get_secret_value():
+            raise RuntimeError("JWT_SECRET is not set")
+        return self.jwt_secret.get_secret_value()
+
     def secret_values(self) -> list[str]:
         """Every secret value (and the password inside the database URL), for log redaction."""
         values: list[str] = []
+        for secret in (self.jwt_secret, self.demo_user_password):
+            if secret is not None and secret.get_secret_value():
+                values.append(secret.get_secret_value())
         if self.database_url is not None and self.database_url.get_secret_value():
             url = self.database_url.get_secret_value()
             values.append(url)
@@ -83,6 +100,16 @@ def validate_secrets(settings: Settings) -> None:
     if len(password) < MIN_STRICT_SECRET_LENGTH:
         raise SecretsError(
             f"The database password must be at least {MIN_STRICT_SECRET_LENGTH} characters long"
+        )
+    try:
+        jwt_secret = settings.require_jwt_secret()
+    except RuntimeError as exc:
+        raise SecretsError(str(exc)) from None
+    if jwt_secret.lower() in WEAK_SECRETS:
+        raise SecretsError("The JWT secret is a well-known weak value")
+    if len(jwt_secret) < MIN_STRICT_JWT_SECRET_LENGTH:
+        raise SecretsError(
+            f"The JWT secret must be at least {MIN_STRICT_JWT_SECRET_LENGTH} characters long"
         )
 
 

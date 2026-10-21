@@ -1,9 +1,11 @@
+import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Index, Numeric, String, Text, false
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Numeric, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.enums import APPROVAL_STATUSES, sql_in
 
 
 class AccountMixin:
@@ -63,8 +65,21 @@ class Organisation(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):
     __tablename__ = "organisations"
 
     org_name: Mapped[str] = mapped_column(String(200))
+    # An organisation cannot log in until an admin approves it.
+    approval_status: Mapped[str] = mapped_column(
+        String(20), default="pending", server_default="pending"
+    )
+    approved_at: Mapped[datetime | None] = mapped_column()
+    approved_by_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("admins.id", ondelete="SET NULL")
+    )
 
-    __table_args__ = (_email_is_lowercase(), Index(None, "created_at"))
+    __table_args__ = (
+        _email_is_lowercase(),
+        CheckConstraint(sql_in("approval_status", APPROVAL_STATUSES), name="approval_status_valid"),
+        Index(None, "created_at"),
+        Index(None, "approval_status"),
+    )
 
 
 class Admin(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):

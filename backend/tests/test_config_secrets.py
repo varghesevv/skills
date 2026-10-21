@@ -18,7 +18,11 @@ from app.core.config import (
 
 def settings_with_password(password: str, environment: str = "demo") -> Settings:
     url = f"postgresql+psycopg://app:{password}@db.internal:5432/app"
-    return Settings(environment=environment, database_url=SecretStr(url))
+    return Settings(
+        environment=environment,
+        database_url=SecretStr(url),
+        jwt_secret=SecretStr(secrets.token_hex(32)),
+    )
 
 
 def test_strong_password_is_accepted_in_demo() -> None:
@@ -94,3 +98,11 @@ def test_unknown_environment_name_is_rejected(
             get_settings()
     finally:
         get_settings.cache_clear()
+
+
+def test_weak_jwt_secret_is_rejected_in_demo() -> None:
+    settings = settings_with_password(secrets.token_hex(16))
+    settings.jwt_secret = SecretStr(secrets.token_hex(4))
+    with pytest.raises(SecretsError) as error:
+        validate_secrets(settings)
+    assert settings.jwt_secret.get_secret_value() not in str(error.value)

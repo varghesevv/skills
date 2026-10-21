@@ -15,7 +15,8 @@ PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf 
 
 .PHONY: help env check-secrets install-hooks up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
-	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-format pi-shell
+	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-format pi-shell \
+	pi-lock pi-migrate pi-seed-demo pi-create-admin
 
 help: ## Show this help
 	awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -108,5 +109,16 @@ pi-format: ## Auto-fix and format the backend with Ruff on the Pi, then copy the
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR)/backend && uv run ruff check --fix . && uv run ruff format .'
 	rsync -rlt --exclude .venv --exclude __pycache__ --exclude .pytest_cache --exclude .mypy_cache --exclude .ruff_cache $(PI_HOST):$(PI_DIR)/backend/ $(CURDIR)/backend/
 	@git diff --stat -- backend | tail -3
+pi-lock: ## Regenerate backend/uv.lock on the Pi (after changing dependencies) and copy it back
+	$(MAKE) pi-sync
+	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR)/backend && uv lock'
+	rsync -t $(PI_HOST):$(PI_DIR)/backend/uv.lock $(CURDIR)/backend/uv.lock
+	@git diff --stat -- backend/uv.lock | tail -1
+pi-migrate: ## Apply database migrations to the dev database on the Pi
+	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head'
+pi-seed-demo: ## Create fake demo users in the Pi dev database (password: DEMO_USER_PASSWORD in the Pi's .env)
+	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli seed-demo'
+pi-create-admin: ## Create an admin on the Pi: make pi-create-admin EMAIL=you@example.com MOBILE=+971500000000 (asks for the password)
+	ssh -t $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli create-admin --email "$(EMAIL)" --mobile "$(MOBILE)"'
 pi-shell: ## Open a shell in the project folder on the Pi
 	ssh -t $(PI_HOST) 'cd $(PI_DIR) && exec $$SHELL -l'

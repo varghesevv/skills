@@ -6,7 +6,7 @@ Work in phases. Each phase ends with passing tests, updated docs and a reviewed 
 |---|---|---|
 | 1 Scaffold | Repo layout, Dockerfiles, local Docker Compose (PostgreSQL), lint/format, CI workflows (`ci-backend`, `ci-frontend`, `ci-docs`), config | `docker compose up` starts API with `/health`; CI green on a pull request |
 | 2 Database | Models, Alembic migrations, label and report-schedule seed, constraint tests. Fake demo users are created in phase 3 (they need password hashing) | Migration up and down passes in CI; models and migrations have no drift |
-| 3 Auth | Registration, login, refresh, logout, password reset, login history, throttling | FR-C-01 to FR-C-07 tested |
+| 3 Auth | Registration, login, refresh, logout, password reset, login history, throttling, organisation approval by admin, admin CLI, fake demo users | FR-C-01 to FR-C-07 tested |
 | 4 Core APIs | Profiles, labels, unavailability, vouching, ratings | FR-F, FR-W, FR-O tested |
 | 5 Search | Filters, sorting, pagination, indexes | FR-S tested, performance target checked |
 | 6 Reports | Report registry, standard reports, worker, scheduled daily report, run history | RP-01 to RP-07 and the daily report run on schedule |

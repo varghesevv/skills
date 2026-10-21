@@ -12,6 +12,9 @@ dependencies = [
     "pydantic>=2.8,<3.0",
     "pydantic-settings>=2.4,<3.0",
     "apscheduler>=3.10,<4.0",
+    "argon2-cffi>=23.1,<26.0",
+    "pyjwt>=2.9,<3.0",
+    "email-validator>=2.2,<3.0",
 ]
 
 [dependency-groups]
@@ -37,6 +40,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "C4", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependencies are declared as argument defaults.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106"]
