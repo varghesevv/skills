@@ -16,7 +16,9 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, pi]
+    # Runs on the Raspberry Pi. Never run code from fork pull requests on it.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     defaults:
       run:
         working-directory: backend
@@ -27,12 +29,10 @@ jobs:
           POSTGRES_USER: skills
           POSTGRES_PASSWORD: skills
           POSTGRES_DB: skills
-        ports: ["5432:5432"]
+        ports: ["5432"]   # random free host port, so it never clashes with the dev database on the Pi
         options: >-
           --health-cmd "pg_isready -U skills -d skills"
           --health-interval 5s --health-timeout 3s --health-retries 10
-    env:
-      DATABASE_URL: postgresql+psycopg://skills:skills@localhost:5432/skills
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -45,6 +45,8 @@ jobs:
       - name: Type check
         run: uv run mypy app
       - name: Tests (includes migration up/down on PostgreSQL)
+        env:
+          DATABASE_URL: postgresql+psycopg://skills:skills@localhost:${{ job.services.postgres.ports['5432'] }}/skills
         run: uv run pytest --cov=app --cov-report=term-missing
       - name: Export OpenAPI schema
         run: uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))" > openapi.json
