@@ -26,6 +26,7 @@ jobs:
       ENVIRONMENT: ci
       CORS_ORIGINS: http://localhost:5173
       REPORT_TIMEZONE: Asia/Dubai
+      REPORTS_OUTPUT_DIR: reports_output
       FRONTEND_BASE_URL: http://localhost:5173
       ACCESS_TOKEN_MINUTES: "15"
       REFRESH_TOKEN_DAYS: "30"
