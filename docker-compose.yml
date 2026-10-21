@@ -41,6 +41,8 @@ services:
     build: ./backend
     command: python -m app.worker
     environment: *backend-env
+    healthcheck:
+      disable: true   # the image's HTTP health check only applies to the api service
     volumes:
       - ./backend:/app
       - /app/.venv
