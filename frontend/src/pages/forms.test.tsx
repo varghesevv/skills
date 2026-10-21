@@ -19,7 +19,7 @@ async function fillAccount(user: User, email: string, mobile: string, name = 'Te
 
 describe('registration', () => {
   it('registers a freelancer', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({
       'POST /auth/register/freelancer': () =>
         json(201, {
@@ -48,7 +48,7 @@ describe('registration', () => {
   })
 
   it('tells a new organisation that an admin must approve it', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({
       'POST /auth/register/organisation': () =>
         json(201, {
@@ -72,7 +72,7 @@ describe('registration', () => {
   })
 
   it('does not call the API for a short password', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({})
     renderApp('/register/workhost')
     await user.type(screen.getByLabelText('Full name'), 'Wael Host')
@@ -85,7 +85,7 @@ describe('registration', () => {
   })
 
   it('asks work hosts and freelancers for their name', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({})
     renderApp('/register/workhost')
     await user.type(screen.getByLabelText('Email'), 'w@example.com')
@@ -97,7 +97,7 @@ describe('registration', () => {
   })
 
   it('shows a taken email next to the email field', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({ 'POST /auth/register/workhost': () => apiError(409, 'email_taken') })
     renderApp('/register/workhost')
     await fillAccount(user, 'w@example.com', '0501234567')
@@ -109,7 +109,7 @@ describe('registration', () => {
   })
 
   it('shows server field messages from a 422', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({
       'POST /auth/register/workhost': () =>
         apiError(422, 'validation_error', {
@@ -131,7 +131,7 @@ describe('registration', () => {
 
 describe('password reset', () => {
   it('asks for a reset link', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({ 'POST /auth/forgot-password': () => json(202, { status: 'accepted' }) })
     renderApp('/forgot-password')
     await user.selectOptions(screen.getByLabelText('I am a'), 'workhost')
@@ -145,7 +145,7 @@ describe('password reset', () => {
   })
 
   it('sets a new password using the token from the link', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({ 'POST /auth/reset-password': () => json(204) })
     renderApp(`/reset-password?token=${LINK_VALUE}`)
     await user.type(screen.getByLabelText('New password'), PASSWORD)
@@ -164,7 +164,7 @@ describe('password reset', () => {
   })
 
   it('explains an invalid or expired token', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({ 'POST /auth/reset-password': () => apiError(400, 'invalid_reset_token') })
     renderApp(`/reset-password?token=${LINK_VALUE}`)
     await user.type(screen.getByLabelText('New password'), PASSWORD)

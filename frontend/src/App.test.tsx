@@ -48,7 +48,7 @@ describe('public pages', () => {
 
 describe('login', () => {
   it('logs in and lands on the dashboard of the persons portal', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({
       'POST /auth/login': () => json(200, tokens('1')),
       'GET /me': () => json(200, makeMe()),
@@ -68,7 +68,7 @@ describe('login', () => {
   })
 
   it('sends the chosen account type', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({
       'POST /auth/login': () => json(200, tokens('1')),
       'GET /me': () =>
@@ -83,7 +83,7 @@ describe('login', () => {
   })
 
   it('shows one message for a wrong password and stays on the page', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({ 'POST /auth/login': () => apiError(401, 'invalid_credentials') })
     renderApp('/login')
     await fillLogin(user)
@@ -93,7 +93,7 @@ describe('login', () => {
   })
 
   it('explains that an organisation is waiting for approval', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({ 'POST /auth/login': () => apiError(403, 'organisation_pending') })
     renderApp('/login?type=organisation')
     expect(screen.getByLabelText('I am a')).toHaveValue('organisation')
@@ -103,7 +103,7 @@ describe('login', () => {
   })
 
   it('tells the person how long to wait after too many attempts', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({
       'POST /auth/login': () => apiError(429, 'too_many_attempts', {}, { 'Retry-After': '120' }),
     })
@@ -114,7 +114,7 @@ describe('login', () => {
   })
 
   it('checks the form before calling the API', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = mockApi({})
     renderApp('/login')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
@@ -124,7 +124,7 @@ describe('login', () => {
   })
 
   it('can show and hide the password', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     mockApi({})
     renderApp('/login')
     const field = screen.getByLabelText('Password')
@@ -175,7 +175,7 @@ describe('protected pages', () => {
   })
 
   it('logs out: revokes the token, forgets it and returns to the login page', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const api = signedInAs()
     renderApp('/freelancer')
     await user.click(await screen.findByRole('button', { name: 'Log out' }))
@@ -189,7 +189,7 @@ describe('protected pages', () => {
 
 describe('navigation drawer', () => {
   it('opens from the menu button and closes with Escape, returning focus to the button', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     signedInAs()
     renderApp('/freelancer')
     const button = await screen.findByRole('button', { name: 'Open menu' })
@@ -211,7 +211,7 @@ describe('navigation drawer', () => {
   })
 
   it('closes when the backdrop or the close button is used', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     signedInAs()
     renderApp('/freelancer')
     const button = await screen.findByRole('button', { name: 'Open menu' })
