@@ -12,7 +12,7 @@ PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf 
 .DEFAULT_GOAL := help
 .PHONY: help up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
-	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-shell
+	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-shell
 
 help: ## Show this help
 	awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -87,5 +87,10 @@ pi-lock-web: ## Generate frontend/package-lock.json on the Pi (Docker, no Node n
 	ssh $(PI_HOST) 'cd $(PI_DIR)/frontend && $(PI_NODE) "$(PI_COPY) && npm install --package-lock-only && cp package-lock.json /src/"'
 	rsync -t $(PI_HOST):$(PI_DIR)/frontend/package-lock.json $(CURDIR)/frontend/package-lock.json
 	@ls -l frontend/package-lock.json
+pi-upgrade-web: ## Try upgrading vite/vitest/plugin-react on the Pi; keeps the change only if lint, types, tests, build and audit all pass
+	$(MAKE) pi-sync
+	ssh $(PI_HOST) 'cd $(PI_DIR)/frontend && $(PI_NODE) "$(PI_COPY) && npm install && npm install -D vite@latest vitest@latest @vitejs/plugin-react@latest && npm run lint && npm run format:check && npm run typecheck && npm test && npm run build && npm audit --audit-level=high && cp package.json package-lock.json /src/"'
+	rsync -t $(PI_HOST):$(PI_DIR)/frontend/package.json $(PI_HOST):$(PI_DIR)/frontend/package-lock.json $(CURDIR)/frontend/
+	@git diff --stat -- frontend/package.json frontend/package-lock.json
 pi-shell: ## Open a shell in the project folder on the Pi
 	ssh -t $(PI_HOST) 'cd $(PI_DIR) && exec $$SHELL -l'
