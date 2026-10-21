@@ -8,7 +8,8 @@ COPY pyproject.toml uv.lock* ./
 RUN if [ -f uv.lock ]; then uv sync --frozen --no-dev --no-install-project; else uv sync --no-dev --no-install-project; fi
 
 FROM base AS runtime
-RUN useradd --system --uid 10001 --home /app skills
+RUN useradd --system --uid 10001 --home /app skills \
+    && mkdir -p /data/reports && chown skills /data/reports
 COPY --from=deps /app/.venv /app/.venv
 COPY . .
 ENV PATH="/app/.venv/bin:$PATH"

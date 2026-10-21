@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None  # required by the API; checked by require_database_url()
     cors_origins: str
     report_timezone: str
+    reports_output_dir: str  # where generated report files are written
     frontend_base_url: str  # used to build password reset links
     access_token_minutes: int
     refresh_token_days: int

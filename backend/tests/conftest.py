@@ -6,6 +6,7 @@ server and credentials are used). The user must be allowed to CREATE DATABASE.
 
 import os
 import secrets
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -32,6 +33,7 @@ for _name, _value in {
     "RESET_TOKEN_MINUTES": "60",
     "LOGIN_MAX_FAILURES": "5",
     "LOGIN_WINDOW_MINUTES": "15",
+    "REPORTS_OUTPUT_DIR": str(Path(tempfile.gettempdir()) / "skills-test-reports"),
 }.items():
     os.environ.setdefault(_name, _value)
 # A random signing key for this test run only; nothing secret is stored in the source.

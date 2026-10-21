@@ -8,12 +8,23 @@ from app.api.v1 import (
     me,
     organisations,
     ratings,
+    reports,
     search,
     workhosts,
 )
 
 api_v1_router = APIRouter(prefix="/api/v1")
-for module in (auth, me, admin, freelancers, workhosts, organisations, labels, ratings, search):
+ROUTERS = (
+    auth,
+    me,
+    admin,
+    freelancers,
+    workhosts,
+    organisations,
+    labels,
+    ratings,
+    search,
+    reports,
+)
+for module in ROUTERS:
     api_v1_router.include_router(module.router)
-
-# Reports are added in a later phase (see docs/specification/08-delivery-plan.md).
