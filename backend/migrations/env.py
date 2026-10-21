@@ -4,18 +4,25 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 from app.core.config import get_settings
-from app.models import Base  # noqa: F401  (import models so metadata is populated)
+from app.models import Base
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# target_metadata also supplies the constraint naming convention to op.create_table().
 target_metadata = Base.metadata
+
+
+def _database_url() -> str:
+    # Tests pass their own database through config.attributes; otherwise use the app settings.
+    url = config.attributes.get("database_url")
+    return str(url) if url else get_settings().database_url
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=get_settings().database_url,
+        url=_database_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
@@ -25,7 +32,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    engine = create_engine(get_settings().database_url, poolclass=pool.NullPool)
+    engine = create_engine(_database_url(), poolclass=pool.NullPool)
     with engine.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
         with context.begin_transaction():

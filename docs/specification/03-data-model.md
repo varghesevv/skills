@@ -19,6 +19,12 @@ Decision: PostgreSQL only, SQLite is not supported (confirmed 2026-10-20, [ADR-0
 - `login_history` gains `user_id`, `ip_address`, `user_agent`; column `succeed` -> `succeeded`.
 - Skill level is attached per skill via `freelancer_labels.level_label_id` (Q3).
 
+## Implementation status
+
+Implemented in phase 2: models in `backend/app/models/`, migration `0001` (schema) and `0002` (seed labels and report schedules) in `backend/migrations/versions/`. Tests in `backend/tests/` run against a separate database (`skills_test`) and check every rule below.
+
+Delete behaviour: deleting a freelancer removes their labels, unavailability, vouches and ratings (`ON DELETE CASCADE`); deleting a work host removes the ratings they gave; labels in use cannot be deleted (`RESTRICT`); `login_history` has no foreign keys so history survives account deletion. Other rules: `rate_per_hour` and `rate_currency` must both be set or both empty; currency is three upper-case letters.
+
 ## Tables
 
 ### work_hosts
@@ -66,7 +72,7 @@ Same shape as work_hosts without availability: id, user_email, password_hash, cr
 | org_id | uuid FK organisations | PK part |
 | freelancer_id | uuid FK freelancers | PK part |
 | is_active | boolean NOT NULL default true | |
-| status | text NOT NULL default 'approved' | CHECK in (pending, approved, revoked); default depends on Q6 |
+| status | text NOT NULL default 'pending' | CHECK in (pending, approved, revoked). A vouch starts pending until the freelancer accepts (Q6 default) |
 | created_at | timestamptz | |
 
 ### labels
@@ -83,16 +89,16 @@ Same shape as work_hosts without availability: id, user_email, password_hash, cr
 |---|---|---|
 | freelancer_id | uuid FK | PK part |
 | label_id | uuid FK labels | PK part |
-| level_label_id | uuid FK labels, nullable | only for skill labels; must point to a `skill_level` label (enforced in service layer and a trigger or constraint) |
+| level_label_id | uuid FK labels, nullable | only for skill labels; must point to a `skill_level` label. Enforced by the database trigger `freelancer_labels_level_check` (migration 0001) and a CHECK that it differs from `label_id` |
 
 ### freelancer_unavailability
-id uuid PK, freelancer_id FK, unavailable_from timestamptz, unavailable_to timestamptz, CHECK (unavailable_from < unavailable_to). Optional exclusion constraint to prevent overlapping periods per freelancer.
+id uuid PK, freelancer_id FK, unavailable_from timestamptz, unavailable_to timestamptz, CHECK (unavailable_from < unavailable_to). An exclusion constraint (`btree_gist` extension) prevents overlapping periods for the same freelancer; back-to-back periods are allowed.
 
 ### login_history
 id uuid PK, user_type text (CHECK freelancer/workhost/organisation/admin), user_id uuid null, login_email text, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null.
 
 ### user_ratings
-id uuid PK, work_host_id FK, freelancer_id FK, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, UNIQUE (work_host_id, freelancer_id) (Q5).
+id uuid PK, work_host_id FK, freelancer_id FK, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, updated_at timestamptz null (set when the rating is edited), UNIQUE (work_host_id, freelancer_id) (Q5).
 
 ### password_reset_tokens
 id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestamptz, used_at timestamptz null.
@@ -118,4 +124,4 @@ id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestampt
 | nativity | Indian, Srilankan, Keralite, Bangla, Philippines |
 | skill_level | basic, 50%, 80% |
 
-Seeding is done by a migration so every environment has the same base labels.
+Seeding is done by migration `0002` so every environment has the same base labels. The same migration seeds `report_schedules`: `users_registered_daily` (`5 0 * * *`), `weekly_summary` (`0 6 * * 1`), `monthly_summary` (`0 6 1 * *`), timezone Asia/Dubai.

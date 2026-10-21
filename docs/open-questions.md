@@ -2,6 +2,10 @@
 
 Decisions still needed from the product owner. When one is answered, record the answer in the relevant specification file (and an ADR if it is architectural), then move it to "Resolved".
 
+## Defaults currently built into the schema
+
+Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06` = 08:00 to 18:00; Q3 skill level per skill; Q5 one editable rating per work host and freelancer; Q6 vouches start `pending` until the freelancer accepts.
+
 ## Open
 
 | # | Question | Why it matters | Default if unanswered |
