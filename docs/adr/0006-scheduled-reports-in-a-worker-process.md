@@ -1,6 +1,6 @@
 # ADR-0006: Scheduled reports in a separate worker process
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-20
 - **Deciders:** Project owner
 

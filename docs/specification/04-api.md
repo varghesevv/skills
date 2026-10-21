@@ -78,11 +78,13 @@ POST `/ratings` (workhost), PUT `/ratings/{id}` (own rating).
 ### Reports (admin; organisations see scoped reports)
 | Method | Path | Notes |
 |---|---|---|
-| GET | /reports | list available reports |
-| GET | /reports/{name}?from=&to=&format=json\|csv | run on demand |
-| GET | /reports/runs | scheduled-run history |
-| POST | /reports/{name}/run | manual run (admin) |
-| GET | /reports/runs/{id}/download | file download |
+| GET | /reports | list the reports you may run (organisations: only `vouching_summary`) |
+| GET | /reports/{name}?from=&to=&format=json\|csv | run on demand, nothing stored (admin; organisations only `vouching_summary`, always limited to their own data) |
+| GET | /reports/runs | run history, paginated (admin) |
+| POST | /reports/{name}/run | run for a window and keep the files; body `{"date_from", "date_to"}`; `201` when it ran, `200` when it had already run (admin) |
+| GET | /reports/runs/{id}/download?format=csv\|html | file download (admin) |
+| GET | /reports/schedules | list schedules (admin) |
+| PUT | /reports/schedules/{report} | change cron expression, time zone, enabled (admin) |
 
 ## Authorisation rules
 

@@ -6,6 +6,7 @@ x-backend-env: &backend-env
   ENVIRONMENT: ${ENVIRONMENT:?Run make env to create or complete .env}
   CORS_ORIGINS: ${CORS_ORIGINS:?Run make env to create or complete .env}
   REPORT_TIMEZONE: ${REPORT_TIMEZONE:?Run make env to create or complete .env}
+  REPORTS_OUTPUT_DIR: /data/reports   # a volume shared by api and worker
   JWT_SECRET: ${JWT_SECRET:?Run make env to create or complete .env}
   ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:?Run make env to create or complete .env}
   REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:?Run make env to create or complete .env}
@@ -40,6 +41,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/.venv
+      - reports_data:/data/reports
     depends_on:
       db:
         condition: service_healthy
@@ -53,6 +55,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/.venv
+      - reports_data:/data/reports
     depends_on:
       db:
         condition: service_healthy
@@ -73,3 +76,4 @@ services:
 
 volumes:
   pgdata:
+  reports_data:

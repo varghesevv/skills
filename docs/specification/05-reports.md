@@ -33,3 +33,14 @@ Rules:
 - Schedules are stored in `report_schedules` and editable by admin; defaults seeded by migration.
 - CLI: `python -m app.reports run <name> --from <date> --to <date>`.
 - Exactly one worker runs schedules (or a PostgreSQL advisory lock guards runs).
+
+## Implementation notes (phase 6)
+
+- Report names (used in URLs, the CLI and `report_schedules`): `registrations_per_day` (RP-01), `active_users` (RP-02), `freelancers_by_label` (RP-03), `top_rated` (RP-04), `vouching_summary` (RP-05), `rate_distribution` (RP-06), `availability_overview` (RP-07, at most 93 days), and the scheduled `users_registered_daily`, `weekly_summary` (RP-04 and RP-05) and `monthly_summary` (RP-01 to RP-07).
+- A report returns one or more **sections** (title, columns, rows). `row_count` in the run history is the total number of rows over all sections.
+- Windows are whole days in the report time zone, `[start, end)` stored in UTC. Scheduled windows: yesterday (daily), the previous Monday to Sunday (weekly), the previous calendar month (monthly). On-demand dates (`from`, `to`) include both days; the default is the last 30 days.
+- Files go to `REPORTS_OUTPUT_DIR` as `<report>/<start>_<end>.csv` and `.html` (in docker compose: the `reports_data` volume at `/data/reports`). CSV cells that start with `=`, `+`, `-` or `@` are prefixed with `'` so spreadsheets do not run them as formulas.
+- Idempotency: one `report_runs` row per report and window. A succeeded run is never repeated; a failed run, or a run stuck in `running` for more than an hour, is executed again. A failed scheduled run is retried once after 30 seconds.
+- The worker reads `report_schedules` at start and then every minute, so an admin can change a schedule (`PUT /reports/schedules/{report}`) without restarting it. After a restart it also runs any window that was missed while it was down.
+- Not built yet: email delivery of reports (open question Q7, needs SMTP settings and a secret).
+- Run exactly one worker. Two workers cannot create duplicate runs (a unique constraint guards each window), but they would repeat the work.
