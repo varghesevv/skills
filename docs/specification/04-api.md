@@ -26,6 +26,17 @@ Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`). Decision record
 | POST | /auth/forgot-password | always 202, never reveals whether email exists |
 | POST | /auth/reset-password | token + new password |
 | GET | /me | current user and role |
+| GET | /admin/organisations?status=pending | admin only, paginated |
+| POST | /admin/organisations/{id}/approve | admin only |
+| POST | /admin/organisations/{id}/reject | admin only |
+
+Auth behaviour:
+
+- Wrong password and unknown email give the same `401 invalid_credentials`. Organisations that are not approved get `403 organisation_pending` or `organisation_rejected`, but only after the correct password.
+- Throttling: after `LOGIN_MAX_FAILURES` failures within `LOGIN_WINDOW_MINUTES` for the same email, user type and IP, login answers `429` with `Retry-After`. A successful login resets the count.
+- Access token: JWT (HS256, signed with `JWT_SECRET`), `ACCESS_TOKEN_MINUTES`. Refresh token: opaque, stored hashed, `REFRESH_TOKEN_DAYS`, rotated on every use. Using a token that was already rotated or logged out revokes all sessions of that user.
+- Password reset: the link (`FRONTEND_BASE_URL/reset-password?token=...`) is written to the server log until email delivery exists (open question Q7). Using it ends all sessions.
+- Behind a reverse proxy the throttle sees the proxy address; start uvicorn with proxy headers (phase 7b).
 
 ### Freelancers
 | Method | Path | Role |

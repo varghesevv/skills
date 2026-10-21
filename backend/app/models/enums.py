@@ -2,6 +2,7 @@
 
 USER_TYPES = ("freelancer", "workhost", "organisation", "admin")
 LABEL_TYPES = ("skill", "language", "timing", "nativity", "skill_level")
+APPROVAL_STATUSES = ("pending", "approved", "rejected")
 VOUCH_STATUSES = ("pending", "approved", "revoked")
 REPORT_RUN_STATUSES = ("running", "succeeded", "failed")
 

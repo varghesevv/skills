@@ -1,19 +1,24 @@
 #!/bin/sh
 # Creates or completes .env from .env.example. Idempotent: existing values are never changed.
-# Missing keys are added with their default value; an empty POSTGRES_PASSWORD gets a random one.
+# Missing keys are added with their default value; empty generated secrets get a random value.
 # Prints key names only, never values.
 set -eu
 cd "$(dirname "$0")/.."
 umask 077
 touch .env
 
-# Fill an empty POSTGRES_PASSWORD.
-if grep -q '^POSTGRES_PASSWORD=$' .env; then
-  password=$(openssl rand -hex 24)
-  awk -v pw="$password" '/^POSTGRES_PASSWORD=$/ { print "POSTGRES_PASSWORD=" pw; next } { print }' \
-    .env > .env.tmp && mv .env.tmp .env
-  echo "Set POSTGRES_PASSWORD (generated, not shown)"
-fi
+# Secrets that are generated here when empty or missing.
+GENERATED="POSTGRES_PASSWORD JWT_SECRET DEMO_USER_PASSWORD"
+
+# Fill generated secrets that exist but are empty.
+for key in $GENERATED; do
+  if grep -q "^${key}=$" .env; then
+    value=$(openssl rand -hex 24)
+    awk -v k="$key" -v v="$value" 'BEGIN { p = k "=" } $0 == p { print p v; next } { print }' \
+      .env > .env.tmp && mv .env.tmp .env
+    echo "Set $key (generated, not shown)"
+  fi
+done
 
 # Add keys that are missing.
 while IFS= read -r line; do
@@ -21,12 +26,12 @@ while IFS= read -r line; do
   key=${line%%=*}
   if ! grep -q "^${key}=" .env; then
     value=${line#*=}
-    if [ "$key" = "POSTGRES_PASSWORD" ]; then
-      value=$(openssl rand -hex 24)
-      echo "Added $key (generated, not shown)"
-    else
-      echo "Added $key"
-    fi
+    case " $GENERATED " in
+      *" $key "*)
+        value=$(openssl rand -hex 24)
+        echo "Added $key (generated, not shown)" ;;
+      *) echo "Added $key" ;;
+    esac
     printf '%s=%s\n' "$key" "$value" >> .env
   fi
 done < .env.example

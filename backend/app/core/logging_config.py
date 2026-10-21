@@ -41,7 +41,14 @@ class RedactingFormatter(logging.Formatter):
     """Redacts the final text, including exception tracebacks."""
 
     def format(self, record: logging.LogRecord) -> str:
-        return redact(super().format(record))
+        text = super().format(record)
+        # A password reset link is deliberately logged (there is no email delivery yet). Pass it
+        # in `extra={"reset_link": link}`: everything else on the line is still redacted.
+        link = getattr(record, "reset_link", None)
+        if isinstance(link, str) and link and link in text:
+            marker = "\x00RESET_LINK\x00"
+            return redact(text.replace(link, marker)).replace(marker, link)
+        return redact(text)
 
 
 def configure_logging(level: int = logging.INFO) -> None:
