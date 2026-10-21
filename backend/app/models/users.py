@@ -59,6 +59,7 @@ class Freelancer(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):
             "(rate_per_hour IS NULL) = (rate_currency IS NULL)", name="rate_with_currency"
         ),
         Index(None, "created_at"),
+        Index(None, "rate_currency", "rate_per_hour"),  # search: maximum rate in a currency
     )
 
 

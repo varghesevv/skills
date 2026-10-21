@@ -70,6 +70,8 @@ GET `/labels?type=skill|language|timing|nativity|skill_level` (any authenticated
 ### Search
 GET `/search/freelancers` with query parameters: `skill` (repeatable), `skill_match=any|all`, `skill_level`, `language`, `timing`, `nativity`, `max_rate`, `currency`, `negotiable`, `available_from`, `available_to`, `org_id`, `min_rating`, `sort=rating|rate|newest`, `page`, `page_size`.
 
+Search behaviour: only complete profiles are listed (a rate and at least one skill). `skill`, `language`, `timing` and `nativity` can be repeated and match case-insensitively by label name. `skill_match=any` (default) or `all`. `skill_level` applies to the chosen skills (or to any skill when none is given). `max_rate` needs `currency`. `available_from` and `available_to` must be given together and exclude freelancers with an overlapping unavailability period. `org_id` and `vouch_count` only count approved, active vouches. `min_rating` excludes unrated freelancers. Default sort is `newest`. Results never contain email or mobile number. Roles: work host, organisation, admin.
+
 ### Ratings
 POST `/ratings` (workhost), PUT `/ratings/{id}` (own rating).
 
