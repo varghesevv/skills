@@ -5,11 +5,14 @@ PI_HOST ?= pi
 PI_DIR  ?= skills
 DB_URL  ?= postgresql+psycopg://skills:skills@localhost:5432/skills
 PI_PATH := export PATH=$$HOME/.local/bin:$$PATH
+# Node container on the Pi: project mounted at /src, work done in a temp copy at /tmp/w
+PI_NODE := docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v "$$PWD":/src -w /tmp node:22-alpine sh -c
+PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf - .) | tar -xf - -C w && cd w
 
 .DEFAULT_GOAL := help
 .PHONY: help up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
-	pi-test pi-check pi-test-web pi-shell
+	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-shell
 
 help: ## Show this help
 	awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -74,5 +77,15 @@ pi-test: ## Backend tests (with PostgreSQL) on the Pi
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && docker compose up -d --wait db && cd backend && uv sync && DATABASE_URL=$(DB_URL) uv run pytest'
 pi-test-web: ## Frontend lint, type check and tests on the Pi (uses Docker, no Node needed)
 	ssh $(PI_HOST) 'cd $(PI_DIR)/frontend && docker run --rm -v "$$PWD":/app -v skills_node_modules:/app/node_modules -w /app node:22-alpine sh -c "npm install && npm run lint && npm run format:check && npm run typecheck && npm test"'
+pi-format-web: ## Auto-format the frontend with Prettier on the Pi and pull the result back (also creates package-lock.json)
+	$(MAKE) pi-sync
+	ssh $(PI_HOST) 'cd $(PI_DIR)/frontend && $(PI_NODE) "$(PI_COPY) && npm install && npx prettier --write . && tar --exclude=node_modules --exclude=dist -cf - . | tar -xf - -C /src"'
+	rsync -rlt --exclude node_modules --exclude dist $(PI_HOST):$(PI_DIR)/frontend/ $(CURDIR)/frontend/
+	@echo "Formatted files copied back to frontend/. Review with git diff, then commit."
+pi-lock-web: ## Generate frontend/package-lock.json on the Pi (Docker, no Node needed) and copy it back
+	$(MAKE) pi-sync
+	ssh $(PI_HOST) 'cd $(PI_DIR)/frontend && $(PI_NODE) "$(PI_COPY) && npm install --package-lock-only && cp package-lock.json /src/"'
+	rsync -t $(PI_HOST):$(PI_DIR)/frontend/package-lock.json $(CURDIR)/frontend/package-lock.json
+	@ls -l frontend/package-lock.json
 pi-shell: ## Open a shell in the project folder on the Pi
 	ssh -t $(PI_HOST) 'cd $(PI_DIR) && exec $$SHELL -l'
