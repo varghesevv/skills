@@ -83,9 +83,9 @@ def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
             print("The passwords do not match.", file=sys.stderr)
             return 1
     problem = _check_password(password)
-    if problem is None and settings.environment in ("demo", "prod"):
-        if password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH:
-            problem = f"In {settings.environment} the password must be strong and long enough"
+    weak = password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH
+    if problem is None and settings.environment in ("demo", "prod") and weak:
+        problem = f"In {settings.environment} the password must be strong and long enough"
     if problem:
         print(problem, file=sys.stderr)
         return 1
@@ -99,7 +99,7 @@ def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
 
 
 def seed_demo() -> int:
-    """Create the fake demo users (idempotent). All share the DEMO_USER_PASSWORD from the environment."""
+    """Create the fake demo users (idempotent), all with the DEMO_USER_PASSWORD password."""
     settings = get_settings()
     if settings.environment == "prod":
         print("Refusing to create demo users in the prod environment.", file=sys.stderr)
@@ -109,9 +109,9 @@ def seed_demo() -> int:
         return 1
     password = settings.demo_user_password.get_secret_value()
     problem = _check_password(password)
-    if problem is None and settings.environment == "demo":
-        if password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH:
-            problem = "In demo, DEMO_USER_PASSWORD must be strong and long enough"
+    weak = password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH
+    if problem is None and settings.environment == "demo" and weak:
+        problem = "In demo, DEMO_USER_PASSWORD must be strong and long enough"
     if problem:
         print(problem, file=sys.stderr)
         return 1

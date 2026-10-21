@@ -7,8 +7,8 @@ from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.models.users import Organisation
 from app.schemas.auth import (
-    FreelancerRegister,
     ForgotPasswordRequest,
+    FreelancerRegister,
     LoginRequest,
     OrganisationRegister,
     RefreshRequest,
@@ -23,9 +23,7 @@ from app.services import accounts, auth
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _register(
-    db: Session, user_type: str, body: RegisterBase, **extra: Any
-) -> RegisterResponse:
+def _register(db: Session, user_type: str, body: RegisterBase, **extra: Any) -> RegisterResponse:
     account = accounts.create_account(
         db,
         user_type,
@@ -36,7 +34,7 @@ def _register(
     )
     return RegisterResponse(
         id=account.id,
-        user_type=user_type,  # type: ignore[arg-type]
+        user_type=user_type,
         email=account.user_email,
         approval_status=account.approval_status if isinstance(account, Organisation) else None,
     )
@@ -57,7 +55,9 @@ def register_freelancer(
 
 
 @router.post("/register/workhost", status_code=status.HTTP_201_CREATED)
-def register_workhost(body: WorkHostRegister, db: Session = Depends(get_session)) -> RegisterResponse:
+def register_workhost(
+    body: WorkHostRegister, db: Session = Depends(get_session)
+) -> RegisterResponse:
     return _register(db, "workhost", body)
 
 
@@ -114,7 +114,5 @@ def forgot_password(
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_session)) -> Response:
-    auth.reset_password(
-        db, token=body.token, new_password=body.new_password.get_secret_value()
-    )
+    auth.reset_password(db, token=body.token, new_password=body.new_password.get_secret_value())
     return Response(status_code=status.HTTP_204_NO_CONTENT)

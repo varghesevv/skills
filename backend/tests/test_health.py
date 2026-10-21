@@ -27,7 +27,9 @@ def test_ready_reports_unavailable_without_database_url(monkeypatch: pytest.Monk
     try:
         response = TestClient(app).get("/health/ready")
         assert response.status_code == 503
-        assert response.json() == {"detail": "database unavailable"}
+        error = response.json()["error"]
+        assert error["code"] == "service_unavailable"
+        assert error["message"] == "database unavailable"
     finally:
         get_settings.cache_clear()
         get_engine.cache_clear()

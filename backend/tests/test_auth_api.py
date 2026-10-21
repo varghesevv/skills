@@ -132,9 +132,7 @@ def test_throttle_counts_per_email(client: TestClient) -> None:
     assert login(client, "b@example.com", password).status_code == 200
 
 
-def test_failures_older_than_the_window_do_not_count(
-    client: TestClient, session: Session
-) -> None:
+def test_failures_older_than_the_window_do_not_count(client: TestClient, session: Session) -> None:
     password = new_password()
     register(client, "freelancer", "old@example.com", password)
     for _ in range(get_settings().login_max_failures):
@@ -159,7 +157,10 @@ def test_organisation_cannot_log_in_until_approved(client: TestClient, session: 
     assert login(client, "org@example.com", new_password(), "organisation").status_code == 401
 
     create_account(
-        session, "admin", email="boss@example.com", mobile_number="+971500000000",
+        session,
+        "admin",
+        email="boss@example.com",
+        mobile_number="+971500000000",
         password=admin_password,
     )
     admin_token = login(client, "boss@example.com", admin_password, "admin").json()["access_token"]
@@ -168,10 +169,14 @@ def test_organisation_cannot_log_in_until_approved(client: TestClient, session: 
     assert listing.status_code == 200
     assert [item["id"] for item in listing.json()["items"]] == [org_id]
 
-    approved = client.post(f"{API}/admin/organisations/{org_id}/approve", headers=bearer(admin_token))
+    approved = client.post(
+        f"{API}/admin/organisations/{org_id}/approve", headers=bearer(admin_token)
+    )
     assert approved.status_code == 200
     assert approved.json()["approval_status"] == "approved"
-    assert session.get(Organisation, uuid.UUID(org_id)).approved_by_admin_id is not None  # type: ignore[union-attr]
+    org = session.get(Organisation, uuid.UUID(org_id))
+    assert org is not None
+    assert org.approved_by_admin_id is not None
     assert login(client, "org@example.com", org_password, "organisation").status_code == 200
 
 
@@ -181,7 +186,10 @@ def test_rejected_organisation_cannot_log_in(client: TestClient, session: Sessio
         client, "organisation", "no@example.com", org_password, org_name="Nope"
     ).json()["id"]
     create_account(
-        session, "admin", email="boss2@example.com", mobile_number="+971500000000",
+        session,
+        "admin",
+        email="boss2@example.com",
+        mobile_number="+971500000000",
         password=admin_password,
     )
     admin_token = login(client, "boss2@example.com", admin_password, "admin").json()["access_token"]
@@ -219,7 +227,8 @@ def test_refresh_rotates_and_old_token_is_dead(client: TestClient, session: Sess
     # Re-using the old token is treated as theft: it fails and kills the new one too.
     replay = client.post(f"{API}/auth/refresh", json={"refresh_token": first["refresh_token"]})
     assert replay.status_code == 401
-    after = client.post(f"{API}/auth/refresh", json={"refresh_token": second.json()["refresh_token"]})
+    newer = {"refresh_token": second.json()["refresh_token"]}
+    after = client.post(f"{API}/auth/refresh", json=newer)
     assert after.status_code == 401
     assert all(t.revoked_at is not None for t in session.scalars(select(RefreshToken)).all())
 
@@ -260,7 +269,9 @@ def reset_token_from_log(text: str) -> str:
     return match.group(1)
 
 
-def test_password_reset_flow(client: TestClient, session: Session, caplog: pytest.LogCaptureFixture) -> None:
+def test_password_reset_flow(
+    client: TestClient, session: Session, caplog: pytest.LogCaptureFixture
+) -> None:
     old, new = new_password(), new_password()
     register(client, "freelancer", "reset@example.com", old)
     session_tokens = login(client, "reset@example.com", old).json()
@@ -312,7 +323,8 @@ def test_expired_or_unknown_reset_token_is_rejected(
             json={"email": "exp@example.com", "user_type": "freelancer"},
         )
     token = reset_token_from_log(caplog.text)
-    session.execute(update(PasswordResetToken).values(expires_at=datetime.now(UTC) - timedelta(minutes=1)))
+    past = datetime.now(UTC) - timedelta(minutes=1)
+    session.execute(update(PasswordResetToken).values(expires_at=past))
     body = {"token": token, "new_password": new_password()}
     assert client.post(f"{API}/auth/reset-password", json=body).status_code == 400
     body["token"] = secrets.token_urlsafe(32)
@@ -330,4 +342,3 @@ def test_nothing_secret_is_logged_during_login(
     assert password not in caplog.text
     assert tokens["access_token"] not in caplog.text
     assert tokens["refresh_token"] not in caplog.text
-

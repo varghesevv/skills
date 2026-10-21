@@ -3,7 +3,7 @@
 Validation errors never echo the submitted values (they may be passwords).
 """
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -18,6 +18,7 @@ _STATUS_CODES = {
     405: "method_not_allowed",
     409: "conflict",
     429: "too_many_requests",
+    503: "service_unavailable",
 }
 
 
@@ -51,12 +52,12 @@ def _response(
 
 
 async def _api_error(_: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, ApiError)
+    exc = cast(ApiError, exc)
     return _response(exc.status_code, exc.code, exc.message, exc.details, exc.headers)
 
 
 async def _validation_error(_: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, RequestValidationError)
+    exc = cast(RequestValidationError, exc)
     fields = [
         {
             "field": ".".join(str(part) for part in error["loc"] if part != "body"),
@@ -68,7 +69,7 @@ async def _validation_error(_: Request, exc: Exception) -> JSONResponse:
 
 
 async def _http_error(_: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, StarletteHTTPException)
+    exc = cast(StarletteHTTPException, exc)
     code = _STATUS_CODES.get(exc.status_code, "error")
     headers = dict(exc.headers) if exc.headers else None
     return _response(exc.status_code, code, str(exc.detail), headers=headers)

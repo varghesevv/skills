@@ -22,7 +22,7 @@ def me(
     org = account if isinstance(account, Organisation) else None
     return MeResponse(
         id=account.id,
-        user_type=principal.user_type,  # type: ignore[arg-type]
+        user_type=principal.user_type,
         email=account.user_email,
         mobile_number=account.mobile_number,
         org_name=org.org_name if org else None,

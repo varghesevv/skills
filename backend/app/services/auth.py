@@ -33,6 +33,7 @@ from app.services.accounts import Account, get_by_email, get_by_id
 
 logger = logging.getLogger(__name__)
 
+
 def _invalid_credentials() -> ApiError:
     return ApiError(401, "invalid_credentials", "Invalid email or password")
 
@@ -230,6 +231,7 @@ def refresh(db: Session, settings: Settings, *, refresh_token: str) -> TokenResp
     if account is None or _can_log_in(account) is not None:
         raise invalid
     tokens, new_row = _token_response(db, settings, Principal(row.user_type, row.user_id), now)
+    db.flush()  # the new token must exist before the old one can point at it
     row.revoked_at = now
     row.replaced_by_id = new_row.id
     db.commit()

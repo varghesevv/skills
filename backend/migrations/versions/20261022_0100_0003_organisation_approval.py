@@ -34,9 +34,7 @@ def upgrade() -> None:
         ["id"],
         ondelete="SET NULL",
     )
-    op.create_index(
-        op.f("ix_organisations_approval_status"), "organisations", ["approval_status"]
-    )
+    op.create_index(op.f("ix_organisations_approval_status"), "organisations", ["approval_status"])
 
 
 def downgrade() -> None:
@@ -44,7 +42,7 @@ def downgrade() -> None:
     op.drop_constraint(
         "fk_organisations_approved_by_admin_id_admins", "organisations", type_="foreignkey"
     )
-    op.drop_constraint("ck_organisations_approval_status_valid", "organisations", type_="check")
+    op.drop_constraint("approval_status_valid", "organisations", type_="check")
     op.drop_column("organisations", "approved_by_admin_id")
     op.drop_column("organisations", "approved_at")
     op.drop_column("organisations", "approval_status")
