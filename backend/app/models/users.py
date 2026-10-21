@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Numeric, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column
@@ -44,7 +45,7 @@ class Freelancer(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):
     )
     nationality: Mapped[str | None] = mapped_column(String(100))
     primary_language: Mapped[str | None] = mapped_column(String(100))
-    rate_per_hour: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    rate_per_hour: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     rate_currency: Mapped[str | None] = mapped_column(String(3))
     is_rate_negotiable: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
