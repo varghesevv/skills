@@ -8,7 +8,10 @@ const LINK_VALUE = 'abcdefghijklmnop'
 
 type User = ReturnType<typeof userEvent.setup>
 
-async function fillAccount(user: User, email: string, mobile: string) {
+async function fillAccount(user: User, email: string, mobile: string, name = 'Test Person') {
+  if (screen.queryByLabelText('Full name')) {
+    await user.type(screen.getByLabelText('Full name'), name)
+  }
   await user.type(screen.getByLabelText('Email'), email)
   await user.type(screen.getByLabelText('Mobile number'), mobile)
   await user.type(screen.getByLabelText('Password'), PASSWORD)
@@ -27,13 +30,14 @@ describe('registration', () => {
         }),
     })
     renderApp('/register/freelancer')
-    await fillAccount(user, 'n@example.com', '+971 50 000 0002')
+    await fillAccount(user, 'n@example.com', '+971 50 000 0002', 'Nadia Ali')
     await user.type(screen.getByLabelText('Nationality (optional)'), 'Indian')
     await user.click(screen.getByLabelText('I am available on WhatsApp'))
     await user.click(screen.getByRole('button', { name: 'Create account' }))
 
     expect(await screen.findByRole('heading', { name: 'Account created' })).toBeInTheDocument()
     expect(api.last('POST /auth/register/freelancer')?.body).toEqual({
+      full_name: 'Nadia Ali',
       email: 'n@example.com',
       mobile_number: '+971500000002',
       password: PASSWORD,
@@ -55,7 +59,8 @@ describe('registration', () => {
         }),
     })
     renderApp('/register/organisation')
-    await user.type(screen.getByLabelText('Organisation name'), 'Acme Training')
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Organisation Name'), 'Acme Training')
     await fillAccount(user, 'o@example.com', '0501234567')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
 
@@ -63,17 +68,31 @@ describe('registration', () => {
     const body = api.last('POST /auth/register/organisation')?.body
     expect(body).toMatchObject({ org_name: 'Acme Training' })
     expect(body).not.toHaveProperty('nationality')
+    expect(body).not.toHaveProperty('full_name')
   })
 
   it('does not call the API for a short password', async () => {
     const user = userEvent.setup()
     const api = mockApi({})
     renderApp('/register/workhost')
+    await user.type(screen.getByLabelText('Full name'), 'Wael Host')
     await user.type(screen.getByLabelText('Email'), 'w@example.com')
     await user.type(screen.getByLabelText('Mobile number'), '0501234567')
     await user.type(screen.getByLabelText('Password'), 'short')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
     expect(await screen.findByText('Use at least 10 characters.')).toBeInTheDocument()
+    expect(api.calls).toHaveLength(0)
+  })
+
+  it('asks work hosts and freelancers for their name', async () => {
+    const user = userEvent.setup()
+    const api = mockApi({})
+    renderApp('/register/workhost')
+    await user.type(screen.getByLabelText('Email'), 'w@example.com')
+    await user.type(screen.getByLabelText('Mobile number'), '0501234567')
+    await user.type(screen.getByLabelText('Password'), PASSWORD)
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+    expect(await screen.findByText('Enter your name (2 to 200 characters).')).toBeInTheDocument()
     expect(api.calls).toHaveLength(0)
   })
 

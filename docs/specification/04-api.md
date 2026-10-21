@@ -17,9 +17,9 @@ Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`). Decision record
 ### Auth
 | Method | Path | Notes |
 |---|---|---|
-| POST | /auth/register/freelancer | |
-| POST | /auth/register/workhost | |
-| POST | /auth/register/organisation | |
+| POST | /auth/register/freelancer | email, mobile_number, password, **full_name**; optional nationality, primary_language, whatsapp_availability |
+| POST | /auth/register/workhost | email, mobile_number, password, **full_name** |
+| POST | /auth/register/organisation | email, mobile_number, password, **org_name** (Organisation Name) |
 | POST | /auth/login | body: email, password, user_type. Returns access and refresh tokens |
 | POST | /auth/refresh | rotates refresh token |
 | POST | /auth/logout | revokes refresh token |
@@ -52,6 +52,7 @@ Auth behaviour:
 
 Behaviour of the core APIs:
 
+- `PUT /freelancers/me` and `PUT /workhosts/me` take an optional `full_name`; leaving it out keeps the current name. `GET /me`, the own-profile endpoints, the freelancer detail page and search results return `full_name`.
 - `PUT /freelancers/me/labels` replaces the whole label set. A skill may carry a `level_label_id` (a `skill_level` label); languages, timings and nativity take no level. Inactive labels cannot be selected.
 - Unavailability periods need timezone-aware timestamps and cannot overlap (`409 unavailability_overlaps`).
 - Vouching: an approved organisation creates a `pending` vouch; the freelancer accepts (`approved`) or rejects (`revoked`). Only approved and active vouches are shown on the public profile. Revoking sets the vouch inactive; vouching again starts over as `pending`.

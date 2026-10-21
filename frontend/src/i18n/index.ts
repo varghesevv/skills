@@ -28,6 +28,7 @@ const en = {
   'landing.organisation.text': 'Vouch for freelancers. New organisations are approved by an admin.',
   'landing.toDashboard': 'Go to your dashboard',
 
+  'field.fullName': 'Full name',
   'field.email': 'Email',
   'field.mobile': 'Mobile number',
   'field.mobileHint': 'Digits only, with an optional + at the start.',
@@ -35,7 +36,7 @@ const en = {
   'field.newPassword': 'New password',
   'field.passwordHint': 'At least 10 characters.',
   'field.userType': 'I am a',
-  'field.orgName': 'Organisation name',
+  'field.orgName': 'Organisation Name',
   'field.nationality': 'Nationality (optional)',
   'field.language': 'Primary language (optional)',
   'field.whatsapp': 'I am available on WhatsApp',
@@ -48,6 +49,7 @@ const en = {
   'validation.passwordShort': 'Use at least 10 characters.',
   'validation.passwordLong': 'Use at most 128 characters.',
   'validation.orgName': 'Enter 2 to 200 characters.',
+  'validation.fullName': 'Enter your name (2 to 200 characters).',
   'validation.tooLong': 'This text is too long.',
 
   'login.title': 'Log in',

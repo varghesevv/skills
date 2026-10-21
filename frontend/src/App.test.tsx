@@ -57,7 +57,7 @@ describe('login', () => {
     await fillLogin(user)
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, f@example.com' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Welcome, Fatima Khan' })).toBeVisible()
     expect(api.last('POST /auth/login')?.body).toEqual({
       email: 'f@example.com',
       password: PASSWORD,
@@ -71,7 +71,8 @@ describe('login', () => {
     const user = userEvent.setup()
     const api = mockApi({
       'POST /auth/login': () => json(200, tokens('1')),
-      'GET /me': () => json(200, makeMe({ user_type: 'admin', email: 'a@example.com' })),
+      'GET /me': () =>
+        json(200, makeMe({ user_type: 'admin', email: 'a@example.com', full_name: null })),
     })
     renderApp('/login')
     await user.selectOptions(screen.getByLabelText('I am a'), 'admin')
@@ -145,26 +146,32 @@ describe('protected pages', () => {
   })
 
   it('sends a person to their own portal when they open another one', async () => {
-    signedInAs(makeMe({ user_type: 'workhost', email: 'w@example.com' }))
+    signedInAs(makeMe({ user_type: 'workhost', full_name: 'Wael Host' }))
     renderApp('/freelancer')
-    expect(await screen.findByRole('heading', { name: 'Welcome, w@example.com' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Welcome, Wael Host' })).toBeVisible()
     expect(screen.getByText('Work host', { selector: '.role-badge' })).toBeInTheDocument()
   })
 
   it('restores the session after a reload using the refresh token', async () => {
     const api = signedInAs()
     renderApp('/freelancer')
-    expect(await screen.findByRole('heading', { name: 'Welcome, f@example.com' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Welcome, Fatima Khan' })).toBeVisible()
     expect(api.last('POST /auth/refresh')?.body).toEqual({ refresh_token: OLD_REFRESH })
     expect(getRefreshToken()).toBe('refresh-2')
   })
 
   it('shows the organisation name for organisations', async () => {
     signedInAs(
-      makeMe({ user_type: 'organisation', org_name: 'Acme Training', approval_status: 'approved' }),
+      makeMe({
+        user_type: 'organisation',
+        full_name: null,
+        org_name: 'Acme Training',
+        approval_status: 'approved',
+      }),
     )
     renderApp('/organisation')
     expect(await screen.findByRole('heading', { name: 'Welcome, Acme Training' })).toBeVisible()
+    expect(screen.getByText('Organisation Name')).toBeInTheDocument()
   })
 
   it('logs out: revokes the token, forgets it and returns to the login page', async () => {

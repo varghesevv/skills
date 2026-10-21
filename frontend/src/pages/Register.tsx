@@ -57,6 +57,7 @@ export function RegisterChoice() {
 }
 
 type Values = {
+  full_name: string
   email: string
   mobile_number: string
   password: string
@@ -67,6 +68,7 @@ type Values = {
 }
 
 const EMPTY: Values = {
+  full_name: '',
   email: '',
   mobile_number: '',
   password: '',
@@ -156,7 +158,7 @@ function RegisterForm({ type }: { type: RegisterType }) {
               </Alert>
             </div>
           )}
-          {type === 'organisation' && (
+          {type === 'organisation' ? (
             <TextField
               className="span-2"
               label={t('field.orgName')}
@@ -165,6 +167,16 @@ function RegisterForm({ type }: { type: RegisterType }) {
               value={values.org_name}
               onChange={(value) => set('org_name', value)}
               error={errors.org_name}
+            />
+          ) : (
+            <TextField
+              className="span-2"
+              label={t('field.fullName')}
+              name="full_name"
+              autoComplete="name"
+              value={values.full_name}
+              onChange={(value) => set('full_name', value)}
+              error={errors.full_name}
             />
           )}
           <TextField

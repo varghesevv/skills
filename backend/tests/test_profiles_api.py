@@ -44,9 +44,8 @@ def test_names_can_be_edited_and_are_shown_to_the_right_people(
     host = signup(client, session, "workhost", "named.h@example.com", full_name="Host Person")
     base = {"mobile_number": "+971501234567"}
 
-    renamed = client.put(
-        f"{API}/freelancers/me", json={**base, "full_name": "  New Name "}, headers=freelancer.headers
-    )
+    new_name = {**base, "full_name": "  New Name "}
+    renamed = client.put(f"{API}/freelancers/me", json=new_name, headers=freelancer.headers)
     assert renamed.json()["full_name"] == "New Name"
     kept = client.put(f"{API}/freelancers/me", json=base, headers=freelancer.headers)
     assert kept.json()["full_name"] == "New Name"  # omitted means unchanged

@@ -15,6 +15,7 @@ export type Me = {
   user_type: UserType
   email: string
   mobile_number: string
+  full_name: string | null
   org_name: string | null
   approval_status: string | null
   created_at: string

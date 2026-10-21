@@ -17,6 +17,8 @@ const email = z
   .max(254, 'validation.email')
   .email('validation.email')
 
+const fullName = z.string().trim().min(2, 'validation.fullName').max(200, 'validation.fullName')
+
 const mobile = z
   .string()
   .transform((value) => value.replace(/[ -]/g, ''))
@@ -38,13 +40,14 @@ export const loginSchema = z.object({
 const registerBase = { email, mobile_number: mobile, password: newPassword }
 
 export const freelancerRegisterSchema = z.object({
+  full_name: fullName,
   ...registerBase,
   nationality: optionalText,
   primary_language: optionalText,
   whatsapp_availability: z.boolean(),
 })
 
-export const workhostRegisterSchema = z.object(registerBase)
+export const workhostRegisterSchema = z.object({ full_name: fullName, ...registerBase })
 
 export const organisationRegisterSchema = z.object({
   ...registerBase,

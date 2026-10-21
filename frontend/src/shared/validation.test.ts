@@ -7,9 +7,11 @@ import {
   organisationRegisterSchema,
   resetPasswordSchema,
   validate,
+  workhostRegisterSchema,
 } from './validation'
 
 const base = {
+  full_name: ' Amina Yusuf ',
   email: ' A@Example.com ',
   mobile_number: '+971 50-000 0001',
   password: 'x'.repeat(10),
@@ -25,7 +27,12 @@ describe('validate', () => {
     })
     expect(result).toMatchObject({
       ok: true,
-      data: { email: 'A@Example.com', mobile_number: '+971500000001', nationality: 'UAE' },
+      data: {
+        full_name: 'Amina Yusuf',
+        email: 'A@Example.com',
+        mobile_number: '+971500000001',
+        nationality: 'UAE',
+      },
     })
   })
 
@@ -44,6 +51,16 @@ describe('validate', () => {
         org_name: 'Enter 2 to 200 characters.',
       },
     })
+  })
+
+  it('requires a name for people but not for organisations', () => {
+    const noName = { ...base, full_name: 'A', nationality: '', whatsapp_availability: false }
+    expect(validate(freelancerRegisterSchema, noName)).toMatchObject({
+      ok: false,
+      errors: { full_name: 'Enter your name (2 to 200 characters).' },
+    })
+    expect(validate(workhostRegisterSchema, { ...base, full_name: '' }).ok).toBe(false)
+    expect(validate(organisationRegisterSchema, { ...base, org_name: 'Acme' }).ok).toBe(true)
   })
 
   it('requires a login password but does not length-check it', () => {

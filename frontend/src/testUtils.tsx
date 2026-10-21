@@ -40,6 +40,7 @@ export function makeMe(overrides: Partial<Me> = {}): Me {
     user_type: 'freelancer',
     email: 'f@example.com',
     mobile_number: '+971500000001',
+    full_name: 'Fatima Khan',
     org_name: null,
     approval_status: null,
     created_at: '2026-10-01T10:00:00Z',

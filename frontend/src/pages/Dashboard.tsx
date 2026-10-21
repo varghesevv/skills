@@ -10,11 +10,17 @@ export default function Dashboard() {
   const since = new Date(user.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })
   return (
     <>
-      <h1>{t('dashboard.welcome', { name: user.org_name ?? user.email })}</h1>
+      <h1>{t('dashboard.welcome', { name: user.org_name ?? user.full_name ?? user.email })}</h1>
       <p className="lead">{t(portal.leadKey)}</p>
       <section className="card" aria-labelledby="account-heading">
         <h2 id="account-heading">{t('dashboard.account')}</h2>
         <dl className="facts">
+          {(user.org_name ?? user.full_name) && (
+            <div>
+              <dt>{user.org_name ? t('field.orgName') : t('field.fullName')}</dt>
+              <dd>{user.org_name ?? user.full_name}</dd>
+            </div>
+          )}
           <div>
             <dt>{t('dashboard.email')}</dt>
             <dd>{user.email}</dd>
