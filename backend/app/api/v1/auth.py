@@ -48,6 +48,7 @@ def register_freelancer(
         db,
         "freelancer",
         body,
+        full_name=body.full_name,
         nationality=body.nationality,
         primary_language=body.primary_language,
         whatsapp_availability=body.whatsapp_availability,
@@ -58,7 +59,7 @@ def register_freelancer(
 def register_workhost(
     body: WorkHostRegister, db: Session = Depends(get_session)
 ) -> RegisterResponse:
-    return _register(db, "workhost", body)
+    return _register(db, "workhost", body, full_name=body.full_name)
 
 
 @router.post("/register/organisation", status_code=status.HTTP_201_CREATED)

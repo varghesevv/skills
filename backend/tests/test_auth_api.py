@@ -25,6 +25,8 @@ def new_password() -> str:
 
 def register(client: TestClient, user_type: str, email: str, password: str, **extra: object):
     body = {"email": email, "mobile_number": "+971501234567", "password": password, **extra}
+    if user_type != "organisation":
+        body.setdefault("full_name", "Test Person")
     return client.post(f"{API}/auth/register/{user_type}", json=body)
 
 
@@ -52,6 +54,33 @@ def test_register_each_user_type(client: TestClient, user_type: str, extra: dict
     assert body["email"] == f"new.{user_type}@example.com"  # stored lowercase
     assert "password" not in str(body).lower()
     assert body["approval_status"] == ("pending" if user_type == "organisation" else None)
+
+
+@pytest.mark.parametrize("user_type", ["freelancer", "workhost"])
+def test_people_must_give_a_name_and_it_is_returned_by_me(
+    client: TestClient, user_type: str
+) -> None:
+    password = new_password()
+    email = f"named.{user_type}@example.com"
+    body = {"email": email, "mobile_number": "+971501234567", "password": password}
+    url = f"{API}/auth/register/{user_type}"
+
+    assert client.post(url, json=body).status_code == 422  # no name
+    assert client.post(url, json={**body, "full_name": " A "}).status_code == 422  # too short
+    assert client.post(url, json={**body, "full_name": "x" * 201}).status_code == 422
+    assert client.post(url, json={**body, "full_name": "  Amina Yusuf  "}).status_code == 201
+
+    token = login(client, email, password, user_type).json()["access_token"]
+    me = client.get(f"{API}/me", headers=bearer(token)).json()
+    assert me["full_name"] == "Amina Yusuf"  # trimmed
+    assert me["org_name"] is None
+
+
+def test_organisations_use_org_name_not_a_person_name(client: TestClient) -> None:
+    url = f"{API}/auth/register/organisation"
+    body = {"email": "o@example.com", "mobile_number": "+971501234567", "password": new_password()}
+    assert client.post(url, json=body).status_code == 422  # org_name is required
+    assert client.post(url, json={**body, "org_name": "Acme Staffing"}).status_code == 201
 
 
 def test_duplicate_email_is_rejected_but_allowed_for_another_user_type(client: TestClient) -> None:

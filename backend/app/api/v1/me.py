@@ -25,6 +25,7 @@ def me(
         user_type=principal.user_type,
         email=account.user_email,
         mobile_number=account.mobile_number,
+        full_name=getattr(account, "full_name", None),
         org_name=org.org_name if org else None,
         approval_status=org.approval_status if org else None,
         created_at=account.created_at,

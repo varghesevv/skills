@@ -202,6 +202,7 @@ def search_freelancers(
     items = [
         SearchResult(
             id=freelancer.id,
+            full_name=freelancer.full_name,
             nationality=freelancer.nationality,
             primary_language=freelancer.primary_language,
             whatsapp_availability=freelancer.whatsapp_availability,

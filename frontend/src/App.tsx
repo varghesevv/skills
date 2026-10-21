@@ -1,30 +1,46 @@
-import { useQuery } from '@tanstack/react-query'
+import { Route, Routes } from 'react-router-dom'
 
-import { fetchHealth } from './api/client'
-
-const pageStyle = {
-  maxWidth: 640,
-  margin: '4rem auto',
-  padding: '0 1rem',
-  fontFamily: 'sans-serif',
-}
-
-function statusText(isPending: boolean, isError: boolean, status?: string): string {
-  if (isPending) return 'checking…'
-  if (isError) return 'unavailable'
-  return status ?? 'unknown'
-}
+import { AuthProvider } from './auth/AuthContext'
+import { RequireAuth, RequireRole } from './auth/guards'
+import ForgotPassword from './pages/ForgotPassword'
+import Dashboard from './pages/Dashboard'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import NotFound from './pages/NotFound'
+import Register, { RegisterChoice } from './pages/Register'
+import ResetPassword from './pages/ResetPassword'
+import { PORTALS } from './portals/config'
+import AppShell from './shell/AppShell'
+import PublicLayout from './shell/PublicLayout'
 
 export default function App() {
-  const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth, retry: false })
-
   return (
-    <main style={pageStyle}>
-      <h1>Skills</h1>
-      <p>Find skilled freelancers, or offer your skills.</p>
-      <p role="status">
-        API status: {statusText(health.isPending, health.isError, health.data?.status)}
-      </p>
-    </main>
+    <AuthProvider>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route index element={<Landing />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<RegisterChoice />} />
+          <Route path="register/:type" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+        <Route element={<RequireAuth />}>
+          <Route element={<AppShell />}>
+            {PORTALS.map((portal) => (
+              <Route
+                key={portal.path}
+                path={portal.path}
+                element={<RequireRole role={portal.userType} />}
+              >
+                <Route index element={<Dashboard />} />
+                {/* Later steps add this portal's pages here. */}
+              </Route>
+            ))}
+          </Route>
+        </Route>
+      </Routes>
+    </AuthProvider>
   )
 }

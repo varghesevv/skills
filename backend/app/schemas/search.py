@@ -12,6 +12,7 @@ class SearchResult(BaseModel):
     """A freelancer in search results. Never contains email or mobile number."""
 
     id: uuid.UUID
+    full_name: str | None
     nationality: str | None
     primary_language: str | None
     whatsapp_availability: bool

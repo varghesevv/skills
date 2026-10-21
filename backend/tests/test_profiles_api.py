@@ -37,6 +37,35 @@ def test_freelancer_updates_own_profile(client: TestClient, session: Session) ->
     assert client.get(f"{API}/freelancers/me", headers=me.headers).json()["rate_currency"] == "AED"
 
 
+def test_names_can_be_edited_and_are_shown_to_the_right_people(
+    client: TestClient, session: Session
+) -> None:
+    freelancer = signup(client, session, "freelancer", "named.f@example.com", full_name="Old Name")
+    host = signup(client, session, "workhost", "named.h@example.com", full_name="Host Person")
+    base = {"mobile_number": "+971501234567"}
+
+    renamed = client.put(
+        f"{API}/freelancers/me", json={**base, "full_name": "  New Name "}, headers=freelancer.headers
+    )
+    assert renamed.json()["full_name"] == "New Name"
+    kept = client.put(f"{API}/freelancers/me", json=base, headers=freelancer.headers)
+    assert kept.json()["full_name"] == "New Name"  # omitted means unchanged
+    too_short = {**base, "full_name": "A"}
+    assert (
+        client.put(f"{API}/freelancers/me", json=too_short, headers=freelancer.headers).status_code
+        == 422
+    )
+
+    public = client.get(f"{API}/freelancers/{freelancer.id}", headers=host.headers).json()
+    assert public["full_name"] == "New Name"
+    assert "email" not in public
+
+    renamed_host = client.put(
+        f"{API}/workhosts/me", json={**base, "full_name": "Host Renamed"}, headers=host.headers
+    )
+    assert renamed_host.json()["full_name"] == "Host Renamed"
+
+
 def test_rate_needs_a_valid_currency(client: TestClient, session: Session) -> None:
     me = signup(client, session, "freelancer", "f2@example.com")
     base = {"mobile_number": "+971501234567"}

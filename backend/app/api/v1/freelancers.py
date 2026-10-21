@@ -50,6 +50,7 @@ def _me(db: Session, principal: Principal) -> Freelancer:
 def _me_response(db: Session, me: Freelancer) -> FreelancerMe:
     return FreelancerMe(
         id=me.id,
+        full_name=me.full_name,
         email=me.user_email,
         mobile_number=me.mobile_number,
         whatsapp_availability=me.whatsapp_availability,
@@ -76,6 +77,8 @@ def update_me(
     body: FreelancerUpdate, principal: FreelancerOnly, db: Session = Depends(get_session)
 ) -> FreelancerMe:
     me = _me(db, principal)
+    if body.full_name is not None:
+        me.full_name = body.full_name
     me.mobile_number = body.mobile_number
     me.whatsapp_availability = body.whatsapp_availability
     me.nationality = body.nationality
@@ -288,6 +291,7 @@ def public_profile(
     ).all()
     return FreelancerPublic(
         id=freelancer.id,
+        full_name=freelancer.full_name,
         # Mobile numbers are shown to work hosts (and admins) only.
         mobile_number=freelancer.mobile_number if sees_mobile else None,
         whatsapp_availability=freelancer.whatsapp_availability,
