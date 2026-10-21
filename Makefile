@@ -3,19 +3,30 @@
 
 PI_HOST ?= pi
 PI_DIR  ?= skills
-DB_URL  ?= postgresql+psycopg://skills:skills@localhost:5432/skills
 PI_PATH := export PATH=$$HOME/.local/bin:$$PATH
+# Completes .env if needed, then loads it and builds DATABASE_URL. Secrets are read by the shell only;
+# make never expands or prints them.
+DB_ENV  := sh scripts/gen-env.sh >/dev/null && set -a && . ./.env && set +a && export DATABASE_URL="postgresql+psycopg://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$$DB_PORT/$$POSTGRES_DB"
 # Node container on the Pi: project mounted at /src, work done in a temp copy at /tmp/w
 PI_NODE := docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v "$$PWD":/src -w /tmp node:22-alpine sh -c
 PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf - .) | tar -xf - -C w && cd w
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
+
+.PHONY: help env check-secrets install-hooks up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
 	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-format pi-shell
 
 help: ## Show this help
 	awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+## ---- Secrets ----
+env: ## Create or complete .env from .env.example (random database password, existing values kept)
+	@sh scripts/gen-env.sh
+check-secrets: ## Scan the repository for committed secrets (prints file and line only)
+	@sh scripts/check-secrets.sh
+install-hooks: ## Run the secret check before every git commit
+	@printf '#!/bin/sh\nsh scripts/check-secrets.sh\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'pre-commit hook installed'
 
 ## ---- Local Docker stack (run where Docker is installed) ----
 up: ## Start db, api, worker, web
@@ -36,10 +47,10 @@ be-check: ## Lint, format check and type check backend
 	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app
 be-test: ## Backend tests incl. PostgreSQL tests (starts db first)
 	docker compose up -d --wait db
-	cd backend && DATABASE_URL=$(DB_URL) uv run pytest
+	$(DB_ENV) && cd backend && uv run pytest
 be-migrate: ## Apply database migrations
 	docker compose up -d --wait db
-	cd backend && DATABASE_URL=$(DB_URL) uv run alembic upgrade head
+	$(DB_ENV) && cd backend && uv run alembic upgrade head
 
 ## ---- Frontend (needs Node 22+) ----
 fe-install: ## Install frontend dependencies
@@ -62,7 +73,7 @@ pi-sync: ## One-off Mac -> Pi sync with rsync (alternative to Mutagen)
 
 ## ---- Commands that run ON the Pi over SSH (run from the Mac) ----
 pi-up: ## Start the stack on the Pi
-	ssh $(PI_HOST) 'cd $(PI_DIR) && { [ -f .env ] || cp .env.example .env; } && docker compose up -d --build'
+	ssh $(PI_HOST) 'cd $(PI_DIR) && sh scripts/gen-env.sh && docker compose up -d --build'
 pi-down: ## Stop the stack on the Pi
 	ssh $(PI_HOST) 'cd $(PI_DIR) && docker compose down'
 pi-ps: ## Service status on the Pi
@@ -74,7 +85,7 @@ pi-reset-db: ## DELETE the database volume on the Pi
 pi-check: ## Backend lint, format and type checks on the Pi
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR)/backend && uv sync && uv run ruff check . && uv run ruff format --check . && uv run mypy app'
 pi-test: ## Backend tests (with PostgreSQL) on the Pi
-	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && docker compose up -d --wait db && cd backend && uv sync && DATABASE_URL=$(DB_URL) uv run pytest'
+	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run pytest'
 pi-test-web: ## Frontend lint, type check and tests on the Pi (uses Docker, no Node needed)
 	ssh $(PI_HOST) 'cd $(PI_DIR)/frontend && docker run --rm -v "$$PWD":/app -v skills_node_modules:/app/node_modules -w /app node:22-alpine sh -c "npm install && npm run lint && npm run format:check && npm run typecheck && npm test"'
 pi-format-web: ## Auto-format the frontend with Prettier on the Pi and pull the result back (also creates package-lock.json)

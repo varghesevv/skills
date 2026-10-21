@@ -5,12 +5,20 @@ FastAPI + SQLAlchemy 2 + Alembic on PostgreSQL. See `docs/specification/` at the
 ```bash
 uv sync                      # install (Python 3.12)
 docker compose up -d db      # from the repo root: PostgreSQL
-export DATABASE_URL=postgresql+psycopg://skills:skills@localhost:5432/skills
+make -C .. env                # once: creates ../.env with a random database password
+set -a; . ../.env; set +a
+export DATABASE_URL="postgresql+psycopg://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB"
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 uv run pytest                # DB tests run when DATABASE_URL is set
 uv run ruff check . && uv run ruff format --check . && uv run mypy app
 ```
+
+## Secrets
+
+Settings come from environment variables only: `ENVIRONMENT`, `CORS_ORIGINS` and `REPORT_TIMEZONE` are required and have no defaults (see `.env.example`), and `DATABASE_URL` is required for anything that touches the database. Secrets are `SecretStr`,
+log output is redacted by `app/core/logging_config.py`, and when `ENVIRONMENT` is `demo` or `prod` a weak or short
+database password stops the application at startup. See ADR-0011.
 
 ## Database tests
 

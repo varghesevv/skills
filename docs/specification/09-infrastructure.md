@@ -116,6 +116,8 @@ docker-compose.yml      # local development (db, api, worker, web)
 | `DATABASE_URL`, `POSTGRES_PASSWORD`, `JWT_SECRET`, `SMTP_*`, `CORS_ORIGINS`, `REPORT_TIMEZONE`, `BACKUP_BUCKET`, AWS backup key | GitHub Environment `demo` secrets/variables; deploy writes `/opt/skills/.env` (mode 600, owned by deploy user) |
 | Terraform variables | `terraform.tfvars` locally (not committed) or GitHub Environment variables in CI |
 
+Required GitHub repository secret for CI: `CI_DB_PASSWORD` (any random string; used for the throwaway test database). The application validates secrets at startup in `demo` and `prod` (ADR-0011).
+
 Rules: `.env` and `*.tfvars` are git-ignored; secrets never appear in logs or images; rotating a secret = update GitHub secret and redeploy.
 
 ## 6. GitHub Actions workflows (`.github/workflows/`)
@@ -125,6 +127,7 @@ Rules: `.env` and `*.tfvars` are git-ignored; secrets never appear in logs or im
 | `ci-backend.yml` | PR and push touching `backend/**` | Python 3.12; install; `ruff` lint + format check; `mypy`; `pytest` with a **PostgreSQL 16 service container**; Alembic `upgrade head` then `downgrade base` check; OpenAPI schema export and diff; coverage report; `pip-audit` |
 | `ci-frontend.yml` | PR and push touching `frontend/**` | Node LTS; install with lockfile; ESLint; Prettier check; `tsc --noEmit`; Vitest; build; `npm audit` (high only) |
 | `ci-infra.yml` | PR touching `infra/**` | `terraform fmt -check`, `validate`, `tflint`, `trivy config`; `terraform plan` for `envs/demo` using OIDC role `skills-terraform`; plan posted as PR comment |
+| `ci-secrets.yml` | every PR; push to `main` | `scripts/check-secrets.sh` and Gitleaks over the PR's commits (`--redact`); required check |
 | `ci-docs.yml` | PR touching `docs/**` or `*.md` | Markdown lint and link check; verify ADR index lists every ADR file |
 | `build-images.yml` | push to `main`; manual | Build `api` and `web` images with Buildx cache; scan with Trivy (fail on critical); push to GHCR with SHA tag |
 | `terraform-apply.yml` | manual (`workflow_dispatch`) on `main`; Environment `demo` requires approval | `terraform apply` of the reviewed plan |

@@ -21,15 +21,18 @@ from app.models import (
 
 pytestmark = pytest.mark.db
 
+# Not a credential: a placeholder for the hash column, which the tests never check.
+FAKE_HASH = "placeholder-hash"
+
 
 def make_freelancer(email: str = "f@example.com", **extra: object) -> Freelancer:
     return Freelancer(
-        user_email=email, mobile_number="+971500000001", password_hash="not-a-real-hash", **extra
+        user_email=email, mobile_number="+971500000001", password_hash=FAKE_HASH, **extra
     )
 
 
 def make_work_host(email: str = "h@example.com") -> WorkHost:
-    return WorkHost(user_email=email, mobile_number="+971500000002", password_hash="x")
+    return WorkHost(user_email=email, mobile_number="+971500000002", password_hash=FAKE_HASH)
 
 
 def label(session: Session, label_type: str, name: str) -> Label:
@@ -168,7 +171,7 @@ def test_vouch_starts_pending_and_active(session: Session) -> None:
         org_name="Care Co",
         user_email="o@example.com",
         mobile_number="+971500000003",
-        password_hash="x",
+        password_hash=FAKE_HASH,
     )
     session.add_all([freelancer, organisation])
     session.flush()

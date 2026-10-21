@@ -23,7 +23,7 @@ Skills is a marketplace for finding skilled freelancers. Three kinds of users ta
 ## Quick start (local)
 
 ```bash
-cp .env.example .env
+make env                       # creates .env with a random database password
 docker compose up --build      # db, api (http://localhost:8000/docs), worker, web (http://localhost:5173)
 ```
 

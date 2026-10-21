@@ -15,6 +15,15 @@ from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+# Non-secret settings the application requires from the environment. Tests supply them here;
+# real environments get them from .env / the deployment. No secrets belong in this block.
+for _name, _value in {
+    "ENVIRONMENT": "ci",
+    "CORS_ORIGINS": "http://localhost:5173",
+    "REPORT_TIMEZONE": "Asia/Dubai",
+}.items():
+    os.environ.setdefault(_name, _value)
+
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 TEST_DB_NAME = "skills_test"
 MIGRATION_DB_NAME = "skills_migration_test"

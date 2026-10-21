@@ -1,5 +1,12 @@
 # 07 Non-functional requirements
 
+## Secrets and logging (mandatory, see ADR-0011)
+- No secret in the repository; secrets come from environment variables or GitHub Secrets and have no default values.
+- The application refuses to start without required secrets, and in `demo`/`prod` rejects short or well-known weak ones.
+- Secrets, password hashes, tokens and full database URLs are never logged. Secret settings use `SecretStr`; SQL parameters are hidden; all log output passes through a redacting formatter.
+- `ci-secrets` (repository rules and Gitleaks, redacted output) is a required check before merge; `make install-hooks` runs the same rules before each commit.
+- A secret that reaches git history is treated as leaked and rotated.
+
 ## Security
 - Passwords: argon2id, minimum 10 characters. Never logged or returned.
 - Reset and refresh tokens stored only as hashes; reset tokens single use, 1 hour expiry.

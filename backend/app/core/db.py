@@ -9,7 +9,10 @@ from app.core.config import get_settings
 
 @lru_cache
 def get_engine() -> Engine:
-    return create_engine(get_settings().database_url, pool_pre_ping=True)
+    # hide_parameters keeps bound values (which may be secrets or hashes) out of error messages.
+    return create_engine(
+        get_settings().require_database_url(), pool_pre_ping=True, hide_parameters=True
+    )
 
 
 def get_session() -> Iterator[Session]:

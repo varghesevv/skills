@@ -22,18 +22,30 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      ENVIRONMENT: ci
+      CORS_ORIGINS: http://localhost:5173
+      REPORT_TIMEZONE: Asia/Dubai
     services:
       postgres:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: skills
-          POSTGRES_PASSWORD: skills
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
           POSTGRES_DB: skills
         ports: ["5432"]   # random free host port, so it never clashes with the dev database on the Pi
         options: >-
           --health-cmd "pg_isready -U skills -d skills"
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
+      - name: Require the CI_DB_PASSWORD repository secret
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+        run: |
+          if [ -z "$CI_DB_PASSWORD" ]; then
+            echo "::error::Repository secret CI_DB_PASSWORD is not set (Settings, Secrets and variables, Actions)"
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - name: Install dependencies
@@ -46,8 +58,11 @@ jobs:
         run: uv run mypy app
       - name: Tests (includes migration up/down on PostgreSQL)
         env:
-          DATABASE_URL: postgresql+psycopg://skills:skills@localhost:${{ job.services.postgres.ports['5432'] }}/skills
-        run: uv run pytest --cov=app --cov-report=term-missing
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+          DB_PORT: ${{ job.services.postgres.ports['5432'] }}
+        run: |
+          export DATABASE_URL="postgresql+psycopg://skills:${CI_DB_PASSWORD}@localhost:${DB_PORT}/skills"
+          uv run pytest --cov=app --cov-report=term-missing
       - name: Export OpenAPI schema
         run: uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))" > openapi.json
       - uses: actions/upload-artifact@v4

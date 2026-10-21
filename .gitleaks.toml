@@ -1,0 +1,7 @@
+# Gitleaks configuration: default rules plus the exceptions below.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lockfiles contain integrity hashes, not secrets"
+paths = ['''package-lock\.json''', '''uv\.lock''']
