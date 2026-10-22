@@ -235,3 +235,7 @@ pgdata/
 frontend/test-results/
 frontend/playwright-report/
 backend.hcl
+
+# Generated demo login lists (they contain the shared demo password)
+demo-logins*.csv
+*-logins.csv

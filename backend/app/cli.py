@@ -2,6 +2,7 @@
 
     python -m app.cli create-admin --email you@example.com --mobile +971500000000
     python -m app.cli seed-demo
+    python -m app.cli generate-demo-data --csv logins.csv [--reset]
 
 Passwords are never accepted as command-line arguments (they would end up in shell history and
 process lists): create-admin asks for it (or reads one line from stdin), and seed-demo reads
@@ -9,15 +10,19 @@ DEMO_USER_PASSWORD from the environment. Passwords are never printed or logged.
 """
 
 import argparse
+import csv
 import getpass
+import os
 import sys
 from dataclasses import dataclass
+from typing import TextIO
 
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import MIN_STRICT_SECRET_LENGTH, WEAK_SECRETS, get_settings
 from app.core.db import get_engine
 from app.core.logging_config import configure_logging
+from app.demo_data import DEMO_DATA_DOMAIN, CredentialRow, generate, remove_generated
 from app.schemas.auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
 from app.services.accounts import create_account, get_by_email
 
@@ -111,15 +116,15 @@ def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
     return 0
 
 
-def seed_demo() -> int:
-    """Create the fake demo users (idempotent), all with the DEMO_USER_PASSWORD password."""
+def _demo_password() -> str | None:
+    """DEMO_USER_PASSWORD from the environment, or None after printing why it cannot be used."""
     settings = get_settings()
     if settings.environment == "prod":
         print("Refusing to create demo users in the prod environment.", file=sys.stderr)
-        return 1
+        return None
     if settings.demo_user_password is None or not settings.demo_user_password.get_secret_value():
         print("DEMO_USER_PASSWORD is not set (run `make env`).", file=sys.stderr)
-        return 1
+        return None
     password = settings.demo_user_password.get_secret_value()
     problem = _check_password(password)
     weak = password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH
@@ -127,6 +132,48 @@ def seed_demo() -> int:
         problem = "In demo, DEMO_USER_PASSWORD must be strong and long enough"
     if problem:
         print(problem, file=sys.stderr)
+        return None
+    return password
+
+
+def generate_demo_data(csv_path: str, reset: bool) -> int:
+    """Create the larger demo data set and write the login list (with the shared password)."""
+    password = _demo_password()
+    if password is None:
+        return 1
+    with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
+        if reset:
+            print(f"Removed {remove_generated(db)} earlier generated accounts.", file=sys.stderr)
+        elif get_by_email(db, "organisation", f"admin.gulf.care.staffing@{DEMO_DATA_DOMAIN}"):
+            print("Demo data already exists. Use --reset to replace it.", file=sys.stderr)
+            return 1
+        rows = generate(db, password)
+    # The file holds the password on purpose (it is the login list), so it is owner-only, and
+    # nothing is printed to the log. "-" writes to standard output for redirecting into a file.
+    if csv_path == "-":
+        _write_logins(sys.stdout, rows, password)
+    else:
+        with os.fdopen(os.open(csv_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as out:
+            _write_logins(out, rows, password)
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row.user_type] = counts.get(row.user_type, 0) + 1
+    target = "standard output" if csv_path == "-" else csv_path
+    print(f"Created accounts {counts}. Login list written to {target}.", file=sys.stderr)
+    return 0
+
+
+def _write_logins(out: TextIO, rows: list[CredentialRow], password: str) -> None:
+    writer = csv.writer(out)
+    writer.writerow(["user_type", "email", "password", "name", "status"])
+    for row in rows:
+        writer.writerow([row.user_type, row.email, password, row.name, row.status])
+
+
+def seed_demo() -> int:
+    """Create the fake demo users (idempotent), all with the DEMO_USER_PASSWORD password."""
+    password = _demo_password()
+    if password is None:
         return 1
     created = 0
     with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
@@ -161,10 +208,18 @@ def main(argv: list[str] | None = None) -> int:
     admin.add_argument("--mobile", required=True)
     admin.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
     sub.add_parser("seed-demo", help="create fake demo users (not allowed in prod)")
+    gen = sub.add_parser(
+        "generate-demo-data",
+        help="create ~10 organisations, ~50 work hosts, ~200 freelancers and write a login CSV",
+    )
+    gen.add_argument("--csv", required=True, help="where to write the login list; - for stdout")
+    gen.add_argument("--reset", action="store_true", help="remove earlier generated data first")
     args = parser.parse_args(argv)
     configure_logging()
     if args.command == "create-admin":
         return create_admin(args.email, args.mobile, args.password_stdin)
+    if args.command == "generate-demo-data":
+        return generate_demo_data(args.csv, args.reset)
     return seed_demo()
 
 

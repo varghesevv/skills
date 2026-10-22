@@ -90,3 +90,19 @@ After this, pull requests that touch `infra/` get a plan as a comment, and `terr
 - The Lightsail key pair `skills-demo` was created by hand and is only referenced by name, so its private key is never in Terraform state.
 - `prevent_destroy` protects the backup and state buckets. To remove them on purpose, delete that line first.
 - Trivy findings that are accepted on purpose go in `terraform/.trivyignore`, with a reason.
+
+## Larger demo data set
+
+`python -m app.cli generate-demo-data --csv <file> [--reset]` creates about 10 organisations
+(8 approved, 1 pending, 1 rejected), 50 work hosts and 200 freelancers with varied skills,
+skill levels, timings, languages and nativity, plus vouches, ratings and planned time off. All
+accounts use the `DEMO_USER_PASSWORD` from the server's `.env`. The CSV (user_type, email,
+password, name, status) is written owner-only; use `--csv -` to write to standard output and
+redirect it into a file on the server:
+
+    cd /opt/skills && umask 077
+    docker compose --env-file .env -f compose.demo.yml run --rm -T api \
+      python -m app.cli generate-demo-data --csv - > demo-logins.csv
+
+Copy it with `scp`, then delete it from the server. Never commit it. `--reset` removes the
+earlier generated accounts (emails ending `@demo.example.com`) and creates them again.
