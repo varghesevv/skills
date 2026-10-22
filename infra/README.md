@@ -101,7 +101,7 @@ password, name, status) is written owner-only; use `--csv -` to write to standar
 redirect it into a file on the server:
 
     cd /opt/skills && umask 077
-    docker compose --env-file .env -f compose.demo.yml run --rm -T api \
+    docker compose --env-file .env -f compose.demo.yml run --rm -T tools \
       python -m app.cli generate-demo-data --csv - > demo-logins.csv
 
 Copy it with `scp`, then delete it from the server. Never commit it. `--reset` removes the
