@@ -2,7 +2,6 @@ name: ci-docs
 
 on:
   pull_request:
-    paths: ["docs/**", "**/*.md", ".github/workflows/ci-docs.yml"]
   push:
     branches: [main]
     paths: ["docs/**", "**/*.md"]
@@ -12,6 +11,7 @@ permissions:
 
 jobs:
   docs:
+    name: docs-links
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
