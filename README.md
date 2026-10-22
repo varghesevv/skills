@@ -8,12 +8,13 @@ Skills is a marketplace for finding skilled freelancers. Three kinds of users ta
 | **Work host** | Searches for freelancers, offers work, rates freelancers. |
 | **Organisation** | Vouches for freelancers by linking them to the organisation. |
 
-**Status:** phase 1 (scaffold) in progress. Start with the specification.
+**Status:** the application is built (API, web portals, reports) and runs as a demo on AWS. Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
 ## Documentation
 
 | Document | Purpose |
 |---|---|
+| [docs/local-development.md](docs/local-development.md) | **Run Skills on your computer**: step-by-step guide for beginners (tools to install, start, demo data, tests, troubleshooting) |
 | [docs/specification/](docs/specification/README.md) | What we are building: requirements, data model, API, reports, frontend, non-functional requirements |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records: why we chose what we chose |
 | [docs/specification/09-infrastructure.md](docs/specification/09-infrastructure.md) | Demo deployment on AWS Lightsail, Terraform, GitHub Actions |
@@ -22,20 +23,22 @@ Skills is a marketplace for finding skilled freelancers. Three kinds of users ta
 
 ## Quick start (local)
 
+New to the project? Follow the [detailed local development guide](docs/local-development.md). It covers installing the tools on macOS, Windows (WSL) and Linux, starting the application, creating demo data, running the tests and fixing common problems.
+
+If you already have Git, Docker and `make`:
+
 ```bash
-make env                       # creates .env with a random database password
+make env                       # creates .env with random secrets (never commit it)
 docker compose up --build      # db, api (http://localhost:8000/docs), worker, web (http://localhost:5173)
 ```
 
 Backend and frontend details: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
 
-**Lockfiles still to generate:** the scaffold was written without access to PyPI/npm, so `backend/uv.lock` and `frontend/package-lock.json` do not exist yet. Run `cd backend && uv lock` and `cd frontend && npm install` once, then commit both files. Until then CI and Docker builds resolve versions fresh (not reproducible).
+## Stack
 
-## Planned stack
+Python (FastAPI, SQLAlchemy, Alembic), PostgreSQL (only), React + TypeScript, REST API shared by web and a future mobile app. Demo hosting: Docker Compose on one AWS Lightsail instance, provisioned with Terraform, deployed by GitHub Actions (see [infra/README.md](infra/README.md)). See [ADRs](docs/adr/README.md).
 
-Python (FastAPI, SQLAlchemy, Alembic), PostgreSQL (only), React + TypeScript, REST API shared by web and a future mobile app. Demo hosting: Docker Compose on one AWS Lightsail instance, provisioned with Terraform, deployed by GitHub Actions. See [ADRs](docs/adr/README.md).
-
-## Planned repository layout
+## Repository layout
 
 ```
 backend/     Python REST API, migrations, scheduled report worker
