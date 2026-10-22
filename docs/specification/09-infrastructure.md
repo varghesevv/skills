@@ -146,7 +146,7 @@ Branch protection on `main`: required status checks (`ci-backend`, `ci-frontend`
 6. Back up the database first (`backup.sh`).
 7. Run migrations as a one-off container: `docker compose run --rm api alembic upgrade head`.
 8. `docker compose up -d`; wait for health checks on `api` and `web`.
-9. Smoke test: `GET /health` and `GET /api/v1/labels` through the public URL.
+9. Smoke test: `GET /health` and `GET /api/v1/labels` (expects 401 without a token) through the public URL.
 10. On failure: print logs, keep previous images, mark the job failed; rollback = rerun the workflow with the previous tag (migrations must be backward compatible for one release, or restore from the backup).
 11. Always (even on failure): close port 22.
 
