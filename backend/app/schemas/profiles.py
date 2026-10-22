@@ -6,7 +6,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
-from app.schemas.auth import Mobile
+from app.schemas.auth import Mobile, PersonName
 from app.schemas.common import LabelOut
 
 Day = Literal["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
@@ -20,6 +20,7 @@ _CURRENCY = re.compile(r"^[A-Z]{3}$")
 class FreelancerUpdate(BaseModel):
     """Replaces the editable profile fields (PUT)."""
 
+    full_name: PersonName | None = None  # left unchanged when omitted
     mobile_number: Mobile
     whatsapp_availability: bool = False
     nationality: Annotated[str, Field(max_length=100)] | None = None
@@ -44,6 +45,7 @@ class FreelancerLabelOut(BaseModel):
 
 class FreelancerMe(BaseModel):
     id: uuid.UUID
+    full_name: str | None
     email: str
     mobile_number: str
     whatsapp_availability: bool
@@ -107,6 +109,7 @@ class FreelancerPublic(BaseModel):
     """What work hosts, organisations and admins see. Never the email."""
 
     id: uuid.UUID
+    full_name: str | None
     mobile_number: str | None  # only for work hosts and admins
     whatsapp_availability: bool
     nationality: str | None
@@ -125,12 +128,14 @@ class FreelancerPublic(BaseModel):
 
 
 class WorkHostUpdate(BaseModel):
+    full_name: PersonName | None = None  # left unchanged when omitted
     mobile_number: Mobile
     available_days: list[Day] = []
 
 
 class WorkHostMe(BaseModel):
     id: uuid.UUID
+    full_name: str | None
     email: str
     mobile_number: str
     available_days: list[Day]

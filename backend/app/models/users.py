@@ -26,6 +26,9 @@ def _email_is_lowercase() -> CheckConstraint:
 class WorkHost(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):
     __tablename__ = "work_hosts"
 
+    # Required when registering; empty only for accounts created before names existed.
+    full_name: Mapped[str | None] = mapped_column(String(200))
+
     avail_sun: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     avail_mon: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     avail_tue: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
@@ -39,6 +42,9 @@ class WorkHost(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):
 
 class Freelancer(UUIDPrimaryKeyMixin, AccountMixin, TimestampMixin, Base):
     __tablename__ = "freelancers"
+
+    # Required when registering; empty only for accounts created before names existed.
+    full_name: Mapped[str | None] = mapped_column(String(200))
 
     whatsapp_availability: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=false()

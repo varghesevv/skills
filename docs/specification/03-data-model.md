@@ -32,6 +32,7 @@ Delete behaviour: deleting a freelancer removes their labels, unavailability, vo
 |---|---|---|
 | id | uuid PK | |
 | user_email | text NOT NULL | unique, lowercase |
+| full_name | varchar(200) | required at registration; empty only for accounts created before names existed |
 | mobile_number | text NOT NULL | E.164 format |
 | password_hash | text NOT NULL | argon2id |
 | avail_sun .. avail_sat | boolean NOT NULL default false | seven columns, one per day |
@@ -43,6 +44,7 @@ Delete behaviour: deleting a freelancer removes their labels, unavailability, vo
 |---|---|---|
 | id | uuid PK | |
 | user_email | text NOT NULL | unique, lowercase |
+| full_name | varchar(200) | required at registration; empty only for accounts created before names existed |
 | mobile_number | text NOT NULL | E.164 |
 | whatsapp_availability | boolean NOT NULL default false | |
 | password_hash | text NOT NULL | |
@@ -57,7 +59,7 @@ Delete behaviour: deleting a freelancer removes their labels, unavailability, vo
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| org_name | text NOT NULL | |
+| org_name | text NOT NULL | shown as "Organisation Name" |
 | approval_status | text NOT NULL | `pending` (default), `approved`, `rejected`. Only approved organisations can log in |
 | approved_at, approved_by_admin_id | timestamptz, uuid FK admins | set when an admin decides |
 | user_email | text NOT NULL | unique, lowercase |

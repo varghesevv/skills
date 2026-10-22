@@ -22,6 +22,7 @@ def _response(host: WorkHost) -> WorkHostMe:
     days = [day for day in DAYS if getattr(host, f"avail_{day}")]
     return WorkHostMe(
         id=host.id,
+        full_name=host.full_name,
         email=host.user_email,
         mobile_number=host.mobile_number,
         available_days=days,
@@ -39,6 +40,8 @@ def update_me(
     body: WorkHostUpdate, principal: HostOnly, db: Session = Depends(get_session)
 ) -> WorkHostMe:
     host = current_account(db, WorkHost, principal)
+    if body.full_name is not None:
+        host.full_name = body.full_name
     host.mobile_number = body.mobile_number
     for day in DAYS:
         setattr(host, f"avail_{day}", day in body.available_days)

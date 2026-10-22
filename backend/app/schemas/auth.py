@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, EmailStr, Field, SecretStr
+from pydantic import AfterValidator, BaseModel, EmailStr, Field, SecretStr, StringConstraints
 
 UserType = Literal["freelancer", "workhost", "organisation", "admin"]
 
@@ -24,6 +24,8 @@ def _check_mobile(value: str) -> str:
 
 
 Email = Annotated[EmailStr, AfterValidator(_normalise_email)]
+# A person's name (freelancers and work hosts). Organisations use org_name instead.
+PersonName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=200)]
 Mobile = Annotated[str, AfterValidator(_check_mobile)]
 # SecretStr keeps passwords out of repr() and logs.
 NewPassword = Annotated[
@@ -38,13 +40,14 @@ class RegisterBase(BaseModel):
 
 
 class FreelancerRegister(RegisterBase):
+    full_name: PersonName
     nationality: Annotated[str, Field(max_length=100)] | None = None
     primary_language: Annotated[str, Field(max_length=100)] | None = None
     whatsapp_availability: bool = False
 
 
 class WorkHostRegister(RegisterBase):
-    pass
+    full_name: PersonName
 
 
 class OrganisationRegister(RegisterBase):
@@ -92,7 +95,8 @@ class MeResponse(BaseModel):
     user_type: UserType
     email: str
     mobile_number: str
-    org_name: str | None = None
+    full_name: str | None = None  # freelancers and work hosts
+    org_name: str | None = None  # organisations
     approval_status: str | None = None
     created_at: datetime
 
