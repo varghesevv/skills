@@ -192,3 +192,13 @@ Build the demo so production is a configuration change, not a rewrite:
 - Keep images and migrations environment-independent: the same image tag that passed in demo is promoted to prod.
 - Prepare a production checklist before go-live: separate AWS account or at least separate IAM roles, managed backups with point-in-time recovery, monitoring and alerting, log aggregation, WAF or rate limiting at the edge, domain (for example `skills.privatedir.com`), real SMTP provider, data protection review.
 - The demo environment keeps fake data only and may be destroyed when production exists.
+
+## Implementation notes (phase 7b-1: containers and server scripts)
+
+- Files: `infra/docker/compose.demo.yml`, `infra/docker/Caddyfile`, `infra/docker/demo.env.example`, `infra/scripts/{bootstrap-server,deploy,backup,restore}.sh`, workflows `build-images.yml` and `ci-infra.yml` (shellcheck, compose and Caddyfile validation). See `infra/README.md`.
+- No separate data disk (section 0): PostgreSQL data is bind-mounted from `/opt/skills/data/postgres` and report files from `/opt/skills/data/reports`.
+- `build-images.yml` runs on GitHub-hosted runners (images are `linux/amd64`, as the Lightsail instance is x86_64), scans each image with Trivy before pushing and fails on critical findings. Third-party actions are pinned to a version tag; pinning to commit SHAs is part of hardening (phase 8).
+- The api runs with `--proxy-headers --forwarded-allow-ips=*` behind Caddy so login throttling sees the real client address. This is safe only because Caddy is the sole way in.
+- Caddy serves HTTP/1.1 and HTTP/2 only, so no UDP port is needed. A Content-Security-Policy header is left for phase 8.
+- `deploy.sh` reads `.env` without sourcing it, and the backup and restore scripts take only the settings they need. AWS keys stay out of the containers.
+- Server settings the application needs are checked in CI: `ci-infra.yml` fails if a variable in `.env.example` is missing from `demo.env.example`.
