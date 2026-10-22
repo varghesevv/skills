@@ -1,0 +1,41 @@
+name: uptime
+
+# Checks the public demo every 15 minutes. A failed run emails the people watching the
+# repository's Actions (Settings > Notifications). Also checks that the certificate is not
+# about to expire. Needs no secrets.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE_URL: ${{ vars.DEMO_URL || 'https://skills-demo.privatedir.in' }}
+    steps:
+      - name: Site answers
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if curl -fsS --max-time 15 "$SITE_URL/health" > /dev/null; then ok=1; break; fi
+            ok=0; sleep 15
+          done
+          [ "$ok" = 1 ] || { echo "::error::$SITE_URL/health did not answer after 3 tries"; exit 1; }
+          code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$SITE_URL/api/v1/labels")"
+          [ "$code" = 401 ] || { echo "::error::/api/v1/labels returned $code, expected 401"; exit 1; }
+          curl -fsS --max-time 15 "$SITE_URL/" | grep -q 'id="root"' \
+            || { echo "::error::the web app did not return its page"; exit 1; }
+      - name: Certificate is valid for at least 14 more days
+        run: |
+          set -euo pipefail
+          host="${SITE_URL#https://}"; host="${host%%/*}"
+          if ! echo | openssl s_client -connect "${host}:443" -servername "$host" 2>/dev/null \
+               | openssl x509 -noout -checkend $((14 * 86400)); then
+            echo "::error::the certificate for $host expires within 14 days or is invalid"
+            exit 1
+          fi

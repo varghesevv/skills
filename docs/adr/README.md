@@ -25,3 +25,4 @@ An ADR records one significant technical decision: the context, the choice, and 
 | [0009](0009-terraform-for-infrastructure.md) | Terraform for infrastructure | Proposed |
 | [0010](0010-github-actions-ci-cd.md) | GitHub Actions for CI/CD and GHCR for images | Proposed |
 | [0011](0011-secrets-from-environment-only.md) | Secrets come from the environment only, and are checked before merge | Accepted |
+| [0012](0012-production-on-ecs-fargate-and-rds.md) | Production on ECS Fargate and Amazon RDS for PostgreSQL | Proposed |

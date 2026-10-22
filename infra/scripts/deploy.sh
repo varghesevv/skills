@@ -10,6 +10,14 @@
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
+
+# Lightsail has no disk metric, so check here: refuse to deploy onto an almost full disk.
+used="$(df --output=pcent /opt/skills | tail -n1 | tr -dc '0-9')"
+if [ "${used:-0}" -ge 90 ]; then
+  echo "Disk is ${used}% full. Free space first (docker image prune -af, old logs, old backups)." >&2
+  exit 1
+fi
+echo "Disk usage: ${used}%"
 COMPOSE=(docker compose --env-file .env -f compose.demo.yml)
 
 if [ ! -f .env ]; then
@@ -35,6 +43,12 @@ fi
 "${COMPOSE[@]}" run --rm api alembic upgrade head
 
 "${COMPOSE[@]}" up -d --remove-orphans --wait --wait-timeout 180
+
+# A changed Caddyfile is a mounted file, so compose does not recreate the proxy for it: reload.
+if ! "${COMPOSE[@]}" exec -T proxy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+  echo "Caddy reload failed; restarting the proxy."
+  "${COMPOSE[@]}" restart proxy
+fi
 
 echo "$current_tag" > .deployed_tag
 echo "Deployed. To roll back, deploy the previous tag: ${previous_tag:-none}"
