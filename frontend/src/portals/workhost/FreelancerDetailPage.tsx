@@ -7,6 +7,8 @@ import { vouchFor } from '../../api/organisation'
 import { createRating, getFreelancer, updateRating } from '../../api/workhost'
 import { useUser } from '../../auth/AuthContext'
 import { t, type StringKey } from '../../i18n'
+import { portalPath } from '../config'
+import { term } from '../../terminology/terms'
 import { formatDateTime } from '../../shared/dates'
 import { errorMessage } from '../../shared/errors'
 import RatingsList from '../../shared/RatingsList'
@@ -279,7 +281,7 @@ function VouchPanel({ person }: { person: FreelancerPublic }) {
         </button>
       )}
       <p>
-        <Link to="/organisation/freelancers">{t('vouch.viewList')}</Link>
+        <Link to={portalPath('organisation', term('freelancers_path'))}>{t('vouch.viewList')}</Link>
       </p>
     </section>
   )
@@ -295,7 +297,9 @@ export default function FreelancerDetailPage({ portal }: { portal: Portal }) {
   return (
     <>
       <p>
-        <Link to={`/${portal}/search${search ? `?${search}` : ''}`}>← {t('detail.back')}</Link>
+        <Link to={`${portalPath(portal, 'search')}${search ? `?${search}` : ''}`}>
+          ← {t('detail.back')}
+        </Link>
       </p>
       <QueryBoundary query={query}>
         {(person) => (

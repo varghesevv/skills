@@ -6,6 +6,8 @@ import { listLabels } from '../../api/freelancer'
 import type { SearchResult } from '../../api/types'
 import { SEARCH_PAGE_SIZE, listOrganisations, searchFreelancers } from '../../api/workhost'
 import { t } from '../../i18n'
+import { portalPath } from '../config'
+import { term } from '../../terminology/terms'
 import { Badge, Pager, QueryBoundary, SelectField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import FilterForm, { SORT_OPTIONS } from './FilterForm'
@@ -32,7 +34,7 @@ function ResultCard({
   return (
     <li className="card result">
       <h2>
-        <Link to={`/${portal}/freelancers/${item.id}`} state={{ search }}>
+        <Link to={portalPath(portal, term('freelancers_path'), item.id)} state={{ search }}>
           {item.full_name ?? t('search.noName')}
         </Link>
       </h2>

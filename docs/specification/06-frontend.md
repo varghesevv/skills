@@ -27,6 +27,17 @@ Dashboard; profile; vouched freelancers (add, revoke, status); organisation repo
 ### Admin portal
 Organisation approvals (waiting, approved and rejected lists; approve or reject); label management (add, rename, deactivate or reactivate, by kind); report pages for all reports (date range plus each report's own filters, table on screen, CSV download); report history (kept runs with CSV and HTML downloads, and running and keeping a report for chosen dates); and schedule editing. Charts are not built yet; tables and CSV cover the reports.
 
+## Installation terminology
+
+Screen text refers to the three kinds of people through tokens such as `{organisation}`,
+`{Workhosts}` and `{a_freelancer}` (see `src/terminology/terms.ts`). The words and the web-address
+segments come from the active profile in `src/terminology/profiles.json` (key/value pairs, one block
+per profile). The profile is chosen per installation: the web server serves `/config.json` from its
+`TERMINOLOGY_PROFILE` setting and the app reads it before it starts (development uses
+`VITE_TERMINOLOGY_PROFILE`). An unknown name falls back to `default`. Portal, login and register
+addresses are built from the profile (`/church`, `/login/church`, `/register/church`), while API
+paths, `user_type` values, report files and emails are unchanged.
+
 ## UI requirements
 
 - Responsive web design (RWD) on every page, see the next section.

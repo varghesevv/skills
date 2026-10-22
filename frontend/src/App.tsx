@@ -16,6 +16,7 @@ import { freelancerRoutes } from './portals/freelancer/routes'
 import { adminRoutes } from './portals/admin/routes'
 import { organisationRoutes } from './portals/organisation/routes'
 import { workhostRoutes } from './portals/workhost/routes'
+import { slugOf } from './terminology/terms'
 import AppShell from './shell/AppShell'
 import PublicLayout from './shell/PublicLayout'
 
@@ -26,9 +27,12 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route index element={<Landing />} />
           <Route path="login" element={<Login />} />
-          <Route path="login/freelancer" element={<Navigate to="/login" replace />} />
-          <Route path="login/workhost" element={<Login userType="workhost" />} />
-          <Route path="login/organisation" element={<OrganisationLogin />} />
+          <Route
+            path={`login/${slugOf('freelancer')}`}
+            element={<Navigate to="/login" replace />}
+          />
+          <Route path={`login/${slugOf('workhost')}`} element={<Login userType="workhost" />} />
+          <Route path={`login/${slugOf('organisation')}`} element={<OrganisationLogin />} />
           <Route path="login/admin" element={<AdminLogin />} />
           <Route path="register" element={<RegisterChoice />} />
           <Route path="register/:type" element={<Register />} />

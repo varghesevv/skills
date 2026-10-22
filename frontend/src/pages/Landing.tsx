@@ -2,10 +2,11 @@ import { Link } from 'react-router-dom'
 
 import { useAuth } from '../auth/AuthContext'
 import { t, type StringKey } from '../i18n'
-import { homePath } from '../portals/config'
+import type { RegisterType } from '../api/types'
+import { homePath, registerPath } from '../portals/config'
 import { usePageTitle } from '../shared/usePageTitle'
 
-const CHOICES: readonly { type: string; title: StringKey; text: StringKey }[] = [
+const CHOICES: readonly { type: RegisterType; title: StringKey; text: StringKey }[] = [
   { type: 'freelancer', title: 'landing.freelancer.title', text: 'landing.freelancer.text' },
   { type: 'workhost', title: 'landing.workhost.title', text: 'landing.workhost.text' },
   {
@@ -35,7 +36,7 @@ export default function Landing() {
             <li key={choice.type} className="card">
               <h2>{t(choice.title)}</h2>
               <p>{t(choice.text)}</p>
-              <Link className="btn btn-primary" to={`/register/${choice.type}`}>
+              <Link className="btn btn-primary" to={registerPath(choice.type)}>
                 {t('nav.register')}
               </Link>
             </li>

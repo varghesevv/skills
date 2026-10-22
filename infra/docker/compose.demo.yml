@@ -50,6 +50,8 @@ services:
     image: ghcr.io/${GHCR_OWNER:?missing in .env}/skills-web:${IMAGE_TAG:?missing in .env}
     restart: unless-stopped
     logging: *logging
+    environment:
+      TERMINOLOGY_PROFILE: ${TERMINOLOGY_PROFILE:-default}
 
   api:
     image: ghcr.io/${GHCR_OWNER:?missing in .env}/skills-api:${IMAGE_TAG:?missing in .env}

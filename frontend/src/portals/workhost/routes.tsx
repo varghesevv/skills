@@ -1,5 +1,6 @@
 import { Route } from 'react-router-dom'
 
+import { term } from '../../terminology/terms'
 import FreelancerDetailPage from './FreelancerDetailPage'
 import GivenRatingsPage from './GivenRatingsPage'
 import HostProfilePage from './HostProfilePage'
@@ -10,7 +11,7 @@ export const workhostRoutes = [
   <Route key="search" path="search" element={<SearchPage portal="workhost" />} />,
   <Route
     key="detail"
-    path="freelancers/:id"
+    path={`${term('freelancers_path')}/:id`}
     element={<FreelancerDetailPage portal="workhost" />}
   />,
   <Route key="given" path="ratings" element={<GivenRatingsPage />} />,

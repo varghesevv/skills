@@ -109,6 +109,13 @@ Three layers:
 
 Test the alarms once: the quickest safe test is to run `setup-alarms.sh` with a very low threshold temporarily, or to stop the stack briefly (`dc stop api`) and see the uptime check fail within 15 minutes; then `dc start api`.
 
+### Wording of this installation
+
+`TERMINOLOGY_PROFILE` (Environment variable, not a secret; default `default`) selects the words and
+web addresses from `frontend/src/terminology/profiles.json`, for example `church`. Change it in
+GitHub, re-run `deploy-demo`, and the site serves the new words. Existing bookmarks to the old
+addresses (for example `/organisation`) stop working after a change.
+
 ## 8. Security headers and limits
 
 - Caddy adds HSTS, `nosniff`, a strict Content-Security-Policy (everything from the site's own origin), `X-Frame-Options: DENY`, a Permissions-Policy and removes the `Server` header. A page that suddenly breaks after a change may be blocked by the policy: open the browser developer console and look for "Content Security Policy" messages, then fix the page rather than loosening the policy.

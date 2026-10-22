@@ -66,6 +66,7 @@ services:
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     environment:
       VITE_API_PROXY: http://api:8000
+      VITE_TERMINOLOGY_PROFILE: ${TERMINOLOGY_PROFILE:-default}
     ports:
       - "${WEB_PORT:?Run make env to create or complete .env}:5173"
     volumes:

@@ -112,6 +112,7 @@ jobs:
           SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
           BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
           REPORT_TIMEZONE: ${{ vars.REPORT_TIMEZONE || 'Asia/Dubai' }}
+          TERMINOLOGY_PROFILE: ${{ vars.TERMINOLOGY_PROFILE || 'default' }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }}
@@ -122,6 +123,7 @@ jobs:
           for v in POSTGRES_PASSWORD JWT_SECRET DEMO_USER_PASSWORD BACKUP_AWS_ACCESS_KEY_ID BACKUP_AWS_SECRET_ACCESS_KEY; do
             case "${!v}" in *$'\n'*|"") echo "$v must be a single non-empty line." >&2; exit 1;; esac
           done
+          case "${TERMINOLOGY_PROFILE}" in *[!a-z0-9_-]*) echo "TERMINOLOGY_PROFILE may only contain a-z, 0-9, _ and -." >&2; exit 1;; esac
           umask 077
           envfile="$(mktemp)"
           {
@@ -130,6 +132,7 @@ jobs:
             echo "FRONTEND_BASE_URL=https://${SITE_ADDRESS}"
             echo "CORS_ORIGINS=https://${SITE_ADDRESS}"
             echo "REPORT_TIMEZONE=${REPORT_TIMEZONE}"
+            echo "TERMINOLOGY_PROFILE=${TERMINOLOGY_PROFILE}"
             echo "GHCR_OWNER=${GHCR_OWNER}"
             echo "IMAGE_TAG=${IMAGE_TAG}"
             echo "POSTGRES_USER=skills"

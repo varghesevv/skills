@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 
 import { GIVEN_PAGE_SIZE, listGivenRatings } from '../../api/workhost'
 import { t } from '../../i18n'
+import { portalPath } from '../config'
+import { term } from '../../terminology/terms'
 import { formatDate } from '../../shared/dates'
 import { Pager, QueryBoundary } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
@@ -33,7 +35,9 @@ export default function GivenRatingsPage() {
                 {data.items.map((item) => (
                   <li key={item.id} className="card">
                     <h2>
-                      <Link to={`/workhost/freelancers/${item.freelancer_id}`}>
+                      <Link
+                        to={portalPath('workhost', term('freelancers_path'), item.freelancer_id)}
+                      >
                         {item.freelancer_name ?? t('search.noName')}
                       </Link>
                     </h2>
