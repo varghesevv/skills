@@ -79,6 +79,24 @@ services:
       db:
         condition: service_healthy
 
+  # One-off operator commands (seed data, create an admin). Not started by `up`; run with
+  #   docker compose --env-file .env -f compose.demo.yml run --rm tools python -m app.cli ...
+  # Only this service receives DEMO_USER_PASSWORD, so the long-running containers never have it.
+  tools:
+    image: ghcr.io/${GHCR_OWNER:?missing in .env}/skills-api:${IMAGE_TAG:?missing in .env}
+    profiles: ["tools"]
+    logging: *logging
+    environment:
+      <<: *backend-env
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
+    healthcheck:
+      disable: true
+    volumes:
+      - /opt/skills/data/reports:/data/reports
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
