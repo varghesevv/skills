@@ -202,3 +202,14 @@ Build the demo so production is a configuration change, not a rewrite:
 - Caddy serves HTTP/1.1 and HTTP/2 only, so no UDP port is needed. A Content-Security-Policy header is left for phase 8.
 - `deploy.sh` reads `.env` without sourcing it, and the backup and restore scripts take only the settings they need. AWS keys stay out of the containers.
 - Server settings the application needs are checked in CI: `ci-infra.yml` fails if a variable in `.env.example` is missing from `demo.env.example`.
+
+## Implementation notes (phase 7b-2: Terraform)
+
+- Layout: `infra/terraform/bootstrap` (run once by hand, local state), `modules/lightsail_host`, `modules/backup_bucket`, `envs/demo`. See `infra/README.md` for the runbook (`make tf-*` calls the locally installed `terraform`).
+- Facts of the adopted instance (checked 2026-10-22): name `skills`, zone `ap-south-1a`, `ubuntu_24_04`, bundle `small_3_1`, key pair `skills-demo`, `dualstack`, no static IP, ports 22 and 80 open to the world, no snapshot add-on. These are the defaults in `envs/demo/variables.tf`; the first `plan` imports the instance through `imports.tf` and must show no replacement.
+- Attaching a static IP gives the instance a new public address (a dynamic address cannot be converted). DNS follows through the Route 53 record.
+- The key pair is referenced by name and not managed, so no private key reaches Terraform state. The backup IAM user is managed but its access key is created by hand (secret out of state).
+- Firewall: 80 and 443 open; 22 open only to `ssh_allowed_cidrs` and, by default, the Lightsail console's browser SSH (`lightsail-connect`) as an emergency way in. Deploys open 22 for the runner address and close it again (phase 7b-3).
+- The state bucket name contains the AWS account id and is passed to `envs/demo` through `backend.hcl` or `-backend-config`, as a backend block cannot use variables.
+- `ci-infra.yml`: `fmt`, `validate`, `tflint` (core rules) and `trivy config` always run; the plan comment runs only once `AWS_TERRAFORM_ROLE_ARN` is set as a repository variable. The AWS provider is pinned to `~> 6.0`.
+- Not built yet: Lightsail alarms and the external uptime check (section 9).

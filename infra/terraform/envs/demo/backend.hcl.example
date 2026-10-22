@@ -1,0 +1,2 @@
+# Copy to backend.hcl (git-ignored). The value is the `state_bucket` output of the bootstrap.
+bucket = "skills-terraform-state-<aws-account-id>"

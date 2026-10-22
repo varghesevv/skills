@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (git-ignored). Only values that differ from the defaults in
+# variables.tf are needed. Nothing here is secret, but it is personal (your own address).
+
+# Your public address, so you can SSH in for the bootstrap. Find it with: curl -s https://checkip.amazonaws.com
+ssh_allowed_cidrs = ["203.0.113.10/32"]

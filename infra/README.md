@@ -12,7 +12,8 @@ Demo environment on one AWS Lightsail instance. Specification: `docs/specificati
 | `scripts/bootstrap-server.sh` | One-time server setup over SSH (Docker, `deploy` user, folders, backup timer) | phase 7b-1 |
 | `scripts/deploy.sh` | Pull, back up, migrate, start, wait for healthy | phase 7b-1 |
 | `scripts/backup.sh`, `scripts/restore.sh` | Database backup to S3 and restore | phase 7b-1 |
-| `terraform/` | Lightsail host, static IP, firewall, backup bucket, Route 53 record | phase 7b-2 |
+| `terraform/bootstrap` | Run once by hand: state bucket, GitHub sign-in (OIDC) and the roles `skills-terraform` and `skills-deploy` | phase 7b-2 |
+| `terraform/modules`, `terraform/envs/demo` | Lightsail host (adopted), static IP, firewall, daily snapshots, backup bucket and user, Route 53 record | phase 7b-2 |
 
 ## Setting up the server the first time
 
@@ -50,3 +51,42 @@ To replace the live database after a disaster: `CONFIRM_REPLACE=yes ./restore.sh
 ## Secrets
 
 Nothing secret is stored in this repository. The server's `.env` is written by the deploy workflow from GitHub Environment secrets (ADR-0011). Scripts read only the settings they need and never print them.
+
+## Terraform: first-time runbook
+
+You need an AWS CLI profile for an IAM user with administrator rights (not the root user) and Terraform 1.10 or newer on your computer (`brew install hashicorp/tap/terraform`). The `make tf-*` targets just call `terraform -chdir=...`.
+
+```
+export AWS_PROFILE=skills
+make tf-lock                         # once: writes .terraform.lock.hcl; commit the result
+```
+
+1. **Bootstrap** (state bucket, GitHub sign-in, roles). Its own state stays in `terraform/bootstrap/terraform.tfstate` (git-ignored): keep a copy somewhere safe.
+   ```
+   make tf-init  TF_DIR=bootstrap
+   make tf-plan  TF_DIR=bootstrap
+   make tf-apply TF_DIR=bootstrap
+   ```
+   Then set these **repository variables** in GitHub (Settings, Secrets and variables, Actions, Variables), from the outputs: `TF_STATE_BUCKET`, `AWS_TERRAFORM_ROLE_ARN`, `AWS_DEPLOY_ROLE_ARN`. Create the GitHub Environment `demo` (with a required reviewer).
+2. **Demo environment.** Copy `terraform/envs/demo/backend.hcl.example` to `backend.hcl` and `terraform.tfvars.example` to `terraform.tfvars`, and fill them in (your own address for SSH, the state bucket name).
+   ```
+   make tf-init TF_DIR=envs/demo TF_INIT_ARGS=-backend-config=backend.hcl
+   make tf-plan TF_DIR=envs/demo
+   ```
+   Read the plan before applying:
+   - The instance `skills` must show **no replacement** ("must be replaced" would destroy the server). A tag update and the snapshot add-on are expected.
+   - A **new static IP** is created and attached. The instance gets a new public address (the old `13.233.41.127` is released), and the DNS record `skills-demo.privatedir.com` points to the new one.
+   - The firewall opens 443, and port 22 is restricted to your `ssh_allowed_cidrs` plus the Lightsail console's browser SSH. Make sure your address is in `terraform.tfvars` first, or you lose SSH from your computer (the browser SSH still works).
+   ```
+   make tf-apply TF_DIR=envs/demo
+   ```
+3. **Backup user key.** Terraform creates the IAM user `skills-demo-backup` but not its access key, so that the secret never enters Terraform state. Create the key in the console (IAM, Users, Security credentials) and store it in the GitHub Environment `demo` secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. Set the variable `BACKUP_BUCKET` from the `backup_bucket` output.
+4. **Server bootstrap** over SSH, using the new static IP (see "Setting up the server the first time" above).
+
+After this, pull requests that touch `infra/` get a plan as a comment, and `terraform-apply` (phase 7b-3) applies it after approval.
+
+## Notes
+
+- The Lightsail key pair `skills-demo` was created by hand and is only referenced by name, so its private key is never in Terraform state.
+- `prevent_destroy` protects the backup and state buckets. To remove them on purpose, delete that line first.
+- Trivy findings that are accepted on purpose go in `terraform/.trivyignore`, with a reason.
