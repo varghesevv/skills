@@ -597,7 +597,8 @@ fieldset legend {
 .period-dates {
   margin-bottom: 0.75rem;
 }
-input[type='datetime-local'] {
+input[type='datetime-local'],
+input[type='date'] {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
