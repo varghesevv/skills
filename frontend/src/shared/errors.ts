@@ -26,6 +26,19 @@ export function errorMessage(error: unknown): string {
         return t('error.unavailable')
       case 'validation_error':
         return t('error.fixFields')
+      case 'unavailability_overlaps':
+        return t('error.overlap')
+      case 'unknown_label':
+      case 'invalid_level':
+      case 'duplicate_label':
+      case 'level_not_selectable':
+        return t('error.labelProblem')
+      case 'not_found':
+        return t('error.notFound')
+      case 'vouch_not_pending':
+        return t('error.vouchDecided')
+      case 'forbidden':
+        return t('error.forbidden')
     }
   }
   return t('error.generic')

@@ -54,6 +54,36 @@ export const organisationRegisterSchema = z.object({
   org_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
 })
 
+export const freelancerProfileSchema = z
+  .object({
+    full_name: fullName,
+    mobile_number: mobile,
+    whatsapp_availability: z.boolean(),
+    nationality: optionalText,
+    primary_language: optionalText,
+    // Up to 8 digits and 2 decimals, as the API stores numeric(10,2). Empty means no rate.
+    rate_per_hour: z
+      .string()
+      .trim()
+      .regex(/^(\d{1,8}(\.\d{1,2})?)?$/, 'validation.rate'),
+    // Three capital letters (ISO 4217). Typed in any case and corrected here.
+    rate_currency: z
+      .string()
+      .trim()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.string().regex(/^([A-Z]{3})?$/, 'validation.currency')),
+    is_rate_negotiable: z.boolean(),
+  })
+  .superRefine((value, context) => {
+    if ((value.rate_per_hour === '') !== (value.rate_currency === '')) {
+      context.addIssue({
+        code: 'custom',
+        path: [value.rate_per_hour === '' ? 'rate_per_hour' : 'rate_currency'],
+        message: 'validation.rateTogether',
+      })
+    }
+  })
+
 export const forgotPasswordSchema = z.object({ email, user_type: userType })
 
 export const resetPasswordSchema = z.object({ new_password: newPassword })

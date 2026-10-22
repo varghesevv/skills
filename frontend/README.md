@@ -12,16 +12,16 @@ On the Pi (no Node needed): `make pi-test-web`, `make pi-format-web`, and `make 
 
 ## Layout of `src/`
 
-| Folder              | Contents                                                                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api/`              | `http.ts` (fetch wrapper: bearer token, one shared silent refresh on 401, `ApiError`), `auth.ts` (auth endpoints), `types.ts`               |
-| `auth/`             | `tokenStore.ts` (access token in memory, refresh token in `sessionStorage`), `AuthContext.tsx`, `guards.tsx` (`RequireAuth`, `RequireRole`) |
-| `portals/`          | `config.ts`: each portal's path, role name and navigation. New portal pages are added here and in `App.tsx`                                 |
-| `shell/`            | `PublicLayout` (visitors) and `AppShell` (signed in: top bar, navigation drawer below 1024 px, side column from 1024 px)                    |
-| `pages/`            | Landing, login, register, forgot and reset password, dashboard, not found                                                                   |
-| `shared/`           | form components (`ui.tsx`), zod schemas (`validation.ts`), error messages (`errors.ts`)                                                     |
-| `i18n/`             | all user-visible text, so more languages can be added (Q9)                                                                                  |
-| `styles/global.css` | design tokens, light and dark themes, mobile-first layout, breakpoints 640 px and 1024 px                                                   |
+| Folder              | Contents                                                                                                                                                                                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/`              | `http.ts` (fetch wrapper: bearer token, one shared silent refresh on 401, `ApiError`), `auth.ts` (auth endpoints), `types.ts`                                                                                                                                  |
+| `auth/`             | `tokenStore.ts` (access token in memory, refresh token in `sessionStorage`), `AuthContext.tsx`, `guards.tsx` (`RequireAuth`, `RequireRole`)                                                                                                                    |
+| `portals/`          | `config.ts`: each portal's path, role name and navigation. `portals/freelancer/`: profile, skills and labels, availability (list and month calendar), ratings and vouches, plus `routes.tsx`. New portals follow the same pattern and are mounted in `App.tsx` |
+| `shell/`            | `PublicLayout` (visitors) and `AppShell` (signed in: top bar, navigation drawer below 1024 px, side column from 1024 px)                                                                                                                                       |
+| `pages/`            | Landing, login, register, forgot and reset password, dashboard, not found                                                                                                                                                                                      |
+| `shared/`           | form components (`ui.tsx`), zod schemas (`validation.ts`), error messages (`errors.ts`)                                                                                                                                                                        |
+| `i18n/`             | all user-visible text, so more languages can be added (Q9)                                                                                                                                                                                                     |
+| `styles/global.css` | design tokens, light and dark themes, mobile-first layout, breakpoints 640 px and 1024 px                                                                                                                                                                      |
 
 ## Rules for new pages
 
@@ -34,5 +34,5 @@ On the Pi (no Node needed): `make pi-test-web`, `make pi-format-web`, and `make 
 
 ## Known gaps (planned)
 
-- The API client is written by hand for the auth endpoints. Generating types from the backend OpenAPI schema (`openapi.json` from `ci-backend`) is planned before the portal pages are added.
+- The API client and its types are written by hand (auth and freelancer endpoints). Generating types from the backend OpenAPI schema (`openapi.json` from `ci-backend`) is planned as a separate change, once more portals exist, because it needs new build tooling that has to be tested on the Pi.
 - Browser tests at the five reference viewports (Playwright) are added once there are enough pages to check.

@@ -2,24 +2,22 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { getRefreshToken, setTokens } from './auth/tokenStore'
-import { PASSWORD, apiError, json, makeMe, mockApi, renderApp, tokens } from './testUtils'
-
-const OLD_REFRESH = 'refresh-old'
+import { getRefreshToken } from './auth/tokenStore'
+import {
+  OLD_REFRESH,
+  PASSWORD,
+  apiError,
+  json,
+  makeMe,
+  mockApi,
+  renderApp,
+  signedInAs,
+  tokens,
+} from './testUtils'
 
 async function fillLogin(user: ReturnType<typeof userEvent.setup>, email = 'f@example.com') {
   await user.type(screen.getByLabelText('Email'), email)
   await user.type(screen.getByLabelText('Password'), PASSWORD)
-}
-
-/** A returning visitor: a refresh token is stored, so the app restores the session. */
-function signedInAs(me = makeMe()) {
-  setTokens('gone', OLD_REFRESH)
-  return mockApi({
-    'POST /auth/refresh': () => json(200, tokens('2')),
-    'GET /me': () => json(200, me),
-    'POST /auth/logout': () => json(204),
-  })
 }
 
 describe('public pages', () => {

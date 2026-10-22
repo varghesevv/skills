@@ -1,6 +1,8 @@
+import type { UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
 
 import { t } from '../i18n'
+import { errorMessage } from './errors'
 
 type FieldShared = {
   label: string
@@ -13,7 +15,8 @@ type FieldShared = {
 }
 
 type TextFieldProps = FieldShared & {
-  type?: 'text' | 'email' | 'tel' | 'password'
+  type?: 'text' | 'email' | 'tel' | 'password' | 'datetime-local'
+  list?: string
   autoComplete?: string
   inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']
   maxLength?: number
@@ -42,6 +45,7 @@ export function TextField(props: TextFieldProps) {
           autoComplete={props.autoComplete}
           inputMode={props.inputMode}
           maxLength={props.maxLength}
+          list={props.list}
           aria-invalid={props.error ? true : undefined}
           aria-describedby={describedBy(props.hint && hintId, props.error && errorId)}
         />
@@ -166,4 +170,78 @@ export function LoadingScreen() {
       {t('loading')}
     </div>
   )
+}
+
+/** Loading, error (with retry) and then the content, for a page that depends on one query. */
+export function QueryBoundary<T>({
+  query,
+  children,
+}: {
+  query: UseQueryResult<T>
+  children: (data: T) => ReactNode
+}) {
+  if (query.isPending) {
+    return (
+      <p role="status" className="muted">
+        {t('loading')}
+      </p>
+    )
+  }
+  if (query.isError) {
+    return (
+      <Alert kind="error">
+        <p>{errorMessage(query.error)}</p>
+        <button type="button" className="btn btn-quiet" onClick={() => void query.refetch()}>
+          {t('common.retry')}
+        </button>
+      </Alert>
+    )
+  }
+  return <>{children(query.data)}</>
+}
+
+export function Pager({
+  page,
+  pageSize,
+  total,
+  onChange,
+}: {
+  page: number
+  pageSize: number
+  total: number
+  onChange: (page: number) => void
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  if (pages <= 1) return null
+  return (
+    <nav className="pager" aria-label={t('common.page', { page, pages })}>
+      <button
+        type="button"
+        className="btn btn-quiet"
+        disabled={page <= 1}
+        onClick={() => onChange(page - 1)}
+      >
+        {t('common.previous')}
+      </button>
+      <span aria-live="polite">{t('common.page', { page, pages })}</span>
+      <button
+        type="button"
+        className="btn btn-quiet"
+        disabled={page >= pages}
+        onClick={() => onChange(page + 1)}
+      >
+        {t('common.next')}
+      </button>
+    </nav>
+  )
+}
+
+export function Badge({
+  tone,
+  children,
+}: {
+  tone: 'neutral' | 'good' | 'warn'
+  children: ReactNode
+}) {
+  return <span className={`badge badge-${tone}`}>{children}</span>
 }

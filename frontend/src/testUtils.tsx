@@ -5,6 +5,7 @@ import { vi } from 'vitest'
 
 import type { Me } from './api/types'
 import App from './App'
+import { setTokens } from './auth/tokenStore'
 
 // Passwords used in tests are generated, never written into the source.
 export const PASSWORD = `pw-${Math.random().toString(36).slice(2).padEnd(12, 'x')}`
@@ -76,4 +77,17 @@ export function renderApp(route = '/') {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+}
+
+export const OLD_REFRESH = 'refresh-old'
+
+/** A returning visitor: a refresh token is stored, so the app restores the session. */
+export function signedInAs(me: Me = makeMe(), routes: Record<string, Handler> = {}) {
+  setTokens('gone', OLD_REFRESH)
+  return mockApi({
+    'POST /auth/refresh': () => json(200, tokens('2')),
+    'GET /me': () => json(200, me),
+    'POST /auth/logout': () => json(204),
+    ...routes,
+  })
 }

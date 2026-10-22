@@ -475,6 +475,174 @@ select[aria-invalid='true'] {
   font-weight: 600;
 }
 
+/* ---------- Portal pages ---------- */
+
+.muted {
+  color: var(--muted);
+}
+.stack {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.btn-danger {
+  background: var(--danger);
+  color: var(--surface);
+}
+.btn-danger:hover {
+  background: var(--danger);
+  color: var(--surface);
+  filter: brightness(0.92);
+}
+.shortcut {
+  display: block;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ink);
+}
+.shortcut:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.shortcuts {
+  margin-top: 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid currentColor;
+}
+.badge-good {
+  color: var(--success);
+  background: var(--success-bg);
+}
+.badge-warn {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.badge-neutral {
+  color: var(--muted);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+fieldset.card {
+  margin: 0;
+  min-width: 0;
+}
+fieldset legend {
+  padding: 0 0.5rem;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+.check-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: 1fr;
+}
+.check-item {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.check-item select {
+  margin-inline-start: 2.75rem;
+  width: calc(100% - 2.75rem);
+}
+
+.vouch-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.vouch-head h2 {
+  margin: 0;
+}
+.rating-score {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.period-dates {
+  margin-bottom: 0.75rem;
+}
+input[type='datetime-local'] {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+/* Calendar: hidden on phones, where the list of periods is the interface. */
+.calendar {
+  display: none;
+}
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.calendar-head h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+.calendar table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.calendar th {
+  font-size: 0.875rem;
+  color: var(--muted);
+  padding: 0.25rem;
+}
+.calendar td {
+  height: 2.75rem;
+  text-align: center;
+  border: 1px solid var(--line);
+}
+.calendar .is-off {
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-weight: 700;
+}
+.calendar .calendar-blank {
+  border-color: transparent;
+}
+
 /* ---------- Tablet: 640px and up ---------- */
 
 @media (min-width: 640px) {
@@ -496,6 +664,12 @@ select[aria-invalid='true'] {
   .card {
     padding: 1.5rem;
   }
+  .check-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .calendar {
+    display: block;
+  }
 }
 
 /* ---------- Desktop: 1024px and up ---------- */
@@ -506,6 +680,15 @@ select[aria-invalid='true'] {
   }
   .facts {
     grid-template-columns: repeat(4, 1fr);
+  }
+  .check-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .availability-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
   }
 
   .menu-button,
