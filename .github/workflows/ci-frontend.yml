@@ -36,3 +36,35 @@ jobs:
       - run: npm run build
       - name: Audit (high severity and above)
         run: npm audit --audit-level=high
+
+  # Responsive layout checks (docs/specification/06-frontend.md, acceptance criterion 4).
+  # Runs in a real browser on a GitHub-hosted runner: the browser needs system libraries that
+  # the self-hosted runners do not have, and the checks use a mocked API, so no secrets or
+  # database are involved.
+  responsive:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Check the layout at the five reference viewports
+        run: npx playwright test
+        env:
+          CI: "true"
+      - name: Keep the screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 14

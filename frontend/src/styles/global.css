@@ -329,6 +329,7 @@ main:focus {
 }
 
 .card {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -484,6 +485,9 @@ textarea[aria-invalid='true'] {
 }
 .stack {
   display: grid;
+  /* minmax(0, ...) lets wide content (a report table) shrink to the page and scroll inside
+     its own container, instead of stretching the whole column. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-content: start;
 }
@@ -593,7 +597,8 @@ fieldset legend {
 .period-dates {
   margin-bottom: 0.75rem;
 }
-input[type='datetime-local'] {
+input[type='datetime-local'],
+input[type='date'] {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;

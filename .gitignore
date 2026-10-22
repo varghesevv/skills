@@ -230,3 +230,7 @@ frontend/dist/
 .terraform.lock.hcl.bak
 reports_output/
 pgdata/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
