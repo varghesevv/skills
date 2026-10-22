@@ -18,7 +18,14 @@ export const PORTALS: readonly Portal[] = [
     path: '/freelancer',
     roleKey: 'role.freelancer',
     leadKey: 'dashboard.lead.freelancer',
-    nav: [{ to: '/freelancer', labelKey: 'nav.dashboard', end: true }],
+    nav: [
+      { to: '/freelancer', labelKey: 'nav.dashboard', end: true },
+      { to: '/freelancer/profile', labelKey: 'nav.profile' },
+      { to: '/freelancer/labels', labelKey: 'nav.labels' },
+      { to: '/freelancer/availability', labelKey: 'nav.availability' },
+      { to: '/freelancer/ratings', labelKey: 'nav.ratings' },
+      { to: '/freelancer/vouches', labelKey: 'nav.vouches' },
+    ],
   },
   {
     userType: 'workhost',

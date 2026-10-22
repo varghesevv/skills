@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { useUser } from '../auth/AuthContext'
 import { t } from '../i18n'
 import { portalFor } from '../portals/config'
@@ -7,6 +9,7 @@ export default function Dashboard() {
   const user = useUser()
   const portal = portalFor(user.user_type)
   usePageTitle(t('dashboard.title'))
+  const shortcuts = portal.nav.filter((item) => !item.end)
   const since = new Date(user.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })
   return (
     <>
@@ -39,6 +42,20 @@ export default function Dashboard() {
           </div>
         </dl>
       </section>
+      {shortcuts.length > 0 && (
+        <section aria-labelledby="shortcuts-heading" className="shortcuts">
+          <h2 id="shortcuts-heading">{t('dashboard.shortcuts')}</h2>
+          <ul className="choice-grid">
+            {shortcuts.map((item) => (
+              <li key={item.to}>
+                <Link className="card shortcut" to={item.to}>
+                  {t(item.labelKey)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   )
 }

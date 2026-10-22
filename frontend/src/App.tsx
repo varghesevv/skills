@@ -10,6 +10,7 @@ import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import { PORTALS } from './portals/config'
+import { freelancerRoutes } from './portals/freelancer/routes'
 import AppShell from './shell/AppShell'
 import PublicLayout from './shell/PublicLayout'
 
@@ -35,7 +36,7 @@ export default function App() {
                 element={<RequireRole role={portal.userType} />}
               >
                 <Route index element={<Dashboard />} />
-                {/* Later steps add this portal's pages here. */}
+                {portal.userType === 'freelancer' && freelancerRoutes}
               </Route>
             ))}
           </Route>
