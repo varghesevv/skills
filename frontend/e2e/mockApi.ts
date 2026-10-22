@@ -123,6 +123,9 @@ const REPORT_DATA = {
   ],
 }
 
+// Tokens for the fake API are made up on the spot, never written into the source.
+const fakeToken = () => `t-${Math.random().toString(36).slice(2)}`
+
 function body(route: Route, status: number, data?: unknown) {
   return route.fulfill({
     status,
@@ -144,8 +147,8 @@ export async function mockApi(page: Page, role: Role | null) {
     const method = route.request().method()
     if (method === 'POST' && path === '/auth/refresh') {
       return body(route, 200, {
-        access_token: 'e2e-access',
-        refresh_token: 'e2e-refresh-2',
+        access_token: fakeToken(),
+        refresh_token: fakeToken(),
         token_type: 'bearer', // secret-scan:allow (a label, not a secret)
         expires_in: 900,
       })
