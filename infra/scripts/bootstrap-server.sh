@@ -83,7 +83,8 @@ fi
 install -d -m 750 -o deploy -g deploy /opt/skills
 install -d -m 750 -o deploy -g deploy /opt/skills/data
 install -d -m 700 /opt/skills/data/postgres # the postgres image takes ownership on first start
-install -d -m 750 -o 10001 -g 10001 /opt/skills/data/reports # uid of the app user in the image
+# The app user in the image (uid 10001) writes here; the deploy group may read, so backup.sh works.
+install -d -m 750 -o 10001 -g deploy /opt/skills/data/reports
 
 # ---- unattended security upgrades ----
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'
