@@ -187,7 +187,8 @@ def generate(
     seed: int = 2026,
 ) -> list[CredentialRow]:
     """Create the data set and return one row per account (no passwords inside)."""
-    rng = random.Random(seed)
+    # Not for security: a seeded generator makes the fake data repeatable.
+    rng = random.Random(seed)  # noqa: S311
     now = _utc_now()
     password_hash = hash_password(password)  # hashed once; every demo account shares it
     labels = _labels(db)

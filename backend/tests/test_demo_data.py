@@ -1,3 +1,5 @@
+import secrets
+
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -14,7 +16,7 @@ from app.models import (
 
 pytestmark = pytest.mark.db
 
-PASSWORD = "A-long-demo-password-for-tests-1"
+PASSWORD = secrets.token_urlsafe(24)  # made up per run, never stored
 
 
 def test_generates_requested_numbers_and_unique_logins(session: Session) -> None:
