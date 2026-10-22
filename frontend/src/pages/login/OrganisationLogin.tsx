@@ -18,7 +18,8 @@ export default function OrganisationLogin() {
           {t('login.noAccount')} <Link to="/register/organisation">{t('nav.register')}</Link>
         </p>
         <p className="auth-links">
-          {t('login.otherPeople')} <Link to={loginPath('freelancer')}>{t('login.otherPeopleLink')}</Link>
+          {t('login.otherPeople')}{' '}
+          <Link to={loginPath('freelancer')}>{t('login.otherPeopleLink')}</Link>
         </p>
       </div>
     </div>

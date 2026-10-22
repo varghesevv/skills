@@ -13,7 +13,7 @@ export default function ForgotPassword() {
   usePageTitle(t('forgot.title'))
   const [params] = useSearchParams()
   const typeParam = params.get('type')
-  const [values, setValues] = useState({
+  const [values, setValues] = useState<{ email: string; user_type: string }>({
     email: '',
     user_type: isUserType(typeParam) ? typeParam : 'freelancer',
   })

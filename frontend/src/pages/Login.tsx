@@ -39,7 +39,8 @@ export default function Login({ userType = 'freelancer' }: { userType?: PeopleTy
           {t('login.noAccount')} <Link to={`/register/${userType}`}>{t('nav.register')}</Link>
         </p>
         <p className="auth-links">
-          {t('login.otherOrg')} <Link to={loginPath('organisation')}>{t('login.otherOrgLink')}</Link>
+          {t('login.otherOrg')}{' '}
+          <Link to={loginPath('organisation')}>{t('login.otherOrgLink')}</Link>
           {' · '}
           <Link to={loginPath('admin')}>{t('login.otherAdminLink')}</Link>
         </p>

@@ -36,6 +36,18 @@ docker compose up --build      # db, api (http://localhost:8000/docs), worker, w
 
 Backend and frontend details: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
 
+## Login pages
+
+There are three separate login pages. Each one is for one kind of account, so the page decides which account is used:
+
+| Page | Address | For |
+|---|---|---|
+| Log in | `/login` and `/login/workhost` | Freelancers and work hosts. Two links at the top of the form (**Freelancer**, **Work host**) switch between them. |
+| Organisation log in | `/login/organisation` | Organisations only. A new organisation can log in once an admin has approved it. |
+| Admin log in | `/login/admin` | Administrators only. There is no sign-up; operators create admins. |
+
+Opening a protected address while logged out leads to the matching login page. Old `/login?type=...` links are redirected. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
+
 ## Stack
 
 Python (FastAPI, SQLAlchemy, Alembic), PostgreSQL (only), React + TypeScript, REST API shared by web and a future mobile app. Demo hosting: Docker Compose on one AWS Lightsail instance, provisioned with Terraform, deployed by GitHub Actions (see [infra/README.md](infra/README.md)). See [ADRs](docs/adr/README.md).
