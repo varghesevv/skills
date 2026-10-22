@@ -1,0 +1,6 @@
+# Findings accepted on purpose. Each entry needs a reason.
+
+# AVD-AWS-0132: S3 buckets use S3-managed encryption (SSE-S3, AES-256) instead of a customer
+# managed KMS key. The demo holds fake data only; a KMS key adds a monthly cost and extra
+# permissions for the backup user. Revisit with the production ADR (section 12 of the spec).
+AVD-AWS-0132

@@ -44,3 +44,78 @@ jobs:
         run: |
           docker run --rm -e SITE_ADDRESS=example.test -v "$PWD/infra/docker/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Format
+        run: terraform fmt -check -recursive -diff infra/terraform
+
+      - name: Validate (no AWS access needed)
+        run: |
+          for dir in infra/terraform/bootstrap infra/terraform/envs/demo; do
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+          done
+
+      - uses: terraform-linters/setup-tflint@v4
+      - name: tflint
+        run: tflint --recursive --config "$GITHUB_WORKSPACE/infra/terraform/.tflint.hcl"
+
+      - name: Security scan of the Terraform (trivy config)
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:0.58.1 \
+            config --severity HIGH,CRITICAL --exit-code 1 --ignorefile infra/terraform/.trivyignore \
+            infra/terraform
+
+  # Shows what a pull request would change in AWS. It runs only once the bootstrap exists and
+  # the repository variables below are set, so the checks above work before that.
+  plan:
+    needs: terraform
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.AWS_TERRAFORM_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ap-south-1
+      - name: Plan
+        id: plan
+        working-directory: infra/terraform/envs/demo
+        shell: bash # with pipefail, so a failed plan fails the step even though it is piped to tee
+        env:
+          TF_VAR_ssh_allowed_cidrs: ${{ vars.TF_SSH_ALLOWED_CIDRS }}
+        run: |
+          terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          terraform plan -input=false -no-color -lock-timeout=60s | tee plan.txt
+      - name: Comment the plan on the pull request
+        if: always() && steps.plan.outcome != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const file = 'infra/terraform/envs/demo/plan.txt';
+            let text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : 'The plan did not run.';
+            if (text.length > 60000) text = text.slice(0, 60000) + '\n... (cut)';
+            const body = '### Terraform plan (envs/demo)\n```\n' + text + '\n```';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, body,
+            });

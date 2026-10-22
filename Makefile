@@ -16,7 +16,8 @@ PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf 
 .PHONY: help env check-secrets install-hooks up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
 	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-format pi-shell \
-	pi-lock pi-migrate pi-seed-demo pi-create-admin
+	pi-lock pi-migrate pi-seed-demo pi-create-admin \
+	tf-fmt tf-validate tf-lock tf-init tf-plan tf-apply
 
 help: ## Show this help
 	awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -122,3 +123,22 @@ pi-create-admin: ## Create an admin on the Pi: make pi-create-admin EMAIL=you@ex
 	ssh -t $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli create-admin --email "$(EMAIL)" --mobile "$(MOBILE)"'
 pi-shell: ## Open a shell in the project folder on the Pi
 	ssh -t $(PI_HOST) 'cd $(PI_DIR) && exec $$SHELL -l'
+
+## ---- Terraform (needs terraform installed: brew install hashicorp/tap/terraform) ----
+# Pick the stack with TF_DIR (bootstrap or envs/demo) and the AWS CLI profile with AWS_PROFILE.
+TF_DIR ?= envs/demo
+TF_ROOT := infra/terraform
+TF_PLATFORMS := -platform=linux_amd64 -platform=linux_arm64 -platform=darwin_arm64 -platform=darwin_amd64
+
+tf-fmt: ## Format all Terraform files
+	terraform -chdir=$(TF_ROOT) fmt -recursive
+tf-validate: ## Check both stacks without touching AWS
+	for dir in bootstrap envs/demo; do terraform -chdir=$(TF_ROOT)/$$dir init -backend=false -input=false >/dev/null && terraform -chdir=$(TF_ROOT)/$$dir validate || exit 1; done
+tf-lock: ## Write .terraform.lock.hcl for Linux (CI) and macOS, for both stacks
+	for dir in bootstrap envs/demo; do terraform -chdir=$(TF_ROOT)/$$dir init -backend=false -input=false >/dev/null && terraform -chdir=$(TF_ROOT)/$$dir providers lock $(TF_PLATFORMS) || exit 1; done
+tf-init: ## terraform init (TF_DIR=bootstrap, or envs/demo with TF_INIT_ARGS=-backend-config=backend.hcl)
+	terraform -chdir=$(TF_ROOT)/$(TF_DIR) init $(TF_INIT_ARGS)
+tf-plan: ## terraform plan for TF_DIR
+	terraform -chdir=$(TF_ROOT)/$(TF_DIR) plan
+tf-apply: ## terraform apply for TF_DIR (asks for confirmation)
+	terraform -chdir=$(TF_ROOT)/$(TF_DIR) apply
