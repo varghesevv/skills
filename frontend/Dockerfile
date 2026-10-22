@@ -3,7 +3,9 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
-RUN npm run build
+# The build version (set by the build-images workflow), served as /version.txt.
+ARG APP_VERSION=dev
+RUN npm run build && echo "$APP_VERSION" > dist/version.txt
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 # The base image lags behind Alpine security fixes; pull them in, then drop root again.

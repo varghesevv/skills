@@ -13,7 +13,7 @@ Several people will work on this project. These rules keep the work consistent.
 - Branch from `main`: `feature/<short-name>`, `fix/<short-name>`, `docs/<short-name>`.
 - Keep pull requests small and focused. Link the issue and the specification section.
 - At least one reviewer approves before merge. Do not merge your own PR.
-- Squash-merge with a clear message. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
+- Squash-merge with a clear message. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, `test:`). The PR title becomes the commit message and decides the next version, so the `pr-title` check must pass. See [docs/releasing.md](docs/releasing.md).
 
 ## Changing the specification or architecture
 

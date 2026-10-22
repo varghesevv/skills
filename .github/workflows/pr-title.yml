@@ -1,0 +1,35 @@
+name: pr-title
+
+# Pull requests are squash-merged, so the PR title becomes the commit message on main and
+# decides the next version. It must follow Conventional Commits, for example
+# "feat: add rating comments" or "fix(api): reject empty labels".
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            docs
+            style
+            refactor
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: The subject "{subject}" must start with a lowercase letter.

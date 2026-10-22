@@ -13,6 +13,9 @@ RUN useradd --system --uid 10001 --home /app skills \
 COPY --from=deps /app/.venv /app/.venv
 COPY . .
 ENV PATH="/app/.venv/bin:$PATH"
+# The build version (set by the build-images workflow); shown by /health and in the API docs.
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 USER skills
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=3s --retries=5 \

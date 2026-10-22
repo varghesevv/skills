@@ -1,0 +1,33 @@
+name: release
+
+# Keeps one open "release PR" that bumps the version and the changelog from the Conventional
+# Commit titles merged to main (feat: minor, fix: patch, feat!: or BREAKING CHANGE: major;
+# while the version is below 1.0 a breaking change bumps the minor). Merging that PR creates
+# the vX.Y.Z tag and the GitHub Release. The release commit then builds images tagged with the
+# same version (build-images).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # A pull request opened with the default GITHUB_TOKEN does not start the other workflows,
+      # so the release PR would never get its checks. If the secret RELEASE_PLEASE_TOKEN (a
+      # fine-grained personal access token with Contents and Pull requests write) exists, it is
+      # used instead. See docs/releasing.md.
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
