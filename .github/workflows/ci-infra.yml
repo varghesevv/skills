@@ -2,7 +2,6 @@ name: ci-infra
 
 on:
   pull_request:
-    paths: ["infra/**", ".github/workflows/ci-infra.yml"]
   push:
     branches: [main]
     paths: ["infra/**", ".github/workflows/ci-infra.yml"]
@@ -16,6 +15,7 @@ concurrency:
 
 jobs:
   server-files:
+    name: infra-files
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -46,6 +46,7 @@ jobs:
             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 
   terraform:
+    name: infra-terraform
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -76,6 +77,7 @@ jobs:
   # Shows what a pull request would change in AWS. It runs only once the bootstrap exists and
   # the repository variables below are set, so the checks above work before that.
   plan:
+    name: infra-plan
     needs: terraform
     if: >-
       github.event_name == 'pull_request' &&

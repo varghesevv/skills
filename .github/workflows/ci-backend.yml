@@ -2,7 +2,6 @@ name: ci-backend
 
 on:
   pull_request:
-    paths: ["backend/**", ".github/workflows/ci-backend.yml"]
   push:
     branches: [main]
     paths: ["backend/**", ".github/workflows/ci-backend.yml"]
@@ -16,6 +15,7 @@ concurrency:
 
 jobs:
   test:
+    name: backend-test
     runs-on: [self-hosted, pi]
     # Runs on the Raspberry Pi. Never run code from fork pull requests on it.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -46,6 +46,8 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - name: Require the CI_DB_PASSWORD repository secret
+        # Runs before checkout, so the job's default folder (backend) does not exist yet on a fresh runner.
+        working-directory: .
         env:
           CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
         run: |
@@ -84,6 +86,7 @@ jobs:
           path: backend/openapi.json
 
   audit:
+    name: backend-audit
     runs-on: ubuntu-latest
     defaults:
       run:
