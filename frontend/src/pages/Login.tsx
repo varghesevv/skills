@@ -1,118 +1,47 @@
-import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 
-import type { UserType } from '../api/types'
-import { useAuth } from '../auth/AuthContext'
 import { t } from '../i18n'
-import { landingTarget } from '../portals/config'
-import { errorMessage } from '../shared/errors'
-import { Alert, PasswordField, SelectField, TextField } from '../shared/ui'
+import { loginPath } from '../portals/config'
 import { usePageTitle } from '../shared/usePageTitle'
-import { loginSchema, validate, type FieldErrors } from '../shared/validation'
+import LoginForm from './login/LoginForm'
+import { isUserType } from './userTypes'
 
-export const USER_TYPE_OPTIONS = [
-  { value: 'freelancer', label: t('role.freelancer') },
-  { value: 'workhost', label: t('role.workhost') },
-  { value: 'organisation', label: t('role.organisation') },
-  { value: 'admin', label: t('role.admin') },
-] as const
+type PeopleType = 'freelancer' | 'workhost'
 
-export function isUserType(value: string | null): value is UserType {
-  return USER_TYPE_OPTIONS.some((option) => option.value === value)
-}
+const PEOPLE: readonly PeopleType[] = ['freelancer', 'workhost']
 
-export default function Login() {
+/** Log in for freelancers and work hosts. Organisations and admins have their own pages. */
+export default function Login({ userType = 'freelancer' }: { userType?: PeopleType }) {
   usePageTitle(t('login.title'))
-  const { user, signIn } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
   const [params] = useSearchParams()
-  const from = (location.state as { from?: unknown } | null)?.from
-  const typeParam = params.get('type')
-
-  const [values, setValues] = useState({
-    email: '',
-    password: '',
-    user_type: isUserType(typeParam) ? typeParam : 'freelancer',
-  })
-  const [errors, setErrors] = useState<FieldErrors>({})
-  const [formError, setFormError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  if (user) return <Navigate to={landingTarget(user.user_type, from)} replace />
-
-  function set(name: keyof typeof values, value: string) {
-    setValues((current) => ({ ...current, [name]: value }))
-  }
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    setFormError(null)
-    const result = validate(loginSchema, values)
-    if (!result.ok) {
-      setErrors(result.errors)
-      return
-    }
-    setErrors({})
-    setBusy(true)
-    try {
-      const me = await signIn(result.data)
-      navigate(landingTarget(me.user_type, from), { replace: true })
-    } catch (error) {
-      setFormError(errorMessage(error))
-    } finally {
-      setBusy(false)
-    }
+  const legacy = params.get('type') // older links looked like /login?type=organisation
+  if (isUserType(legacy) && legacy !== userType) {
+    return <Navigate to={loginPath(legacy)} replace />
   }
 
   return (
     <div className="container">
       <div className="card auth-card">
         <h1>{t('login.title')}</h1>
-        <form onSubmit={onSubmit} noValidate className="form-grid">
-          {formError && (
-            <Alert kind="error" focus>
-              {formError}
-            </Alert>
-          )}
-          <SelectField
-            className="span-2"
-            label={t('field.userType')}
-            name="user_type"
-            value={values.user_type}
-            onChange={(value) => set('user_type', value)}
-            options={USER_TYPE_OPTIONS}
-            error={errors.user_type}
-          />
-          <TextField
-            className="span-2"
-            label={t('field.email')}
-            name="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            value={values.email}
-            onChange={(value) => set('email', value)}
-            error={errors.email}
-          />
-          <PasswordField
-            className="span-2"
-            label={t('field.password')}
-            name="password"
-            autoComplete="current-password"
-            value={values.password}
-            onChange={(value) => set('password', value)}
-            error={errors.password}
-          />
-          <button type="submit" className="btn btn-primary span-2" disabled={busy}>
-            {busy ? t('login.working') : t('login.submit')}
-          </button>
-        </form>
+        <nav className="segmented" aria-label={t('login.switch')}>
+          {PEOPLE.map((type) => (
+            <Link
+              key={type}
+              to={loginPath(type)}
+              aria-current={type === userType ? 'page' : undefined}
+            >
+              {t(`role.${type}`)}
+            </Link>
+          ))}
+        </nav>
+        <LoginForm userType={userType} />
         <p>
-          <Link to="/forgot-password">{t('login.forgot')}</Link>
+          {t('login.noAccount')} <Link to={`/register/${userType}`}>{t('nav.register')}</Link>
         </p>
-        <p>
-          {t('login.noAccount')} <Link to="/register">{t('nav.register')}</Link>
+        <p className="auth-links">
+          {t('login.otherOrg')} <Link to={loginPath('organisation')}>{t('login.otherOrgLink')}</Link>
+          {' · '}
+          <Link to={loginPath('admin')}>{t('login.otherAdminLink')}</Link>
         </p>
       </div>
     </div>

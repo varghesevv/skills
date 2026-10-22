@@ -25,6 +25,30 @@ const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: 'work host login',
+    role: null,
+    path: '/login/workhost',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Log in' })).toBeVisible()
+    },
+  },
+  {
+    name: 'organisation login',
+    role: null,
+    path: '/login/organisation',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Organisation log in' })).toBeVisible()
+    },
+  },
+  {
+    name: 'admin login',
+    role: null,
+    path: '/login/admin',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Admin log in' })).toBeVisible()
+    },
+  },
+  {
     name: 'register',
     role: null,
     path: '/register/freelancer',

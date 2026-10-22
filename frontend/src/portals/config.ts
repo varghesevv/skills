@@ -84,3 +84,16 @@ export function landingTarget(userType: UserType, from: unknown): string {
   if (typeof from === 'string' && (from === home || from.startsWith(`${home}/`))) return from
   return home
 }
+
+/** The login page of each kind of account. Freelancers have the main /login page. */
+export function loginPath(userType: UserType): string {
+  return userType === 'freelancer' ? '/login' : `/login/${userType}`
+}
+
+/** The login page that fits a protected address, so an admin link leads to the admin login. */
+export function loginPathFor(pathname: string): string {
+  const portal = PORTALS.find(
+    (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
+  )
+  return portal ? loginPath(portal.userType) : '/login'
+}

@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext'
 import { RequireAuth, RequireRole } from './auth/guards'
@@ -6,6 +6,8 @@ import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import AdminLogin from './pages/login/AdminLogin'
+import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
@@ -24,6 +26,10 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route index element={<Landing />} />
           <Route path="login" element={<Login />} />
+          <Route path="login/freelancer" element={<Navigate to="/login" replace />} />
+          <Route path="login/workhost" element={<Login userType="workhost" />} />
+          <Route path="login/organisation" element={<OrganisationLogin />} />
+          <Route path="login/admin" element={<AdminLogin />} />
           <Route path="register" element={<RegisterChoice />} />
           <Route path="register/:type" element={<Register />} />
           <Route path="forgot-password" element={<ForgotPassword />} />

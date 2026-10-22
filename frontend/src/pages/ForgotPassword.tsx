@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { forgotPasswordRequest } from '../api/auth'
 import { t } from '../i18n'
@@ -7,11 +7,16 @@ import { errorMessage } from '../shared/errors'
 import { Alert, SelectField, TextField } from '../shared/ui'
 import { usePageTitle } from '../shared/usePageTitle'
 import { forgotPasswordSchema, validate, type FieldErrors } from '../shared/validation'
-import { USER_TYPE_OPTIONS } from './Login'
+import { USER_TYPE_OPTIONS, isUserType } from './userTypes'
 
 export default function ForgotPassword() {
   usePageTitle(t('forgot.title'))
-  const [values, setValues] = useState({ email: '', user_type: 'freelancer' })
+  const [params] = useSearchParams()
+  const typeParam = params.get('type')
+  const [values, setValues] = useState({
+    email: '',
+    user_type: isUserType(typeParam) ? typeParam : 'freelancer',
+  })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

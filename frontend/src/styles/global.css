@@ -339,6 +339,38 @@ main:focus {
   max-width: 28rem;
   margin-inline: auto;
 }
+.segmented {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  margin-block: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+.segmented a {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+.segmented a:hover {
+  background: var(--surface);
+}
+.segmented a[aria-current='page'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.auth-links {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
 .form-card {
   max-width: 44rem;
   margin-inline: auto;

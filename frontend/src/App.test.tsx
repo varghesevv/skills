@@ -65,19 +65,66 @@ describe('login', () => {
     expect(getRefreshToken()).toBe('refresh-1')
   })
 
-  it('sends the chosen account type', async () => {
+  it('lets work hosts log in from the same page with a link instead of a dropdown', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = mockApi({
+      'POST /auth/login': () => json(200, tokens('1')),
+      'GET /me': () => json(200, makeMe({ user_type: 'workhost', full_name: 'Wael Host' })),
+    })
+    renderApp('/login')
+    expect(screen.queryByLabelText('I am a')).not.toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Log in as' })
+    expect(within(nav).getByRole('link', { name: 'Freelancer' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await user.click(within(nav).getByRole('link', { name: 'Work host' }))
+    expect(within(nav).getByRole('link', { name: 'Work host' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await fillLogin(user, 'w@example.com')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+    expect(await screen.findByRole('heading', { name: 'Welcome, Wael Host' })).toBeVisible()
+    expect(api.last('POST /auth/login')?.body).toMatchObject({ user_type: 'workhost' })
+  })
+
+  it('has an admin page that only logs in admins', async () => {
     const user = userEvent.setup({ delay: null })
     const api = mockApi({
       'POST /auth/login': () => json(200, tokens('1')),
       'GET /me': () =>
         json(200, makeMe({ user_type: 'admin', email: 'a@example.com', full_name: null })),
     })
-    renderApp('/login')
-    await user.selectOptions(screen.getByLabelText('I am a'), 'admin')
+    renderApp('/login/admin')
+    expect(screen.getByRole('heading', { name: 'Admin log in' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Register' })).not.toBeInTheDocument()
     await fillLogin(user, 'a@example.com')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
     expect(await screen.findByRole('heading', { name: 'Welcome, a@example.com' })).toBeVisible()
     expect(api.last('POST /auth/login')?.body).toMatchObject({ user_type: 'admin' })
+  })
+
+  it('has an organisation page that only logs in organisations and links to its sign-up', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = mockApi({ 'POST /auth/login': () => apiError(401, 'invalid_credentials') })
+    renderApp('/login/organisation')
+    expect(screen.getByRole('heading', { name: 'Organisation log in' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('I am a')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Register' })).toHaveAttribute(
+      'href',
+      '/register/organisation',
+    )
+    await fillLogin(user, 'o@example.com')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+    await screen.findByRole('alert')
+    expect(api.last('POST /auth/login')?.body).toMatchObject({ user_type: 'organisation' })
+  })
+
+  it('moves an old /login?type=organisation link to the organisation page', async () => {
+    mockApi({})
+    renderApp('/login?type=organisation')
+    expect(await screen.findByRole('heading', { name: 'Organisation log in' })).toBeInTheDocument()
   })
 
   it('shows one message for a wrong password and stays on the page', async () => {
@@ -93,8 +140,7 @@ describe('login', () => {
   it('explains that an organisation is waiting for approval', async () => {
     const user = userEvent.setup({ delay: null })
     mockApi({ 'POST /auth/login': () => apiError(403, 'organisation_pending') })
-    renderApp('/login?type=organisation')
-    expect(screen.getByLabelText('I am a')).toHaveValue('organisation')
+    renderApp('/login/organisation')
     await fillLogin(user)
     await user.click(screen.getByRole('button', { name: 'Log in' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/waiting for admin approval/)
@@ -141,6 +187,18 @@ describe('protected pages', () => {
     mockApi({})
     renderApp('/freelancer')
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+  })
+
+  it('sends a visitor to the login page that fits the address', async () => {
+    mockApi({})
+    renderApp('/organisation')
+    expect(await screen.findByRole('heading', { name: 'Organisation log in' })).toBeInTheDocument()
+  })
+
+  it('sends a visitor of the admin area to the admin login', async () => {
+    mockApi({})
+    renderApp('/admin/reports')
+    expect(await screen.findByRole('heading', { name: 'Admin log in' })).toBeInTheDocument()
   })
 
   it('sends a person to their own portal when they open another one', async () => {
