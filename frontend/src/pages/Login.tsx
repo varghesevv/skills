@@ -1,7 +1,7 @@
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 
 import { t } from '../i18n'
-import { loginPath } from '../portals/config'
+import { loginPath, registerPath } from '../portals/config'
 import { usePageTitle } from '../shared/usePageTitle'
 import LoginForm from './login/LoginForm'
 import { isUserType } from './userTypes'
@@ -36,7 +36,7 @@ export default function Login({ userType = 'freelancer' }: { userType?: PeopleTy
         </nav>
         <LoginForm userType={userType} />
         <p>
-          {t('login.noAccount')} <Link to={`/register/${userType}`}>{t('nav.register')}</Link>
+          {t('login.noAccount')} <Link to={registerPath(userType)}>{t('nav.register')}</Link>
         </p>
         <p className="auth-links">
           {t('login.otherOrg')}{' '}

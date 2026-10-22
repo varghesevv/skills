@@ -1,0 +1,28 @@
+{
+  "default": {
+    "organisation": "Organisation",
+    "organisations": "Organisations",
+    "organisation_path": "organisation",
+    "organisations_path": "organisations",
+    "workhost": "Work host",
+    "workhosts": "Work hosts",
+    "workhost_path": "workhost",
+    "freelancer": "Freelancer",
+    "freelancers": "Freelancers",
+    "freelancer_path": "freelancer",
+    "freelancers_path": "freelancers"
+  },
+  "church": {
+    "organisation": "Church",
+    "organisations": "Churches",
+    "organisation_path": "church",
+    "organisations_path": "churches",
+    "workhost": "Provider",
+    "workhosts": "Providers",
+    "workhost_path": "provider",
+    "freelancer": "Freelancer",
+    "freelancers": "Freelancers",
+    "freelancer_path": "freelancer",
+    "freelancers_path": "freelancers"
+  }
+}

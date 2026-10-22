@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom'
 import { VOUCHED_PAGE_SIZE, listVouched, revokeVouch, vouchFor } from '../../api/organisation'
 import type { VouchedFreelancer, VouchStatus } from '../../api/types'
 import { t, type StringKey } from '../../i18n'
+import { portalPath } from '../config'
+import { term } from '../../terminology/terms'
 import { formatDate } from '../../shared/dates'
 import { errorMessage } from '../../shared/errors'
 import { Alert, Badge, Pager, QueryBoundary } from '../../shared/ui'
@@ -47,7 +49,9 @@ function Row({ item }: { item: VouchedFreelancer }) {
     <li className="card">
       <div className="vouch-head">
         <h2>
-          <Link to={`/organisation/freelancers/${item.freelancer_id}`}>{name}</Link>
+          <Link to={portalPath('organisation', term('freelancers_path'), item.freelancer_id)}>
+            {name}
+          </Link>
         </h2>
         <Badge tone={STATUS_TONE[item.status]}>{t(STATUS_TEXT[item.status])}</Badge>
       </div>
@@ -111,7 +115,7 @@ export default function VouchedPage() {
       <h1>{t('vouched.title')}</h1>
       <p className="lead">{t('vouched.lead')}</p>
       <p>
-        <Link className="btn btn-primary" to="/organisation/search">
+        <Link className="btn btn-primary" to={portalPath('organisation', 'search')}>
           {t('vouched.add')}
         </Link>
       </p>

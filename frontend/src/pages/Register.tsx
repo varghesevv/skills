@@ -6,7 +6,7 @@ import { registerRequest } from '../api/auth'
 import { ApiError } from '../api/http'
 import type { RegisterResponse, RegisterType } from '../api/types'
 import { t, type StringKey } from '../i18n'
-import { loginPath } from '../portals/config'
+import { loginPath, registerPath } from '../portals/config'
 import { errorMessage, serverFieldErrors } from '../shared/errors'
 import { Alert, CheckboxField, PasswordField, TextField } from '../shared/ui'
 import { usePageTitle } from '../shared/usePageTitle'
@@ -17,6 +17,7 @@ import {
   workhostRegisterSchema,
   type FieldErrors,
 } from '../shared/validation'
+import { userTypeOfSlug } from '../terminology/terms'
 import NotFound from './NotFound'
 
 const REGISTER_TYPES: readonly RegisterType[] = ['freelancer', 'workhost', 'organisation']
@@ -44,7 +45,7 @@ export function RegisterChoice() {
           <li key={type} className="card">
             <h2>{t(`landing.${type}.title`)}</h2>
             <p>{t(`landing.${type}.text`)}</p>
-            <Link className="btn btn-primary" to={`/register/${type}`}>
+            <Link className="btn btn-primary" to={registerPath(type)}>
               {t(`role.${type}`)}
             </Link>
           </li>
@@ -249,7 +250,8 @@ function RegisterForm({ type }: { type: RegisterType }) {
 }
 
 export default function Register() {
-  const { type } = useParams()
-  if (!REGISTER_TYPES.includes(type as RegisterType)) return <NotFound />
-  return <RegisterForm key={type} type={type as RegisterType} />
+  const { type: slug } = useParams()
+  const type = userTypeOfSlug(slug)
+  if (!type) return <NotFound />
+  return <RegisterForm key={type} type={type} />
 }

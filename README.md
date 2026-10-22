@@ -48,6 +48,23 @@ There are three separate login pages. Each one is for one kind of account, so th
 
 Opening a protected address while logged out leads to the matching login page. Old `/login?type=...` links are redirected. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
 
+## Wording and web addresses per installation
+
+The words for the three kinds of people (Organisation, Work host, Freelancer) and the matching web
+addresses are not fixed. Each installation picks a profile from
+[`frontend/src/terminology/profiles.json`](frontend/src/terminology/profiles.json), a plain file of
+key/value pairs. `default` keeps today's words; `church` shows Church / Provider / Freelancer and
+uses `/church`, `/login/church`, `/provider` and so on.
+
+- Demo/production: set the Environment variable `TERMINOLOGY_PROFILE` (for example `church`) and deploy.
+  The web container hands it to the browser as `/config.json`; no rebuild is needed.
+- Local: set `TERMINOLOGY_PROFILE=church` in `.env` and run `make up` again.
+- To add a profile, copy a block in `profiles.json` and change the values; a test checks that every
+  profile has the same keys.
+
+Only what people see changes. API paths, stored `user_type` values, report file names and emails keep
+the original words.
+
 ## Stack
 
 Python (FastAPI, SQLAlchemy, Alembic), PostgreSQL (only), React + TypeScript, REST API shared by web and a future mobile app. Demo hosting: Docker Compose on one AWS Lightsail instance, provisioned with Terraform, deployed by GitHub Actions (see [infra/README.md](infra/README.md)). See [ADRs](docs/adr/README.md).
