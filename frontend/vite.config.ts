@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['./src/setupTests.ts'],
       globals: true,
+      // The Playwright checks in e2e/ run with `npm run e2e`, not here.
+      include: ['src/**/*.{test,spec}.{ts,tsx}'],
       // The first test in a file is slow on a Raspberry Pi (cold start); keep generous headroom.
       testTimeout: 20000,
     },

@@ -70,5 +70,5 @@ Every page, in every portal, works on phones, tablets and desktops. This is a re
 1. No horizontal page scrolling at any width from 320 px up.
 2. Every function in the portals can be completed at 360 px width using touch only.
 3. Layout changes at the breakpoints above, with no overlapping or clipped content.
-4. Each page is checked at all five reference viewports, with automated browser tests (Playwright screenshots and an overflow check) for the shell, login, search, a form page and a report page.
+4. Each page is checked at all five reference viewports, with automated browser tests (Playwright screenshots and an overflow check) for the shell, login, search, a form page and a report page. They live in `frontend/e2e` and run in CI as the `responsive` job.
 5. Pages meet the WCAG 2.1 AA reflow and target-size expectations.

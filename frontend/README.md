@@ -34,5 +34,6 @@ On the Pi (no Node needed): `make pi-test-web`, `make pi-format-web`, and `make 
 
 ## Known gaps (planned)
 
+- Responsive checks: `npm run e2e` builds the app and runs Playwright (Chromium) at the five reference viewports against a mocked API (`e2e/mockApi.ts`), checking for sideways page scroll, controls under 44 px and the navigation layout, and keeping a screenshot of each page. CI runs it as the `responsive` job on a GitHub-hosted runner and uploads the screenshots as the `responsive-report` artifact. To run it locally you need Node 22 and `npx playwright install chromium` once.
 - The API client and its types are written by hand (auth and freelancer endpoints). Generating types from the backend OpenAPI schema (`openapi.json` from `ci-backend`) is planned as a separate change, once more portals exist, because it needs new build tooling that has to be tested on the Pi.
 - Browser tests at the five reference viewports (Playwright) are added once there are enough pages to check.
