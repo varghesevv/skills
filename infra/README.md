@@ -106,3 +106,11 @@ redirect it into a file on the server:
 
 Copy it with `scp`, then delete it from the server. Never commit it. `--reset` removes the
 earlier generated accounts (emails ending `@demo.example.com`) and creates them again.
+
+### Fix for a server bootstrapped before the reports folder was group-readable
+
+If the pre-deploy backup stops with "Skipping file /opt/skills/data/reports/. File/Directory is
+not readable", run this once on the server as `deploy` (no sudo needed, Docker does the change):
+
+    docker run --rm -v /opt/skills/data/reports:/r alpine \
+      sh -c "chgrp -R $(id -g deploy) /r && chmod -R g+rX /r && chmod 750 /r"
