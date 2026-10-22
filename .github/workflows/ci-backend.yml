@@ -46,6 +46,8 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - name: Require the CI_DB_PASSWORD repository secret
+        # Runs before checkout, so the job's default folder (backend) does not exist yet on a fresh runner.
+        working-directory: .
         env:
           CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
         run: |
