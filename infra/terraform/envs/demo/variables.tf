@@ -43,13 +43,13 @@ variable "key_pair_name" {
 
 variable "domain_name" {
   type    = string
-  default = "skills-demo.privatedir.com"
+  default = "skills-demo.privatedir.in"
 }
 
 variable "parent_zone_name" {
   description = "The existing Route 53 zone. It is looked up, never created or destroyed here."
   type        = string
-  default     = "privatedir.com"
+  default     = "privatedir.in"
 }
 
 variable "ssh_allowed_cidrs" {

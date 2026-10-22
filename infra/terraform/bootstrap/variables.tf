@@ -25,7 +25,7 @@ variable "github_repository" {
 variable "parent_zone_name" {
   description = "The existing Route 53 zone the demo record lives in. It is looked up, never created."
   type        = string
-  default     = "privatedir.com"
+  default     = "privatedir.in"
 }
 
 variable "backup_bucket_prefix" {

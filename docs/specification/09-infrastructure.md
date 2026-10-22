@@ -9,8 +9,8 @@ Decision records: [ADR-0008](../adr/0008-aws-lightsail-single-instance-demo-depl
 | Item | Value |
 |---|---|
 | AWS region | `ap-south-1` (Mumbai); Lightsail availability zone `ap-south-1a` |
-| Domain | `skills-demo.privatedir.com` (domain `privatedir.com` is registered in Route 53) |
-| Public URL | `https://skills-demo.privatedir.com` (web at `/`, API at `/api/v1`) |
+| Domain | `skills-demo.privatedir.in` (DNS for `privatedir.in` is hosted in Route 53; the domain must be delegated to that hosted zone's name servers) |
+| Public URL | `https://skills-demo.privatedir.in` (web at `/`, API at `/api/v1`) |
 
 ## 0. Current state (as of 2026-10-20)
 
@@ -96,10 +96,10 @@ docker-compose.yml      # local development (db, api, worker, web)
   - Automatic snapshot add-on enabled on the instance
 - Module `backup_bucket`: `aws_s3_bucket` (private, versioning, encryption, lifecycle expiry 30 days), and an IAM user with a policy limited to that bucket (Lightsail instances cannot use instance roles; the access key is stored only on the server in `/opt/skills/.env`).
 - Outputs: static IP, instance name, disk name, backup bucket name.
-- Variables, not hard-coded values, for region (default `ap-south-1`), bundle size, domain name (`skills-demo.privatedir.com`), parent zone name (`privatedir.com`), SSH key, allowed admin CIDRs (Q13, to be supplied later; empty list means no manual SSH).
+- Variables, not hard-coded values, for region (default `ap-south-1`), bundle size, domain name (`skills-demo.privatedir.in`), parent zone name (`privatedir.in`), SSH key, allowed admin CIDRs (Q13, to be supplied later; empty list means no manual SSH).
 - No secrets in `.tfvars` committed to git. Only `terraform.tfvars.example`.
-- **DNS (Terraform-managed):** look up the existing Route 53 hosted zone with `data "aws_route53_zone"` (name `privatedir.com`; the zone is NOT created or destroyed by this project) and create `aws_route53_record` `skills-demo` (type A, TTL 300) pointing to the Lightsail static IP. The `skills-terraform` role gets `route53:ChangeResourceRecordSets` and `route53:ListResourceRecordSets` limited to that hosted zone, and `route53:GetHostedZone`/`ListHostedZones`.
-- Caddy obtains the Let's Encrypt certificate for `skills-demo.privatedir.com` automatically once the A record resolves (HTTP-01 on port 80, so port 80 must stay open). The domain registration itself must not be managed by Terraform.
+- **DNS (Terraform-managed):** look up the existing Route 53 hosted zone with `data "aws_route53_zone"` (name `privatedir.in`; the zone is NOT created or destroyed by this project) and create `aws_route53_record` `skills-demo` (type A, TTL 300) pointing to the Lightsail static IP. The `skills-terraform` role gets `route53:ChangeResourceRecordSets` and `route53:ListResourceRecordSets` limited to that hosted zone, and `route53:GetHostedZone`/`ListHostedZones`.
+- Caddy obtains the Let's Encrypt certificate for `skills-demo.privatedir.in` automatically once the A record resolves (HTTP-01 on port 80, so port 80 must stay open). The domain registration itself must not be managed by Terraform.
 
 ## 4. Containers
 
@@ -165,7 +165,7 @@ Installs Docker Engine and the Compose plugin, creates user `deploy` (docker gro
 
 ## 10. Security requirements for the environment
 
-- HTTPS only; HTTP redirects to HTTPS (Caddy automatic certificates for `skills-demo.privatedir.com`).
+- HTTPS only; HTTP redirects to HTTPS (Caddy automatic certificates for `skills-demo.privatedir.in`).
 - PostgreSQL not reachable from the internet; strong generated password.
 - SSH: key only, root login disabled, port closed by default (section 7); manual admin access from allowed CIDRs only (Q13, owner will provide the list; until then no manual SSH, deploys use the temporary-IP method).
 - IAM least privilege: the backup user can write only to the backup bucket; the deploy role can only change the instance firewall.
@@ -175,7 +175,7 @@ Installs Docker Engine and the Compose plugin, creates user `deploy` (docker gro
 ## 11. Acceptance criteria
 
 - `terraform apply` from a clean AWS account (after bootstrap) creates the full environment, including the Route 53 record, with no manual console steps.
-- `https://skills-demo.privatedir.com/health` returns OK with a valid certificate.
+- `https://skills-demo.privatedir.in/health` returns OK with a valid certificate.
 - A merge to `main` results in new images in GHCR and, after approval, a deployed demo with passing smoke test.
 - A pull request cannot merge unless its relevant CI workflows pass.
 - Killing the `db` container or rebooting the instance brings the system back with data intact.
@@ -190,7 +190,7 @@ Build the demo so production is a configuration change, not a rewrite:
 - Resource names, state keys, GitHub Environments (`demo`, later `prod`) and secrets are per environment.
 - Production will probably replace single-instance PostgreSQL with a managed database (AWS RDS for PostgreSQL, Multi-AZ optional) and the Lightsail instance with a container service. This is decided by a new ADR before `envs/prod` is built. The application therefore must read only `DATABASE_URL` and keep no assumption that PostgreSQL is a local container.
 - Keep images and migrations environment-independent: the same image tag that passed in demo is promoted to prod.
-- Prepare a production checklist before go-live: separate AWS account or at least separate IAM roles, managed backups with point-in-time recovery, monitoring and alerting, log aggregation, WAF or rate limiting at the edge, domain (for example `skills.privatedir.com`), real SMTP provider, data protection review.
+- Prepare a production checklist before go-live: separate AWS account or at least separate IAM roles, managed backups with point-in-time recovery, monitoring and alerting, log aggregation, WAF or rate limiting at the edge, domain (for example `skills.privatedir.in`), real SMTP provider, data protection review.
 - The demo environment keeps fake data only and may be destroyed when production exists.
 
 ## Implementation notes (phase 7b-1: containers and server scripts)

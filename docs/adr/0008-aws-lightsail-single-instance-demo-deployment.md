@@ -25,4 +25,4 @@ Deploy to **one AWS Lightsail Linux instance** with a static IP, running **Docke
 - Deploys cause a short restart.
 - Because the database runs in a container, backups and disk space are our responsibility; see the infrastructure specification.
 - Instance needs at least 2 GB RAM for PostgreSQL and the API together.
-- The owner plans a production environment within 1 to 2 months of the demo (confirmed 2026-10-20). Region is `ap-south-1` and the demo URL is `https://skills-demo.privatedir.com`. The application must stay portable (`DATABASE_URL` only) so moving to managed PostgreSQL is a configuration change. A follow-up ADR will decide the production architecture.
+- The owner plans a production environment within 1 to 2 months of the demo (confirmed 2026-10-20). Region is `ap-south-1` and the demo URL is `https://skills-demo.privatedir.in`. The application must stay portable (`DATABASE_URL` only) so moving to managed PostgreSQL is a configuration change. A follow-up ADR will decide the production architecture.
