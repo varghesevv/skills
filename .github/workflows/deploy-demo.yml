@@ -162,7 +162,9 @@ jobs:
             [ "$attempt" = 6 ] && { echo "Health check failed." >&2; exit 1; }
             sleep 10
           done
-          curl -fsS --max-time 15 "$base/api/v1/labels" > /dev/null
+          # The API requires a login, so a 401 without a token proves the request reached it.
+          code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$base/api/v1/labels")"
+          if [ "$code" != "401" ]; then echo "Expected 401 from /api/v1/labels, got $code." >&2; exit 1; fi
           curl -fsS --max-time 15 "$base/" | grep -qi "<div id=\"root\""
           echo "Smoke test passed."
 
