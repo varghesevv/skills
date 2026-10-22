@@ -15,3 +15,9 @@ updates:
   - package-ecosystem: docker
     directory: /frontend
     schedule: { interval: weekly }
+  - package-ecosystem: terraform
+    directory: /infra/terraform/envs/demo
+    schedule: { interval: weekly }
+  - package-ecosystem: terraform
+    directory: /infra/terraform/bootstrap
+    schedule: { interval: weekly }
