@@ -68,13 +68,10 @@ jobs:
         run: tflint --recursive --config "$GITHUB_WORKSPACE/infra/terraform/.tflint.hcl"
 
       - name: Security scan of the Terraform (trivy config)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: config
-          scan-ref: infra/terraform
-          severity: HIGH,CRITICAL
-          exit-code: "1"
-          trivyignores: infra/terraform/.trivyignore
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work aquasec/trivy:0.58.1 \
+            config --severity HIGH,CRITICAL --exit-code 1 --ignorefile infra/terraform/.trivyignore \
+            infra/terraform
 
   # Shows what a pull request would change in AWS. It runs only once the bootstrap exists and
   # the repository variables below are set, so the checks above work before that.

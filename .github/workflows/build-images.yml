@@ -56,12 +56,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
       - name: Scan for vulnerabilities (fail on critical)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ steps.name.outputs.ref }}:scan
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \
+            image --severity CRITICAL --ignore-unfixed --exit-code 1 \
+            "${{ steps.name.outputs.ref }}:scan"
 
       # The layers are cached, so this second build only adds the push.
       - name: Push
