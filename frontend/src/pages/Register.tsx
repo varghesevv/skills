@@ -6,6 +6,7 @@ import { registerRequest } from '../api/auth'
 import { ApiError } from '../api/http'
 import type { RegisterResponse, RegisterType } from '../api/types'
 import { t, type StringKey } from '../i18n'
+import { loginPath } from '../portals/config'
 import { errorMessage, serverFieldErrors } from '../shared/errors'
 import { Alert, CheckboxField, PasswordField, TextField } from '../shared/ui'
 import { usePageTitle } from '../shared/usePageTitle'
@@ -138,7 +139,7 @@ function RegisterForm({ type }: { type: RegisterType }) {
               ? t('register.done.pending')
               : t('register.done.text')}
           </Alert>
-          <Link className="btn btn-primary" to={`/login?type=${type}`}>
+          <Link className="btn btn-primary" to={loginPath(type)}>
             {t('register.done.login')}
           </Link>
         </div>
@@ -240,7 +241,7 @@ function RegisterForm({ type }: { type: RegisterType }) {
           </button>
         </form>
         <p>
-          {t('register.haveAccount')} <Link to={`/login?type=${type}`}>{t('nav.logIn')}</Link>
+          {t('register.haveAccount')} <Link to={loginPath(type)}>{t('nav.logIn')}</Link>
         </p>
       </div>
     </div>

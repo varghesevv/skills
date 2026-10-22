@@ -5,7 +5,15 @@ Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React
 ## Portals and pages
 
 ### Public
-Landing, login, register (choose user type), forgot and reset password.
+Landing, register (choose user type), forgot and reset password, and three login pages, each tied to one kind of account (the page, not a dropdown, decides the `user_type` sent to the API):
+
+| Page | Address | For |
+|---|---|---|
+| Log in | `/login` and `/login/workhost` | Freelancers and work hosts. Two links at the top of the form switch between them. |
+| Organisation log in | `/login/organisation` | Organisations only. States that a new organisation needs admin approval. Links to organisation sign-up. |
+| Admin log in | `/login/admin` | Admins only. No sign-up link (admins are created by operators). |
+
+A visitor who opens a protected address is sent to the login page that fits it (for example `/admin/reports` leads to the admin login). Old links of the form `/login?type=organisation` are redirected.
 
 ### Freelancer portal
 Dashboard; profile; rate and currency; labels (skills with levels, languages, timings, nativity); unavailability calendar; my ratings; my organisation vouches.

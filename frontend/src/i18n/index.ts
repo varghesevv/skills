@@ -64,6 +64,17 @@ const en = {
   'login.working': 'Logging in…',
   'login.forgot': 'Forgot your password?',
   'login.noAccount': 'No account yet?',
+  'login.switch': 'Log in as',
+  'login.otherOrg': 'Organisation?',
+  'login.otherOrgLink': 'Organisation log in',
+  'login.otherAdminLink': 'Admin log in',
+  'login.otherPeople': 'Freelancer or work host?',
+  'login.otherPeopleLink': 'Log in here',
+  'login.org.title': 'Organisation log in',
+  'login.org.text':
+    'For organisations that vouch for freelancers. A new organisation can log in once an admin has approved it.',
+  'login.admin.title': 'Admin log in',
+  'login.admin.text': 'For platform administrators only.',
 
   'register.title': 'Create an account',
   'register.choose': 'Choose the kind of account you need.',
