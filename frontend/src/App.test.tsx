@@ -98,7 +98,7 @@ describe('login', () => {
     })
     renderApp('/login/admin')
     expect(screen.getByRole('heading', { name: 'Admin log in' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Register' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('link', { name: 'Register' })).toBeNull()
     await fillLogin(user, 'a@example.com')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
     expect(await screen.findByRole('heading', { name: 'Welcome, a@example.com' })).toBeVisible()
@@ -111,10 +111,9 @@ describe('login', () => {
     renderApp('/login/organisation')
     expect(screen.getByRole('heading', { name: 'Organisation log in' })).toBeInTheDocument()
     expect(screen.queryByLabelText('I am a')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Register' })).toHaveAttribute(
-      'href',
-      '/register/organisation',
-    )
+    expect(
+      within(screen.getByRole('main')).getByRole('link', { name: 'Register' }),
+    ).toHaveAttribute('href', '/register/organisation')
     await fillLogin(user, 'o@example.com')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
     await screen.findByRole('alert')
