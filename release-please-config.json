@@ -1,0 +1,25 @@
+{
+  "bootstrap-sha": "57def1275689d9f29ca0361cda511fcd371a0556",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "skills",
+      "changelog-path": "CHANGELOG.md",
+      "include-v-in-tag": true,
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "backend/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "json",
+          "path": "frontend/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}

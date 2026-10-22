@@ -2,14 +2,15 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 
 from app.core.db import get_engine
+from app.core.version import APP_VERSION
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    """Liveness: the process is up."""
-    return {"status": "ok"}
+    """Liveness: the process is up. Also tells which build is running."""
+    return {"status": "ok", "version": APP_VERSION}
 
 
 @router.get("/health/ready")

@@ -5,7 +5,7 @@ name: build-images
 on:
   push:
     branches: [main]
-    paths: ["backend/**", "frontend/**", ".github/workflows/build-images.yml"]
+    paths: ["backend/**", "frontend/**", ".release-please-manifest.json", ".github/workflows/build-images.yml"]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,29 @@ jobs:
             context: frontend
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 2 # the previous commit is needed to see whether this is a release commit
+
+      # Version of this build. The release PR (release-please) changes .release-please-manifest.json,
+      # so a commit that changes it is the release commit: its images are the release, tagged
+      # vX.Y.Z and X.Y.Z. Every other build is X.Y.Z-dev.<short sha>, where X.Y.Z is the last release.
+      - name: Work out the version
+        id: version
+        run: |
+          base="$(jq -r '.["."]' .release-please-manifest.json)"
+          if ! [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version in .release-please-manifest.json is not X.Y.Z" >&2
+            exit 1
+          fi
+          # only a change to the file counts; adding it (the first time) is not a release
+          if git diff --diff-filter=M --quiet HEAD^ HEAD -- .release-please-manifest.json; then
+            echo "value=${base}-dev.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${base}" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "base=${base}" >> "$GITHUB_OUTPUT"
 
       - name: Work out the image name
         id: name
@@ -52,6 +75,12 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: ${{ steps.name.outputs.ref }}:scan
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.value }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
@@ -60,6 +89,9 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.58.1 \
             image --severity CRITICAL --ignore-unfixed --exit-code 1 \
             "${{ steps.name.outputs.ref }}:scan"
+
+      - name: Show the version
+        run: echo "Version ${{ steps.version.outputs.value }} (release=${{ steps.version.outputs.release }})"
 
       # The layers are cached, so this second build only adds the push.
       - name: Push
@@ -71,4 +103,12 @@ jobs:
           tags: |
             ${{ steps.name.outputs.ref }}:${{ github.sha }}
             ${{ steps.name.outputs.ref }}:demo
+            ${{ steps.version.outputs.release == 'true' && format('{0}:v{1}', steps.name.outputs.ref, steps.version.outputs.value) || '' }}
+            ${{ steps.version.outputs.release == 'true' && format('{0}:{1}', steps.name.outputs.ref, steps.version.outputs.value) || '' }}
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.value }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.image }}

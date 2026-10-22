@@ -15,6 +15,7 @@ Skills is a marketplace for finding skilled freelancers. Three kinds of users ta
 | Document | Purpose |
 |---|---|
 | [docs/local-development.md](docs/local-development.md) | **Run Skills on your computer**: step-by-step guide for beginners (tools to install, start, demo data, tests, troubleshooting) |
+| [docs/releasing.md](docs/releasing.md) | Versions, tags and releases: Conventional Commits, release PR, image tags |
 | [docs/operations-runbook.md](docs/operations-runbook.md) | Running the demo: deploy, roll back, secrets, backup and restore drill, monitoring |
 | [docs/specification/](docs/specification/README.md) | What we are building: requirements, data model, API, reports, frontend, non-functional requirements |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records: why we chose what we chose |

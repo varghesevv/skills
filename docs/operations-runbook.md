@@ -40,7 +40,7 @@ ssh -i ~/.ssh/skills-deploy deploy@13.127.253.202
 
 ## 3. Deploy
 
-**Normal:** merge to `main`. If backend or frontend files changed, `build-images` builds and scans the images, then `deploy-demo` deploys that commit. Approve the `demo` Environment prompt if it appears.
+**Normal:** merge to `main` (versions and releases: [releasing.md](releasing.md)). If backend or frontend files changed, `build-images` builds and scans the images, then `deploy-demo` deploys that commit. Approve the `demo` Environment prompt if it appears.
 
 **Infrastructure-only changes** (anything under `infra/`) do not build images. Deploy them by hand: Actions → `deploy-demo` → Run workflow (leave the tag empty to use the latest main commit; if the tag is empty and no image exists for that commit, give the tag of an existing image).
 
@@ -51,7 +51,7 @@ If it fails, the log of the failing step says why. The stack keeps running the p
 ## 4. Roll back
 
 1. Find the previous good tag: Actions → earlier successful `deploy-demo` run → "Deploying image tag …", or on the server `cat /opt/skills/.deployed_tag` after the failed deploy (it shows the last *successful* tag).
-2. Actions → `deploy-demo` → Run workflow → enter that 40-character tag.
+2. Actions → `deploy-demo` → Run workflow → enter that tag: a 40-character commit SHA, or a release such as `v0.2.0`.
 3. Migrations are meant to stay backward compatible for one release, so the old code works with the new schema. If a migration was destructive, restore the pre-deploy backup instead (section 6).
 
 ## 5. Secrets
