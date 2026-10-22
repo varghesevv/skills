@@ -44,7 +44,13 @@ export const PORTALS: readonly Portal[] = [
     path: '/organisation',
     roleKey: 'role.organisation',
     leadKey: 'dashboard.lead.organisation',
-    nav: [{ to: '/organisation', labelKey: 'nav.dashboard', end: true }],
+    nav: [
+      { to: '/organisation', labelKey: 'nav.dashboard', end: true },
+      { to: '/organisation/freelancers', labelKey: 'nav.vouched' },
+      { to: '/organisation/search', labelKey: 'nav.search' },
+      { to: '/organisation/reports', labelKey: 'nav.reports' },
+      { to: '/organisation/profile', labelKey: 'nav.profile' },
+    ],
   },
   {
     userType: 'admin',

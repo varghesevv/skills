@@ -112,7 +112,8 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** Send a request with the bearer token, refreshing it once on 401. Throws ApiError on failure. */
+async function sendAuthed(path: string, options: RequestOptions): Promise<Response> {
   const withAuth = options.auth !== false
   let response = await send(path, options, withAuth ? getAccessToken() : null)
 
@@ -125,6 +126,19 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (!response.ok) throw await toApiError(response)
+  return response
+}
+
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await sendAuthed(path, options)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
+}
+
+/** Fetch a file (such as a CSV report) with the bearer token. */
+export async function requestFile(path: string): Promise<{ blob: Blob; filename: string }> {
+  const response = await sendAuthed(path, {})
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const match = /filename="?([^";]+)"?/.exec(disposition)
+  return { blob: await response.blob(), filename: match?.[1] ?? 'report.csv' }
 }

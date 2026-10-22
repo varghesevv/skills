@@ -37,6 +37,10 @@ export function errorMessage(error: unknown): string {
         return t('error.notFound')
       case 'vouch_not_pending':
         return t('error.vouchDecided')
+      case 'organisation_not_approved':
+        return t('error.orgNotApproved')
+      case 'already_vouched':
+        return t('error.alreadyVouched')
       case 'forbidden':
         return t('error.forbidden')
       case 'already_rated':

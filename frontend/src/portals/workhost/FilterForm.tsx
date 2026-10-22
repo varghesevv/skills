@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
-import type { LabelOut } from '../../api/types'
+import type { LabelOut, OrgBrief } from '../../api/types'
 import { t, type StringKey } from '../../i18n'
 import { SelectField, TextField } from '../../shared/ui'
 import type { FieldErrors } from '../../shared/validation'
@@ -65,10 +65,12 @@ export const SORT_OPTIONS = SORT_KEYS.map((item) => ({ value: item.value, label:
 
 export default function FilterForm({
   labels,
+  organisations,
   initial,
   onApply,
 }: {
   labels: LabelOut[]
+  organisations: OrgBrief[]
   initial: FilterValues
   onApply: (values: FilterValues) => void
 }) {
@@ -188,6 +190,18 @@ export default function FilterForm({
         onChange={(value) => set('minRating', value)}
         options={RATING_OPTIONS}
       />
+      {organisations.length > 0 && (
+        <SelectField
+          label={t('search.vouchedBy')}
+          name="org_id"
+          value={values.orgId}
+          onChange={(value) => set('orgId', value)}
+          options={[
+            { value: '', label: t('search.anyOrg') },
+            ...organisations.map((item) => ({ value: item.id, label: item.org_name })),
+          ]}
+        />
+      )}
       <div className="row-actions">
         <button type="submit" className="btn btn-primary">
           {t('search.apply')}

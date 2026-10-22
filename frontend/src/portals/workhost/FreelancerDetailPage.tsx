@@ -3,7 +3,9 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 
 import type { FreelancerPublic, LabelType } from '../../api/types'
+import { vouchFor } from '../../api/organisation'
 import { createRating, getFreelancer, updateRating } from '../../api/workhost'
+import { useUser } from '../../auth/AuthContext'
 import { t, type StringKey } from '../../i18n'
 import { formatDateTime } from '../../shared/dates'
 import { errorMessage } from '../../shared/errors'
@@ -11,7 +13,9 @@ import RatingsList from '../../shared/RatingsList'
 import { Alert, Badge, QueryBoundary, SelectField, TextAreaField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import { ratingSchema, validate, type FieldErrors } from '../../shared/validation'
+import { VOUCHED_KEY } from '../organisation/keys'
 import { GIVEN_KEY } from './GivenRatingsPage'
+import type { Portal } from './SearchPage'
 import { formatRate } from './format'
 
 const detailKey = (id: string) => ['freelancer-public', id] as const
@@ -105,7 +109,7 @@ function RatingForm({ person }: { person: FreelancerPublic }) {
   )
 }
 
-function Profile({ person }: { person: FreelancerPublic }) {
+function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal }) {
   const skills = person.labels.filter((item) => item.label.label_type === 'skill')
   return (
     <div className="stack">
@@ -141,25 +145,29 @@ function Profile({ person }: { person: FreelancerPublic }) {
         </dl>
       </section>
 
-      <section className="card" aria-labelledby="contact-heading">
-        <h2 id="contact-heading">{t('detail.contact')}</h2>
-        <dl className="facts">
-          <div>
-            <dt>{t('detail.mobile')}</dt>
-            <dd>
-              {person.mobile_number ? (
-                <a href={`tel:${person.mobile_number}`}>{person.mobile_number}</a>
-              ) : (
-                t('common.none')
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>WhatsApp</dt>
-            <dd>{person.whatsapp_availability ? t('detail.whatsapp') : t('detail.noWhatsapp')}</dd>
-          </div>
-        </dl>
-      </section>
+      {portal === 'workhost' && (
+        <section className="card" aria-labelledby="contact-heading">
+          <h2 id="contact-heading">{t('detail.contact')}</h2>
+          <dl className="facts">
+            <div>
+              <dt>{t('detail.mobile')}</dt>
+              <dd>
+                {person.mobile_number ? (
+                  <a href={`tel:${person.mobile_number}`}>{person.mobile_number}</a>
+                ) : (
+                  t('common.none')
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>WhatsApp</dt>
+              <dd>
+                {person.whatsapp_availability ? t('detail.whatsapp') : t('detail.noWhatsapp')}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      )}
 
       <section className="card" aria-labelledby="labels-heading">
         <h2 id="labels-heading">{t('detail.labels')}</h2>
@@ -228,7 +236,56 @@ function Profile({ person }: { person: FreelancerPublic }) {
   )
 }
 
-export default function FreelancerDetailPage() {
+function VouchPanel({ person }: { person: FreelancerPublic }) {
+  const user = useUser()
+  const queryClient = useQueryClient()
+  const approved = user.approval_status === 'approved'
+  const alreadyShown = person.vouched_by.some((org) => org.org_id === user.id)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const vouch = useMutation({
+    mutationFn: () => vouchFor(person.id),
+    onSuccess: async () => {
+      setSent(true)
+      await queryClient.invalidateQueries({ queryKey: VOUCHED_KEY })
+    },
+    onError: (failure) => setError(errorMessage(failure)),
+  })
+
+  return (
+    <section className="card form-grid" aria-labelledby="vouch-action-heading">
+      <h2 id="vouch-action-heading">{t('vouch.heading')}</h2>
+      {error && (
+        <Alert kind="error" focus>
+          {error}
+        </Alert>
+      )}
+      {sent && <Alert kind="success">{t('vouch.sent')}</Alert>}
+      {!approved && <Alert kind="info">{t('vouch.notApproved')}</Alert>}
+      {alreadyShown ? (
+        <p>{t('vouch.already')}</p>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!approved || vouch.isPending || sent}
+          onClick={() => {
+            setError(null)
+            vouch.mutate()
+          }}
+        >
+          {vouch.isPending ? t('common.saving') : t('vouch.action')}
+        </button>
+      )}
+      <p>
+        <Link to="/organisation/freelancers">{t('vouch.viewList')}</Link>
+      </p>
+    </section>
+  )
+}
+
+export default function FreelancerDetailPage({ portal }: { portal: Portal }) {
   const { id = '' } = useParams()
   const location = useLocation()
   const search = (location.state as { search?: string } | null)?.search ?? ''
@@ -238,16 +295,20 @@ export default function FreelancerDetailPage() {
   return (
     <>
       <p>
-        <Link to={`/workhost/search${search ? `?${search}` : ''}`}>← {t('detail.back')}</Link>
+        <Link to={`/${portal}/search${search ? `?${search}` : ''}`}>← {t('detail.back')}</Link>
       </p>
       <QueryBoundary query={query}>
         {(person) => (
           <>
             <h1>{person.full_name ?? t('search.noName')}</h1>
             <div className="detail-layout">
-              <Profile person={person} />
+              <Profile person={person} portal={portal} />
               <div className="stack">
-                <RatingForm key={person.id} person={person} />
+                {portal === 'workhost' ? (
+                  <RatingForm key={person.id} person={person} />
+                ) : (
+                  <VouchPanel key={person.id} person={person} />
+                )}
                 <h2>{t('detail.ratings')}</h2>
                 <RatingsList freelancerId={person.id} />
               </div>
