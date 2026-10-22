@@ -312,9 +312,7 @@ def generate(
             )
         for timing in rng.sample(timings, rng.choice((1, 1, 2, 3))):
             label_rows.append(
-                FreelancerLabel(
-                    freelancer_id=freelancer.id, label_id=labels[("timing", timing)].id
-                )
+                FreelancerLabel(freelancer_id=freelancer.id, label_id=labels[("timing", timing)].id)
             )
         spoken = set(group["labels"])  # type: ignore[call-overload]
         if rng.random() < 0.3:
