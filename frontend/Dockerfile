@@ -7,7 +7,7 @@ COPY . .
 ARG APP_VERSION=dev
 RUN npm run build && echo "$APP_VERSION" > dist/version.txt
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 # The base image lags behind Alpine security fixes; pull them in, then drop root again.
 USER root
 RUN apk upgrade --no-cache
