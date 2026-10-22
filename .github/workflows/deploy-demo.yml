@@ -1,0 +1,182 @@
+name: deploy-demo
+
+# Deploys the images built by build-images to the Lightsail demo server.
+# Runs after a successful build-images on main, or manually with a chosen image tag (rollback).
+# Secrets come only from the GitHub Environment `demo` and are never echoed.
+on:
+  workflow_run:
+    workflows: [build-images]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (a full git SHA). Leave empty for the latest main build."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-south-1
+  INSTANCE_NAME: skills
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: demo
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Choose the image tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.image_tag }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          tag="${INPUT_TAG:-${RUN_SHA:-${GITHUB_SHA}}}"
+          if ! [[ "$tag" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Image tag must be a full 40-character git SHA." >&2
+            exit 1
+          fi
+          echo "value=$tag" >> "$GITHUB_OUTPUT"
+          echo "Deploying image tag $tag"
+
+      - name: Check required settings
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }}
+          BACKUP_AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
+          BACKUP_AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          GHCR_OWNER: ${{ vars.GHCR_OWNER }}
+        run: |
+          missing=0
+          for v in DEPLOY_SSH_PRIVATE_KEY POSTGRES_PASSWORD JWT_SECRET DEMO_USER_PASSWORD \
+                   BACKUP_AWS_ACCESS_KEY_ID BACKUP_AWS_SECRET_ACCESS_KEY AWS_DEPLOY_ROLE_ARN \
+                   SERVER_HOST SITE_ADDRESS BACKUP_BUCKET GHCR_OWNER; do
+            if [ -z "${!v}" ]; then echo "Missing Environment setting: $v" >&2; missing=1; fi
+          done
+          exit $missing
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          # Pin the server's host key on first use for this run only.
+          ssh-keyscan -T 10 -t ed25519 "$SERVER_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Open SSH for this runner
+        run: |
+          ip="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')"
+          echo "::add-mask::$ip"
+          echo "RUNNER_IP=$ip" >> "$GITHUB_ENV"
+          aws lightsail open-instance-public-ports --instance-name "$INSTANCE_NAME" \
+            --port-info "fromPort=22,toPort=22,protocol=tcp,cidrs=${ip}/32" > /dev/null
+          sleep 10
+
+      - name: Upload files and deploy
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          IMAGE_TAG: ${{ steps.tag.outputs.value }}
+          GHCR_OWNER: ${{ vars.GHCR_OWNER }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          REPORT_TIMEZONE: ${{ vars.REPORT_TIMEZONE || 'Asia/Dubai' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }}
+          BACKUP_AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
+          BACKUP_AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          for v in POSTGRES_PASSWORD JWT_SECRET DEMO_USER_PASSWORD BACKUP_AWS_ACCESS_KEY_ID BACKUP_AWS_SECRET_ACCESS_KEY; do
+            case "${!v}" in *$'\n'*|"") echo "$v must be a single non-empty line." >&2; exit 1;; esac
+          done
+          umask 077
+          envfile="$(mktemp)"
+          {
+            echo "ENVIRONMENT=demo"
+            echo "SITE_ADDRESS=${SITE_ADDRESS}"
+            echo "FRONTEND_BASE_URL=https://${SITE_ADDRESS}"
+            echo "CORS_ORIGINS=https://${SITE_ADDRESS}"
+            echo "REPORT_TIMEZONE=${REPORT_TIMEZONE}"
+            echo "GHCR_OWNER=${GHCR_OWNER}"
+            echo "IMAGE_TAG=${IMAGE_TAG}"
+            echo "POSTGRES_USER=skills"
+            echo "POSTGRES_DB=skills"
+            echo "ACCESS_TOKEN_MINUTES=15"
+            echo "REFRESH_TOKEN_DAYS=30"
+            echo "RESET_TOKEN_MINUTES=60"
+            echo "LOGIN_MAX_FAILURES=5"
+            echo "LOGIN_WINDOW_MINUTES=15"
+            echo "BACKUP_BUCKET=${BACKUP_BUCKET}"
+            echo "AWS_DEFAULT_REGION=${AWS_REGION}"
+            echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+            echo "JWT_SECRET=${JWT_SECRET}"
+            echo "DEMO_USER_PASSWORD=${DEMO_USER_PASSWORD}"
+            echo "AWS_ACCESS_KEY_ID=${BACKUP_AWS_ACCESS_KEY_ID}"
+            echo "AWS_SECRET_ACCESS_KEY=${BACKUP_AWS_SECRET_ACCESS_KEY}"
+          } > "$envfile"
+
+          ssh_opts=(-i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          target="deploy@${SERVER_HOST}"
+          scp "${ssh_opts[@]}" "$envfile" "${target}:/opt/skills/.env.new"
+          rm -f "$envfile"
+          scp "${ssh_opts[@]}" infra/docker/compose.demo.yml infra/docker/Caddyfile \
+            infra/scripts/deploy.sh infra/scripts/backup.sh infra/scripts/restore.sh "${target}:/opt/skills/"
+          ssh "${ssh_opts[@]}" "$target" 'cd /opt/skills && chmod 600 .env.new && mv .env.new .env && chmod 755 deploy.sh backup.sh restore.sh && ./deploy.sh'
+
+      - name: Smoke test
+        env:
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+        run: |
+          set -euo pipefail
+          base="https://${SITE_ADDRESS}"
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS --max-time 15 "$base/health" > /dev/null; then break; fi
+            [ "$attempt" = 6 ] && { echo "Health check failed." >&2; exit 1; }
+            sleep 10
+          done
+          curl -fsS --max-time 15 "$base/api/v1/labels" > /dev/null
+          curl -fsS --max-time 15 "$base/" | grep -qi "<div id=\"root\""
+          echo "Smoke test passed."
+
+      - name: Show service state on failure
+        if: failure()
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=20 "deploy@${SERVER_HOST}" \
+            'cd /opt/skills && docker compose --env-file .env -f compose.demo.yml ps && docker compose --env-file .env -f compose.demo.yml logs --tail=40 api web proxy' || true
+
+      - name: Close SSH
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          aws lightsail close-instance-public-ports --instance-name "$INSTANCE_NAME" \
+            --port-info "fromPort=22,toPort=22,protocol=tcp" > /dev/null || echo "::warning::Could not close port 22; check the firewall."
