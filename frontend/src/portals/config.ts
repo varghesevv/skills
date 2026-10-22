@@ -32,7 +32,12 @@ export const PORTALS: readonly Portal[] = [
     path: '/workhost',
     roleKey: 'role.workhost',
     leadKey: 'dashboard.lead.workhost',
-    nav: [{ to: '/workhost', labelKey: 'nav.dashboard', end: true }],
+    nav: [
+      { to: '/workhost', labelKey: 'nav.dashboard', end: true },
+      { to: '/workhost/search', labelKey: 'nav.search' },
+      { to: '/workhost/ratings', labelKey: 'nav.given' },
+      { to: '/workhost/profile', labelKey: 'nav.profile' },
+    ],
   },
   {
     userType: 'organisation',

@@ -8,7 +8,7 @@ from app.api.deps import require_roles
 from app.core.db import get_session
 from app.core.security import Principal
 from app.models.ratings import UserRating
-from app.models.users import WorkHost
+from app.models.users import Freelancer, WorkHost
 from app.schemas.common import Page, Pagination, pagination
 from app.schemas.profiles import DAYS, GivenRating, WorkHostMe, WorkHostUpdate
 from app.services.profiles import current_account
@@ -57,8 +57,9 @@ def my_ratings(
 ) -> Page[GivenRating]:
     where = UserRating.work_host_id == principal.user_id
     total = db.scalar(select(func.count()).select_from(UserRating).where(where)) or 0
-    rows = db.scalars(
-        select(UserRating)
+    rows = db.execute(
+        select(UserRating, Freelancer.full_name)
+        .join(Freelancer, Freelancer.id == UserRating.freelancer_id)
         .where(where)
         .order_by(UserRating.rated_on.desc(), UserRating.id)
         .offset(paging.offset)
@@ -69,12 +70,13 @@ def my_ratings(
             GivenRating(
                 id=r.id,
                 freelancer_id=r.freelancer_id,
+                freelancer_name=name,
                 rating=r.rating,
                 comment=r.comment,
                 rated_on=r.rated_on,
                 updated_at=r.updated_at,
             )
-            for r in rows
+            for r, name in rows
         ],
         total=total,
         page=paging.page,

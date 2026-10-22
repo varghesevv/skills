@@ -39,6 +39,12 @@ export function errorMessage(error: unknown): string {
         return t('error.vouchDecided')
       case 'forbidden':
         return t('error.forbidden')
+      case 'already_rated':
+        return t('error.alreadyRated')
+      case 'currency_required':
+        return t('error.currencyRequired')
+      case 'availability_range':
+        return t('error.availabilityRange')
     }
   }
   return t('error.generic')

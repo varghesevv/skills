@@ -18,10 +18,11 @@ router = APIRouter(prefix="/ratings", tags=["ratings"])
 HostOnly = Annotated[Principal, Depends(require_roles("workhost"))]
 
 
-def _out(r: UserRating) -> GivenRating:
+def _out(r: UserRating, freelancer_name: str | None) -> GivenRating:
     return GivenRating(
         id=r.id,
         freelancer_id=r.freelancer_id,
+        freelancer_name=freelancer_name,
         rating=r.rating,
         comment=r.comment,
         rated_on=r.rated_on,
@@ -34,7 +35,8 @@ def create_rating(
     body: RatingCreate, principal: HostOnly, db: Session = Depends(get_session)
 ) -> GivenRating:
     """Rate a freelancer 1 to 10. One rating per work host and freelancer; use PUT to change it."""
-    if db.get(Freelancer, body.freelancer_id) is None:
+    freelancer = db.get(Freelancer, body.freelancer_id)
+    if freelancer is None:
         raise ApiError(404, "not_found", "Freelancer not found")
     row = UserRating(
         work_host_id=principal.user_id,
@@ -50,7 +52,7 @@ def create_rating(
         raise ApiError(
             409, "already_rated", "You already rated this freelancer; update that rating instead"
         ) from None
-    return _out(row)
+    return _out(row, freelancer.full_name)
 
 
 @router.put("/{rating_id}")
@@ -66,4 +68,5 @@ def update_rating(
     row.rating = body.rating
     row.comment = body.comment
     db.commit()
-    return _out(row)
+    freelancer = db.get(Freelancer, row.freelancer_id)
+    return _out(row, freelancer.full_name if freelancer else None)

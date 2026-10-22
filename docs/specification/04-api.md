@@ -52,6 +52,7 @@ Auth behaviour:
 
 Behaviour of the core APIs:
 
+- `GET /workhosts/me/ratings` and the rating endpoints return `freelancer_name` with each rating. `GET /freelancers/{id}` returns `my_rating` (the calling work host's own rating of that freelancer, with its `id` for `PUT /ratings/{id}`), and `null` for everyone else.
 - `PUT /freelancers/me` and `PUT /workhosts/me` take an optional `full_name`; leaving it out keeps the current name. `GET /me`, the own-profile endpoints, the freelancer detail page and search results return `full_name`.
 - `PUT /freelancers/me/labels` replaces the whole label set. A skill may carry a `level_label_id` (a `skill_level` label); languages, timings and nativity take no level. Inactive labels cannot be selected.
 - Unavailability periods need timezone-aware timestamps and cannot overlap (`409 unavailability_overlaps`).
