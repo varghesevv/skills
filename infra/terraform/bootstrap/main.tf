@@ -126,13 +126,18 @@ data "aws_iam_policy_document" "terraform" {
     resources = ["${aws_s3_bucket.state.arn}/*"]
   }
 
+  # Terraform creates and configures the backup bucket. It never reads or writes the backups
+  # themselves, so there are no object-level permissions here.
   statement {
-    sid     = "BackupBuckets"
-    actions = ["s3:*"]
-    resources = [
-      "arn:aws:s3:::${var.backup_bucket_prefix}-*",
-      "arn:aws:s3:::${var.backup_bucket_prefix}-*/*",
+    sid = "BackupBuckets"
+    actions = [
+      "s3:CreateBucket", "s3:DeleteBucket", "s3:ListBucket", "s3:ListBucketVersions",
+      "s3:GetBucket*", "s3:PutBucket*",
+      "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration",
+      "s3:GetEncryptionConfiguration", "s3:PutEncryptionConfiguration",
+      "s3:GetAccelerateConfiguration", "s3:GetReplicationConfiguration",
     ]
+    resources = ["arn:aws:s3:::${var.backup_bucket_prefix}-*"]
   }
 
   statement {
