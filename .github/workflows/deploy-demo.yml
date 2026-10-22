@@ -34,7 +34,7 @@ jobs:
     environment: demo
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
@@ -74,7 +74,7 @@ jobs:
           done
           exit $missing
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -148,8 +148,8 @@ jobs:
           scp "${ssh_opts[@]}" "$envfile" "${target}:/opt/skills/.env.new"
           rm -f "$envfile"
           scp "${ssh_opts[@]}" infra/docker/compose.demo.yml infra/docker/Caddyfile \
-            infra/scripts/deploy.sh infra/scripts/backup.sh infra/scripts/restore.sh "${target}:/opt/skills/"
-          ssh "${ssh_opts[@]}" "$target" 'cd /opt/skills && chmod 600 .env.new && mv .env.new .env && chmod 755 deploy.sh backup.sh restore.sh && ./deploy.sh'
+            infra/scripts/deploy.sh infra/scripts/backup.sh infra/scripts/restore.sh infra/scripts/list-backups.sh "${target}:/opt/skills/"
+          ssh "${ssh_opts[@]}" "$target" 'cd /opt/skills && chmod 600 .env.new && mv .env.new .env && chmod 755 deploy.sh backup.sh restore.sh list-backups.sh && ./deploy.sh'
 
       - name: Smoke test
         env:
@@ -176,9 +176,20 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o ConnectTimeout=20 "deploy@${SERVER_HOST}" \
             'cd /opt/skills && docker compose --env-file .env -f compose.demo.yml ps && docker compose --env-file .env -f compose.demo.yml logs --tail=40 api web proxy' || true
 
-      - name: Close SSH
+      - name: Restore the normal SSH rule
         if: always()
+        env:
+          ALLOWED: ${{ vars.TF_SSH_ALLOWED_CIDRS }}
         run: |
           rm -f ~/.ssh/deploy_key
-          aws lightsail close-instance-public-ports --instance-name "$INSTANCE_NAME" \
-            --port-info "fromPort=22,toPort=22,protocol=tcp" > /dev/null || echo "::warning::Could not close port 22; check the firewall."
+          # Back to what Terraform manages: your own addresses (TF_SSH_ALLOWED_CIDRS, a JSON
+          # list such as ["203.0.113.10/32"]) plus the Lightsail browser SSH. Without a valid
+          # list, port 22 is closed completely.
+          if info="$(jq -ce '{fromPort:22,toPort:22,protocol:"tcp",cidrs:.,cidrListAliases:["lightsail-connect"]}' <<<"${ALLOWED:-[]}" 2>/dev/null)"; then
+            aws lightsail open-instance-public-ports --instance-name "$INSTANCE_NAME" --port-info "$info" > /dev/null \
+              || echo "::warning::Could not restore the SSH rule; run terraform apply."
+          else
+            aws lightsail close-instance-public-ports --instance-name "$INSTANCE_NAME" \
+              --port-info "fromPort=22,toPort=22,protocol=tcp" > /dev/null \
+              || echo "::warning::Could not close port 22; check the firewall."
+          fi

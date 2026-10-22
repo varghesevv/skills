@@ -161,7 +161,7 @@ Installs Docker Engine and the Compose plugin, creates user `deploy` (docker gro
 - **Nightly** `pg_dump` (custom format, gzip) uploaded to S3, kept 30 days (bucket lifecycle). Also run before every deploy.
 - **Lightsail snapshots**: automatic daily snapshot add-on.
 - **Restore** documented and tested: `restore.sh <s3-key>` into a fresh database; restore drill performed once before the demo is shared.
-- **Monitoring (demo level):** Lightsail CPU and network alarms with email notification; disk usage alarm at 80%; external uptime check on `/health` (free tier of a monitoring service or a scheduled GitHub Action). Logs via `docker compose logs`; no central logging for the demo.
+- **Monitoring (demo level):** Lightsail alarms for CPU, status checks, burst capacity and outbound traffic with email notification (`infra/scripts/setup-alarms.sh`; Terraform has no Lightsail alarm resource). Lightsail has no disk metric, so `deploy.sh` refuses to deploy at 90% disk usage and prints the usage. External uptime check: the scheduled `uptime` GitHub workflow calls `/health` every 15 minutes, checks the API answers 401 without a login, the web page loads and the certificate has more than 14 days left. Logs via `docker compose logs`; no central logging for the demo. See [the runbook](../operations-runbook.md).
 
 ## 10. Security requirements for the environment
 
@@ -188,7 +188,7 @@ Build the demo so production is a configuration change, not a rewrite:
 
 - Terraform layout supports more environments: `infra/terraform/envs/demo` now, `envs/prod` later. Shared modules take all environment-specific values as variables. No hard-coded names.
 - Resource names, state keys, GitHub Environments (`demo`, later `prod`) and secrets are per environment.
-- Production will probably replace single-instance PostgreSQL with a managed database (AWS RDS for PostgreSQL, Multi-AZ optional) and the Lightsail instance with a container service. This is decided by a new ADR before `envs/prod` is built. The application therefore must read only `DATABASE_URL` and keep no assumption that PostgreSQL is a local container.
+- Production will probably replace single-instance PostgreSQL with a managed database (AWS RDS for PostgreSQL, Multi-AZ optional) and the Lightsail instance with a container service. This is proposed in [ADR-0012](../adr/0012-production-on-ecs-fargate-and-rds.md) and decided before `envs/prod` is built. The application therefore must read only `DATABASE_URL` and keep no assumption that PostgreSQL is a local container.
 - Keep images and migrations environment-independent: the same image tag that passed in demo is promoted to prod.
 - Prepare a production checklist before go-live: separate AWS account or at least separate IAM roles, managed backups with point-in-time recovery, monitoring and alerting, log aggregation, WAF or rate limiting at the edge, domain (for example `skills.privatedir.in`), real SMTP provider, data protection review.
 - The demo environment keeps fake data only and may be destroyed when production exists.

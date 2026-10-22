@@ -1,6 +1,6 @@
 # Infrastructure
 
-Demo environment on one AWS Lightsail instance. Specification: `docs/specification/09-infrastructure.md`.
+Demo environment on one AWS Lightsail instance. Specification: `docs/specification/09-infrastructure.md`. Day-to-day operation (deploy, rollback, backup drill, alarms): [`docs/operations-runbook.md`](../docs/operations-runbook.md).
 
 ## What is here
 
@@ -11,7 +11,8 @@ Demo environment on one AWS Lightsail instance. Specification: `docs/specificati
 | `docker/demo.env.example` | Checklist of what `/opt/skills/.env` must contain (no secrets) | phase 7b-1 |
 | `scripts/bootstrap-server.sh` | One-time server setup over SSH (Docker, `deploy` user, folders, backup timer) | phase 7b-1 |
 | `scripts/deploy.sh` | Pull, back up, migrate, start, wait for healthy | phase 7b-1 |
-| `scripts/backup.sh`, `scripts/restore.sh` | Database backup to S3 and restore | phase 7b-1 |
+| `scripts/backup.sh`, `scripts/restore.sh`, `scripts/list-backups.sh` | Database backup to S3, restore, list the backups | phase 7b-1 |
+| `scripts/setup-alarms.sh` | Creates the Lightsail alarms (run once by hand, needs an email address) | phase 8 |
 | `terraform/bootstrap` | Run once by hand: state bucket, GitHub sign-in (OIDC) and the roles `skills-terraform` and `skills-deploy` | phase 7b-2 |
 | `terraform/modules`, `terraform/envs/demo` | Lightsail host (adopted), static IP, firewall, daily snapshots, backup bucket and user, Route 53 record | phase 7b-2 |
 
@@ -114,3 +115,7 @@ not readable", run this once on the server as `deploy` (no sudo needed, Docker d
 
     docker run --rm -v /opt/skills/data/reports:/r alpine \
       sh -c "chgrp -R $(id -g deploy) /r && chmod -R g+rX /r && chmod 750 /r"
+
+## Notes on GitHub sign-in to AWS
+
+GitHub can put the numeric owner and repository IDs into the OIDC subject (repository setting "immutable subject": `repo:owner@<id>/name@<id>:environment:demo`). The bootstrap roles trust both the legacy and the immutable form (`github_repository` and `github_repository_immutable` in `terraform/bootstrap/variables.tf`). If AWS answers "Not authorized to perform sts:AssumeRoleWithWebIdentity", compare the real subject with `gh api repos/<owner>/<repo>/actions/oidc/customization/sub` and update the variable.
