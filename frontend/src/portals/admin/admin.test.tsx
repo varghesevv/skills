@@ -34,7 +34,7 @@ describe('navigation', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Dashboard', 'Organisations', 'Labels'])
+    ).toEqual(['Dashboard', 'Organisations', 'Reports', 'Report history', 'Schedules', 'Labels'])
   })
 })
 

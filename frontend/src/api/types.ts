@@ -206,3 +206,23 @@ export type OrgSummary = {
   approval_status: ApprovalStatus
   created_at: string
 }
+
+export type ReportRun = {
+  id: string
+  report_name: string
+  window_from: string
+  window_to: string
+  started_at: string
+  finished_at: string | null
+  status: 'running' | 'succeeded' | 'failed'
+  row_count: number | null
+  error_message: string | null
+  has_files: boolean
+}
+
+export type ReportSchedule = {
+  report_name: string
+  cron_expression: string
+  timezone: string
+  is_enabled: boolean
+}

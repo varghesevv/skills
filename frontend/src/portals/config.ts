@@ -60,6 +60,9 @@ export const PORTALS: readonly Portal[] = [
     nav: [
       { to: '/admin', labelKey: 'nav.dashboard', end: true },
       { to: '/admin/organisations', labelKey: 'nav.orgs' },
+      { to: '/admin/reports', labelKey: 'nav.reports' },
+      { to: '/admin/report-history', labelKey: 'nav.runs' },
+      { to: '/admin/report-schedules', labelKey: 'nav.schedules' },
       { to: '/admin/labels', labelKey: 'nav.adminLabels' },
     ],
   },
