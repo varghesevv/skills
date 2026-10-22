@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 
 import { listLabels } from '../../api/freelancer'
 import type { SearchResult } from '../../api/types'
-import { SEARCH_PAGE_SIZE, searchFreelancers } from '../../api/workhost'
+import { SEARCH_PAGE_SIZE, listOrganisations, searchFreelancers } from '../../api/workhost'
 import { t } from '../../i18n'
 import { Badge, Pager, QueryBoundary, SelectField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
@@ -20,11 +20,19 @@ import {
   type SortKey,
 } from './searchParams'
 
-function ResultCard({ item, search }: { item: SearchResult; search: string }) {
+function ResultCard({
+  item,
+  search,
+  portal,
+}: {
+  item: SearchResult
+  search: string
+  portal: Portal
+}) {
   return (
     <li className="card result">
       <h2>
-        <Link to={`/workhost/freelancers/${item.id}`} state={{ search }}>
+        <Link to={`/${portal}/freelancers/${item.id}`} state={{ search }}>
           {item.full_name ?? t('search.noName')}
         </Link>
       </h2>
@@ -54,7 +62,10 @@ function ResultCard({ item, search }: { item: SearchResult; search: string }) {
   )
 }
 
-export default function SearchPage() {
+export type Portal = 'workhost' | 'organisation'
+
+/** The freelancer search, shared by work hosts and organisations (who search to find people to vouch for). */
+export default function SearchPage({ portal }: { portal: Portal }) {
   usePageTitle(t('search.title'))
   const [params, setParams] = useSearchParams()
   const [panelOpen, setPanelOpen] = useState(false)
@@ -66,6 +77,8 @@ export default function SearchPage() {
   const paramsKey = params.toString()
 
   const labels = useQuery({ queryKey: ['labels'], queryFn: listLabels })
+  // The organisation filter is optional: if the list cannot be loaded the rest still works.
+  const organisations = useQuery({ queryKey: ['organisations'], queryFn: listOrganisations })
   const results = useQuery({
     queryKey: ['search', paramsKey],
     queryFn: () => searchFreelancers(apiQuery(params, page, SEARCH_PAGE_SIZE)),
@@ -126,7 +139,13 @@ export default function SearchPage() {
           </div>
           <QueryBoundary query={labels}>
             {(available) => (
-              <FilterForm key={filterKey} labels={available} initial={applied} onApply={apply} />
+              <FilterForm
+                key={`${filterKey}-${organisations.data?.length ?? 0}`}
+                labels={available}
+                organisations={organisations.data ?? []}
+                initial={applied}
+                onApply={apply}
+              />
             )}
           </QueryBoundary>
         </aside>
@@ -164,7 +183,7 @@ export default function SearchPage() {
                   <p role="status">{t('search.results', { count: data.total })}</p>
                   <ul className="result-grid plain-list">
                     {data.items.map((item) => (
-                      <ResultCard key={item.id} item={item} search={paramsKey} />
+                      <ResultCard key={item.id} item={item} search={paramsKey} portal={portal} />
                     ))}
                   </ul>
                   <Pager

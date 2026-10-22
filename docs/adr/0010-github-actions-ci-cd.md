@@ -13,7 +13,7 @@ The code is on GitHub. We need automated tests on every pull request and automat
 - **GitHub Actions** for CI (lint, type check, tests, migration check, security scans), infrastructure plan/apply, image build and deploy.
 - Container images are built in CI and pushed to **GitHub Container Registry (GHCR)**, tagged with the commit SHA.
 - Deploy connects to the Lightsail instance over **SSH** with a dedicated deploy key, pulls the new images and restarts with Docker Compose. Database migrations run as a one-off step before the new API starts.
-- The backend and frontend test jobs run on **self-hosted runners**: the Raspberry Pi (Linux ARM64, label `pi`) and a Linux x64 machine. Jobs ask for `[self-hosted, Linux]`, so either runner can take them and they can run in parallel. Both runners need Docker (the backend job starts PostgreSQL as a service container) with the runner user in the `docker` group. Lightweight jobs (docs links, secret scan, dependency audit) use GitHub-hosted `ubuntu-latest`.
+- Test jobs run on **self-hosted runners**: the Raspberry Pi (Linux ARM64, label `pi`) and a Linux x64 machine whose runner itself runs inside a container. GitHub does not support `services:` containers on a runner that is already in a container, so the **backend** job (PostgreSQL as a service container) asks for `[self-hosted, pi]`. The **frontend** job needs only Node and asks for `[self-hosted, Linux]`, so either runner can take it. Lightweight jobs (docs links, secret scan, dependency audit) use GitHub-hosted `ubuntu-latest`.
 - Deployments use a GitHub **Environment** (`demo`) that holds secrets and can require approval.
 
 ## Alternatives considered

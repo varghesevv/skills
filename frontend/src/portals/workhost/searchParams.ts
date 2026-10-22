@@ -17,6 +17,7 @@ export type FilterValues = {
   availableFrom: string // value of a datetime-local input
   availableTo: string
   minRating: string
+  orgId: string
   sort: SortKey
 }
 
@@ -33,6 +34,7 @@ export const EMPTY_FILTERS: FilterValues = {
   availableFrom: '',
   availableTo: '',
   minRating: '',
+  orgId: '',
   sort: 'newest',
 }
 
@@ -56,6 +58,7 @@ export function valuesFromParams(params: URLSearchParams): FilterValues {
     availableFrom: from ? toLocalInput(from) : '',
     availableTo: to ? toLocalInput(to) : '',
     minRating: params.get('min_rating') ?? '',
+    orgId: params.get('org_id') ?? '',
     sort: SORTS.find((key) => key === sort) ?? 'newest',
   }
 }
@@ -77,6 +80,7 @@ export function paramsFromValues(values: FilterValues): URLSearchParams {
   if (from) params.set('available_from', from)
   if (to) params.set('available_to', to)
   if (values.minRating) params.set('min_rating', values.minRating)
+  if (values.orgId) params.set('org_id', values.orgId)
   if (values.sort !== 'newest') params.set('sort', values.sort)
   return params
 }
@@ -122,6 +126,7 @@ export function activeFilterCount(values: FilterValues): number {
     values.negotiable,
     values.availableFrom,
     values.minRating,
+    values.orgId,
   ].filter(Boolean).length
   return (
     values.skills.length +

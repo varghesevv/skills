@@ -150,3 +150,48 @@ export type FreelancerPublic = {
   unavailable: Unavailability[]
   my_rating: GivenRating | null
 }
+
+export type OrgBrief = { id: string; org_name: string }
+
+// ---- organisation portal ----
+
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
+
+export type OrgProfile = {
+  id: string
+  email: string
+  org_name: string
+  mobile_number: string
+  approval_status: ApprovalStatus
+  created_at: string
+}
+
+export type OrgUpdate = { org_name: string; mobile_number: string }
+
+export type VouchedFreelancer = {
+  freelancer_id: string
+  full_name: string | null
+  nationality: string | null
+  primary_language: string | null
+  status: VouchStatus
+  is_active: boolean
+  created_at: string
+}
+
+export type ReportInfo = {
+  name: string
+  code: string
+  title: string
+  description: string
+  filters: string[]
+}
+
+export type ReportCell = string | number | boolean | null
+
+export type ReportData = {
+  name: string
+  title: string
+  window: { from: string; to: string }
+  row_count: number
+  sections: { title: string; columns: string[]; rows: ReportCell[][] }[]
+}

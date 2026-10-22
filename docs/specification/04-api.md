@@ -64,7 +64,9 @@ Behaviour of the core APIs:
 GET, PUT `/workhosts/me`; GET `/workhosts/me/ratings`.
 
 ### Organisations
-GET, PUT `/organisations/me`; GET `/organisations/me/freelancers`; POST `/organisations/me/freelancers/{freelancer_id}` (vouch); DELETE same path (revoke).
+GET `/organisations`: approved organisations (`id`, `org_name`) by name, up to 500, for work hosts, organisations and admins. It is what the "vouched by" search filter (`org_id`) offers. No contact details.
+
+GET, PUT `/organisations/me`; GET `/organisations/me/freelancers` (each item has the freelancer's `full_name`, so the list can be read without opening every profile); POST `/organisations/me/freelancers/{freelancer_id}` (vouch); DELETE same path (revoke).
 
 ### Labels
 GET `/labels?type=skill|language|timing|nativity|skill_level` (any authenticated). Admin: POST `/labels`, PATCH `/labels/{id}`.

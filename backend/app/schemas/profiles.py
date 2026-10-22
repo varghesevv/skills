@@ -183,8 +183,16 @@ class OrganisationMe(BaseModel):
     created_at: datetime
 
 
+class OrganisationBrief(BaseModel):
+    """An approved organisation as listed in the directory (no contact details)."""
+
+    id: uuid.UUID
+    org_name: str
+
+
 class VouchedFreelancer(BaseModel):
     freelancer_id: uuid.UUID
+    full_name: str | None
     nationality: str | None
     primary_language: str | None
     status: str  # pending, approved or revoked

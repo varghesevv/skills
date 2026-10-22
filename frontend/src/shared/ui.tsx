@@ -15,7 +15,7 @@ type FieldShared = {
 }
 
 type TextFieldProps = FieldShared & {
-  type?: 'text' | 'email' | 'tel' | 'password' | 'datetime-local'
+  type?: 'text' | 'email' | 'tel' | 'password' | 'datetime-local' | 'date'
   list?: string
   autoComplete?: string
   inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']

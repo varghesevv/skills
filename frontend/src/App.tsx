@@ -11,6 +11,7 @@ import Register, { RegisterChoice } from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import { PORTALS } from './portals/config'
 import { freelancerRoutes } from './portals/freelancer/routes'
+import { organisationRoutes } from './portals/organisation/routes'
 import { workhostRoutes } from './portals/workhost/routes'
 import AppShell from './shell/AppShell'
 import PublicLayout from './shell/PublicLayout'
@@ -39,6 +40,7 @@ export default function App() {
                 <Route index element={<Dashboard />} />
                 {portal.userType === 'freelancer' && freelancerRoutes}
                 {portal.userType === 'workhost' && workhostRoutes}
+                {portal.userType === 'organisation' && organisationRoutes}
               </Route>
             ))}
           </Route>

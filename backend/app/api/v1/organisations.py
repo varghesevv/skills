@@ -12,12 +12,20 @@ from app.core.security import Principal
 from app.models.users import Freelancer, Organisation
 from app.models.vouching import OrgFreelancer
 from app.schemas.common import Page, Pagination, pagination
-from app.schemas.profiles import OrganisationMe, OrganisationUpdate, VouchedFreelancer
+from app.schemas.profiles import (
+    OrganisationBrief,
+    OrganisationMe,
+    OrganisationUpdate,
+    VouchedFreelancer,
+)
 from app.services.profiles import current_account
 
 router = APIRouter(prefix="/organisations", tags=["organisations"])
 
 OrgOnly = Annotated[Principal, Depends(require_roles("organisation"))]
+DirectoryReader = Annotated[Principal, Depends(require_roles("workhost", "organisation", "admin"))]
+
+DIRECTORY_LIMIT = 500
 
 
 def _response(org: Organisation) -> OrganisationMe:
@@ -34,12 +42,25 @@ def _response(org: Organisation) -> OrganisationMe:
 def _vouched(link: OrgFreelancer, freelancer: Freelancer) -> VouchedFreelancer:
     return VouchedFreelancer(
         freelancer_id=freelancer.id,
+        full_name=freelancer.full_name,
         nationality=freelancer.nationality,
         primary_language=freelancer.primary_language,
         status=link.status,
         is_active=link.is_active,
         created_at=link.created_at,
     )
+
+
+@router.get("")
+def directory(_: DirectoryReader, db: Session = Depends(get_session)) -> list[OrganisationBrief]:
+    """Approved organisations by name, so work hosts can filter a search by who vouches."""
+    rows = db.execute(
+        select(Organisation.id, Organisation.org_name)
+        .where(Organisation.approval_status == "approved")
+        .order_by(Organisation.org_name, Organisation.id)
+        .limit(DIRECTORY_LIMIT)
+    ).all()
+    return [OrganisationBrief(id=row.id, org_name=row.org_name) for row in rows]
 
 
 @router.get("/me")

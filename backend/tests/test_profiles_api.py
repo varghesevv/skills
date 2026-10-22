@@ -195,8 +195,25 @@ def test_unavailability_validation_and_ownership(client: TestClient, session: Se
 # ---- vouching -----------------------------------------------------------------------------
 
 
+def test_organisation_directory(client: TestClient, session: Session) -> None:
+    signup(client, session, "organisation", "o20@example.com", org_name="Beta Training")
+    signup(client, session, "organisation", "o21@example.com", org_name="Acme Training")
+    signup(client, session, "organisation", "o22@example.com", org_name="Waiting", approved=False)
+    host = signup(client, session, "workhost", "h20@example.com")
+    freelancer = signup(client, session, "freelancer", "f20@example.com")
+
+    listing = client.get(f"{API}/organisations", headers=host.headers)
+    assert listing.status_code == 200
+    names = [item["org_name"] for item in listing.json()]
+    assert names == ["Acme Training", "Beta Training"]  # approved only, by name
+    assert set(listing.json()[0]) == {"id", "org_name"}  # no contact details
+
+    assert client.get(f"{API}/organisations", headers=freelancer.headers).status_code == 403
+    assert client.get(f"{API}/organisations").status_code == 401
+
+
 def test_vouch_lifecycle(client: TestClient, session: Session) -> None:
-    freelancer = signup(client, session, "freelancer", "f8@example.com")
+    freelancer = signup(client, session, "freelancer", "f8@example.com", full_name="Fatima Khan")
     org = signup(client, session, "organisation", "o1@example.com", org_name="Acme")
     host = signup(client, session, "workhost", "h2@example.com")
     link = f"{API}/organisations/me/freelancers/{freelancer.id}"
@@ -221,6 +238,7 @@ def test_vouch_lifecycle(client: TestClient, session: Session) -> None:
     listing = client.get(f"{API}/organisations/me/freelancers", headers=org.headers).json()
     assert listing["total"] == 1
     assert listing["items"][0]["status"] == "approved"
+    assert listing["items"][0]["full_name"] == "Fatima Khan"
     assert listing["items"][0]["is_active"] is True
 
     assert client.delete(link, headers=org.headers).status_code == 204

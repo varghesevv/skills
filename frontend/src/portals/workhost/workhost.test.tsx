@@ -111,6 +111,25 @@ describe('search', () => {
     expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeVisible()
   })
 
+  it('filters by the organisation that vouches', async () => {
+    const user = ui()
+    const filtered = 'GET /search/freelancers?org_id=org-1&page=1&page_size=12'
+    const api = asHost({
+      'GET /organisations': () =>
+        json(200, [
+          { id: 'org-1', org_name: 'Acme Training' },
+          { id: 'org-2', org_name: 'Beta Academy' },
+        ]),
+      [DEFAULT_SEARCH]: () => json(200, page([makeResult(), makeResult({ id: 'x' })])),
+      [filtered]: () => json(200, page([makeResult()])),
+    })
+    renderApp('/workhost/search')
+    await user.selectOptions(await screen.findByLabelText('Vouched by'), 'Acme Training')
+    await user.click(screen.getByRole('button', { name: 'Show results' }))
+    expect(await screen.findByText('1 freelancer(s) found')).toBeVisible()
+    expect(api.count(filtered)).toBe(1)
+  })
+
   it('explains a missing currency instead of calling the API', async () => {
     const user = ui()
     const api = asHost({ [DEFAULT_SEARCH]: () => json(200, page([makeResult()])) })

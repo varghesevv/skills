@@ -89,6 +89,11 @@ export const hostProfileSchema = z.object({
   mobile_number: mobile,
 })
 
+export const orgProfileSchema = z.object({
+  org_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
+  mobile_number: mobile,
+})
+
 export const ratingSchema = z.object({
   rating: z
     .string()

@@ -2,11 +2,14 @@ import { request } from './http'
 import type {
   FreelancerPublic,
   GivenRating,
+  OrgBrief,
   Page,
   SearchResult,
   WorkHostProfile,
   WorkHostUpdate,
 } from './types'
+
+export const listOrganisations = () => request<OrgBrief[]>('/organisations')
 
 export const SEARCH_PAGE_SIZE = 12
 export const GIVEN_PAGE_SIZE = 10
