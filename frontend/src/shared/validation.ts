@@ -94,6 +94,10 @@ export const orgProfileSchema = z.object({
   mobile_number: mobile,
 })
 
+export const labelNameSchema = z.object({
+  label_name: z.string().trim().min(1, 'validation.required').max(100, 'validation.tooLong'),
+})
+
 export const ratingSchema = z.object({
   rating: z
     .string()

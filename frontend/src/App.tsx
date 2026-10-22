@@ -11,6 +11,7 @@ import Register, { RegisterChoice } from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import { PORTALS } from './portals/config'
 import { freelancerRoutes } from './portals/freelancer/routes'
+import { adminRoutes } from './portals/admin/routes'
 import { organisationRoutes } from './portals/organisation/routes'
 import { workhostRoutes } from './portals/workhost/routes'
 import AppShell from './shell/AppShell'
@@ -41,6 +42,7 @@ export default function App() {
                 {portal.userType === 'freelancer' && freelancerRoutes}
                 {portal.userType === 'workhost' && workhostRoutes}
                 {portal.userType === 'organisation' && organisationRoutes}
+                {portal.userType === 'admin' && adminRoutes}
               </Route>
             ))}
           </Route>

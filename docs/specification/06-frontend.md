@@ -17,7 +17,7 @@ Dashboard; profile and available days; freelancer search with filters and sortin
 Dashboard; profile; vouched freelancers (add, revoke, status); organisation reports.
 
 ### Admin portal
-Report pages (RP-01 to RP-07), scheduled-run history and downloads, label management.
+Organisation approvals (waiting, approved and rejected lists; approve or reject); label management (add, rename, deactivate or reactivate, by kind); report pages (RP-01 to RP-07), scheduled-run history and downloads, and schedule editing.
 
 ## UI requirements
 

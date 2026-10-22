@@ -41,6 +41,8 @@ export function errorMessage(error: unknown): string {
         return t('error.orgNotApproved')
       case 'already_vouched':
         return t('error.alreadyVouched')
+      case 'label_exists':
+        return t('error.labelExists')
       case 'forbidden':
         return t('error.forbidden')
       case 'already_rated':

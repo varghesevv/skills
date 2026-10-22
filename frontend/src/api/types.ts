@@ -195,3 +195,14 @@ export type ReportData = {
   row_count: number
   sections: { title: string; columns: string[]; rows: ReportCell[][] }[]
 }
+
+// ---- admin portal ----
+
+export type OrgSummary = {
+  id: string
+  org_name: string
+  email: string
+  mobile_number: string
+  approval_status: ApprovalStatus
+  created_at: string
+}
