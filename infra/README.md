@@ -75,7 +75,7 @@ make tf-lock                         # once: writes .terraform.lock.hcl; commit 
    ```
    Read the plan before applying:
    - The instance `skills` must show **no replacement** ("must be replaced" would destroy the server). A tag update and the snapshot add-on are expected.
-   - A **new static IP** is created and attached. The instance gets a new public address (the old `13.233.41.127` is released), and the DNS record `skills-demo.privatedir.com` points to the new one.
+   - A **new static IP** is created and attached. The instance gets a new public address (the old `13.233.41.127` is released), and the DNS record `skills-demo.privatedir.in` points to the new one.
    - The firewall opens 443, and port 22 is restricted to your `ssh_allowed_cidrs` plus the Lightsail console's browser SSH. Make sure your address is in `terraform.tfvars` first, or you lose SSH from your computer (the browser SSH still works).
    ```
    make tf-apply TF_DIR=envs/demo

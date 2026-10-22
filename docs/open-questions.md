@@ -41,5 +41,5 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 ## Resolved (infrastructure)
 
 - **Q11** AWS region: `ap-south-1` (Mumbai). Confirmed 2026-10-20.
-- **Q12** Domain: `privatedir.com` is registered in Route 53; the demo uses `skills-demo.privatedir.com`. Confirmed 2026-10-20.
+- **Q12** Domain: the demo uses `skills-demo.privatedir.in`, with DNS in Route 53. Changed 2026-10-22 from `privatedir.com`, whose name servers point to another provider (site4now), so records written to its Route 53 zone were never served. Originally confirmed 2026-10-20.
 - **Q14** Production environment: planned within 1 to 2 months after the demo. See section 12 of the [infrastructure spec](specification/09-infrastructure.md) and ADR-0008.
