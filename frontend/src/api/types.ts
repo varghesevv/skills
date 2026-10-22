@@ -84,3 +84,69 @@ export type Vouch = {
 }
 
 export type PublicRating = { rating: number; comment: string | null; rated_on: string }
+
+// ---- work host portal ----
+
+export type Day = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
+export const DAYS: readonly Day[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+export type WorkHostProfile = {
+  id: string
+  full_name: string | null
+  email: string
+  mobile_number: string
+  available_days: Day[]
+  created_at: string
+}
+
+export type WorkHostUpdate = {
+  full_name: string
+  mobile_number: string
+  available_days: Day[]
+}
+
+export type SearchResult = {
+  id: string
+  full_name: string | null
+  nationality: string | null
+  primary_language: string | null
+  whatsapp_availability: boolean
+  rate_per_hour: number | null
+  rate_currency: string | null
+  is_rate_negotiable: boolean
+  average_rating: number | null
+  rating_count: number
+  vouch_count: number
+  skills: { name: string; level: string | null }[]
+  languages: string[]
+  timings: string[]
+  nativity: string[]
+}
+
+export type GivenRating = {
+  id: string
+  freelancer_id: string
+  freelancer_name: string | null
+  rating: number
+  comment: string | null
+  rated_on: string
+  updated_at: string | null
+}
+
+export type FreelancerPublic = {
+  id: string
+  full_name: string | null
+  mobile_number: string | null
+  whatsapp_availability: boolean
+  nationality: string | null
+  primary_language: string | null
+  rate_per_hour: number | null
+  rate_currency: string | null
+  is_rate_negotiable: boolean
+  labels: FreelancerLabel[]
+  average_rating: number | null
+  rating_count: number
+  vouched_by: { org_id: string; org_name: string }[]
+  unavailable: Unavailability[]
+  my_rating: GivenRating | null
+}

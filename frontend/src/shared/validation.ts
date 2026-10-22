@@ -84,6 +84,19 @@ export const freelancerProfileSchema = z
     }
   })
 
+export const hostProfileSchema = z.object({
+  full_name: fullName,
+  mobile_number: mobile,
+})
+
+export const ratingSchema = z.object({
+  rating: z
+    .string()
+    .regex(/^(10|[1-9])$/, 'validation.ratingChoose')
+    .transform(Number),
+  comment: z.string().trim().max(2000, 'validation.commentLong'),
+})
+
 export const forgotPasswordSchema = z.object({ email, user_type: userType })
 
 export const resetPasswordSchema = z.object({ new_password: newPassword })

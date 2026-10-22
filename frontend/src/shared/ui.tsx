@@ -245,3 +245,28 @@ export function Badge({
 }) {
   return <span className={`badge badge-${tone}`}>{children}</span>
 }
+
+export function TextAreaField(props: FieldShared & { rows?: number; maxLength?: number }) {
+  const id = useId()
+  const errorId = `${id}-error`
+  return (
+    <div className={`field ${props.className ?? ''}`.trim()}>
+      <label htmlFor={id}>{props.label}</label>
+      <textarea
+        id={id}
+        name={props.name}
+        rows={props.rows ?? 4}
+        maxLength={props.maxLength}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+        aria-invalid={props.error ? true : undefined}
+        aria-describedby={describedBy(props.error && errorId)}
+      />
+      {props.error && (
+        <p className="field-error" id={errorId}>
+          {props.error}
+        </p>
+      )}
+    </div>
+  )
+}

@@ -105,6 +105,18 @@ class VouchingOrg(BaseModel):
     org_name: str
 
 
+class GivenRating(BaseModel):
+    """A rating a work host gave, with the freelancer's name so the host can recognise it."""
+
+    id: uuid.UUID
+    freelancer_id: uuid.UUID
+    freelancer_name: str | None
+    rating: int
+    comment: str | None
+    rated_on: datetime
+    updated_at: datetime | None
+
+
 class FreelancerPublic(BaseModel):
     """What work hosts, organisations and admins see. Never the email."""
 
@@ -122,6 +134,7 @@ class FreelancerPublic(BaseModel):
     rating_count: int
     vouched_by: list[VouchingOrg]
     unavailable: list[UnavailabilityOut]  # upcoming periods
+    my_rating: GivenRating | None = None  # only for the work host who rated this person
 
 
 # ---- work host --------------------------------------------------------------------------
@@ -140,15 +153,6 @@ class WorkHostMe(BaseModel):
     mobile_number: str
     available_days: list[Day]
     created_at: datetime
-
-
-class GivenRating(BaseModel):
-    id: uuid.UUID
-    freelancer_id: uuid.UUID
-    rating: int
-    comment: str | None
-    rated_on: datetime
-    updated_at: datetime | None
 
 
 class RatingCreate(BaseModel):

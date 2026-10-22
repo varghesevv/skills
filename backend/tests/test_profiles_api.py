@@ -259,7 +259,7 @@ def test_vouch_rules(client: TestClient, session: Session) -> None:
 
 
 def test_rating_flow(client: TestClient, session: Session) -> None:
-    freelancer = signup(client, session, "freelancer", "f11@example.com")
+    freelancer = signup(client, session, "freelancer", "f11@example.com", full_name="Test Person")
     host_a = signup(client, session, "workhost", "ha@example.com")
     host_b = signup(client, session, "workhost", "hb@example.com")
     body = {"freelancer_id": str(freelancer.id), "rating": 8, "comment": "Great"}
@@ -285,6 +285,29 @@ def test_rating_flow(client: TestClient, session: Session) -> None:
     assert all(set(item) == {"rating", "comment", "rated_on"} for item in page.json()["items"])
     mine = client.get(f"{API}/workhosts/me/ratings", headers=host_a.headers).json()
     assert mine["total"] == 1
+    assert mine["items"][0]["freelancer_name"] == "Test Person"
+    assert changed.json()["freelancer_name"] == "Test Person"
+
+
+def test_work_host_sees_their_own_rating_on_the_detail_page(
+    client: TestClient, session: Session
+) -> None:
+    freelancer = signup(client, session, "freelancer", "f13@example.com", full_name="Rated Person")
+    host_a = signup(client, session, "workhost", "hc@example.com")
+    host_b = signup(client, session, "workhost", "hd@example.com")
+    org = signup(client, session, "organisation", "o9@example.com")
+    url = f"{API}/freelancers/{freelancer.id}"
+
+    assert client.get(url, headers=host_a.headers).json()["my_rating"] is None
+    body = {"freelancer_id": str(freelancer.id), "rating": 7, "comment": "Fine"}
+    created = client.post(f"{API}/ratings", json=body, headers=host_a.headers).json()
+
+    mine = client.get(url, headers=host_a.headers).json()["my_rating"]
+    assert mine["id"] == created["id"]
+    assert (mine["rating"], mine["comment"], mine["freelancer_name"]) == (7, "Fine", "Rated Person")
+    # Other people never see another host's rating through this field.
+    assert client.get(url, headers=host_b.headers).json()["my_rating"] is None
+    assert client.get(url, headers=org.headers).json()["my_rating"] is None
 
 
 def test_rating_validation(client: TestClient, session: Session) -> None:

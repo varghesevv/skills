@@ -21,6 +21,7 @@ from app.schemas.profiles import (
     FreelancerMe,
     FreelancerPublic,
     FreelancerUpdate,
+    GivenRating,
     LabelsUpdate,
     PublicRating,
     UnavailabilityIn,
@@ -289,6 +290,24 @@ def public_profile(
         )
         .order_by(FreelancerUnavailability.unavailable_from)
     ).all()
+    mine = None
+    if principal.user_type == "workhost":
+        given = db.scalar(
+            select(UserRating).where(
+                UserRating.work_host_id == principal.user_id,
+                UserRating.freelancer_id == freelancer.id,
+            )
+        )
+        if given is not None:
+            mine = GivenRating(
+                id=given.id,
+                freelancer_id=given.freelancer_id,
+                freelancer_name=freelancer.full_name,
+                rating=given.rating,
+                comment=given.comment,
+                rated_on=given.rated_on,
+                updated_at=given.updated_at,
+            )
     return FreelancerPublic(
         id=freelancer.id,
         full_name=freelancer.full_name,
@@ -305,6 +324,7 @@ def public_profile(
         rating_count=count,
         vouched_by=[VouchingOrg(org_id=org_id, org_name=name) for org_id, name in orgs],
         unavailable=[_unavailability_out(row) for row in upcoming],
+        my_rating=mine,
     )
 
 
