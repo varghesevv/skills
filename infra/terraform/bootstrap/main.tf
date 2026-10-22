@@ -8,7 +8,12 @@ data "aws_route53_zone" "parent" {
 locals {
   account_id   = data.aws_caller_identity.current.account_id
   state_bucket = "${var.name_prefix}-terraform-state-${local.account_id}"
-  github_sub   = "repo:${var.github_repository}"
+  # GitHub can put the numeric owner and repository IDs in the OIDC subject ("immutable
+  # subject"). Accept both forms of the same repository.
+  github_subs = [
+    "repo:${var.github_repository}",
+    "repo:${var.github_repository_immutable}",
+  ]
 }
 
 # ---- Terraform state ----------------------------------------------------------------------
@@ -72,10 +77,12 @@ data "aws_iam_policy_document" "terraform_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values = [
-        "${local.github_sub}:pull_request",
-        "${local.github_sub}:environment:${var.environment_name}",
-      ]
+      values = flatten([
+        for sub in local.github_subs : [
+          "${sub}:pull_request",
+          "${sub}:environment:${var.environment_name}",
+        ]
+      ])
     }
   }
 }
@@ -96,7 +103,7 @@ data "aws_iam_policy_document" "deploy_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["${local.github_sub}:environment:${var.environment_name}"]
+      values   = [for sub in local.github_subs : "${sub}:environment:${var.environment_name}"]
     }
   }
 }

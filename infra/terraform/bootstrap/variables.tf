@@ -22,6 +22,12 @@ variable "github_repository" {
   default     = "varghesevv/skills"
 }
 
+variable "github_repository_immutable" {
+  description = "The same repository in GitHub's immutable OIDC form: owner@<owner id>/name@<repo id>."
+  type        = string
+  default     = "varghesevv@1423145/skills@1427422104"
+}
+
 variable "parent_zone_name" {
   description = "The existing Route 53 zone the demo record lives in. It is looked up, never created."
   type        = string
