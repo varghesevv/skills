@@ -206,7 +206,7 @@ describe('availability page', () => {
     const ui = user()
     const api = signedInAs(undefined, {
       'GET /freelancers/me/unavailability': () => json(200, []),
-      'POST /freelancers/me/unavailability': () => json(201, { id: 'new', ...existing }),
+      'POST /freelancers/me/unavailability': () => json(201, { ...existing, id: 'new' }),
     })
     renderApp('/freelancer/availability')
     const from = await screen.findByLabelText('From')
