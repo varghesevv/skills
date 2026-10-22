@@ -1,0 +1,100 @@
+# Demo server compose file. Copied to /opt/skills by the deploy workflow, next to the .env file
+# the workflow writes from the GitHub Environment `demo`. Local development uses the root
+# docker-compose.yml instead.
+#
+# Only `proxy` publishes ports. `db`, `api`, `worker` and `web` are reachable only on the
+# internal compose network.
+name: skills-demo
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:?missing in .env}:${POSTGRES_PASSWORD:?missing in .env}@db:5432/${POSTGRES_DB:?missing in .env}
+  ENVIRONMENT: ${ENVIRONMENT:?missing in .env}
+  CORS_ORIGINS: ${CORS_ORIGINS:?missing in .env}
+  REPORT_TIMEZONE: ${REPORT_TIMEZONE:?missing in .env}
+  REPORTS_OUTPUT_DIR: /data/reports
+  JWT_SECRET: ${JWT_SECRET:?missing in .env}
+  ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:?missing in .env}
+  REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:?missing in .env}
+  RESET_TOKEN_MINUTES: ${RESET_TOKEN_MINUTES:?missing in .env}
+  LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:?missing in .env}
+  LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:?missing in .env}
+  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?missing in .env}
+
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?missing in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificates: keep them across restarts
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:?missing in .env}/skills-web:${IMAGE_TAG:?missing in .env}
+    restart: unless-stopped
+    logging: *logging
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:?missing in .env}/skills-api:${IMAGE_TAG:?missing in .env}
+    restart: unless-stopped
+    logging: *logging
+    # Behind the proxy: trust the forwarded client address so login throttling sees real
+    # addresses. Safe because only the proxy can reach this container.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    environment: *backend-env
+    volumes:
+      - /opt/skills/data/reports:/data/reports
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/${GHCR_OWNER:?missing in .env}/skills-api:${IMAGE_TAG:?missing in .env}
+    restart: unless-stopped
+    logging: *logging
+    command: python -m app.worker
+    environment: *backend-env
+    healthcheck:
+      disable: true # the image's HTTP health check only applies to the api service
+    volumes:
+      - /opt/skills/data/reports:/data/reports
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?missing in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?missing in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?missing in .env}
+    volumes:
+      - /opt/skills/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  caddy_data:
+  caddy_config:

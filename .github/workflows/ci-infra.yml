@@ -1,0 +1,46 @@
+name: ci-infra
+
+on:
+  pull_request:
+    paths: ["infra/**", ".github/workflows/ci-infra.yml"]
+  push:
+    branches: [main]
+    paths: ["infra/**", ".github/workflows/ci-infra.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-infra-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell scripts (shellcheck)
+        run: shellcheck infra/scripts/*.sh
+
+      - name: Server compose file is valid
+        # Throwaway values only, to prove that every variable the file needs is listed.
+        run: |
+          export ENVIRONMENT=demo SITE_ADDRESS=example.test FRONTEND_BASE_URL=https://example.test
+          export CORS_ORIGINS=https://example.test REPORT_TIMEZONE=UTC GHCR_OWNER=owner IMAGE_TAG=test
+          export POSTGRES_USER=skills POSTGRES_DB=skills ACCESS_TOKEN_MINUTES=15 REFRESH_TOKEN_DAYS=30
+          export RESET_TOKEN_MINUTES=60 LOGIN_MAX_FAILURES=5 LOGIN_WINDOW_MINUTES=15
+          export POSTGRES_PASSWORD=$(openssl rand -hex 12) JWT_SECRET=$(openssl rand -hex 24)
+          docker compose --env-file /dev/null -f infra/docker/compose.demo.yml config --quiet
+
+      - name: Every setting the application needs is in the demo example
+        run: |
+          for name in $(grep -oE '^[A-Z_]+=' .env.example | tr -d '='); do
+            case "$name" in DB_PORT|API_PORT|WEB_PORT|REPORTS_OUTPUT_DIR) continue ;; esac
+            grep -q "^${name}=" infra/docker/demo.env.example || { echo "demo.env.example is missing ${name}"; exit 1; }
+          done
+
+      - name: Caddyfile is valid
+        run: |
+          docker run --rm -e SITE_ADDRESS=example.test -v "$PWD/infra/docker/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
