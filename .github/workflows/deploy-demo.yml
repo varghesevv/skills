@@ -118,6 +118,8 @@ jobs:
           DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }}
           BACKUP_AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
           BACKUP_AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
+          PGADMIN_EMAIL: ${{ vars.PGADMIN_EMAIL }}
+          PGADMIN_PASSWORD: ${{ secrets.PGADMIN_PASSWORD }}
         run: |
           set -euo pipefail
           for v in POSTGRES_PASSWORD JWT_SECRET DEMO_USER_PASSWORD BACKUP_AWS_ACCESS_KEY_ID BACKUP_AWS_SECRET_ACCESS_KEY; do
@@ -150,12 +152,19 @@ jobs:
             echo "AWS_ACCESS_KEY_ID=${BACKUP_AWS_ACCESS_KEY_ID}"
             echo "AWS_SECRET_ACCESS_KEY=${BACKUP_AWS_SECRET_ACCESS_KEY}"
           } > "$envfile"
+          # pgAdmin is optional: its login is only written when the secret PGADMIN_PASSWORD exists.
+          if [ -n "${PGADMIN_PASSWORD}" ]; then
+            case "${PGADMIN_PASSWORD}${PGADMIN_EMAIL}" in *$'\n'*|*' '*) echo "PGADMIN_PASSWORD and PGADMIN_EMAIL must be single words." >&2; exit 1;; esac
+            [ "${#PGADMIN_PASSWORD}" -ge 16 ] || { echo "PGADMIN_PASSWORD must have at least 16 characters." >&2; exit 1; }
+            echo "PGADMIN_PASSWORD=${PGADMIN_PASSWORD}" >> "$envfile"
+            [ -z "${PGADMIN_EMAIL}" ] || echo "PGADMIN_EMAIL=${PGADMIN_EMAIL}" >> "$envfile"
+          fi
 
           ssh_opts=(-i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
           target="deploy@${SERVER_HOST}"
           scp "${ssh_opts[@]}" "$envfile" "${target}:/opt/skills/.env.new"
           rm -f "$envfile"
-          scp "${ssh_opts[@]}" infra/docker/compose.demo.yml infra/docker/Caddyfile \
+          scp "${ssh_opts[@]}" infra/docker/compose.demo.yml infra/docker/Caddyfile infra/docker/pgadmin-servers.json \
             infra/scripts/deploy.sh infra/scripts/backup.sh infra/scripts/restore.sh infra/scripts/list-backups.sh "${target}:/opt/skills/"
           ssh "${ssh_opts[@]}" "$target" 'cd /opt/skills && chmod 600 .env.new && mv .env.new .env && chmod 755 deploy.sh backup.sh restore.sh list-backups.sh && ./deploy.sh'
 

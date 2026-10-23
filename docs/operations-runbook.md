@@ -134,6 +134,32 @@ dc run --rm tools python -m app.cli seed-demo
 
 Copy `demo-logins.csv` to your computer with `scp` and delete it from the server. It contains the shared demo password.
 
+### Look at or edit the database with pgAdmin
+
+pgAdmin runs as a container on the demo server, **only when you start it**, and listens on the server's own address (`127.0.0.1:5050`). You reach it through an SSH tunnel, so nothing new is open to the internet and the existing SSH rule (`TF_SSH_ALLOWED_CIDRS`) protects it.
+
+One-time setup (GitHub → Settings → Environments → `demo`):
+- Secret `PGADMIN_PASSWORD`: a long random password (16+ characters, no spaces). It is only the pgAdmin login.
+- Optional variable `PGADMIN_EMAIL`: your login name, a real-looking address such as `you@yourdomain.com` (default `pgadmin4@pgadmin.org`).
+- Re-run `deploy-demo` so the settings and `pgadmin-servers.json` reach the server.
+
+Each time:
+1. Start it on the server (as `deploy`):
+   `cd /opt/skills && docker compose --env-file .env -f compose.demo.yml --profile pgadmin up -d pgadmin`
+2. On your Mac, open the tunnel and leave it running:
+   `ssh -i ~/.ssh/skills-deploy -N -L 5050:127.0.0.1:5050 deploy@13.127.253.202`
+3. Open `http://localhost:5050` and log in with `PGADMIN_EMAIL` / `PGADMIN_PASSWORD`.
+4. The server `skills (demo)` is already listed. Open it and enter the database password once. Copy it without showing it:
+   `ssh -i ~/.ssh/skills-deploy deploy@13.127.253.202 "sed -n 's/^POSTGRES_PASSWORD=//p' /opt/skills/.env" | pbcopy`
+5. When you are done, close the tunnel (Ctrl-C) and stop pgAdmin:
+   `docker compose --env-file .env -f compose.demo.yml --profile pgadmin stop pgadmin`
+
+Safety:
+- For looking around, use a read-only login. On the server: `docker compose --env-file .env -f compose.demo.yml exec db psql -U skills -d skills -c "CREATE ROLE viewer LOGIN"`, then `... -c "\password viewer"` (type the password there), then `... -c "GRANT pg_read_all_data TO viewer"`. Add it as a second connection in pgAdmin.
+- Before changing data, run `cd /opt/skills && ./backup.sh`. In pgAdmin turn auto-commit off (Query Tool toolbar), run your `UPDATE`, check the rows, then commit or roll back.
+- Do not edit `password_hash` or tokens by hand. Reset passwords through the app and create admins with the CLI. Changes in pgAdmin bypass the app's checks.
+- Never open port 5050 or 5432 in the Lightsail firewall.
+
 ## 10. Common problems
 
 | Symptom | Likely cause and fix |
