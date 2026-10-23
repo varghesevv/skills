@@ -42,6 +42,7 @@ describe('applyTerms', () => {
     expect(applyTerms('{Organisations} and {workhosts}')).toBe('Churches and providers')
     expect(applyTerms('I represent {a_organisation}')).toBe('I represent a church')
     expect(applyTerms('{A_workhost} helps')).toBe('A provider helps')
+    expect(applyTerms('Find {freelancers}, {a_freelancer}')).toBe('Find searchers, a searcher')
     expect(applyTerms('{Organisation} Name')).toBe('Church Name')
   })
 
@@ -62,6 +63,9 @@ describe('addresses', () => {
     expect(term('organisations_path')).toBe('churches')
     expect(userTypeOfSlug('church')).toBe('organisation')
     expect(userTypeOfSlug('provider')).toBe('workhost')
+    expect(slugOf('freelancer')).toBe('searcher')
+    expect(term('freelancers_path')).toBe('searchers')
+    expect(userTypeOfSlug('searcher')).toBe('freelancer')
     expect(userTypeOfSlug('organisation')).toBeUndefined()
   })
 
