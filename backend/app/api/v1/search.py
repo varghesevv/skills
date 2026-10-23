@@ -42,7 +42,7 @@ def search(
     name: Annotated[str | None, Query(max_length=100)] = None,
     sort: SortKey = "newest",
 ) -> Page[SearchResult]:
-    """Find freelancers. Only complete profiles (a rate and at least one skill) are listed."""
+    """Find freelancers. Freelancers with at least one skill are listed; a rate is not needed."""
     if max_rate is not None and currency is None:
         raise ApiError(422, "currency_required", "max_rate needs a currency, for example AED")
     if (available_from is None) != (available_to is None):
