@@ -111,6 +111,41 @@ describe('search', () => {
     expect(screen.getByRole('button', { name: 'Filters (2)' })).toBeVisible()
   })
 
+  it('searches by name and shows the name as a removable filter', async () => {
+    const user = ui()
+    const named = 'GET /search/freelancers?name=anita&page=1&page_size=12'
+    const api = asHost({
+      [DEFAULT_SEARCH]: () => json(200, page([makeResult(), makeResult({ id: 'x' })])),
+      [named]: () => json(200, page([makeResult()])),
+    })
+    renderApp('/workhost/search')
+    await user.type(await screen.findByLabelText('Search by name'), 'anita')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    expect(await screen.findByText('1 freelancer(s) found')).toBeVisible()
+    expect(api.count(named)).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: 'Remove filter: Name: anita' }))
+    await waitFor(() => expect(screen.getByLabelText('Search by name')).toHaveValue(''))
+    expect(screen.queryByRole('list', { name: 'Active filters' })).not.toBeInTheDocument()
+  })
+
+  it('removes one filter from its chip and offers to clear everything when nothing matches', async () => {
+    const user = ui()
+    const both = 'GET /search/freelancers?skill=plumbing&language=English&page=1&page_size=12'
+    const oneLeft = 'GET /search/freelancers?skill=plumbing&page=1&page_size=12'
+    const api = asHost({
+      [both]: () => json(200, page([])),
+      [oneLeft]: () => json(200, page([makeResult()])),
+    })
+    renderApp('/workhost/search?skill=plumbing&language=English')
+    expect(await screen.findByText('No freelancer matches. Try fewer filters.')).toBeVisible()
+    // One next to the filter chips and one in the empty message.
+    expect(screen.getAllByRole('button', { name: 'Clear all filters' })).toHaveLength(2)
+    await user.click(screen.getByRole('button', { name: 'Remove filter: English' }))
+    expect(await screen.findByText('1 freelancer(s) found')).toBeVisible()
+    expect(api.count(oneLeft)).toBe(1)
+  })
+
   it('filters by the organisation that vouches', async () => {
     const user = ui()
     const filtered = 'GET /search/freelancers?org_id=org-1&page=1&page_size=12'

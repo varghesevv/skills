@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { listLabels } from '../../api/freelancer'
@@ -8,8 +8,9 @@ import { SEARCH_PAGE_SIZE, listOrganisations, searchFreelancers } from '../../ap
 import { t } from '../../i18n'
 import { portalPath } from '../config'
 import { term } from '../../terminology/terms'
-import { Badge, Pager, QueryBoundary, SelectField } from '../../shared/ui'
+import { Badge, Pager, QueryBoundary, SelectField, TextField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
+import { activeChips, clearedFilters } from './activeFilters'
 import FilterForm, { SORT_OPTIONS } from './FilterForm'
 import { formatRate } from './format'
 import {
@@ -68,7 +69,6 @@ export type Portal = 'workhost' | 'organisation'
 
 /** The freelancer search, shared by work hosts and organisations (who search to find people to vouch for). */
 export default function SearchPage({ portal }: { portal: Portal }) {
-  usePageTitle(t('search.title'))
   const [params, setParams] = useSearchParams()
   const [panelOpen, setPanelOpen] = useState(false)
   const filterButton = useRef<HTMLButtonElement>(null)
@@ -87,6 +87,16 @@ export default function SearchPage({ portal }: { portal: Portal }) {
     placeholderData: (previous) => previous,
   })
 
+  // The number of matches is in the page title, so a tab or history entry says what it holds.
+  usePageTitle(
+    results.data ? t('search.results', { count: results.data.total }) : t('search.title'),
+  )
+
+  const [nameText, setNameText] = useState(applied.name)
+  useEffect(() => {
+    setNameText(applied.name)
+  }, [applied.name])
+
   useEffect(() => {
     if (!panelOpen) return
     function onKeyDown(event: KeyboardEvent) {
@@ -104,6 +114,11 @@ export default function SearchPage({ portal }: { portal: Portal }) {
     setPanelOpen(false)
   }
 
+  function searchByName(event: FormEvent) {
+    event.preventDefault()
+    apply({ ...applied, name: nameText.trim() })
+  }
+
   function changeSort(sort: string) {
     apply({ ...applied, sort: sort as SortKey })
   }
@@ -115,6 +130,7 @@ export default function SearchPage({ portal }: { portal: Portal }) {
   }
 
   const count = activeFilterCount(applied)
+  const chips = activeChips(applied, organisations.data ?? [])
 
   return (
     <>
@@ -156,6 +172,19 @@ export default function SearchPage({ portal }: { portal: Portal }) {
         )}
 
         <section aria-label={t('search.title')}>
+          <form className="name-search" role="search" onSubmit={searchByName} noValidate>
+            <TextField
+              label={t('search.name')}
+              name="name"
+              autoComplete="off"
+              maxLength={100}
+              value={nameText}
+              onChange={setNameText}
+            />
+            <button type="submit" className="btn btn-primary">
+              {t('search.nameGo')}
+            </button>
+          </form>
           <div className="toolbar">
             <button
               ref={filterButton}
@@ -176,10 +205,46 @@ export default function SearchPage({ portal }: { portal: Portal }) {
               options={SORT_OPTIONS}
             />
           </div>
+          {chips.length > 0 && (
+            <ul className="active-filters plain-list" aria-label={t('search.chips')}>
+              {chips.map((chip) => (
+                <li key={chip.key}>
+                  <button
+                    type="button"
+                    className="chip-remove"
+                    aria-label={t('search.chip.remove', { label: chip.label })}
+                    onClick={() => apply(chip.without(applied))}
+                  >
+                    {chip.label} <span aria-hidden="true">✕</span>
+                  </button>
+                </li>
+              ))}
+              <li>
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() => apply(clearedFilters(applied))}
+                >
+                  {t('search.clearAll')}
+                </button>
+              </li>
+            </ul>
+          )}
           <QueryBoundary query={results}>
             {(data) =>
               data.total === 0 ? (
-                <p className="muted">{t('search.none')}</p>
+                <div role="status">
+                  <p className="muted">{t('search.none')}</p>
+                  {chips.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => apply(clearedFilters(applied))}
+                    >
+                      {t('search.clearAll')}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <>
                   <p role="status">{t('search.results', { count: data.total })}</p>

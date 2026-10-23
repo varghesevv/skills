@@ -39,6 +39,7 @@ def search(
     available_to: AwareDatetime | None = None,
     org_id: uuid.UUID | None = None,
     min_rating: Annotated[float | None, Query(ge=1, le=10)] = None,
+    name: Annotated[str | None, Query(max_length=100)] = None,
     sort: SortKey = "newest",
 ) -> Page[SearchResult]:
     """Find freelancers. Only complete profiles (a rate and at least one skill) are listed."""
@@ -66,6 +67,7 @@ def search(
         available_to=end,
         org_id=org_id,
         min_rating=min_rating,
+        name=name,
         sort=sort,
     )
     return search_freelancers(db, filters, paging)
