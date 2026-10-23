@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/varghesevv/skills/compare/skills-v0.2.0...skills-v0.3.0) (2026-10-23)
+
+
+### Features
+
+* show Freelancer as Searcher in the church profile ([1a1c635](https://github.com/varghesevv/skills/commit/1a1c63525255d853b54bca40d54d83186cc6eb4a))
+
 ## [0.2.0](https://github.com/varghesevv/skills/compare/skills-v0.1.0...skills-v0.2.0) (2026-10-23)
 
 
