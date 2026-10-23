@@ -92,8 +92,29 @@ export default function FilterForm({
     if (Object.keys(found).length === 0) onApply(values)
   }
 
+  // The same two buttons at the top (kept in view while scrolling) and at the bottom.
+  const actions = (
+    <div className="row-actions">
+      <button type="submit" className="btn btn-primary">
+        {t('search.apply')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-quiet"
+        onClick={() => {
+          setErrors({})
+          setValues({ ...EMPTY_FILTERS, sort: values.sort })
+          onApply({ ...EMPTY_FILTERS, sort: values.sort })
+        }}
+      >
+        {t('search.clear')}
+      </button>
+    </div>
+  )
+
   return (
     <form onSubmit={onSubmit} noValidate className="stack">
+      <div className="filter-actions-top">{actions}</div>
       <CheckGroup
         legend={t('labels.skill')}
         options={names('skill')}
@@ -202,22 +223,7 @@ export default function FilterForm({
           ]}
         />
       )}
-      <div className="row-actions">
-        <button type="submit" className="btn btn-primary">
-          {t('search.apply')}
-        </button>
-        <button
-          type="button"
-          className="btn btn-quiet"
-          onClick={() => {
-            setErrors({})
-            setValues({ ...EMPTY_FILTERS, sort: values.sort })
-            onApply({ ...EMPTY_FILTERS, sort: values.sort })
-          }}
-        >
-          {t('search.clear')}
-        </button>
-      </div>
+      {actions}
     </form>
   )
 }

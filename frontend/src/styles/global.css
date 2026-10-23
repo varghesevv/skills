@@ -768,6 +768,14 @@ input[aria-invalid='true'] {
 .filter-head h2 {
   margin: 0;
 }
+.filter-actions-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: 0.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
 
 /* ---------- Tablet: 640px and up ---------- */
 
