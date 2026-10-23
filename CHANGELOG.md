@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/varghesevv/skills/compare/skills-v0.3.1...skills-v0.4.0) (2026-10-23)
+
+
+### Features
+
+* add pgadmin and search update ([38c2daa](https://github.com/varghesevv/skills/commit/38c2daa03d534aa194bbe324a55c8b40633051b2))
+* add pgadmin and search update ([571d2ac](https://github.com/varghesevv/skills/commit/571d2ac22ed2586518ab88c974004365e8166d10))
+* search ui refinements ([1c4d1df](https://github.com/varghesevv/skills/commit/1c4d1dfe27dbd64a75a0c8d28f40d72eaa440728))
+
 ## [0.3.1](https://github.com/varghesevv/skills/compare/skills-v0.3.0...skills-v0.3.1) (2026-10-23)
 
 
