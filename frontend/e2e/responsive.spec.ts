@@ -88,7 +88,7 @@ const SCENARIOS: Scenario[] = [
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
       const toggle = page.getByRole('button', { name: 'Filters', exact: true })
       if (await toggle.isVisible()) await toggle.click()
-      await expect(page.getByRole('button', { name: 'Show results' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Show results' }).first()).toBeVisible()
     },
   },
   {
