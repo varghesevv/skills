@@ -20,9 +20,9 @@
     "workhost": "Provider",
     "workhosts": "Providers",
     "workhost_path": "provider",
-    "freelancer": "Freelancer",
-    "freelancers": "Freelancers",
-    "freelancer_path": "freelancer",
-    "freelancers_path": "freelancers"
+    "freelancer": "Searcher",
+    "freelancers": "Searchers",
+    "freelancer_path": "searcher",
+    "freelancers_path": "searchers"
   }
 }
