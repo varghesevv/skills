@@ -199,7 +199,7 @@ const en = {
   'hostProfile.days': 'Days you usually need help',
 
   'search.title': 'Find {freelancers}',
-  'search.lead': 'Only {freelancers} with a rate and at least one skill are listed.',
+  'search.lead': '{Freelancers} are listed once they have at least one skill.',
   'search.filters': 'Filters',
   'search.filtersActive': 'Filters ({count})',
   'search.closeFilters': 'Close filters',

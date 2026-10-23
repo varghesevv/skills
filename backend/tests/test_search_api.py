@@ -75,12 +75,17 @@ def ids(*accounts: Freelancer) -> set[str]:
     return {str(a.id) for a in accounts}
 
 
-def test_only_complete_profiles_are_listed(client: TestClient, session: Session) -> None:
+def test_a_skill_is_needed_but_a_rate_and_ratings_are_not(
+    client: TestClient, session: Session
+) -> None:
     host = signup(client, session, "workhost", "sh1@example.com")
-    complete = freelancer(session, "c1@example.com")
-    freelancer(session, "no-rate@example.com", rate=None)
+    with_rate = freelancer(session, "c1@example.com")
+    newcomer = freelancer(session, "no-rate@example.com", rate=None)
     freelancer(session, "no-skill@example.com", skills=())
-    assert set(found(client, host.headers)) == ids(complete)
+    assert set(found(client, host.headers)) == ids(with_rate, newcomer)
+    # Without a rate they never match a rate filter, and come last when sorted by rate.
+    assert found(client, host.headers, "max_rate=100&currency=AED") == [str(with_rate.id)]
+    assert found(client, host.headers, "sort=rate") == [str(with_rate.id), str(newcomer.id)]
 
 
 def test_skill_filters_any_all_and_level(client: TestClient, session: Session) -> None:
