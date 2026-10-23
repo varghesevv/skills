@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/varghesevv/skills/compare/skills-v0.4.0...skills-v0.4.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* removing other login links from login pages ([1e45a9f](https://github.com/varghesevv/skills/commit/1e45a9ff64254aebbadc6094ce75bc6f7624ba4b))
+* removing other login links from login pages ([9e063f7](https://github.com/varghesevv/skills/commit/9e063f7ce46475c474184d82280cbfca3194b347))
+
 ## [0.4.0](https://github.com/varghesevv/skills/compare/skills-v0.3.1...skills-v0.4.0) (2026-10-23)
 
 
