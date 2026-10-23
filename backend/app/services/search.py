@@ -69,9 +69,11 @@ def _lower(values: list[str]) -> list[str]:
 
 
 def _conditions(filters: SearchFilters) -> list[ColumnElement[bool]]:
-    # A freelancer is searchable once there is at least one skill. A rate and ratings are not
-    # needed, so newcomers are listed too (the rate filters simply do not match them).
-    conditions: list[ColumnElement[bool]] = [_has_label("skill")]
+    # Only complete profiles are searchable: a rate and at least one skill.
+    conditions: list[ColumnElement[bool]] = [
+        Freelancer.rate_per_hour.is_not(None),
+        _has_label("skill"),
+    ]
     name = filters.name.strip() if filters.name else ""
     if name:
         # A part of the name, any case; % and _ in the text are matched literally.
@@ -162,7 +164,7 @@ def search_freelancers(
     if filters.sort == "rating":
         order = [stats.c.avg_rating.desc().nulls_last(), stats.c.rating_count.desc()]
     elif filters.sort == "rate":
-        order = [Freelancer.rate_per_hour.asc().nulls_last()]
+        order = [Freelancer.rate_per_hour.asc()]
     else:
         order = [Freelancer.created_at.desc()]
     rows = db.execute(
