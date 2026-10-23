@@ -47,7 +47,7 @@ export const PORTALS: readonly Portal[] = [
     leadKey: 'dashboard.lead.organisation',
     nav: [
       { to: `/${slugOf('organisation')}`, labelKey: 'nav.dashboard', end: true },
-      { to: `/${slugOf('organisation')}/freelancers`, labelKey: 'nav.vouched' },
+      { to: `/${slugOf('organisation')}/${term('freelancers_path')}`, labelKey: 'nav.vouched' },
       { to: `/${slugOf('organisation')}/search`, labelKey: 'nav.search' },
       { to: `/${slugOf('organisation')}/reports`, labelKey: 'nav.reports' },
       { to: `/${slugOf('organisation')}/profile`, labelKey: 'nav.profile' },

@@ -92,3 +92,33 @@ describe('addresses', () => {
     expect(admin?.nav.map((item) => item.to)).toContain('/admin/churches')
   })
 })
+
+describe('navigation', () => {
+  it.each(Object.keys(profiles))(
+    'only links to pages that exist in the %s profile',
+    async (name) => {
+      vi.resetModules()
+      const terms = await import('./terms')
+      terms.setProfile(name)
+      const { PORTALS } = await import('../portals/config')
+      const { freelancerRoutes } = await import('../portals/freelancer/routes')
+      const { workhostRoutes } = await import('../portals/workhost/routes')
+      const { organisationRoutes } = await import('../portals/organisation/routes')
+      const { adminRoutes } = await import('../portals/admin/routes')
+      const routes = {
+        freelancer: freelancerRoutes,
+        workhost: workhostRoutes,
+        organisation: organisationRoutes,
+        admin: adminRoutes,
+      }
+      for (const portal of PORTALS) {
+        const known = routes[portal.userType].map((route) => (route.props as { path: string }).path)
+        for (const item of portal.nav) {
+          expect(item.to.startsWith(portal.path), item.to).toBe(true)
+          const rest = item.to.slice(portal.path.length).replace(/^\//, '')
+          if (rest) expect(known, `${name}: ${item.to}`).toContain(rest)
+        }
+      }
+    },
+  )
+})
