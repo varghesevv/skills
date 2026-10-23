@@ -13,6 +13,8 @@ Landing, register (choose user type), forgot and reset password, and three login
 | Organisation log in | `/login/organisation` | Organisations only. States that a new organisation needs admin approval. Links to organisation sign-up. |
 | Admin log in | `/login/admin` | Admins only. No sign-up link (admins are created by operators). |
 
+The login pages do not link to each other except the Freelancer / Work host switch; the organisation and admin addresses are shared directly.
+
 A visitor who opens a protected address is sent to the login page that fits it (for example `/admin/reports` leads to the admin login). Old links of the form `/login?type=organisation` are redirected.
 
 ### Freelancer portal

@@ -43,8 +43,8 @@ There are three separate login pages. Each one is for one kind of account, so th
 | Page | Address | For |
 |---|---|---|
 | Log in | `/login` and `/login/workhost` | Freelancers and work hosts. Two links at the top of the form (**Freelancer**, **Work host**) switch between them. |
-| Organisation log in | `/login/organisation` | Organisations only. A new organisation can log in once an admin has approved it. |
-| Admin log in | `/login/admin` | Administrators only. There is no sign-up; operators create admins. |
+| Organisation log in | `/login/organisation` | Organisations only. A new organisation can log in once an admin has approved it. Share this address directly; the main login page does not link to it. |
+| Admin log in | `/login/admin` | Administrators only. There is no sign-up; operators create admins. Share this address directly; no page links to it. |
 
 Opening a protected address while logged out leads to the matching login page. Old `/login?type=...` links are redirected. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
 

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { t } from '../../i18n'
-import { loginPath, registerPath } from '../../portals/config'
+import { registerPath } from '../../portals/config'
 import { usePageTitle } from '../../shared/usePageTitle'
 import LoginForm from './LoginForm'
 
@@ -16,10 +16,6 @@ export default function OrganisationLogin() {
         <LoginForm userType="organisation" />
         <p>
           {t('login.noAccount')} <Link to={registerPath('organisation')}>{t('nav.register')}</Link>
-        </p>
-        <p className="auth-links">
-          {t('login.otherPeople')}{' '}
-          <Link to={loginPath('freelancer')}>{t('login.otherPeopleLink')}</Link>
         </p>
       </div>
     </div>

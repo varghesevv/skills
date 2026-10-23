@@ -105,6 +105,16 @@ describe('login', () => {
     expect(api.last('POST /auth/login')?.body).toMatchObject({ user_type: 'admin' })
   })
 
+  it('does not link from the people login page to the organisation or admin login', () => {
+    mockApi({})
+    renderApp('/login')
+    const hrefs = within(screen.getByRole('main'))
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+    expect(hrefs).not.toContain('/login/organisation')
+    expect(hrefs).not.toContain('/login/admin')
+  })
+
   it('has an organisation page that only logs in organisations and links to its sign-up', async () => {
     const user = userEvent.setup({ delay: null })
     const api = mockApi({ 'POST /auth/login': () => apiError(401, 'invalid_credentials') })
