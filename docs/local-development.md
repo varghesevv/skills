@@ -265,8 +265,8 @@ It asks for a password twice (you will not see what you type). In `local` the pa
 
 1. Open <http://localhost:5173>. There are three login pages:
    - **Log in** (`/login`) for freelancers and work hosts. Switch between the two with the links **Freelancer** and **Work host** at the top of the form.
-   - **Organisation log in** (`/login/organisation`), only for organisations. Linked from the main page.
-   - **Admin log in** (`/login/admin`), only for administrators. Open it by address or from the link at the bottom of the main login page.
+   - **Organisation log in** (`/login/organisation`), only for organisations. Open it by address; the main login page does not link to it.
+   - **Admin log in** (`/login/admin`), only for administrators. Open it by address; no page links to it.
 2. Enter the email and password of that kind of account. An account of another kind is rejected on the wrong page.
 3. Try each type to see its area:
    - **Freelancer**: profile, skills and labels, availability calendar, vouches, ratings.

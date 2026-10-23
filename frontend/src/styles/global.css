@@ -367,10 +367,6 @@ main:focus {
   background: var(--accent);
   color: var(--accent-ink);
 }
-.auth-links {
-  color: var(--muted);
-  font-size: 0.9375rem;
-}
 .form-card {
   max-width: 44rem;
   margin-inline: auto;
