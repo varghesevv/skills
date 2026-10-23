@@ -12,39 +12,53 @@ function CheckGroup({
   options,
   selected,
   onChange,
+  startOpen = false,
 }: {
   legend: string
   options: string[]
   selected: string[]
   onChange: (next: string[]) => void
+  startOpen?: boolean
 }) {
+  // A group starts open when it is the main one or already has choices; the rest can be opened.
+  const [open, setOpen] = useState(startOpen || selected.length > 0)
   if (options.length === 0) return null
   return (
-    <fieldset className="plain-fieldset">
-      <legend>{legend}</legend>
-      <ul className="plain-list">
-        {options.map((name) => {
-          const id = `filter-${legend}-${name}`
-          return (
-            <li key={name} className="field field-check">
-              <input
-                id={id}
-                type="checkbox"
-                checked={selected.includes(name)}
-                onChange={(event) =>
-                  onChange(
-                    event.target.checked
-                      ? [...selected, name]
-                      : selected.filter((item) => item !== name),
-                  )
-                }
-              />
-              <label htmlFor={id}>{name}</label>
-            </li>
-          )
-        })}
-      </ul>
-    </fieldset>
+    <details
+      className="filter-group"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>
+        {legend}
+        {selected.length > 0 && <span className="muted"> ({selected.length})</span>}
+      </summary>
+      <fieldset className="plain-fieldset">
+        <legend className="sr-only">{legend}</legend>
+        <ul className="plain-list">
+          {options.map((name) => {
+            const id = `filter-${legend}-${name}`
+            return (
+              <li key={name} className="field field-check">
+                <input
+                  id={id}
+                  type="checkbox"
+                  checked={selected.includes(name)}
+                  onChange={(event) =>
+                    onChange(
+                      event.target.checked
+                        ? [...selected, name]
+                        : selected.filter((item) => item !== name),
+                    )
+                  }
+                />
+                <label htmlFor={id}>{name}</label>
+              </li>
+            )
+          })}
+        </ul>
+      </fieldset>
+    </details>
   )
 }
 
@@ -98,6 +112,7 @@ export default function FilterForm({
         legend={t('labels.skill')}
         options={names('skill')}
         selected={values.skills}
+        startOpen
         onChange={(next) => set('skills', next)}
       />
       {values.skills.length > 1 && (

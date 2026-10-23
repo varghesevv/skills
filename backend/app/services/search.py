@@ -37,6 +37,7 @@ class SearchFilters:
     available_to: datetime | None = None
     org_id: uuid.UUID | None = None
     min_rating: float | None = None
+    name: str | None = None
     sort: SortKey = "newest"
 
 
@@ -73,6 +74,11 @@ def _conditions(filters: SearchFilters) -> list[ColumnElement[bool]]:
         Freelancer.rate_per_hour.is_not(None),
         _has_label("skill"),
     ]
+    name = filters.name.strip() if filters.name else ""
+    if name:
+        # A part of the name, any case; % and _ in the text are matched literally.
+        escaped = name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        conditions.append(Freelancer.full_name.ilike(f"%{escaped}%", escape="\\"))
     level = filters.skill_level.strip().lower() if filters.skill_level else None
     skills = _lower(filters.skills)
     if skills and filters.skill_match == "all":

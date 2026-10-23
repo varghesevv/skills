@@ -28,9 +28,12 @@ def freelancer(
     negotiable: bool = False,
     skills: tuple[tuple[str, str | None], ...] = (("plumbing", None),),
     labels: tuple[tuple[str, str], ...] = (),
+    full_name: str | None = None,
 ) -> Freelancer:
     """A freelancer with skills (name, level) and other labels (type, name)."""
     extra: dict[str, object] = {"is_rate_negotiable": negotiable}
+    if full_name is not None:
+        extra["full_name"] = full_name
     if rate is not None:
         extra.update(rate_per_hour=rate, rate_currency=currency)
     account = create_account(
@@ -117,6 +120,21 @@ def test_language_timing_and_nativity_filters(client: TestClient, session: Sessi
     assert set(found(client, host.headers, "nativity=keralite")) == ids(a)
     assert set(found(client, host.headers, "language=Hindi&timing=24h")) == set()
     assert set(found(client, host.headers)) == ids(a, b, c)
+
+
+def test_name_filter_matches_part_of_a_name_in_any_case(
+    client: TestClient, session: Session
+) -> None:
+    host = signup(client, session, "workhost", "sh-name@example.com")
+    anita = freelancer(session, "anita@example.com", full_name="Anita Sharma")
+    ravi = freelancer(session, "ravi@example.com", full_name="Ravi 100%_Kumar")
+
+    assert set(found(client, host.headers, "name=ANITA")) == ids(anita)
+    assert set(found(client, host.headers, "name=sharm")) == ids(anita)
+    assert set(found(client, host.headers, "name=100%25_")) == ids(ravi)
+    assert found(client, host.headers, "name=%25") == [str(ravi.id)]
+    assert found(client, host.headers, "name=nobody") == []
+    assert set(found(client, host.headers, "name=%20")) == ids(anita, ravi)
 
 
 def test_rate_currency_and_negotiable_filters(client: TestClient, session: Session) -> None:
