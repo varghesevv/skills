@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1](https://github.com/varghesevv/skills/compare/skills-v0.3.0...skills-v0.3.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* menu navigation ([c7a1a8e](https://github.com/varghesevv/skills/commit/c7a1a8e5a1141ffa26e887e095f1845bd8046d9e))
+* menu navigation ([d746427](https://github.com/varghesevv/skills/commit/d746427c61ae6bc5033d79c69e23b55e5dd40f19))
+* search filter ([2e57f66](https://github.com/varghesevv/skills/commit/2e57f668ac8690001fb5c47f2539c58d265d9837))
+* search filter ([8e69360](https://github.com/varghesevv/skills/commit/8e693607b4ebc448bc90b5889c28d4dba9fd03ce))
+
 ## [0.3.0](https://github.com/varghesevv/skills/compare/skills-v0.2.0...skills-v0.3.0) (2026-10-23)
 
 
