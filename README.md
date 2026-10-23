@@ -1,12 +1,12 @@
 # Skills
 
-Skills is a marketplace for finding skilled freelancers. Three kinds of users take part:
+Skills is a trusted marketplace for finding skilled people within a church organisation. Three kinds of people take part:
 
 | Entity | Role |
 |---|---|
-| **Freelancer** | Lists skills, languages, availability and hourly rate. |
-| **Work host** | Searches for freelancers, offers work, rates freelancers. |
-| **Organisation** | Vouches for freelancers by linking them to the organisation. |
+| **Providers** | These list theirs skills, availability and hourly rate. |
+| **Searchers** | Who seek a particular set of providers for a job they require doing. |
+| **Verifiers** | Vouches for providers and searches within their church. |
 
 **Status:** the application is built (API, web portals, reports) and runs as a demo on AWS. Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
