@@ -245,7 +245,6 @@ def call_claude(api_key: str, model: str, system: str, user: str):
         lambda: client.messages.create(
             model=model,
             max_tokens=MAX_OUTPUT_TOKENS,
-            temperature=0.1,
             system=system,
             messages=[{"role": "user", "content": user}],
         )
