@@ -172,3 +172,15 @@ Safety:
 | "DEMO_USER_PASSWORD must be strong and long enough" | The secret has fewer than 16 characters; update it and deploy. |
 | Terraform plan wants to replace the instance | Stop. Do not apply. Compare the plan with the imported instance settings in `modules/lightsail_host`. |
 | Disk nearly full | `docker image prune -af`; old backups are deleted from S3 automatically after 30 days. |
+
+## Gemini pull request reviewer
+
+Advisory review comment on each non-draft pull request from a branch in this repository (forks and Dependabot are skipped). It is not a required check. See [ADR-0013](adr/0013-gemini-agent-as-pull-request-reviewer.md).
+
+- Secret: repository secret `GEMINI_API_KEY` (Settings > Secrets and variables > Actions). Never commit it or print it.
+- Use a paid-tier or Vertex key so submitted code is not retained or used for model training (ADR-0013), and set a budget alert on the Google Cloud project.
+- The model is set in the workflow (`GEMINI_MODEL`, default `gemini-2.5-flash`).
+- Manual re-run: Actions > "Gemini Advisory PR Review" > Run workflow, with the PR number.
+- Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review brief `.github/review_context.md` (max 6000 characters; the script fails if it is missing or longer).
+- The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
+- Review skipped with a notice: the PR looks like it contains a secret (test files are not scanned by the reviewer; `ci-secrets` still covers them). Empty or failed model answers post nothing and fail the job.

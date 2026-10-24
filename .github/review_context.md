@@ -28,12 +28,14 @@
 - **Migrations:** Large table index additions must use `CONCURRENTLY`. Long table-rewriting `ALTER` operations require explicit approval plans.
 
 ## 5. Structural Flaws & Process Invariants
-- **Layering:** Routers handle HTTP/auth; services contain business rules; models enforce persistence. Business logic placed exclusively in routers or the frontend is a defect.
-- **State Machines:** Registration (`pending` -> `approved`/`rejected`), Vouching (`requested` -> `approved`/`revoked`). Flag illegal state transitions, double-submits, or sync mismatches between `status` and `is_active`.
-- **Data Integrity:** Database constraints (`UNIQUE`, `FOREIGN KEY`, `CHECK`) are mandatory and must back code-level checks.
-- **Time Handling:** Store and compare timezone-aware UTC values (`datetime.now(timezone.utc)`). Never use naive `datetime.utcnow()`.
-- **Process Flow Invariants:**
-  - Users cannot search, vouch, or rate while in `pending` status.
-  - Work hosts can rate freelancers only after a verified engagement.
-  - Freelancers must have at least one assigned skill label to appear in search.
-  - New endpoints must maintain tests for unauthorized, wrong-role, and wrong-owner cases.
+- **Layering:** Routers handle HTTP/auth; services contain business rules; models enforce persistence. Business logic only in routers or the frontend is a defect.
+- **State Machines:** Organisation approval (`pending` -> `approved`/`rejected`; only approved organisations can log in). Vouch (`pending` -> `approved` when the freelancer accepts, or `revoked`; revoking sets it inactive; vouching again restarts at `pending`; only approved AND active vouches are shown). Flag illegal transitions, double-submits, and `status`/`is_active` disagreeing.
+- **Data Integrity:** Database constraints (`UNIQUE`, `FOREIGN KEY`, `CHECK`) must back code-level checks.
+- **Time Handling:** Store and compare timezone-aware UTC (`datetime.now(timezone.utc)`), never naive `datetime.utcnow()`.
+- **Process Invariants:**
+  - Admin approves organisations before they can use the system; do not add a bypass.
+  - A freelancer appears in search once they have at least one skill. A rate or rating is NOT required (newcomers must be listed); requiring either is a regression. `min_rating` excludes unrated, `max_rate` needs `currency`.
+  - Only work hosts rate (1-10), one rating per work host and freelancer (`409 already_rated`); they cannot edit freelancers.
+  - Search results never contain email or mobile number.
+  - The admin has no mobile access.
+  - New endpoints need tests for unauthorized, wrong-role and wrong-owner cases.

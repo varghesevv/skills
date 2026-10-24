@@ -40,16 +40,37 @@ and application context the reviewer is given, written as a principal engineer b
    Forks, Draft PRs (`if: github.event.pull_request.draft == false`), and Dependabot PRs are skipped.
    `pull_request_target` is **not** used.
 4. Permissions: `contents: read`, `pull-requests: write`, nothing else. Third-party actions pinned to full commit
-   SHAs. Runs on `ubuntu-latest` (GitHub-hosted, ephemeral) rather than the self-hosted runner.
+   SHAs. Runs on `ubuntu-latest` (GitHub-hosted, ephemeral) rather than the self-hosted runner. The workflow checks out the **base** commit, never the PR branch, so a PR cannot change the script, or the brief, that runs with the API key; changes to the reviewer take effect after merge.
 5. Input to the model:
    - PR metadata (title, description, changed-file list);
    - The diff with generated/bulky assets removed (`package-lock.json`, `*.svg`, `*.png`, `*.min.js`);
-   - `.github/review_context.md` embedding the review brief in Part B;
+   - `.github/review_context.md`, the review brief (folder structure, application idea, security, performance, structural flaws, process-flow invariants), kept in step with the code and specification and limited to 6000 characters;
    - A hard character threshold (~40,000 characters). Diffs exceeding the limit are truncated **at file or hunk boundaries**, with omitted files explicitly listed so the reviewer notes them as unreviewed rather than hallucinating.
-6. Prompt-injection hardening: PR diff, title, and description are isolated as `UNTRUSTED_DATA`. The model has no system tools, cannot run code, and its output is length-capped plain text with `@mentions` neutralized before posting.
+6. Prompt-injection hardening: PR diff, title, and description are sent inside one block with a random per-run delimiter and treated as untrusted data. The model has no system tools, cannot run code, and its output is length-capped plain text with `@mentions` neutralized before posting.
 7. Data and secret handling:
    - Secret scanning runs on the complete untruncated diff prior to model submission. If matched, execution aborts with a security notice comment.
-   - API keys and raw payload dumps are masked (`::add-mask::`).
+   - The API key, the request and the diff are never printed to logs. Only added lines outside test files are scanned (`ci-secrets` covers test files).
    - Google AI Studio Paid Tier / Vertex billing is enforced so input code is not retained or used for Google model training.
 8. Cost and abuse control: A `concurrency` group cancels obsolete runs on new pushes; token usage is capped per request alongside Google Cloud budget alerts.
 9. Output format: Findings grouped as **Blocker / Should fix / Consider**, citing file and line, evidence, and suggestions. "No findings" is valid when code meets all criteria.
+
+### 2. Failure behaviour
+
+- A failed or empty model answer posts nothing and fails the job; because the check is not required, merging is not blocked.
+- A cut-off answer (output limit) is posted with a note saying later findings may be missing.
+- The script lists every file it did not send under "Not reviewed".
+
+## Alternatives considered
+
+- **Gemini Code Assist GitHub app.** No code to maintain, but less control over context, output format, data sent and cost. A valid fallback if the script becomes a burden.
+- **Agentic reviewer with repository access or tools.** More capable, but untrusted PR text plus tools is a much larger attack surface. Rejected for an advisory reviewer.
+- **Required check that blocks merge.** Rejected: model output is non-deterministic. Deterministic checks (lint, types, tests, secrets, audit) remain the required gates.
+- **No automated reviewer.** Cheapest, but leaves one human as the only reader of every diff.
+
+## Consequences
+
+- Every pull request gets a consistent second opinion against the project's own rules at low cost.
+- False positives and misses are possible; the severity format and "no findings" answer limit noise.
+- Code leaves GitHub for Google's API, so the paid-tier requirement must be confirmed before enabling.
+- `review_context.md` becomes a maintained document: update it in the same pull request when architecture, process rules or the specification change. A stale brief produces wrong findings.
+- A new secret, vendor and recurring cost are owned by the project owner.
