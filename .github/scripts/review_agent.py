@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Advisory pull request reviewer using the Gemini API (see docs/adr/0013).
+"""Advisory pull request reviewer using the Gemini or Claude API (see docs/adr/0013).
+
+REVIEW_PROVIDER selects the model vendor: "gemini" (default) or "claude".
 
 Secrets come from the environment only and are never printed. PR text and diff are
 untrusted data: they are sent inside a randomly delimited block to a model with no tools.
@@ -14,7 +16,10 @@ import sys
 import time
 import urllib.request
 
-COMMENT_HEADING = "### 🤖 Gemini Advisory Code Review"
+PROVIDER = os.environ.get("REVIEW_PROVIDER", "gemini").lower()
+PROVIDER_NAMES = {"gemini": "Gemini", "claude": "Claude"}
+# Each provider keeps its own comment, so the two reviews can sit side by side on one PR.
+COMMENT_HEADING = f"### 🤖 {PROVIDER_NAMES.get(PROVIDER, 'Gemini')} Advisory Code Review"
 MAX_DIFF_CHARS = 40000
 MAX_CONTEXT_CHARS = 6000
 MAX_COMMENT_CHARS = 60000
@@ -191,7 +196,20 @@ def build_prompts(context: str, omitted: list[str], title: str, body: str, diff:
     return system, user
 
 
+def with_retry(call):
+    last: Exception | None = None
+    for attempt in range(2):
+        try:
+            return call()
+        except Exception as e:
+            last = e
+            print(f"Model call failed ({type(e).__name__}); attempt {attempt + 1} of 2")
+            time.sleep(10)
+    raise RuntimeError("Model API call failed") from last
+
+
 def call_gemini(api_key: str, model: str, system: str, user: str):
+    """Returns (text, truncated)."""
     from google import genai
     from google.genai import types
 
@@ -199,20 +217,47 @@ def call_gemini(api_key: str, model: str, system: str, user: str):
     config = types.GenerateContentConfig(
         system_instruction=system, temperature=0.1, max_output_tokens=MAX_OUTPUT_TOKENS
     )
-    last: Exception | None = None
-    for attempt in range(2):
-        try:
-            return client.models.generate_content(model=model, contents=user, config=config)
-        except Exception as e:
-            last = e
-            print(f"Gemini call failed ({type(e).__name__}); attempt {attempt + 1} of 2")
-            time.sleep(10)
-    raise RuntimeError("Gemini API call failed") from last
+    response = with_retry(
+        lambda: client.models.generate_content(model=model, contents=user, config=config)
+    )
+    reason = ""
+    if getattr(response, "candidates", None):
+        reason = str(getattr(response.candidates[0], "finish_reason", "") or "")
+    return (response.text or "").strip(), "MAX_TOKENS" in reason
+
+
+def call_claude(api_key: str, model: str, system: str, user: str):
+    """Returns (text, truncated)."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key)
+    response = with_retry(
+        lambda: client.messages.create(
+            model=model,
+            max_tokens=MAX_OUTPUT_TOKENS,
+            temperature=0.1,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+    )
+    text = "".join(b.text for b in response.content if getattr(b, "type", "") == "text")
+    return text.strip(), response.stop_reason == "max_tokens"
+
+
+PROVIDER_SETTINGS = {
+    # provider: (api key variable, model variable, default model, call)
+    "gemini": ("GEMINI_API_KEY", "GEMINI_MODEL", "gemini-2.5-flash", call_gemini),
+    "claude": ("ANTHROPIC_API_KEY", "CLAUDE_MODEL", "claude-sonnet-5-5", call_claude),
+}
 
 
 def main() -> int:
-    api_key = os.environ.get("GEMINI_API_KEY")
-    model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    if PROVIDER not in PROVIDER_SETTINGS:
+        print(f"Error: unknown REVIEW_PROVIDER '{PROVIDER}'.")
+        return 1
+    key_var, model_var, default_model, call = PROVIDER_SETTINGS[PROVIDER]
+    api_key = os.environ.get(key_var)
+    model = os.environ.get(model_var) or default_model
     token = os.environ.get("GH_TOKEN")
     repo = os.environ.get("REPO")
     pr_num = os.environ.get("PR_NUMBER", "")
@@ -255,17 +300,12 @@ def main() -> int:
         return 1
 
     system, user = build_prompts(context, omitted, title, body, diff)
-    print(f"Sending request to Gemini ({model})...")
-    response = call_gemini(api_key, model, system, user)
-
-    text = (response.text or "").strip()
-    reason = ""
-    if getattr(response, "candidates", None):
-        reason = str(getattr(response.candidates[0], "finish_reason", "") or "")
+    print(f"Sending request to {PROVIDER_NAMES[PROVIDER]} ({model})...")
+    text, truncated = call(api_key, model, system, user)
     if not text:
-        print(f"Empty model response (finish reason: {reason or 'unknown'}); nothing posted.")
+        print("Empty model response; nothing posted.")
         return 1
-    if "MAX_TOKENS" in reason:
+    if truncated:
         text += "\n\n_The review was cut off at the output limit; later findings may be missing._"
 
     post_or_update_comment(

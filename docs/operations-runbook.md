@@ -184,3 +184,12 @@ Advisory review comment on each non-draft pull request from a branch in this rep
 - Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review brief `.github/review_context.md` (max 6000 characters; the script fails if it is missing or longer).
 - The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
 - Review skipped with a notice: the PR looks like it contains a secret (test files are not scanned by the reviewer; `ci-secrets` still covers them). Empty or failed model answers post nothing and fail the job.
+
+### Claude review (manual)
+
+A second, on-demand advisory review from the Claude API, run only by hand. It posts its own comment ("Claude Advisory Code Review") next to the Gemini one and uses the same script and review brief.
+
+- Secret: repository secret `ANTHROPIC_API_KEY`. Optional variable `CLAUDE_MODEL` (default `claude-sonnet-5-5`).
+- Run: Actions > "Claude PR Review (manual)" > Run workflow, with the PR number.
+- It reads the script and brief from the default branch, so reviewer changes take effect after merge. It can review any PR number, including from forks, because it only sends the diff to the API and never runs PR code.
+- API usage is billed to the Anthropic account that owns the key; set a spend limit there.
