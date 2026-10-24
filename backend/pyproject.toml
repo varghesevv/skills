@@ -1,6 +1,6 @@
 [project]
 name = "skills-backend"
-version = "0.4.1"
+version = "0.4.2"
 description = "Skills marketplace REST API"
 requires-python = ">=3.12"
 dependencies = [
