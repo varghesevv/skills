@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     timeout-minutes: 5
     env:
       SITE_URL: ${{ vars.DEMO_URL || 'https://skills-demo.privatedir.in' }}
