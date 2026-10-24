@@ -196,6 +196,12 @@ def build_prompts(context: str, omitted: list[str], title: str, body: str, diff:
     return system, user
 
 
+def is_retryable(error: Exception) -> bool:
+    """Retry rate limits and server errors; a 4xx such as 404 (unknown model) will not fix itself."""
+    code = getattr(error, "code", None) or getattr(error, "status_code", None)
+    return not isinstance(code, int) or code == 429 or code >= 500
+
+
 def with_retry(call):
     last: Exception | None = None
     for attempt in range(2):
@@ -203,8 +209,12 @@ def with_retry(call):
             return call()
         except Exception as e:
             last = e
-            print(f"Model call failed ({type(e).__name__}); attempt {attempt + 1} of 2")
-            time.sleep(10)
+            # The message comes from the API and never contains our key or the request.
+            print(f"Model call failed ({type(e).__name__}): {str(e)[:400]}")
+            if not is_retryable(e):
+                break
+            if attempt == 0:
+                time.sleep(10)
     raise RuntimeError("Model API call failed") from last
 
 
@@ -246,7 +256,7 @@ def call_claude(api_key: str, model: str, system: str, user: str):
 
 PROVIDER_SETTINGS = {
     # provider: (api key variable, model variable, default model, call)
-    "gemini": ("GEMINI_API_KEY", "GEMINI_MODEL", "gemini-2.5-flash", call_gemini),
+    "gemini": ("GEMINI_API_KEY", "GEMINI_MODEL", "gemini-3.8-flash", call_gemini),
     "claude": ("ANTHROPIC_API_KEY", "CLAUDE_MODEL", "claude-sonnet-5-5", call_claude),
 }
 

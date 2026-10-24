@@ -179,7 +179,7 @@ Advisory review comment on each non-draft pull request from a branch in this rep
 
 - Secret: repository secret `GEMINI_API_KEY` (Settings > Secrets and variables > Actions). Never commit it or print it.
 - Use a paid-tier or Vertex key so submitted code is not retained or used for model training (ADR-0013), and set a budget alert on the Google Cloud project.
-- The model is set in the workflow (`GEMINI_MODEL`, default `gemini-2.5-flash`).
+- The model is set in the workflow (`GEMINI_MODEL`, default `gemini-3.8-flash`; if a model is retired, the log shows a 404 and the name to switch to).
 - Manual re-run: Actions > "Gemini Advisory PR Review" > Run workflow, with the PR number.
 - Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review brief `.github/review_context.md` (max 6000 characters; the script fails if it is missing or longer).
 - The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
