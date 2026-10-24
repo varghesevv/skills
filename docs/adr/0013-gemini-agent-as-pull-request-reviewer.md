@@ -54,7 +54,11 @@ and application context the reviewer is given, written as a principal engineer b
 8. Cost and abuse control: A `concurrency` group cancels obsolete runs on new pushes; token usage is capped per request alongside Google Cloud budget alerts.
 9. Output format: Findings grouped as **Blocker / Should fix / Consider**, citing file and line, evidence, and suggestions. "No findings" is valid when code meets all criteria.
 
-### 2. Failure behaviour
+### 2. Second reviewer on demand
+
+A separate manual-only workflow (`claude-pr-review.yml`) runs the same script with `REVIEW_PROVIDER=claude` and the secret `ANTHROPIC_API_KEY`. It never runs automatically, posts a separate comment, and follows the same rules as above (base-branch script, no PR code, advisory, no secrets in logs).
+
+### 3. Failure behaviour
 
 - A failed or empty model answer posts nothing and fails the job; because the check is not required, merging is not blocked.
 - A cut-off answer (output limit) is posted with a note saying later findings may be missing.

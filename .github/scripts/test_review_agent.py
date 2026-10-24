@@ -54,6 +54,23 @@ class ReviewAgentTest(unittest.TestCase):
         self.assertTrue(u1.startswith("<<<UNTRUSTED_"))
         self.assertIn("x (omitted)", s1)
 
+    def test_providers_configured_with_own_secret_and_heading(self):
+        self.assertEqual(set(ra.PROVIDER_SETTINGS), {"gemini", "claude"})
+        self.assertEqual(ra.PROVIDER_SETTINGS["claude"][0], "ANTHROPIC_API_KEY")
+        self.assertEqual(ra.PROVIDER_SETTINGS["gemini"][0], "GEMINI_API_KEY")
+        self.assertTrue(ra.COMMENT_HEADING.startswith("### "))
+
+    def test_retry_only_for_rate_limit_and_server_errors(self):
+        class E(Exception):
+            def __init__(self, code):
+                self.code = code
+
+        self.assertFalse(ra.is_retryable(E(404)))
+        self.assertFalse(ra.is_retryable(E(400)))
+        self.assertTrue(ra.is_retryable(E(429)))
+        self.assertTrue(ra.is_retryable(E(503)))
+        self.assertTrue(ra.is_retryable(ValueError("network")))
+
 
 if __name__ == "__main__":
     unittest.main()
