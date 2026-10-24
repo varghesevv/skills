@@ -26,7 +26,6 @@ jobs:
           done
           exit $status
       - name: Check relative Markdown links
-        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2
-        with:
-          args: --offline --no-progress --include-fragments "./**/*.md"
-          fail: true
+        # A small script instead of lychee: the lychee binary needs a newer glibc than the
+        # self-hosted runner has. Web addresses are not visited (the old check was offline too).
+        run: python3 scripts/check-md-links.py .
