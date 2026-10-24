@@ -6,7 +6,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 |---|---|
 | **Providers** | These list theirs skills, availability and hourly rate. |
 | **Searchers** | Who seek a particular set of providers for a job they require doing. |
-| **Verifiers** | Vouches for providers and searches within their church. |
+| **[Verifiers](verification.md)** | Vouches for providers and searches within their church. |
 
 **Status:** the application is built (API, web portals, reports) and runs as a demo on AWS. Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
