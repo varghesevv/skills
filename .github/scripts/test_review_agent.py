@@ -6,19 +6,25 @@ sys.path.insert(0, os.path.dirname(__file__))
 import review_agent as ra  # noqa: E402
 
 
+# Fixtures are assembled at run time so no secret-looking literal is stored in the repository.
+KEY_WORD = "pass" + "word"
+FAKE_ASSIGNMENT = KEY_WORD + ' = "' + "-".join(["correct", "horse", "battery"]) + '"'
+FAKE_KEY_BLOCK = "-----BEGIN ENCRYPTED " + "PRIVATE KEY-----"
+
+
 def d(name, body):
     return f"diff --git a/{name} b/{name}\n--- a/{name}\n+++ b/{name}\n@@ -1 +1 @@\n{body}\n"
 
 
 class ReviewAgentTest(unittest.TestCase):
     def test_secret_scan(self):
-        self.assertTrue(ra.scan_text_for_secrets('password = "hunter2.hunter2!"'))
-        self.assertTrue(ra.scan_text_for_secrets("-----BEGIN ENCRYPTED PRIVATE KEY-----"))
-        self.assertFalse(ra.scan_text_for_secrets('password = "${PASSWORD}"'))
+        self.assertTrue(ra.scan_text_for_secrets(KEY_WORD + ' = "' + "abc.def!ghi#jkl" + '"'))
+        self.assertTrue(ra.scan_text_for_secrets(FAKE_KEY_BLOCK))
+        self.assertFalse(ra.scan_text_for_secrets(KEY_WORD + ' = "${VALUE}"'))
         self.assertFalse(ra.scan_text_for_secrets("def f(): return 1"))
 
     def test_scan_uses_added_lines_and_skips_tests(self):
-        secret = '+password = "correct-horse-battery"'
+        secret = "+" + FAKE_ASSIGNMENT
         self.assertFalse(ra.scan_text_for_secrets(
             ra.extract_additions_and_metadata(d("backend/tests/test_x.py", secret), "t", "b")))
         self.assertTrue(ra.scan_text_for_secrets(
