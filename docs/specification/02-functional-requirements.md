@@ -60,4 +60,4 @@
 | FR-S-03 | Filter by availability on a given date range (excludes overlapping unavailability). |
 | FR-S-04 | Filter by vouched by a given organisation, and by minimum average rating. |
 | FR-S-05 | Sort by rating, rate, newest. Results MUST be paginated. |
-| FR-S-06 | Search MUST show only freelancers who have completed their profile (at least one skill and a rate). |
+| FR-S-06 | Search MUST show only freelancers who have at least one skill. A rate and ratings are not required, so newcomers are listed. |
