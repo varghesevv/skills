@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.2](https://github.com/varghesevv/skills/compare/skills-v0.4.1...skills-v0.4.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* build errors ([b8fd37d](https://github.com/varghesevv/skills/commit/b8fd37d603e911ddbf1002d1b7f8a43cd50e8657))
+* tests ([fd0ccc9](https://github.com/varghesevv/skills/commit/fd0ccc9dc8a1170849467907f30c4f74d9be2fb0))
+* tests ([7801cea](https://github.com/varghesevv/skills/commit/7801cea18f1376a19f66f3ac1a46721b295df745))
+* tests ([842d444](https://github.com/varghesevv/skills/commit/842d4445cb5eda0aa2f1ee604dd44b83a6a2a14b))
+
 ## [0.4.1](https://github.com/varghesevv/skills/compare/skills-v0.4.0...skills-v0.4.1) (2026-10-23)
 
 
