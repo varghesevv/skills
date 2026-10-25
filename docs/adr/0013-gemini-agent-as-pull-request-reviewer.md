@@ -58,7 +58,11 @@ and application context the reviewer is given, written as a principal engineer b
 
 A separate manual-only workflow (`claude-pr-review.yml`) runs the same script with `REVIEW_PROVIDER=claude` and the secret `ANTHROPIC_API_KEY`. It never runs automatically, posts a separate comment, and follows the same rules as above (base-branch script, no PR code, advisory, no secrets in logs).
 
-### 3. Failure behaviour
+### 3. Output shape: summary plus review threads
+
+The model returns structured output (overview, risk, summary, findings with file and line). The script posts one summary comment, updated in place and starting with a short "What this PR does" overview, and posts each finding that points at a changed line as an inline review comment, so people can reply and resolve it. Earlier findings and their replies are given back to the model on later runs and are not raised twice. Line numbers come from an annotated diff and are checked against it before posting; anything that cannot be placed goes into the summary.
+
+### 4. Failure behaviour
 
 - A failed or empty model answer posts nothing and fails the job; because the check is not required, merging is not blocked.
 - A cut-off answer (output limit) is posted with a note saying later findings may be missing.

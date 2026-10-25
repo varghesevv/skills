@@ -11,6 +11,8 @@ permissions:
 
 jobs:
   docs:
+    # Never run for pull requests from forks (see docs/operations-runbook.md).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: docs-links
     runs-on: [self-hosted, Linux]
     steps:

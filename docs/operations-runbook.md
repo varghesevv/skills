@@ -185,6 +185,15 @@ Advisory review comment on each non-draft pull request from a branch in this rep
 - The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
 - Review skipped with a notice: the PR looks like it contains a secret (test files are not scanned by the reviewer; `ci-secrets` still covers them). Empty or failed model answers post nothing and fail the job.
 
+### Reading and answering the review
+
+Each reviewer (Gemini, Claude) leaves two kinds of output:
+
+- **One summary comment**, updated on every run: "What this PR does" (a short overview so reviewers do not depend on the PR description), the risk level, general findings and files not reviewed.
+- **Inline review comments** on the changed lines. These are normal review threads: reply with how you handled the point or why it is a false positive, then click "Resolve conversation". On the next run the reviewer sees earlier points and the replies, and does not raise them again.
+
+If GitHub refuses the inline comments (for example a line is outside the diff), those points appear in the summary instead. If the model's answer cannot be read as structured output, the plain text is posted as the summary.
+
 ### Claude review (manual)
 
 A second, on-demand advisory review from the Claude API, run only by hand. It posts its own comment ("Claude Advisory Code Review") next to the Gemini one and uses the same script and review brief.
@@ -193,3 +202,18 @@ A second, on-demand advisory review from the Claude API, run only by hand. It po
 - Run: Actions > "Claude PR Review (manual)" > Run workflow, with the PR number.
 - It reads the script and brief from the default branch, so reviewer changes take effect after merge. It can review any PR number, including from forks, because it only sends the diff to the API and never runs PR code.
 - API usage is billed to the Anthropic account that owns the key; set a spend limit there.
+
+## Pull requests from forks
+
+No workflow runs for a pull request from a fork. Every job in a workflow that starts on `pull_request` has this condition, so forked code never runs on our runners and never sees secrets:
+
+```yaml
+if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+```
+
+- New workflows that start on `pull_request` must include it on every job. Never use `pull_request_target` to check out or run PR code.
+- The job shows as "skipped", and GitHub counts a skipped required check as passing. So a fork PR is **not** tested automatically: review the code by reading it. To test it, a maintainer pushes the change to a branch in this repository and opens a PR from there.
+- Also set, once, in Settings > Actions > General: "Fork pull request workflows from outside collaborators" to "Require approval for all outside collaborators". Then nothing starts for a fork PR until a maintainer approves it, even if a workflow forgets the condition.
+- On a public repository GitHub already withholds secrets from fork pull requests and gives them a read-only token; there is no setting for that. (The options "Run workflows from fork pull requests" and "Send secrets to workflows from fork pull requests" exist only for private repositories and organisations.)
+- Workflows that do not start on `pull_request` (push to main, schedule, manual, release) are not affected.
+
