@@ -197,7 +197,7 @@ Each reviewer (Gemini, Claude) leaves two kinds of output:
 - **One summary comment**, updated on every run: "What this PR does" (a short overview so reviewers do not depend on the PR description), the risk level, general findings and files not reviewed.
 - **Inline review comments** on the changed lines. These are normal review threads: reply with how you handled the point or why it is a false positive, then click "Resolve conversation". On the next run the reviewer sees earlier points and the replies, and does not raise them again.
 
-If GitHub refuses the inline comments (for example a line is outside the diff), those points appear in the summary instead. If the model's answer cannot be read as structured output, the plain text is posted as the summary.
+If GitHub refuses the inline comments (for example a line is outside the diff), those points appear in the summary instead. If the model's answer cannot be read (cut off or not in the expected format), a short notice is posted instead, and the raw answer is never shown.
 
 ### Reviewer settings
 
