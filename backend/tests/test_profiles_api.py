@@ -347,10 +347,11 @@ def test_public_profile_privacy(client: TestClient, session: Session) -> None:
 
     for_host = client.get(url, headers=host.headers)
     assert for_host.status_code == 200
-    assert for_host.json()["mobile_number"] is not None
+    assert "mobile_number" not in for_host.json()
+    assert "+971500000099" not in for_host.text
     assert "secret.person" not in for_host.text
     assert "email" not in for_host.json()
-    assert client.get(url, headers=org.headers).json()["mobile_number"] is None
+    assert "mobile_number" not in client.get(url, headers=org.headers).json()
     assert client.get(url, headers=other_freelancer.headers).status_code == 403
     assert client.get(url).status_code == 401
     missing = f"{API}/freelancers/00000000-0000-4000-8000-000000000000"

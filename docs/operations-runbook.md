@@ -125,6 +125,7 @@ profile. In the `default` profile they are Organisation, Work host and Freelance
 
 - Caddy adds HSTS, `nosniff`, a strict Content-Security-Policy (everything from the site's own origin), `X-Frame-Options: DENY`, a Permissions-Policy and removes the `Server` header. A page that suddenly breaks after a change may be blocked by the policy: open the browser developer console and look for "Content Security Policy" messages, then fix the page rather than loosening the policy.
 - Login throttling: five failed passwords for the same email and account type from the same address lock that login for 15 minutes (HTTP 429). There is no general request rate limit at the proxy in the demo; production adds one at the edge (ADR-0012).
+- Mobile number reveals: each work host may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (demo: 10 and 40); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `phone_reveals` (no number is stored); the admin report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per work host".
 - Port 22 is open only to your addresses; ports 80 and 443 to the world.
 
 ## 9. Data tasks
@@ -176,6 +177,7 @@ Safety:
 | Site shows a bad gateway | The `api` or `web` container is restarting: `dc ps`, `dc logs --tail=100 api`. |
 | "DEMO_USER_PASSWORD must be strong and long enough" | The secret has fewer than 16 characters; update it and deploy. |
 | Terraform plan wants to replace the instance | Stop. Do not apply. Compare the plan with the imported instance settings in `modules/lightsail_host`. |
+| A work host reports "revealed many numbers recently" | The per-hour or daily reveal limit was reached. It clears by itself; to change the limits, set `REVEAL_MAX_PER_HOUR` / `REVEAL_MAX_PER_DAY` and deploy. |
 | Disk nearly full | `docker image prune -af`; old backups are deleted from S3 automatically after 30 days. |
 
 ## Gemini pull request reviewer

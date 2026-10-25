@@ -33,6 +33,8 @@ for _name, _value in {
     "RESET_TOKEN_MINUTES": "60",
     "LOGIN_MAX_FAILURES": "5",
     "LOGIN_WINDOW_MINUTES": "15",
+    "REVEAL_MAX_PER_HOUR": "3",
+    "REVEAL_MAX_PER_DAY": "5",
     "REPORTS_OUTPUT_DIR": str(Path(tempfile.gettempdir()) / "skills-test-reports"),
 }.items():
     os.environ.setdefault(_name, _value)

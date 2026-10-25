@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, Field, StringConstraints, model_validator
 
 from app.schemas.auth import Mobile, PersonName
 from app.schemas.common import LabelOut
@@ -122,7 +122,6 @@ class FreelancerPublic(BaseModel):
 
     id: uuid.UUID
     full_name: str | None
-    mobile_number: str | None  # only for work hosts and admins
     whatsapp_availability: bool
     nationality: str | None
     primary_language: str | None
@@ -211,3 +210,17 @@ class LabelCreate(BaseModel):
 class LabelUpdate(BaseModel):
     label_name: Annotated[str, Field(min_length=1, max_length=100)] | None = None
     is_active: bool | None = None
+
+
+class RevealRequest(BaseModel):
+    """Why and how a work host asks for a mobile number. Both fields are hints for reports."""
+
+    channel: Literal["dial", "show"]  # dial: the phone's dialler opens; show: shown on screen
+    source: Literal["search", "detail"]  # the page the request came from
+    searched_skills: list[Annotated[str, StringConstraints(max_length=100)]] = Field(
+        default_factory=list, max_length=10
+    )
+
+
+class RevealedMobile(BaseModel):
+    mobile_number: str

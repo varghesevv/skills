@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { apiError, json, makeMe, renderApp, signedInAs } from '../../testUtils'
 import { ALL_LABELS, label } from '../freelancer/testData'
@@ -259,10 +259,8 @@ describe('freelancer detail', () => {
     asHost({ [detail]: () => json(200, makePerson()), [ratings]: emptyRatings })
     renderApp(`/workhost/freelancers/${PERSON_ID}`)
     expect(await screen.findByRole('heading', { name: 'Anita Sharma' })).toBeVisible()
-    expect(screen.getByRole('link', { name: '+971500000011' })).toHaveAttribute(
-      'href',
-      'tel:+971500000011',
-    )
+    expect(screen.queryByText('+971500000011')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Reveal the mobile number/ })).toBeVisible()
     expect(screen.getByText('50 AED per hour')).toBeVisible()
     expect(screen.getByText('Acme Training')).toBeVisible()
     expect(screen.getByText('plumbing')).toBeVisible()
@@ -388,5 +386,111 @@ describe('ratings I gave', () => {
     asHost({ 'GET /workhosts/me/ratings?page=1&page_size=10': () => json(200, page([])) })
     renderApp('/workhost/ratings')
     expect(await screen.findByText('You have not rated anyone yet.')).toBeVisible()
+  })
+})
+
+describe('mobile number reveal', () => {
+  const NUMBER = '+971500000011'
+  const reveal = `POST /freelancers/${PERSON_ID}/reveal-mobile`
+  const detail = `GET /freelancers/${PERSON_ID}`
+  const ratings = `GET /freelancers/${PERSON_ID}/ratings?page=1&page_size=10`
+  const emptyRatings = () => json(200, { items: [], total: 0, page: 1, page_size: 10 })
+
+  function phone() {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: true, media: query }))
+  }
+
+  it('hides the number in search results until Reveal is pressed', async () => {
+    const user = ui()
+    const api = asHost({
+      'GET /search/freelancers?skill=plumbing&page=1&page_size=12': () =>
+        json(200, page([makeResult()])),
+      [reveal]: () => json(200, { mobile_number: NUMBER }),
+    })
+    renderApp('/workhost/search?skill=plumbing')
+    const button = await screen.findByRole('button', {
+      name: 'Reveal the mobile number of Anita Sharma',
+    })
+    expect(screen.queryByText(NUMBER)).not.toBeInTheDocument()
+    expect(screen.getByText('Mobile number hidden')).toBeInTheDocument()
+    expect(api.count(reveal)).toBe(0)
+
+    await user.click(button)
+
+    expect(await screen.findByRole('link', { name: `Call ${NUMBER}` })).toHaveAttribute(
+      'href',
+      `tel:${NUMBER}`,
+    )
+    expect(api.last(reveal)?.body).toEqual({
+      channel: 'show',
+      source: 'search',
+      searched_skills: ['plumbing'],
+    })
+    expect(screen.queryByRole('button', { name: /Reveal/ })).not.toBeInTheDocument()
+  })
+
+  it('opens the dialler on a phone', async () => {
+    phone()
+    const user = ui()
+    const dialled: string[] = []
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement).closest('a')
+      if (link?.getAttribute('href')?.startsWith('tel:')) {
+        event.preventDefault()
+        dialled.push(link.getAttribute('href') ?? '')
+      }
+    }
+    document.addEventListener('click', onClick)
+    const api = asHost({
+      [detail]: () => json(200, makePerson()),
+      [ratings]: emptyRatings,
+      [reveal]: () => json(200, { mobile_number: NUMBER }),
+    })
+    renderApp(`/workhost/freelancers/${PERSON_ID}`)
+    await user.click(await screen.findByRole('button', { name: /Reveal the mobile number/ }))
+
+    await waitFor(() => expect(dialled).toEqual([`tel:${NUMBER}`]))
+    document.removeEventListener('click', onClick)
+    expect(api.last(reveal)?.body).toEqual({
+      channel: 'dial',
+      source: 'detail',
+      searched_skills: [],
+    })
+  })
+
+  it('shows the number without dialling on a computer', async () => {
+    const user = ui()
+    asHost({
+      [detail]: () => json(200, makePerson()),
+      [ratings]: emptyRatings,
+      [reveal]: () => json(200, { mobile_number: NUMBER }),
+    })
+    renderApp(`/workhost/freelancers/${PERSON_ID}`)
+    await user.click(await screen.findByRole('button', { name: /Reveal the mobile number/ }))
+    expect(await screen.findByText(NUMBER)).toBeVisible()
+  })
+
+  it('explains when the limit is reached and lets the host try again', async () => {
+    const user = ui()
+    asHost({
+      [detail]: () => json(200, makePerson()),
+      [ratings]: emptyRatings,
+      [reveal]: () => apiError(429, 'reveal_limit_reached', {}, { 'Retry-After': '1800' }),
+    })
+    renderApp(`/workhost/freelancers/${PERSON_ID}`)
+    await user.click(await screen.findByRole('button', { name: /Reveal the mobile number/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Try again in 30 minute(s).')
+    expect(screen.getByRole('button', { name: /Reveal the mobile number/ })).toBeEnabled()
+    expect(screen.queryByText(NUMBER)).not.toBeInTheDocument()
+  })
+
+  it('is not offered to organisations', async () => {
+    signedInAs(makeMe({ user_type: 'organisation', approval_status: 'approved', org_name: 'Acme' }), {
+      'GET /labels': () => json(200, LABELS),
+      [DEFAULT_SEARCH]: () => json(200, page([makeResult()])),
+    })
+    renderApp('/organisation/search')
+    expect(await screen.findByRole('link', { name: 'Anita Sharma' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: /Reveal/ })).not.toBeInTheDocument()
   })
 })

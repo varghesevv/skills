@@ -13,6 +13,7 @@ import { usePageTitle } from '../../shared/usePageTitle'
 import { activeChips, clearedFilters } from './activeFilters'
 import FilterForm, { SORT_OPTIONS } from './FilterForm'
 import { formatRate } from './format'
+import RevealMobile from './RevealMobile'
 import {
   activeFilterCount,
   apiQuery,
@@ -27,10 +28,12 @@ function ResultCard({
   item,
   search,
   portal,
+  searchedSkills,
 }: {
   item: SearchResult
   search: string
   portal: Portal
+  searchedSkills: string[]
 }) {
   return (
     <li className="card result">
@@ -61,6 +64,16 @@ function ResultCard({
         ))}
       </ul>
       <p className="muted">{[item.nationality, ...item.languages].filter(Boolean).join(' · ')}</p>
+      {portal === 'workhost' && (
+        <p className="result-contact">
+          <RevealMobile
+            freelancerId={item.id}
+            freelancerName={item.full_name ?? t('search.noName')}
+            source="search"
+            searchedSkills={searchedSkills}
+          />
+        </p>
+      )}
     </li>
   )
 }
@@ -250,7 +263,13 @@ export default function SearchPage({ portal }: { portal: Portal }) {
                   <p role="status">{t('search.results', { count: data.total })}</p>
                   <ul className="result-grid plain-list">
                     {data.items.map((item) => (
-                      <ResultCard key={item.id} item={item} search={paramsKey} portal={portal} />
+                      <ResultCard
+                        key={item.id}
+                        item={item}
+                        search={paramsKey}
+                        portal={portal}
+                        searchedSkills={applied.skills}
+                      />
                     ))}
                   </ul>
                   <Pager

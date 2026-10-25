@@ -13,6 +13,8 @@ x-backend-env: &backend-env
   RESET_TOKEN_MINUTES: ${RESET_TOKEN_MINUTES:?Run make env to create or complete .env}
   LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:?Run make env to create or complete .env}
   LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:?Run make env to create or complete .env}
+  REVEAL_MAX_PER_HOUR: ${REVEAL_MAX_PER_HOUR:?Run make env to create or complete .env}
+  REVEAL_MAX_PER_DAY: ${REVEAL_MAX_PER_DAY:?Run make env to create or complete .env}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?Run make env to create or complete .env}
 
 services:

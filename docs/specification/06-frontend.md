@@ -71,6 +71,7 @@ Every page, in every portal, works on phones, tablets and desktops. This is a re
 - **Navigation:** a top bar with a menu button on mobile, a collapsible side menu on tablet, a persistent side menu on desktop.
 - **Tables** (search results, report sections, run history): on mobile each row becomes a stacked card or the table scrolls horizontally inside its own container; the page itself never scrolls sideways. Key columns stay visible. Report pages keep all columns reachable on every size.
 - **Forms:** single column on mobile, two columns where it helps on wider screens; labels always visible; correct `type`, `inputmode` and `autocomplete` values so phones show the right keyboard.
+- **Mobile number:** shown as a greyed placeholder with a **Reveal** button on work host search results and the freelancer detail page. Reveal calls the server; on a touch device (`hover: none` and `pointer: coarse`) it then opens the dialler, otherwise it shows the number as a `tel:` link. The number lives only in the component state. A refused request (limit reached) shows the wait time and the button stays available.
 - **Filters** on freelancer search: a slide-in panel on mobile and tablet, a side panel on desktop.
 - **Calendar** (unavailability): month view on tablet and desktop, list view on mobile.
 - **Dialogs and menus:** full-screen sheets on mobile, centred dialogs on larger screens; focus is trapped and returned on close.

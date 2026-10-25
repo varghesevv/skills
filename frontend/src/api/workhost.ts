@@ -4,6 +4,8 @@ import type {
   GivenRating,
   OrgBrief,
   Page,
+  RevealedMobile,
+  RevealRequest,
   SearchResult,
   WorkHostProfile,
   WorkHostUpdate,
@@ -24,6 +26,10 @@ export const searchFreelancers = (query: string) =>
   request<Page<SearchResult>>(`/search/freelancers?${query}`)
 
 export const getFreelancer = (id: string) => request<FreelancerPublic>(`/freelancers/${id}`)
+
+/** The only call that returns a mobile number. Every call is recorded and rate limited. */
+export const revealMobile = (freelancerId: string, body: RevealRequest) =>
+  request<RevealedMobile>(`/freelancers/${freelancerId}/reveal-mobile`, { method: 'POST', body })
 
 export type RatingBody = { rating: number; comment: string | null }
 

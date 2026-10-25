@@ -24,6 +24,8 @@ x-backend-env: &backend-env
   RESET_TOKEN_MINUTES: ${RESET_TOKEN_MINUTES:?missing in .env}
   LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:?missing in .env}
   LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:?missing in .env}
+  REVEAL_MAX_PER_HOUR: ${REVEAL_MAX_PER_HOUR:?missing in .env}
+  REVEAL_MAX_PER_DAY: ${REVEAL_MAX_PER_DAY:?missing in .env}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?missing in .env}
 
 services:

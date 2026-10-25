@@ -20,6 +20,10 @@ export function errorMessage(error: unknown): string {
         return t('error.emailTaken')
       case 'invalid_reset_token':
         return t('error.invalidResetToken')
+      case 'reveal_limit_reached':
+        return t('error.revealLimit', {
+          minutes: Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)),
+        })
       case 'network_error':
         return t('error.network')
       case 'service_unavailable':

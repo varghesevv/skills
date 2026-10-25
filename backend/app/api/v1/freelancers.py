@@ -1,4 +1,6 @@
+import math
 import uuid
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
@@ -7,13 +9,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_principal, require_roles
+from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
 from app.models.availability import FreelancerUnavailability
 from app.models.labels import FreelancerLabel, Label
 from app.models.ratings import UserRating
-from app.models.users import Freelancer, Organisation
+from app.models.reveals import PhoneReveal
+from app.models.users import Freelancer, Organisation, WorkHost
 from app.models.vouching import OrgFreelancer
 from app.schemas.common import Page, Pagination, pagination
 from app.schemas.profiles import (
@@ -24,6 +28,8 @@ from app.schemas.profiles import (
     GivenRating,
     LabelsUpdate,
     PublicRating,
+    RevealedMobile,
+    RevealRequest,
     UnavailabilityIn,
     UnavailabilityOut,
     VouchingOrg,
@@ -270,7 +276,6 @@ def public_profile(
     freelancer = db.get(Freelancer, freelancer_id)
     if freelancer is None:
         raise ApiError(404, "not_found", "Freelancer not found")
-    sees_mobile = principal.user_type in ("workhost", "admin")
     average, count = rating_summary(db, freelancer.id)
     orgs = db.execute(
         select(Organisation.id, Organisation.org_name)
@@ -311,8 +316,6 @@ def public_profile(
     return FreelancerPublic(
         id=freelancer.id,
         full_name=freelancer.full_name,
-        # Mobile numbers are shown to work hosts (and admins) only.
-        mobile_number=freelancer.mobile_number if sees_mobile else None,
         whatsapp_availability=freelancer.whatsapp_availability,
         nationality=freelancer.nationality,
         primary_language=freelancer.primary_language,
@@ -326,6 +329,64 @@ def public_profile(
         unavailable=[_unavailability_out(row) for row in upcoming],
         my_rating=mine,
     )
+
+
+HostOnly = Annotated[Principal, Depends(require_roles("workhost"))]
+
+
+def _check_reveal_limits(db: Session, settings: Settings, host_id: uuid.UUID) -> None:
+    """Answer 429 when this work host has asked for too many numbers lately."""
+    now = utc_now()
+    for window, limit in (
+        (timedelta(hours=1), settings.reveal_max_per_hour),
+        (timedelta(days=1), settings.reveal_max_per_day),
+    ):
+        times = db.scalars(
+            select(PhoneReveal.revealed_at)
+            .where(PhoneReveal.work_host_id == host_id, PhoneReveal.revealed_at > now - window)
+            .order_by(PhoneReveal.revealed_at)
+        ).all()
+        if len(times) >= limit:
+            wait = math.ceil((times[len(times) - limit] + window - now).total_seconds())
+            raise ApiError(
+                429,
+                "reveal_limit_reached",
+                "You have revealed too many mobile numbers. Try again later.",
+                headers={"Retry-After": str(max(wait, 1))},
+            )
+
+
+@router.post("/{freelancer_id}/reveal-mobile")
+def reveal_mobile(
+    freelancer_id: uuid.UUID,
+    body: RevealRequest,
+    principal: HostOnly,
+    response: Response,
+    db: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> RevealedMobile:
+    """The only place a freelancer's mobile number is returned to anyone else.
+
+    Every call is recorded, and each work host has an hourly and a daily limit.
+    """
+    freelancer = db.get(Freelancer, freelancer_id)
+    if freelancer is None:
+        raise ApiError(404, "not_found", "Freelancer not found")
+    # Lock the work host's row so two parallel requests cannot both slip under the limit.
+    db.execute(select(WorkHost.id).where(WorkHost.id == principal.user_id).with_for_update())
+    _check_reveal_limits(db, settings, principal.user_id)
+    db.add(
+        PhoneReveal(
+            work_host_id=principal.user_id,
+            freelancer_id=freelancer.id,
+            channel=body.channel,
+            source=body.source,
+            searched_skills=body.searched_skills or None,
+        )
+    )
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return RevealedMobile(mobile_number=freelancer.mobile_number)
 
 
 @router.get("/{freelancer_id}/ratings")

@@ -57,7 +57,8 @@ Behaviour of the core APIs:
 - `PUT /freelancers/me/labels` replaces the whole label set. A skill may carry a `level_label_id` (a `skill_level` label); languages, timings and nativity take no level. Inactive labels cannot be selected.
 - Unavailability periods need timezone-aware timestamps and cannot overlap (`409 unavailability_overlaps`).
 - Vouching: an approved organisation creates a `pending` vouch; the freelancer accepts (`approved`) or rejects (`revoked`). Only approved and active vouches are shown on the public profile. Revoking sets the vouch inactive; vouching again starts over as `pending`.
-- Public profile never contains the email. The mobile number is shown to work hosts and admins only.
+- Public profile never contains the email or the mobile number, for any role.
+- `POST /freelancers/{id}/reveal-mobile` (work host only) is the only endpoint that returns a freelancer's mobile number. Body: `channel` (`dial` or `show`), `source` (`search` or `detail`), `searched_skills` (at most 10 names, optional). Returns `{"mobile_number": "..."}` with `Cache-Control: no-store`, and records the reveal. Other roles get `403`, an unknown freelancer `404`. After `REVEAL_MAX_PER_HOUR` reveals in an hour or `REVEAL_MAX_PER_DAY` in 24 hours the work host gets `429 reveal_limit_reached` with `Retry-After`; nothing is recorded for a refused request.
 - Ratings: one per work host and freelancer (`409 already_rated`; change it with `PUT /ratings/{id}`). The ratings list does not show who rated.
 
 ### Work hosts
@@ -74,7 +75,7 @@ GET `/labels?type=skill|language|timing|nativity|skill_level` (any authenticated
 ### Search
 GET `/search/freelancers` with query parameters: `skill` (repeatable), `skill_match=any|all`, `skill_level`, `language`, `timing`, `nativity`, `max_rate`, `currency`, `negotiable`, `available_from`, `available_to`, `org_id`, `min_rating`, `sort=rating|rate|newest`, `page`, `page_size`.
 
-Search behaviour: freelancers are listed once they have at least one skill; a rate and ratings are not needed (newcomers appear too). `max_rate` and `negotiable` only match freelancers who have a rate; `sort=rate` puts those without a rate last. `skill`, `language`, `timing` and `nativity` can be repeated and match case-insensitively by label name. `skill_match=any` (default) or `all`. `skill_level` applies to the chosen skills (or to any skill when none is given). `max_rate` needs `currency`. `available_from` and `available_to` must be given together and exclude freelancers with an overlapping unavailability period. `org_id` and `vouch_count` only count approved, active vouches. `min_rating` excludes unrated freelancers. Default sort is `newest`. Results never contain email or mobile number. Roles: work host, organisation, admin.
+Search behaviour: freelancers are listed once they have at least one skill; a rate and ratings are not needed (newcomers appear too). `max_rate` and `negotiable` only match freelancers who have a rate; `sort=rate` puts those without a rate last. `skill`, `language`, `timing` and `nativity` can be repeated and match case-insensitively by label name. `skill_match=any` (default) or `all`. `skill_level` applies to the chosen skills (or to any skill when none is given). `max_rate` needs `currency`. `available_from` and `available_to` must be given together and exclude freelancers with an overlapping unavailability period. `org_id` and `vouch_count` only count approved, active vouches. `min_rating` excludes unrated freelancers. Default sort is `newest`. Results never contain email or mobile number (use the reveal endpoint). Roles: work host, organisation, admin.
 
 ### Ratings
 POST `/ratings` (workhost), PUT `/ratings/{id}` (own rating).
