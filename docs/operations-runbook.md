@@ -116,6 +116,11 @@ web addresses from `frontend/src/terminology/profiles.json`, for example `church
 GitHub, re-run `deploy-demo`, and the site serves the new words. Existing bookmarks to the old
 addresses (for example `/organisation`) stop working after a change.
 
+The small label at the top of the navigation menu (the role badge) has its own words, so it can differ
+from the rest of the screen text: `badge_organisation`, `badge_workhost` and `badge_freelancer` in each
+profile. In the `default` profile they are Organisation, Work host and Freelancer. Edit them in
+`profiles.json` and redeploy; every profile must define all three.
+
 ## 8. Security headers and limits
 
 - Caddy adds HSTS, `nosniff`, a strict Content-Security-Policy (everything from the site's own origin), `X-Frame-Options: DENY`, a Permissions-Policy and removes the `Server` header. A page that suddenly breaks after a change may be blocked by the policy: open the browser developer console and look for "Content Security Policy" messages, then fix the page rather than loosening the policy.

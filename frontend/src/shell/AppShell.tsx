@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, useUser } from '../auth/AuthContext'
 import { t } from '../i18n'
 import { portalFor } from '../portals/config'
+import { term } from '../terminology/terms'
 
 /**
  * Signed-in layout. Below 1024 px the navigation is a drawer opened from the top bar;
@@ -64,7 +65,9 @@ export default function AppShell() {
       <div className="shell-body">
         <nav id="sidebar" className="sidebar" data-open={open} aria-label={t('nav.main')}>
           <div className="sidebar-head">
-            <span className="role-badge">{t(portal.roleKey)}</span>
+            <span className="role-badge">
+              {portal.userType === 'admin' ? t(portal.roleKey) : term(`badge_${portal.userType}`)}
+            </span>
             <button type="button" className="icon-btn sidebar-close" onClick={() => setOpen(false)}>
               <span aria-hidden="true">✕</span>
               <span className="sr-only">{t('nav.close')}</span>
