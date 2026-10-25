@@ -36,6 +36,44 @@ class ForkGuardTest(unittest.TestCase):
         problems, _ = self.check(wf("on:\n  pull_request:\n", body))
         self.assertEqual(len(problems), 1)
 
+    def job_if(self, condition):
+        problems, _ = self.check(wf("on:\n  pull_request:\n", f"\n  a:\n    if: {condition}\n    runs-on: x"))
+        return problems
+
+    def test_real_conditions_pass(self):
+        for cond in (
+            f"github.event_name != 'pull_request' || {G}",
+            f"{G}",
+            f"{G} && github.actor != 'bot'",
+            f"github.event_name == 'push' || {G}",
+            f"github.event_name == 'workflow_dispatch' || (github.event.pull_request.draft == false && {G})",
+            f"${{{{ github.event_name != 'pull_request' || {G} }}}}",
+            f"github.event_name == 'pull_request' && {G} && contains(github.ref, 'x')",
+        ):
+            self.assertEqual(self.job_if(cond), [], cond)
+
+    def test_fake_guards_fail(self):
+        for cond in (
+            f"always() || {G}",
+            f"!({G})",
+            f"github.event_name == 'pull_request' || {G}",
+            f"github.ref == 'refs/heads/x' || {G}",
+            "true",
+            "always()",
+            "github.actor != 'dependabot[bot]'",
+        ):
+            self.assertEqual(len(self.job_if(cond)), 1, cond)
+
+    def test_unreadable_condition_fails(self):
+        self.assertEqual(len(self.job_if(f"({G}")), 1)
+        self.assertEqual(len(self.job_if(f"|| {G}")), 1)
+
+    def test_quoted_job_name_cannot_hide_a_job(self):
+        body = f"\n  a:\n{OK_IF}\n    runs-on: x\n  \"my job\":\n    runs-on: x"
+        problems, _ = self.check(wf("on:\n  pull_request:\n", body))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("my job", problems[0])
+
     def test_folded_multiline_if_is_read(self):
         body = f"\n  a:\n    if: >-\n      github.event_name == 'push' ||\n      {G}\n    runs-on: x"
         problems, _ = self.check(wf("on:\n  pull_request:\n", body))

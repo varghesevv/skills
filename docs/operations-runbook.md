@@ -221,7 +221,7 @@ No workflow runs for a pull request from a fork. Every job in a workflow that st
 if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 ```
 
-- `scripts/check-fork-guard.py` (run by `ci-docs`) fails a pull request when any job of a `pull_request` workflow lacks the condition, or when a workflow uses `pull_request_target`. Every new job needs the condition. Never use `pull_request_target` to check out or run PR code.
+- `scripts/check-fork-guard.py` (run by `ci-docs`) fails a pull request when any job of a `pull_request` workflow has an `if:` that could be true for a fork PR (a missing `if:`, `always() || <guard>`, a negated guard and similar), when a job key is not a plain name, or when a workflow uses `pull_request_target`. Every new job needs the condition. Never use `pull_request_target` to check out or run PR code.
 - The job shows as "skipped", and GitHub counts a skipped required check as passing, so required checks alone do not stop a fork PR from being merged: keep "Require a pull request before merging" with at least one approving review in the repository ruleset, and do not approve a fork PR until a maintainer has read it and, if needed, re-pushed it to a branch here.
 - A fork PR is therefore **not** tested automatically: review the code by reading it. To test it, a maintainer pushes the change to a branch in this repository and opens a PR from there.
 - Also set, once, in Settings > Actions > General: "Fork pull request workflows from outside collaborators" to "Require approval for all outside collaborators". Then nothing starts for a fork PR until a maintainer approves it, even if a workflow forgets the condition.
