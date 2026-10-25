@@ -30,7 +30,7 @@ def test_who_can_list_reports(client: TestClient, session: Session) -> None:
     org = signup(client, session, "organisation", "ro1@example.com")
     me = signup(client, session, "freelancer", "rf1@example.com")
     everything = client.get(REPORTS, headers=admin.headers).json()
-    assert len(everything) == 10
+    assert len(everything) == 11
     assert {"RP-01", "RP-07", "SC-01"} <= {report["code"] for report in everything}
     scoped = client.get(REPORTS, headers=org.headers).json()
     assert [report["name"] for report in scoped] == ["vouching_summary"]

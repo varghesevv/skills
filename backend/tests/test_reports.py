@@ -256,7 +256,7 @@ def test_availability_overview_limits_the_range(session: Session) -> None:
 
 def test_phone_reveals_report(session: Session) -> None:
     plumber = freelancer(session, "pr1@example.com", skills=(("plumbing", None),))
-    cook = freelancer(session, "pr2@example.com", skills=(("cooking", None),))
+    cook = freelancer(session, "pr2@example.com", skills=(("electrical", None),))
     host = make_host(session, "prh1@example.com")
     other = make_host(session, "prh2@example.com")
     inside = dubai(10, 12)
@@ -275,7 +275,7 @@ def test_phone_reveals_report(session: Session) -> None:
             )
         )
 
-    reveal(host, plumber, "dial", "search", ["plumbing", "cleaning"])
+    reveal(host, plumber, "dial", "search", ["plumbing", "networking"])
     reveal(host, plumber, "show", "detail", [])  # the same pair again
     reveal(host, cook, "show", "search", ["plumbing"])
     reveal(other, plumber, "show", "search", [])
@@ -306,8 +306,8 @@ def test_phone_reveals_report(session: Session) -> None:
     assert summary["pairs_rated_afterwards"] == 1
     assert summary["rated_afterwards_percent"] == 33.3
     assert sections[2].rows[0][2:4] == [3, 2]  # the busiest work host
-    assert sections[3].rows == [["plumbing", 3, 1], ["cooking", 1, 1]]
-    assert sections[4].rows == [["plumbing", 2], ["cleaning", 1]]
+    assert sections[3].rows == [["plumbing", 3, 1], ["electrical", 1, 1]]
+    assert sections[4].rows == [["plumbing", 2], ["networking", 1]]
     assert sections[5].rows[0][2:] == [3, 2]
 
 
