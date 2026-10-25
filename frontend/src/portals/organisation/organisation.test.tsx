@@ -206,11 +206,7 @@ describe('finding someone to vouch for', () => {
 
   it('says so when the organisation already vouches', async () => {
     asOrg({
-      [DETAIL]: () =>
-        json(
-          200,
-          makePerson({ vouched_by: [{ org_id: ORG_ID, org_name: 'Acme' }] }),
-        ),
+      [DETAIL]: () => json(200, makePerson({ vouched_by: [{ org_id: ORG_ID, org_name: 'Acme' }] })),
       [RATINGS]: () => json(200, page([], 0)),
     })
     renderApp(`/organisation/freelancers/${PERSON_ID}`)

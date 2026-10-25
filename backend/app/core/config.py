@@ -50,8 +50,10 @@ class Settings(BaseSettings):
     reset_token_minutes: int
     login_max_failures: int  # failed logins allowed per email and IP ...
     login_window_minutes: int  # ... within this many minutes
-    reveal_max_per_hour: int  # mobile number reveals allowed per work host per hour ...
-    reveal_max_per_day: int  # ... and per 24 hours
+    # Mobile number reveals allowed per work host per hour and per 24 hours. These two are the
+    # only settings with defaults, because the limits are a safety net, not a deployment choice.
+    reveal_max_per_hour: int = 10
+    reveal_max_per_day: int = 20
     jwt_secret: SecretStr | None = None  # required by the API; checked by require_jwt_secret()
     demo_user_password: SecretStr | None = None  # only used by `python -m app.cli seed-demo`
 

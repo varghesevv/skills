@@ -485,10 +485,13 @@ describe('mobile number reveal', () => {
   })
 
   it('is not offered to organisations', async () => {
-    signedInAs(makeMe({ user_type: 'organisation', approval_status: 'approved', org_name: 'Acme' }), {
-      'GET /labels': () => json(200, LABELS),
-      [DEFAULT_SEARCH]: () => json(200, page([makeResult()])),
-    })
+    signedInAs(
+      makeMe({ user_type: 'organisation', approval_status: 'approved', org_name: 'Acme' }),
+      {
+        'GET /labels': () => json(200, LABELS),
+        [DEFAULT_SEARCH]: () => json(200, page([makeResult()])),
+      },
+    )
     renderApp('/organisation/search')
     expect(await screen.findByRole('link', { name: 'Anita Sharma' })).toBeVisible()
     expect(screen.queryByRole('button', { name: /Reveal/ })).not.toBeInTheDocument()

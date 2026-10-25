@@ -302,8 +302,7 @@ const en = {
   'error.invalidCredentials': 'Invalid email or password.',
   'error.organisationPending': 'This {organisation} is still waiting for admin approval.',
   'error.organisationRejected': 'This {organisation} was not approved.',
-  'error.revealLimit':
-    'You have revealed many numbers recently. Try again in {minutes} minute(s).',
+  'error.revealLimit': 'You have revealed many numbers recently. Try again in {minutes} minute(s).',
   'error.tooManyAttempts': 'Too many failed attempts. Try again in {minutes} minute(s).',
   'error.emailTaken': 'An account with this email already exists.',
   'error.invalidResetToken': 'This reset link is invalid or has expired. Request a new one.',
