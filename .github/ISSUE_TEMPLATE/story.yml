@@ -1,0 +1,87 @@
+name: User story
+description: A small piece of value for one kind of user, with a clear way to check it is done.
+title: "[Story]: "
+labels: ["story", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A story is small enough to build and test in one pull request. If it is bigger, use the
+        **Feature request** form instead and we will split it into stories.
+  - type: dropdown
+    id: role
+    attributes:
+      label: As a...
+      options:
+        - Freelancer
+        - Work host
+        - Organisation
+        - Administrator
+        - Tester or evaluator
+        - Developer or operator
+    validations:
+      required: true
+  - type: textarea
+    id: want
+    attributes:
+      label: I want to...
+      description: The action, in plain words. Use the screen wording of your installation if it differs.
+      placeholder: "see which of my skills have the most vouches"
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: So that...
+      description: Why it matters. If you cannot say, the story is probably not ready.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: |
+        Checks that a tester can run and answer yes or no. Prefer the form Given / When / Then.
+        Include one failure case (what happens with wrong input or the wrong role).
+      placeholder: |
+        - [ ] Given a freelancer with 2 vouched skills, when they open My profile, then the vouch count shows next to each skill.
+        - [ ] Given a freelancer with no vouches, then no count is shown and nothing breaks.
+        - [ ] A work host cannot see this view.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Not included
+      description: What this story deliberately does not do, so the pull request stays small.
+  - type: input
+    id: requirement
+    attributes:
+      label: Related requirement or issue
+      description: Requirement IDs (FR-*, RP-*), specification page, ADR, or issue numbers.
+      placeholder: "FR-F-06, #42"
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your view)
+      options:
+        - Must have
+        - Should have
+        - Could have
+        - Won't have now
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Mock-ups, examples, notes
+      description: Sketches, screenshots or links. Drag files into this box.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and this story is not already there.
+          required: true
+        - label: This issue contains no passwords, tokens, keys or real personal data.
+          required: true

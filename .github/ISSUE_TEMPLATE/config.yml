@@ -1,0 +1,9 @@
+# Shown on the "New issue" page. Blank issues are off so every issue uses a form.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem (private)
+    url: https://github.com/varghesevv/skills/security/advisories/new
+    about: Do not open a public issue for vulnerabilities or leaked secrets. Report them privately here.
+  - name: Read the specification first
+    url: https://github.com/varghesevv/skills/tree/main/docs/specification
+    about: Requirement IDs (FR-*, RP-*) and the API description live here. Quote them in your issue.

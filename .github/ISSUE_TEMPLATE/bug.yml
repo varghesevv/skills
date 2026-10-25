@@ -1,0 +1,105 @@
+name: Bug report
+description: Something does not work as the specification or the screen says it should.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing. One bug per issue please. Never paste passwords, tokens, keys or other people's
+        personal data. Security problems: use the private link on the previous page, not this form.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What is wrong?
+      description: One or two sentences a developer can understand without opening the app.
+      placeholder: "Example: A newly registered freelancer with one skill does not appear in work host search."
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Freelancer portal
+        - Work host portal
+        - Organisation portal
+        - Admin portal
+        - Login / registration / password reset
+        - Search
+        - Ratings or vouching
+        - Reports (scheduled or downloaded)
+        - API only (no screen)
+        - Deployment, CI or infrastructure
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, starting from a known place such as "Open the demo site and log in as a work host".
+      placeholder: |
+        1. Log in as a work host
+        2. Open Search
+        3. Type "Anna" in the name box and press Search
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen?
+      description: Quote the requirement ID (for example FR-S-06) or the specification page if you know it.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happens instead?
+      description: Include the exact error text. Screenshots and screen recordings are welcome; drag them into this box.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How bad is it?
+      options:
+        - "Blocker: cannot use the product or data is wrong or lost"
+        - "Major: an important feature fails, no workaround"
+        - "Minor: a feature fails but there is a workaround"
+        - "Cosmetic: wording, layout or typo"
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often?
+      options:
+        - Every time
+        - Sometimes
+        - Once, could not repeat
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Where you saw it, the version if shown (footer or /version.txt), browser or phone, and the wording profile (for example Church).
+      placeholder: "Demo site, v0.3.1, Chrome 130 on macOS, Church profile"
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Related issues or pull requests, what you already tried, when it started.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and did not find this bug.
+          required: true
+        - label: This issue contains no passwords, tokens, keys or real personal data.
+          required: true
