@@ -15,6 +15,13 @@ describe('terminology profiles', () => {
     }
   })
 
+  it('keep the default badge text equal to the plain role words', () => {
+    const base = (profiles as Record<string, Record<string, string>>).default
+    expect(base.badge_organisation).toBe('Organisation')
+    expect(base.badge_workhost).toBe('Work host')
+    expect(base.badge_freelancer).toBe('Freelancer')
+  })
+
   it('use web-safe, distinct address words', () => {
     const all = profiles as Record<string, Record<string, string>>
     for (const [name, profile] of Object.entries(all)) {

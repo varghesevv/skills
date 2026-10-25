@@ -10,7 +10,10 @@
     "freelancer": "Freelancer",
     "freelancers": "Freelancers",
     "freelancer_path": "freelancer",
-    "freelancers_path": "freelancers"
+    "freelancers_path": "freelancers",
+    "badge_organisation": "Organisation",
+    "badge_workhost": "Work host",
+    "badge_freelancer": "Freelancer"
   },
   "church": {
     "organisation": "Church",
@@ -23,6 +26,9 @@
     "freelancer": "Searcher",
     "freelancers": "Searchers",
     "freelancer_path": "searcher",
-    "freelancers_path": "searchers"
+    "freelancers_path": "searchers",
+    "badge_organisation": "Church",
+    "badge_workhost": "Provider",
+    "badge_freelancer": "Searcher"
   }
 }
