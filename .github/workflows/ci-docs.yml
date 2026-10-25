@@ -31,3 +31,8 @@ jobs:
         # A small script instead of lychee: the lychee binary needs a newer glibc than the
         # self-hosted runner has. Web addresses are not visited (the old check was offline too).
         run: python3 scripts/check-md-links.py .
+      - name: Every pull request job has the fork guard
+        # Keeps fork pull requests away from our runners and secrets (operations runbook, "Pull requests from forks").
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 scripts/check-fork-guard.py .

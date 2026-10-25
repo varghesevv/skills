@@ -197,7 +197,12 @@ Each reviewer (Gemini, Claude) leaves two kinds of output:
 - **One summary comment**, updated on every run: "What this PR does" (a short overview so reviewers do not depend on the PR description), the risk level, general findings and files not reviewed.
 - **Inline review comments** on the changed lines. These are normal review threads: reply with how you handled the point or why it is a false positive, then click "Resolve conversation". On the next run the reviewer sees earlier points and the replies, and does not raise them again.
 
-If GitHub refuses the inline comments (for example a line is outside the diff), those points appear in the summary instead. If the model's answer cannot be read as structured output, the plain text is posted as the summary.
+If GitHub refuses the inline comments (for example a line is outside the diff), those points appear in the summary instead. If the model's answer cannot be read (cut off or not in the expected format), a short notice is posted instead, and the raw answer is never shown.
+
+### Reviewer settings
+
+- `REVIEW_BOT_LOGIN` (optional environment variable of the review step): the account that posts the review comments, default `github-actions[bot]`. Set it when a personal access token or a GitHub App is used instead of the workflow token; otherwise the reviewer cannot find its own earlier comments and repeats itself.
+- If the model's answer cannot be read (cut off or wrong format), the reviewer posts a short notice and never the raw answer.
 
 ### Claude review (manual)
 
@@ -216,9 +221,9 @@ No workflow runs for a pull request from a fork. Every job in a workflow that st
 if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 ```
 
-- New workflows that start on `pull_request` must include it on every job. Never use `pull_request_target` to check out or run PR code.
-- The job shows as "skipped", and GitHub counts a skipped required check as passing. So a fork PR is **not** tested automatically: review the code by reading it. To test it, a maintainer pushes the change to a branch in this repository and opens a PR from there.
+- `scripts/check-fork-guard.py` (run by `ci-docs`) fails a pull request when any job of a `pull_request` workflow has an `if:` that could be true for a fork PR (a missing `if:`, `always() || <guard>`, a negated guard and similar), when a job key is not a plain name, or when a workflow uses `pull_request_target`. Every new job needs the condition. Never use `pull_request_target` to check out or run PR code.
+- The job shows as "skipped", and GitHub counts a skipped required check as passing, so required checks alone do not stop a fork PR from being merged: keep "Require a pull request before merging" with at least one approving review in the repository ruleset, and do not approve a fork PR until a maintainer has read it and, if needed, re-pushed it to a branch here.
+- A fork PR is therefore **not** tested automatically: review the code by reading it. To test it, a maintainer pushes the change to a branch in this repository and opens a PR from there.
 - Also set, once, in Settings > Actions > General: "Fork pull request workflows from outside collaborators" to "Require approval for all outside collaborators". Then nothing starts for a fork PR until a maintainer approves it, even if a workflow forgets the condition.
 - On a public repository GitHub already withholds secrets from fork pull requests and gives them a read-only token; there is no setting for that. (The options "Run workflows from fork pull requests" and "Send secrets to workflows from fork pull requests" exist only for private repositories and organisations.)
 - Workflows that do not start on `pull_request` (push to main, schedule, manual, release) are not affected.
-
