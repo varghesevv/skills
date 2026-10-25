@@ -1,0 +1,102 @@
+name: Feature request
+description: A larger idea or change. It may be split into several stories after discussion.
+title: "[Feature]: "
+labels: ["feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first; the solution can change. Product owners and evaluators: tell us what
+        goes wrong today and for whom. Developers: add the technical impact below.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem or opportunity
+      description: What is hard, missing or slow today, and who feels it?
+    validations:
+      required: true
+  - type: dropdown
+    id: users
+    attributes:
+      label: Who benefits?
+      multiple: true
+      options:
+        - Freelancers
+        - Work hosts
+        - Organisations
+        - Administrators
+        - Operators and developers
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you would like to happen. Sketches and examples help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways to solve it, including doing nothing, and why you prefer your proposal.
+  - type: textarea
+    id: success
+    attributes:
+      label: How will we know it works?
+      description: Observable outcomes or acceptance criteria. Numbers where possible.
+      placeholder: |
+        - Work hosts can filter by language in one step.
+        - Search stays under 1 second with 10,000 freelancers.
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Parts of the system likely affected
+      description: Tick what you know; developers refine this during triage.
+      options:
+        - label: Screens and wording (frontend, terminology profiles)
+        - label: API (new or changed endpoints)
+        - label: Database (new tables or columns, migration)
+        - label: Reports
+        - label: Login, roles or permissions
+        - label: Personal data or privacy
+        - label: Deployment, infrastructure or CI
+        - label: Documentation or specification
+  - type: dropdown
+    id: adr
+    attributes:
+      label: Does this change how the system is built?
+      description: A new technology, service or a rule that is hard to reverse needs an architecture decision record (ADR).
+      options:
+        - No, it fits the current design
+        - Yes, probably needs an ADR
+        - I do not know
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your view)
+      options:
+        - Must have
+        - Should have
+        - Could have
+        - Won't have now
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Links, related issues, deadlines, constraints (cost, privacy, law).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and this idea is not already there.
+          required: true
+        - label: This issue contains no passwords, tokens, keys or real personal data.
+          required: true
