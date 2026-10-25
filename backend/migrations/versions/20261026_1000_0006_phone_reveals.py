@@ -46,9 +46,7 @@ def upgrade() -> None:
         sa.CheckConstraint("channel IN ('dial', 'show')", name="channel_valid"),
         sa.CheckConstraint("source IN ('search', 'detail')", name="source_valid"),
     )
-    op.create_index(
-        "ix_phone_reveals_host_time", "phone_reveals", ["work_host_id", "revealed_at"]
-    )
+    op.create_index("ix_phone_reveals_host_time", "phone_reveals", ["work_host_id", "revealed_at"])
     op.create_index(op.f("ix_phone_reveals_freelancer_id"), "phone_reveals", ["freelancer_id"])
     op.create_index(op.f("ix_phone_reveals_revealed_at"), "phone_reveals", ["revealed_at"])
 

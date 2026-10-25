@@ -363,9 +363,7 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
         .order_by(reveals.desc(), Label.label_name)
     ).all()
 
-    per_searched = db.execute(
-        _SEARCHED_SKILLS_SQL, {"start": p.start, "end": p.end}
-    ).all()
+    per_searched = db.execute(_SEARCHED_SKILLS_SQL, {"start": p.start, "end": p.end}).all()
 
     most_revealed = db.execute(
         select(
