@@ -28,9 +28,12 @@ COMMENT_HEADING = f"### 🤖 {PROVIDER_NAMES.get(PROVIDER, 'Gemini')} Advisory C
 MAX_DIFF_CHARS = 40000
 MAX_CONTEXT_CHARS = 6000
 MAX_COMMENT_CHARS = 60000
-MAX_OUTPUT_TOKENS = 8192
+MAX_OUTPUT_TOKENS = 16384
 MAX_INLINE = 25
-MAX_PRIOR_THREADS = 20
+MAX_PRIOR_IN_PROMPT = 30
+# Login of the account that posts the review comments. Set REVIEW_BOT_LOGIN when a PAT or a
+# GitHub App token is used instead of the workflow token.
+BOT_LOGIN = os.environ.get("REVIEW_BOT_LOGIN", "github-actions[bot]")
 SEVERITIES = {"blocker": "🔴 Blocker", "should_fix": "🟠 Should fix", "consider": "🔵 Consider"}
 
 SECRET_PATTERNS = [
@@ -155,7 +158,7 @@ def post_or_update_comment(repo: str, pr_num: str, token: str, body: str) -> Non
     while comment_id is None:
         comments = github_request(f"{base}/{pr_num}/comments?per_page=100&page={page}", token) or []
         for c in comments:
-            if (c.get("user") or {}).get("login") == "github-actions[bot]" and \
+            if (c.get("user") or {}).get("login") == BOT_LOGIN and \
                     (c.get("body") or "").startswith(COMMENT_HEADING):
                 comment_id = c["id"]
                 break
@@ -254,6 +257,22 @@ def inline_body(f: dict) -> str:
     return neutralise_mentions("\n\n".join(parts)) + "\n" + marker(fingerprint(f["path"], f["title"]))
 
 
+def defang(text: str) -> str:
+    """Break up any delimiter-like sequence in untrusted text before it goes into the prompt."""
+    return text.replace("<<<", "< <<").replace(">>>", ">> >")
+
+
+def title_of(comment_text: str) -> str:
+    match = re.search(r"\*\*[^:*]+: (.+?)\*\*", comment_text)
+    return match.group(1) if match else ""
+
+
+def same_topic(a: str, b: str) -> bool:
+    """True when two finding titles are mostly the same words (title wording varies between runs)."""
+    wa, wb = set(re.findall(r"[a-z0-9]+", a.lower())), set(re.findall(r"[a-z0-9]+", b.lower()))
+    return bool(wa and wb) and len(wa & wb) / len(wa | wb) >= 0.5
+
+
 def fetch_prior_threads(repo: str, pr_num: str, token: str) -> list[dict]:
     """This reviewer's earlier inline comments with the replies people wrote."""
     comments: list[dict] = []
@@ -274,24 +293,28 @@ def fetch_prior_threads(repo: str, pr_num: str, token: str) -> list[dict]:
     threads = []
     for c in comments:
         match = MARKER_RE.search(c.get("body") or "")
-        if match and not c.get("in_reply_to_id") and (c.get("user") or {}).get("login") == "github-actions[bot]":
+        if match and not c.get("in_reply_to_id") and (c.get("user") or {}).get("login") == BOT_LOGIN:
+            text = MARKER_RE.sub("", c.get("body") or "").strip()
             threads.append({
                 "fp": match.group(1),
                 "path": c.get("path"),
                 "line": c.get("line"),
-                "text": MARKER_RE.sub("", c.get("body") or "")[:500].strip(),
+                "title": title_of(text),
+                "text": text[:500],
                 "replies": replies.get(c["id"], []),
             })
-    return threads[:MAX_PRIOR_THREADS]
+    return threads
 
 
 def format_prior(prior: list[dict]) -> str:
     if not prior:
         return "None"
     blocks = []
-    for t in prior:
+    # Threads with replies first: they carry the decisions people made.
+    ordered = sorted(prior, key=lambda t: not t["replies"])[:MAX_PRIOR_IN_PROMPT]
+    for t in ordered:
         replies = "\n".join(f"    reply - {r}" for r in t["replies"]) or "    (no replies)"
-        blocks.append(f"- {t['path']}:{t['line']}\n    {t['text']}\n{replies}")
+        blocks.append(defang(f"- {t['path']}:{t['line']}\n    {t['text']}\n{replies}"))
     return "\n".join(blocks)
 
 
@@ -329,7 +352,7 @@ Files not sent to you (list them in the summary if relevant):
 {omitted_str}
 """
     user = (
-        f"<<<UNTRUSTED_{tag}_START>>>\nPR title: {title}\nPR description:\n{body}\n\n"
+        f"<<<UNTRUSTED_{tag}_START>>>\nPR title: {defang(title)}\nPR description:\n{defang(body)}\n\n"
         f"Earlier findings and replies:\n{format_prior(prior)}\n\n"
         f"Diff:\n{diff}\n<<<UNTRUSTED_{tag}_END>>>\n"
     )
@@ -338,11 +361,14 @@ Files not sent to you (list them in the summary if relevant):
 
 def build_summary(data: dict, general: list[dict], inline_total: int, new_inline: int, omitted: list[str]) -> str:
     risk = data.get("risk") if data.get("risk") in ("Low", "Medium", "High") else "Unknown"
-    overview = str(data.get("overview") or "").strip() or "_No overview produced._"
+    summary_text = data.get("summary")
+    summary_text = summary_text.strip() if isinstance(summary_text, str) else ""
+    overview = data.get("overview")
+    overview = overview.strip() if isinstance(overview, str) and overview.strip() else "_No overview produced._"
     lines = [
         COMMENT_HEADING, "",
         "#### 📝 What this PR does", overview, "",
-        f"**Risk: {risk}.** {str(data.get('summary') or '').strip()}", "",
+        f"**Risk: {risk}.** {summary_text}", "",
     ]
     if inline_total or general:
         lines.append(
@@ -515,21 +541,31 @@ def main() -> int:
 
     data = parse_review(text)
     if data is None:
-        # Fall back to the plain text answer so the review is never lost.
-        note = "\n\n_The answer was cut off at the output limit._" if truncated else ""
+        # Never post the raw answer: it can contain the model's working notes.
+        reason = "it hit the output limit" if truncated else "it was not in the expected format"
+        print(f"Model answer could not be read ({reason}); posting a notice only.")
         post_or_update_comment(
             repo, pr_num, token,
-            f"{COMMENT_HEADING}\n\n{neutralise_mentions(text)}{note}\n\n_Advisory automated review._",
+            f"{COMMENT_HEADING}\n\n⚠️ **No review this time**: the model's answer could not be used because "
+            f"{reason}. Push a commit or run the workflow again to retry.\n\n_Advisory automated review._",
         )
         return 0
 
     inline, general = clean_findings(data, valid)
     seen_fp = {t["fp"] for t in prior}
-    seen_at = {(t["path"], t["line"]) for t in prior}
-    fresh = [
-        f for f in inline
-        if fingerprint(f["path"], f["title"]) not in seen_fp and (f["path"], f["line"]) not in seen_at
-    ][:MAX_INLINE]
+
+    def already_raised(f: dict) -> bool:
+        if fingerprint(f["path"], f["title"]) in seen_fp:
+            return True
+        # Same place and mostly the same words: the title was only phrased differently this time.
+        return any(
+            t["path"] == f["path"] and t["line"] == f["line"] and same_topic(t["title"], f["title"])
+            for t in prior
+        )
+
+    new = [f for f in inline if not already_raised(f)]
+    fresh, overflow = new[:MAX_INLINE], new[MAX_INLINE:]
+    general = overflow + general  # more than MAX_INLINE new points: the rest go into the summary
     if not post_inline_review(repo, pr_num, token, fresh):
         general = fresh + general
         fresh = []
