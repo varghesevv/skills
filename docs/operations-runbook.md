@@ -116,6 +116,13 @@ web addresses from `frontend/src/terminology/profiles.json`, for example `church
 GitHub, re-run `deploy-demo`, and the site serves the new words. Existing bookmarks to the old
 addresses (for example `/organisation`) stop working after a change.
 
+The API reads the same `TERMINOLOGY_PROFILE` and serves the words at the public `GET /api/v1/app/config`
+for the mobile apps. The backend keeps its own copy of the profile file (`backend/app/core/terminology_profiles.json`);
+a backend test fails if it differs from the web file, so edit both together. `APP_MIN_VERSION` and
+`APP_LATEST_VERSION` (`X.Y.Z`, not secrets, default `0.0.0` = nothing blocked) tell the apps which version they
+must at least run and which is newest. The demo deploy does not set them yet, so the defaults apply until the
+mobile release workflow does.
+
 The small label at the top of the navigation menu (the role badge) has its own words, so it can differ
 from the rest of the screen text: `badge_organisation`, `badge_workhost` and `badge_freelancer` in each
 profile. In the `default` profile they are Organisation, Work host and Freelancer. Edit them in

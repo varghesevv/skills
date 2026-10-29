@@ -16,6 +16,9 @@ WEAK_SECRETS = frozenset(
 )
 
 
+VERSION_PATTERN = r"^\d{1,5}\.\d{1,5}\.\d{1,5}$"  # X.Y.Z, as in the app's pubspec version
+
+
 class ConfigError(RuntimeError):
     """A setting is missing or invalid. The message names variables, never values."""
 
@@ -54,6 +57,11 @@ class Settings(BaseSettings):
     # only settings with defaults, because the limits are a safety net, not a deployment choice.
     reveal_max_per_hour: int = Field(default=10, ge=1)
     reveal_max_per_day: int = Field(default=20, ge=1)
+    # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
+    # default word profile, and no minimum version (every app version is accepted).
+    terminology_profile: str = "default"
+    app_min_version: str = Field(default="0.0.0", pattern=VERSION_PATTERN)
+    app_latest_version: str = Field(default="0.0.0", pattern=VERSION_PATTERN)
     jwt_secret: SecretStr | None = None  # required by the API; checked by require_jwt_secret()
     demo_user_password: SecretStr | None = None  # only used by `python -m app.cli seed-demo`
 
