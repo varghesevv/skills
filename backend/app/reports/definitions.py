@@ -15,6 +15,7 @@ from sqlalchemy import (
     literal_column,
     select,
     text,
+    true,
     union_all,
 )
 from sqlalchemy.orm import Session
@@ -352,12 +353,16 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
         .order_by(reveals.desc(), Label.label_name)
     ).all()
 
-    searched = func.unnest(PhoneReveal.searched_skills).column_valued("skill")
+    # The reveals' own skill lists, one row per skill. LATERAL lets the function read the
+    # list of the reveal row it is joined to, so the reveal row must come first in FROM.
+    searched = func.unnest(PhoneReveal.searched_skills).table_valued("skill").lateral()
     per_searched = db.execute(
-        select(searched, func.count())
+        select(searched.c.skill, func.count())
+        .select_from(PhoneReveal)
+        .join(searched, true())
         .where(in_window)
-        .group_by(searched)
-        .order_by(func.count().desc(), searched)
+        .group_by(searched.c.skill)
+        .order_by(func.count().desc(), searched.c.skill)
     ).all()
 
     most_revealed = db.execute(
