@@ -30,10 +30,11 @@ class ApiClient {
 
   Future<bool>? _refreshInFlight;
 
-  /// A refresh that fails for these statuses means the token is no good (not a temporary
-  /// problem). 429 and server errors keep the token so a later attempt can still work.
-  static bool _tokenRejected(int status) =>
-      status >= 400 && status < 500 && status != 429;
+  /// The API answers `401 invalid_refresh_token` for every refresh token that is no good
+  /// (unknown, expired, already rotated, revoked). Only that forgets the token. Any other status
+  /// (a gateway error, 429, a 4xx caused by a bug) keeps it, so one hiccup cannot log a person
+  /// out; the next attempt can still work.
+  static bool _tokenRejected(int status) => status == 401;
 
   Future<Object?> get(
     String path, {

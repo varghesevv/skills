@@ -147,6 +147,24 @@ void main() {
     },
   );
 
+  for (final status in [400, 403, 404, 422, 429, 502, 503]) {
+    test(
+      'a refresh answered with $status keeps the token and does not end the session',
+      () async {
+        adapter
+          ..reply('GET', '/me', FakeReply(401, apiError('unauthorized')))
+          ..reply(
+            'POST',
+            '/auth/refresh',
+            FakeReply(status, apiError('whatever')),
+          );
+        await expectLater(client.get('/me'), throwsA(isA<ApiException>()));
+        expect(await store.readRefreshToken(), refresh);
+        expect(expiredCalls, 0);
+      },
+    );
+  }
+
   test('maps the error envelope and Retry-After', () async {
     adapter.reply(
       'POST',
