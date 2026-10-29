@@ -1,5 +1,7 @@
 # 06 Frontend
 
+The Android app is specified in [docs/android/](../android/plan.md); its screens mirror the portals below ([parity table](../android/parity.md)).
+
 Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React app, role-based portals sharing components. API access only through the generated client.
 
 ## Portals and pages
