@@ -1,0 +1,159 @@
+name: ci-mobile
+
+# The jobs always run and finish quickly when a pull request changes nothing under mobile/, so the
+# required checks never stay "Expected" (no path filters on pull_request).
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/ci-mobile.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Flutter is cloned from the official repository at a fixed release tag (no third-party action).
+  FLUTTER_VERSION: "3.47.8"
+  # The commit that tag points to; checked after the clone so a moved tag cannot change the build.
+  FLUTTER_SHA: "737ba8f885dc774b53b442759999a312c9461e4e"
+
+jobs:
+  analyze:
+    name: mobile-analyze
+    # Never run for pull requests from forks (see docs/operations-runbook.md).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Did this pull request change mobile/?
+        id: changed
+        working-directory: .
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: sh scripts/mobile-changed.sh "$EVENT_NAME" "$BASE_REF"
+      - name: Install Flutter
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Cache pub and Gradle downloads
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
+          restore-keys: mobile-${{ runner.os }}-
+      - name: Dependencies
+        if: steps.changed.outputs.run == 'true'
+        run: flutter pub get
+      - name: Format
+        if: steps.changed.outputs.run == 'true'
+        run: dart format --set-exit-if-changed .
+      - name: Analyze
+        if: steps.changed.outputs.run == 'true'
+        run: flutter analyze
+
+  test:
+    name: mobile-test
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Did this pull request change mobile/?
+        id: changed
+        working-directory: .
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: sh scripts/mobile-changed.sh "$EVENT_NAME" "$BASE_REF"
+      - name: Install Flutter
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Cache pub and Gradle downloads
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
+          restore-keys: mobile-${{ runner.os }}-
+      - name: Test with coverage
+        if: steps.changed.outputs.run == 'true'
+        run: flutter test --coverage
+      - name: Coverage floor
+        if: steps.changed.outputs.run == 'true'
+        working-directory: .
+        run: python3 scripts/check-dart-coverage.py mobile/coverage/lcov.info 70
+
+  build-android:
+    name: mobile-build-android
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Did this pull request change mobile/?
+        id: changed
+        working-directory: .
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: sh scripts/mobile-changed.sh "$EVENT_NAME" "$BASE_REF"
+      - name: Install Flutter
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Cache pub and Gradle downloads
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
+          restore-keys: mobile-${{ runner.os }}-
+      # A debug build for testers. The address is not a secret; this placeholder is never used.
+      - name: Build the demo debug APK
+        if: steps.changed.outputs.run == 'true'
+        run: flutter build apk --debug --flavor demo --dart-define=API_BASE_URL=https://demo.invalid/api/v1
+      - name: Keep the APK for testers
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: skills-demo-debug-apk
+          path: mobile/build/app/outputs/flutter-apk/app-demo-debug.apk
+          retention-days: 5

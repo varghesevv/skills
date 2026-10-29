@@ -240,5 +240,16 @@ backend.hcl
 demo-logins*.csv
 *-logins.csv
 
+# Android app: signing and Firebase material is supplied by CI, never committed
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
+
+# The Flutter app source folder (the Python rule above ignores every lib/)
+!/mobile/lib/
+
 # the reviewer workflow writes the pull request diff here
 pr_raw.diff

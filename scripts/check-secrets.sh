@@ -11,7 +11,9 @@ fail() { echo "SECRET CHECK FAILED  $1  ($2)"; status=1; }
 # 1. Files that must never be committed.
 for f in $(git ls-files --cached --others --exclude-standard); do
   case "$f" in
-    .env|*/.env|*.tfvars|*.pem|*.p12|*.pfx|*.key|id_rsa|id_ed25519|*.tfstate|*.tfstate.*)
+    .env|*/.env|*.tfvars|*.pem|*.p12|*.pfx|*.key|id_rsa|id_ed25519|*.tfstate|*.tfstate.*|\
+    *.jks|*.keystore|key.properties|*/key.properties|google-services.json|*/google-services.json|\
+    GoogleService-Info.plist|*/GoogleService-Info.plist|*firebase-adminsdk*.json)
       fail "$f" "file type must not be committed" ;;
   esac
 done
