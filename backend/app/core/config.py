@@ -1,7 +1,14 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, ValidationError, ValidationInfo, field_validator
+from pydantic import (
+    Field,
+    SecretStr,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -17,6 +24,10 @@ WEAK_SECRETS = frozenset(
 
 
 VERSION_PATTERN = r"^\d{1,5}\.\d{1,5}\.\d{1,5}$"  # X.Y.Z, as in the app's pubspec version
+
+
+def _version_tuple(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
 
 
 class ConfigError(RuntimeError):
@@ -72,6 +83,13 @@ class Settings(BaseSettings):
         if hourly is not None and daily < hourly:
             raise ValueError("REVEAL_MAX_PER_DAY must not be lower than REVEAL_MAX_PER_HOUR")
         return daily
+
+    @model_validator(mode="after")
+    def _minimum_version_not_above_latest(self) -> "Settings":
+        """A minimum above the latest version would lock every app on the update screen."""
+        if _version_tuple(self.app_min_version) > _version_tuple(self.app_latest_version):
+            raise ValueError("APP_MIN_VERSION must not be higher than APP_LATEST_VERSION")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -140,7 +158,14 @@ def get_settings() -> Settings:
         settings = Settings()  # every value comes from the environment
     except ValidationError as exc:
         names = sorted({str(error["loc"][0]).upper() for error in exc.errors() if error["loc"]})
-        raise ConfigError(f"Missing or invalid environment variables: {', '.join(names)}") from None
+        # Cross-setting checks (no single field) carry our own message, which names variables only.
+        problems = [
+            str(error["msg"]).removeprefix("Value error, ")
+            for error in exc.errors()
+            if not error["loc"]
+        ]
+        detail = "; ".join([*([", ".join(names)] if names else []), *problems])
+        raise ConfigError(f"Missing or invalid environment variables: {detail}") from None
     validate_secrets(settings)
     for value in settings.secret_values():
         register_secret(value)

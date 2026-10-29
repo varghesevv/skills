@@ -17,7 +17,7 @@ Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`). Decision record
 ### App configuration
 | Method | Path | Notes |
 |---|---|---|
-| GET | /app/config | Public (no login). `{"terminology": {"profile", "terms": {...}}, "app": {"min_version", "latest_version"}}`. `terms` holds the words and address slugs of the active profile (`TERMINOLOGY_PROFILE`; an unknown name gives `default`), the same keys as `frontend/src/terminology/profiles.json`; a test fails when the two files differ. Versions are `X.Y.Z` from `APP_MIN_VERSION` and `APP_LATEST_VERSION` (default `0.0.0`, so nothing is blocked). `Cache-Control: public, max-age=300`. Stored `user_type` values and API paths never change with the words. Old apps are never rejected by the API; the app reads `min_version` and shows an update screen. |
+| GET | /app/config | Public (no login). `{"terminology": {"profile", "terms": {...}}, "app": {"min_version", "latest_version"}}`. `terms` holds the words and address slugs of the active profile (`TERMINOLOGY_PROFILE`; an unknown name gives `default`), the same keys as `frontend/src/terminology/profiles.json`; a test fails when the two files differ. Versions are `X.Y.Z` from `APP_MIN_VERSION` and `APP_LATEST_VERSION` (default `0.0.0`, so nothing is blocked); the minimum must not be higher than the latest, otherwise the API refuses to start. `Cache-Control: public, max-age=300`. Stored `user_type` values and API paths never change with the words. Old apps are never rejected by the API; the app reads `min_version` and shows an update screen. |
 
 ### Auth
 | Method | Path | Notes |
