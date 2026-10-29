@@ -12,17 +12,17 @@ Words: the app never hard-codes the role words. The web paths below use the term
 
 | Web page (route) | Web source | App screen | Status | Test file |
 |---|---|---|---|---|
-| Landing (`/`) | `pages/Landing.tsx` | Welcome / role choice (sign in, register) | not started | |
-| Log in, freelancer and work host (`/login`, `/login/<slug>`), with switch link | `pages/Login.tsx`, `pages/login/LoginForm.tsx` | Login screen per role | not started | |
-| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | not started | |
+| Landing (`/`) | `pages/Landing.tsx` | Welcome / role choice (sign in, register) | done | `test/features/auth/auth_flow_test.dart` |
+| Log in, freelancer and work host (`/login`, `/login/<slug>`), with switch link | `pages/Login.tsx`, `pages/login/LoginForm.tsx` | Login screen per role | done (a screen per role; no switch link, the welcome screen offers each) | `test/features/auth/auth_flow_test.dart` |
+| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | done (approval notice, link to register) | `test/features/auth/auth_flow_test.dart` |
 | Admin log in (`/login/admin`) | `pages/login/AdminLogin.tsx` | none: the app never sends `user_type=admin` | n/a | |
-| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | not started | |
-| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | not started | |
-| Forgot password (`/forgot-password`) | `pages/ForgotPassword.tsx` | Forgot password (always shows the generic confirmation) | not started | |
+| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | done (the welcome screen) | `test/features/auth/auth_flow_test.dart` |
+| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | done | `test/features/auth/auth_flow_test.dart` |
+| Forgot password (`/forgot-password`) | `pages/ForgotPassword.tsx` | Forgot password (always shows the generic confirmation) | done | `test/features/auth/auth_flow_test.dart` |
 | Reset password (`/reset-password?token=`) | `pages/ResetPassword.tsx` | v1: link opens in the browser; no app screen | n/a (v1) | |
 | Not found | `pages/NotFound.tsx` | Unknown-route screen | not started | |
-| Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | not started | |
-| Log out | `auth/AuthContext.tsx` | Settings: log out (revokes refresh token) | not started | |
+| Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | done (account facts; shortcuts come with the features) | `test/features/home/session_test.dart`, `test/features/auth/auth_flow_test.dart` |
+| Log out | `auth/AuthContext.tsx` | Settings: log out (revokes refresh token) | done | `test/features/home/session_test.dart` |
 | Downloads page (login protected) | planned, `mobile-app-plan.md` 6.4 | Settings: version and "update available" hint | backend B4 | |
 | (new) Minimum-version / update-required screen | none on web | Blocking screen | backend B1 | |
 | (new) Settings: about, privacy link, version, delete account | none on web | Settings | backend B3 | |
@@ -69,7 +69,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Behaviour | Web source | Status |
 |---|---|---|
 | Error codes -> messages (`errorMessage`) incl. `invalid_credentials`, `too_many_attempts` (minutes from `Retry-After`), `organisation_pending/rejected` | `shared/errors.ts` | not started |
-| Validation rules and tests ported | `shared/validation.ts`, `validation.test.ts` | not started |
+| Validation rules and tests ported | `shared/validation.ts`, `validation.test.ts` | in progress: login, register, forgot password (`core/validation`, `test/core/validation/validators_test.dart`); profile rules in phase 2 |
 | Date / timezone handling (aware timestamps, local input) | `shared/dates.ts` | not started |
 | Silent refresh on `401`, logout on refresh failure | `api/http.ts` | not started |
 | Terminology tokens and `church` profile | `terminology/terms.ts` | backend B1 |
@@ -82,13 +82,13 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 
 | Method and path | Roles | Used by (web) | App use | Status |
 |---|---|---|---|---|
-| POST `/auth/register/freelancer` `/workhost` `/organisation` | public | Register | Register | not started |
-| POST `/auth/login` | public | Login | Login | not started |
+| POST `/auth/register/freelancer` `/workhost` `/organisation` | public | Register | Register | done |
+| POST `/auth/login` | public | Login | Login | done |
 | POST `/auth/refresh` | public | `http.ts` | token refresh | not started |
-| POST `/auth/logout` | * | logout | logout | not started |
-| POST `/auth/forgot-password` | public | ForgotPassword | Forgot password | not started |
+| POST `/auth/logout` | * | logout | logout | done |
+| POST `/auth/forgot-password` | public | ForgotPassword | Forgot password | done |
 | POST `/auth/reset-password` | public | ResetPassword | browser in v1 | n/a (v1) |
-| GET `/me` | * | AuthContext, Dashboard | session / dashboard | not started |
+| GET `/me` | * | AuthContext, Dashboard | session / dashboard | done |
 | GET, PUT `/freelancers/me` | F | ProfilePage | Profile | not started |
 | PUT `/freelancers/me/labels` | F | LabelsPage | Labels | not started |
 | GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | not started |

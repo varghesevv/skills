@@ -66,6 +66,9 @@ class MemoryTokenStore implements TokenStore {
   String? _access;
   String? _refresh;
 
+  /// Forgets only the access token, as after an app restart (the refresh token survives).
+  void clearAccessForRestart() => _access = null;
+
   @override
   String? get accessToken => _access;
 

@@ -68,3 +68,23 @@ String? _byCode(ApiException e) {
   }
   return null;
 }
+
+/// Field-level messages from a `validation_error` answer, keyed by API field name. The server
+/// texts describe the rule only and never include what the person typed.
+Map<String, String> serverFieldErrors(Object error) {
+  if (error is! ApiException || error.code != 'validation_error') {
+    return const {};
+  }
+  final fields = error.details['fields'];
+  if (fields is! List) return const {};
+  final result = <String, String>{};
+  for (final item in fields) {
+    if (item is Map && item['field'] is String && item['message'] is String) {
+      result.putIfAbsent(
+        item['field'] as String,
+        () => item['message'] as String,
+      );
+    }
+  }
+  return result;
+}
