@@ -1,4 +1,5 @@
 import '../api/api_client.dart';
+import '../api/parse.dart';
 import 'me.dart';
 import 'token_store.dart';
 import 'user_type.dart';
@@ -22,18 +23,22 @@ class AuthRepository {
       body: {'email': email, 'password': password, 'user_type': type.wire},
       auth: false,
     );
-    final tokens = data! as Map;
-    await _tokens.save(
-      accessToken: tokens['access_token'] as String,
-      refreshToken: tokens['refresh_token'] as String,
+    final (access, refresh) = parseResponse(
+      data,
+      (json) =>
+          (json['access_token'] as String, json['refresh_token'] as String),
     );
-    return me();
+    await _tokens.save(accessToken: access, refreshToken: refresh);
+    try {
+      return await me();
+    } catch (_) {
+      // A login that cannot load the account is a failed login: do not leave a session behind.
+      await _tokens.clear();
+      rethrow;
+    }
   }
 
-  Future<Me> me() async {
-    final data = await _api.get('/me');
-    return Me.fromJson(Map<String, Object?>.from(data! as Map));
-  }
+  Future<Me> me() async => parseResponse(await _api.get('/me'), Me.fromJson);
 
   /// Opens a saved session after the app starts. Returns null when there is none (or it expired).
   Future<Me?> restoreSession() async {

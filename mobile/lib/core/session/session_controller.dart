@@ -10,6 +10,8 @@ import '../providers.dart';
 class SessionController extends AsyncNotifier<Me?> {
   @override
   Future<Me?> build() async {
+    // The API client signals when the server rejects the refresh token: the session is over.
+    ref.listen(sessionExpiredProvider, (_, _) => expire());
     try {
       return await ref.read(authRepositoryProvider).restoreSession();
     } on Exception {

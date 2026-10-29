@@ -6,9 +6,21 @@ import 'auth/auth_repository.dart';
 import 'auth/token_store.dart';
 import 'env.dart';
 import 'terminology/app_config.dart';
-import 'session/session_controller.dart';
 import 'strings/app_text.dart';
 import 'terminology/terms.dart';
+
+/// Counts the times the server rejected the refresh token (the session is over). The session
+/// controller listens to it and returns to the login screen.
+class SessionExpiry extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void signal() => state++;
+}
+
+final sessionExpiredProvider = NotifierProvider<SessionExpiry, int>(
+  SessionExpiry.new,
+);
 
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 
@@ -27,8 +39,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     dio: ref.watch(dioProvider),
     tokens: ref.watch(tokenStoreProvider),
     appVersion: Env.appVersion,
-    // Read lazily: the session controller itself depends on this client.
-    onSessionExpired: () => ref.read(sessionProvider.notifier).expire(),
+    onSessionExpired: () => ref.read(sessionExpiredProvider.notifier).signal(),
   );
 });
 

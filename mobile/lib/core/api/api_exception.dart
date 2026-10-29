@@ -20,6 +20,14 @@ class ApiException implements Exception {
       details = const {},
       retryAfterSeconds = null;
 
+  /// The server answered, but not in the shape this app version expects.
+  const ApiException.badResponse()
+    : status = 0,
+      code = 'bad_response',
+      message = 'Unexpected response',
+      details = const {},
+      retryAfterSeconds = null;
+
   final int status;
   final String code;
   final String message;

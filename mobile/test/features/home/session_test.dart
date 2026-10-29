@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:skills_app/core/providers.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
@@ -78,6 +80,35 @@ void main() {
         },
       );
       expect(find.text('I am a freelancer'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a session that expires while signed in returns to the welcome screen',
+    (tester) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          store.save(accessToken: fresh('a'), refreshToken: fresh('r'));
+          store.clearAccessForRestart();
+          adapter
+            ..reply(
+              'POST',
+              '/auth/refresh',
+              FakeReply(200, tokens(fresh('a'), fresh('r'))),
+            )
+            ..reply('GET', '/me', FakeReply(200, meJson('workhost')));
+        },
+      );
+      expect(find.text('Welcome, Pat Example'), findsOneWidget);
+      // The API client signals this when the server rejects the refresh token.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      container.read(sessionExpiredProvider.notifier).signal();
+      await tester.pumpAndSettle();
+      expect(find.text('I need to hire'), findsOneWidget);
+      expect(find.text('Welcome, Pat Example'), findsNothing);
     },
   );
 }

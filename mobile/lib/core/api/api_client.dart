@@ -86,7 +86,11 @@ class ApiClient {
       }
       return false;
     }
-    if (_tokenRejected(status)) await _tokens.clear();
+    if (_tokenRejected(status)) {
+      await _tokens.clear();
+      // Once per expiry: this runs inside the shared refresh, not once per waiting request.
+      onSessionExpired?.call();
+    }
     return false;
   }
 
@@ -115,8 +119,6 @@ class ApiClient {
           query: query,
           token: auth,
         );
-      } else if (await _tokens.readRefreshToken() == null) {
-        onSessionExpired?.call();
       }
     }
     final status = response.statusCode ?? 0;

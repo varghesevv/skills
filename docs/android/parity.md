@@ -68,13 +68,20 @@ Words: the app never hard-codes the role words. The web paths below use the term
 
 | Behaviour | Web source | Status |
 |---|---|---|
-| Error codes -> messages (`errorMessage`) incl. `invalid_credentials`, `too_many_attempts` (minutes from `Retry-After`), `organisation_pending/rejected` | `shared/errors.ts` | not started |
+| Error codes -> messages (`errorMessage`) incl. `invalid_credentials`, `too_many_attempts` (minutes from `Retry-After`), `organisation_pending/rejected` | `shared/errors.ts` | done: `core/errors/error_messages.dart`, used by every form (`test/core/errors/error_messages_test.dart`, `test/features/auth/auth_flow_test.dart`) |
 | Validation rules and tests ported | `shared/validation.ts`, `validation.test.ts` | in progress: login, register, forgot password (`core/validation`, `test/core/validation/validators_test.dart`); profile rules in phase 2 |
 | Date / timezone handling (aware timestamps, local input) | `shared/dates.ts` | not started |
-| Silent refresh on `401`, logout on refresh failure | `api/http.ts` | not started |
-| Terminology tokens and `church` profile | `terminology/terms.ts` | backend B1 |
+| Silent refresh on `401`, logout on refresh failure | `api/http.ts` | done: `core/api/api_client.dart` + `test/core/api/api_client_test.dart`; an expired session returns to the welcome screen (`test/features/home/session_test.dart`) |
+| Terminology tokens and `church` profile | `terminology/terms.ts` | done: `core/terminology/` + tests; screens show the server's words under both profiles (`test/features/auth/auth_flow_test.dart`) |
 | Loading, empty and error states on every list | spec 06 | not started |
 | Accessibility: 48 dp targets, labels, 2.0 text scale, dark mode | plan section 1 | not started |
+
+### Known differences from the web (on purpose)
+
+| Topic | Web | App | Why |
+|---|---|---|---|
+| Error texts that mention the page (`not_found`, `vouch_not_pending`, `already_rated`, label errors) | "Reload the page ..." | "Go back and try again." / "Open your rating to change it." | An app has no page to reload. The web texts are left as they are; the codes and meaning are the same. |
+| Reset-password link | opens `/reset-password` | opens in the browser (version 1) | The link is an email address on the web site. |
 
 ## 2. API endpoints used by the web (`/api/v1`)
 
@@ -84,7 +91,7 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 |---|---|---|---|---|
 | POST `/auth/register/freelancer` `/workhost` `/organisation` | public | Register | Register | done |
 | POST `/auth/login` | public | Login | Login | done |
-| POST `/auth/refresh` | public | `http.ts` | token refresh | not started |
+| POST `/auth/refresh` | public | `http.ts` | token refresh | done (`core/api/api_client.dart`) |
 | POST `/auth/logout` | * | logout | logout | done |
 | POST `/auth/forgot-password` | public | ForgotPassword | Forgot password | done |
 | POST `/auth/reset-password` | public | ResetPassword | browser in v1 | n/a (v1) |

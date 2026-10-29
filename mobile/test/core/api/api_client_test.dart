@@ -111,6 +111,26 @@ void main() {
     expect(expiredCalls, 1);
   });
 
+  test('many requests that fail together end the session once', () async {
+    adapter
+      ..reply('GET', '/a', FakeReply(401, apiError('unauthorized')))
+      ..reply('GET', '/b', FakeReply(401, apiError('unauthorized')))
+      ..reply('GET', '/c', FakeReply(401, apiError('unauthorized')))
+      ..reply(
+        'POST',
+        '/auth/refresh',
+        FakeReply(401, apiError('invalid_token')),
+      );
+    final results = await Future.wait([
+      client.get('/a').then((_) => 'ok', onError: (_) => 'failed'),
+      client.get('/b').then((_) => 'ok', onError: (_) => 'failed'),
+      client.get('/c').then((_) => 'ok', onError: (_) => 'failed'),
+    ]);
+    expect(results, ['failed', 'failed', 'failed']);
+    expect(adapter.count('POST', '/auth/refresh'), 1);
+    expect(expiredCalls, 1);
+  });
+
   test(
     'a temporary refresh failure keeps the token and does not end the session',
     () async {
