@@ -239,3 +239,6 @@ backend.hcl
 # Generated demo login lists (they contain the shared demo password)
 demo-logins*.csv
 *-logins.csv
+
+# the reviewer workflow writes the pull request diff here
+pr_raw.diff

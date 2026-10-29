@@ -68,6 +68,16 @@ The model returns structured output (overview, risk, summary, findings with file
 - A cut-off answer (output limit) is posted with a note saying later findings may be missing.
 - The script lists every file it did not send under "Not reviewed".
 
+### 5. Component-aware review (added 2026-10)
+
+The repository has several components (backend, web, mobile, infrastructure, CI, documentation). The decision is to keep **one workflow per reviewer and one script**, and make the script component-aware, instead of one workflow per component:
+
+- Pull requests often span components, and the most valuable check is between them (API versus web and mobile clients). Separate workflows would split the review into several comments and none would see both sides.
+- A component map (`.github/review/components.json`) selects short per-component briefs, so the reviewer gets the right rules without one ever-growing brief.
+- Files are packed by priority (source, configuration, tests, documentation) within a size budget; when a change is too large, each component gets its own model request and the answers are merged. One extra request checks the API contract when the backend and a client change together.
+- Generated files are excluded, key stores and similar files stop the review by name, and the first lines of changed source files are given to the model to avoid "undefined name" mistakes.
+- Costs: up to four component requests plus one contract request on large mixed pull requests; most pull requests remain one request.
+
 ## Alternatives considered
 
 - **Gemini Code Assist GitHub app.** No code to maintain, but less control over context, output format, data sent and cost. A valid fallback if the script becomes a burden.
