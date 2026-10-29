@@ -1,6 +1,6 @@
 # Chat design (work host and freelancer)
 
-Status: draft. Companion to [understanding](understanding.md) and [plan](plan.md). To be turned into an ADR ("ADR-0014 Real-time chat over WebSocket") and into the spec files 02, 03 and 04 as the first step of the chat work.
+Status: draft. Companion to [understanding](understanding.md) and [plan](plan.md). To be turned into an ADR ("ADR-0014 Real-time chat over WebSocket") and into the spec files 02, 03 and 04 as the first step of the chat work. ADR-0014 must record three decisions made here: WebSocket over gRPC, LISTEN/NOTIFY instead of Redis, and the delayed-outbox push with database acknowledgements (section 6).
 
 ## 1. Requirements
 
@@ -34,6 +34,10 @@ REST stays the source of truth: history, sending (as a fallback), read marks, li
 
 All ids are UUID like the rest of the schema; `seq` gives a stable order for cursors.
 
+**Naming rule (one spelling everywhere).** Two different things are named in this design and they follow the existing code, not a new convention:
+- *Table and column names* follow the current schema: `work_hosts` / `work_host_id` (as in `user_ratings.work_host_id`) and `freelancers` / `freelancer_id`.
+- *Role strings* (`sender_type`, `side`, `reported_by_side`, the JWT `user_type` claim, REST and WebSocket fields) always use the stored `user_type` values `workhost` and `freelancer`, exactly as in `app/models/enums.py` (`USER_TYPES`) and `Principal.user_type`. There is no second spelling such as `work_host` or `host` for a role string. The `CHECK` constraints are built from the same constants (`sql_in("sender_type", CHAT_SIDES)` with `CHAT_SIDES = ("workhost", "freelancer")` defined next to `USER_TYPES`), and a unit test asserts that `CHAT_SIDES` is a subset of `USER_TYPES` and that `side_of(principal)` returns `principal.user_type` unchanged.
+
 ```
 conversations
   id uuid PK
@@ -57,7 +61,8 @@ messages
 
 conversation_state                          -- one row per side
   conversation_id uuid FK, side text ('workhost','freelancer')  PK together
-  last_read_seq bigint default 0
+  last_read_seq bigint default 0           -- read: the person has seen the messages
+  delivered_seq bigint default 0           -- delivered: one of the person's apps received them
   muted boolean default false
   blocked boolean default false             -- the freelancer side only is used in v1
 
@@ -71,7 +76,8 @@ device_tokens                               -- shared with other push features
 
 notification_outbox
   id uuid PK, user_type, user_id, kind text ('chat_message', later others),
-  payload jsonb (ids only), created_at, send_after, sent_at null, attempts int, last_error text null
+  payload jsonb (ids only, for chat: conversation_id and message seq), created_at,
+  send_after timestamptz, sent_at null, cancelled_at null, attempts int, last_error text null
   INDEX (sent_at NULLS FIRST, send_after)
 ```
 
@@ -109,6 +115,7 @@ Client to server:
 |---|---|---|
 | `auth` | `token` | first frame |
 | `send` | `conversation_id`, `client_message_id`, `body` | send a message |
+| `delivered` | `conversation_id`, `up_to_seq` | the app received messages (sent automatically, even when the thread is not on screen) |
 | `read` | `conversation_id`, `up_to_seq` | mark read |
 | `ping` | | heartbeat every 25 seconds |
 
@@ -120,6 +127,7 @@ Server to client:
 | `ack` | `client_message_id`, `message` | the message was stored (the full stored message) |
 | `message` | `message` | a new message from the other person (also sent to the sender's other devices) |
 | `read` | `conversation_id`, `side`, `up_to_seq` | the other side read up to here |
+| `delivered` | `conversation_id`, `side`, `up_to_seq` | the other side's app received up to here (shown as a single tick later) |
 | `error` | `code`, optional `client_message_id` | a request was refused (rate limit, blocked, too long ...) |
 | `pong` | | heartbeat reply |
 
@@ -138,8 +146,15 @@ Close codes: `4401` not authenticated or token expired, `4403` role not allowed,
 - **Several processes.** After a message is stored the process runs `NOTIFY chat_events, '<json with ids only>'` in the same transaction. Every process holds one dedicated connection that `LISTEN`s and forwards the events to the sockets it has. This keeps PostgreSQL the only infrastructure (ADR-0002); payload is ids only (limit 8 000 bytes) and the message is read from the database by the receiver process. If the LISTEN connection drops, the process reconnects and the app's catch-up covers any gap. Redis is deliberately not added; revisit only if LISTEN/NOTIFY becomes a bottleneck.
 - **Sync SQLAlchemy and async WebSocket.** The code base uses synchronous SQLAlchemy sessions. WebSocket handlers are async. Run database work from the handler with `run_in_threadpool`, keep sessions short, and use one separate async (or raw) connection only for LISTEN. The first task of the chat work is a small spike that proves this under load (section 8 of the plan). If it does not hold, the alternative is a small async engine used only by `chat`.
 - **Rules (one module, used by REST and WebSocket alike).** Both ids exist; the caller is one of the two people; the freelancer has not blocked; length 1 to 2000 after trimming; no control characters other than newline; rate limits; then store, update `last_message_at`, create outbox rows, NOTIFY.
-- **Limits (settings with defaults, like the reveal limits):** `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY=10` per work host, `CHAT_MAX_MESSAGES_PER_MINUTE=20` per person, `CHAT_MAX_MESSAGE_CHARS=2000`, `CHAT_MAX_SOCKETS_PER_USER=5`. They are the only settings with defaults, like `REVEAL_MAX_*`.
-- **Push.** After storing a message the server writes a `notification_outbox` row for the recipient **unless** the recipient has an open socket in any process or has muted the conversation. The existing worker process sends the push via FCM (HTTP v1 API) and removes tokens that FCM reports as invalid. A failed push is retried a few times and never blocks the sender. The push is an FCM notification message with a fixed generic text ("You have a new message") plus data fields (`kind=chat_message`, conversation id), so it shows reliably when the app is closed; no message text and no sender name pass through Google. Whether a name may be shown is a later user setting.
+- **Limits (settings with defaults, like the reveal limits):** `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY=10` per work host, `CHAT_MAX_MESSAGES_PER_MINUTE=20` per person, `CHAT_MAX_MESSAGE_CHARS=2000`, `CHAT_MAX_SOCKETS_PER_USER=5`, `CHAT_PUSH_DELAY_SECONDS=3`. They are the only settings with defaults, like `REVEAL_MAX_*`.
+- **Push without a shared socket map.** A process cannot see sockets held by another process, so the design does **not** ask "is the recipient connected?" at send time. It uses a short delay and an acknowledgement stored in the database, which every process and the worker can see:
+  1. After storing a message, the sender's process always writes a `notification_outbox` row for the recipient (unless the conversation is muted by the recipient) with `send_after = now + CHAT_PUSH_DELAY_SECONDS` (default 3).
+  2. If the recipient has a connected app, the process holding that socket delivers the `message` frame at once, the app answers with a `delivered` frame, and that process sets `conversation_state.delivered_seq` (and `last_read_seq` when the app sends `read`). Both are plain database writes, so they do not depend on which process owns the socket.
+  3. The worker, when it picks up an outbox row whose `send_after` has passed, first checks the database: if the recipient's `delivered_seq` or `last_read_seq` is at least the message `seq`, it sets `cancelled_at` and sends nothing. Otherwise it sends the push. A recipient who was online anywhere and received the frame therefore never gets a push; one whose socket was half-dead (no `delivered`) gets one a few seconds later.
+  4. Outbox rows for the same conversation and recipient that are still waiting are merged into one push ("You have a new message"), so a burst of messages is one notification.
+  5. The cost is a worst-case delay of `CHAT_PUSH_DELAY_SECONDS` before a push for an offline person; the benefit is that nothing depends on in-memory state, so it is correct with one process or ten and survives restarts. A push for a message the person already read on another device is also cancelled by the same check.
+
+  The existing worker process sends the push via FCM (HTTP v1 API) and removes tokens that FCM reports as invalid. A failed push is retried a few times and never blocks the sender. The push is an FCM notification message with a fixed generic text ("You have a new message") plus data fields (`kind=chat_message`, conversation id), so it shows reliably when the app is closed; no message text and no sender name pass through Google. Whether a name may be shown is a later user setting.
 - **Device tokens.** Stored as received (FCM needs the real token). They are not passwords but must never be logged. Logging rules below apply.
 - **Secrets.** The Firebase service-account key is an environment variable (a file path or the JSON in a `SecretStr`), registered with the log redactor like the other secrets, and checked by `validate_secrets` in strict environments only when push is enabled (`PUSH_ENABLED=true`).
 - **Logging.** Never log message bodies, tokens (access, refresh, device) or phone numbers. Log ids, event types, durations and error codes only. Add a test like `test_logging_redaction.py` for the chat paths.
@@ -168,5 +183,6 @@ Typing indicator and online status, attachments (photos), message deletion, "rep
 - API: every REST endpoint for every role (allowed, forbidden, not participant -> 404), rate limits with small test limits (set directly in `conftest.py`, as for the reveal limits).
 - WebSocket: with Starlette's `TestClient.websocket_connect` for auth timeout, bad token, expired token, role not allowed, send/ack/message between two clients, a second device receiving the sender's own message, rate-limit close, oversize frame, reconnect catch-up through REST.
 - Multi-process: a test that starts two hub instances sharing one database and shows that a message stored through one reaches a socket on the other (LISTEN/NOTIFY).
+- Push cancellation: with a fake clock and a fake FCM sender, (a) a `delivered` frame received by a different hub instance cancels the outbox row, (b) a read on another device cancels it, (c) no acknowledgement sends exactly one push after the delay, (d) a burst of five messages sends one push, (e) a muted conversation creates no row.
 - Logging: a test proving bodies, tokens and numbers do not reach logs.
 - Android: unit tests for the message queue (retry, dedupe by `client_message_id`), widget tests for the conversation list and thread (states: empty, loading, error, sending, failed), integration test with a fake WebSocket server.
