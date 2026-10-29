@@ -1,8 +1,8 @@
-name: Gemini Advisory PR Review
+name: Gemini PR Review (manual)
 
+# Manual, advisory review from the Gemini API. Run it from the Actions tab with a PR number.
+# The script and review briefs come from the default branch, never from the PR. See docs/adr/0013.
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -19,20 +19,11 @@ on:
         type: string
 
 concurrency:
-  group: gemini-review-${{ github.event.pull_request.number || inputs.pr_number }}
+  group: gemini-review-${{ inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
   review:
-    if: >-
-      (
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.event.pull_request.draft == false &&
-          github.actor != 'dependabot[bot]' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        )
-      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -40,19 +31,19 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout trusted base repository
+      - name: Checkout trusted default branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Fetch PR Diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUM: ${{ github.event.pull_request.number || inputs.pr_number }}
+          PR_NUM: ${{ inputs.pr_number }}
         run: |
           if ! [[ "$PR_NUM" =~ ^[0-9]+$ ]]; then
-            echo "Error: PR_NUM must be a numeric value. Got: '$PR_NUM'"
+            echo "Error: PR number must be numeric. Got: '$PR_NUM'"
             exit 1
           fi
           gh pr diff "$PR_NUM" > pr_raw.diff
@@ -65,15 +56,16 @@ jobs:
       - name: Install Dependencies
         run: pip install --no-cache-dir "google-genai>=1.0.0,<2.0.0"
 
+      - name: Unit tests for the review script
+        run: python -m unittest discover -s .github/scripts -p 'test_*.py'
+
       - name: Execute Gemini Review Agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: "gemini-3.8-flash"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ inputs.pr_number }}
           REVIEW_COMPONENTS: ${{ inputs.components }}
           REVIEW_FOCUS: ${{ inputs.focus }}
         run: python .github/scripts/review_agent.py

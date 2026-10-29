@@ -38,7 +38,7 @@ and application context the reviewer is given, written as a principal engineer b
 3. Trigger: `pull_request` (`opened`, `synchronize`, `ready_for_review`) for branches in this repository only
    (`head.repo.full_name == github.repository`), plus the existing manual `workflow_dispatch` for re-runs.
    Forks, Draft PRs (`if: github.event.pull_request.draft == false`), and Dependabot PRs are skipped.
-   `pull_request_target` is **not** used.
+   `pull_request_target` is **not** used. (Amended 2026-10: the Gemini workflow no longer runs automatically; see section 6.)
 4. Permissions: `contents: read`, `pull-requests: write`, nothing else. Third-party actions pinned to full commit
    SHAs. Runs on `ubuntu-latest` (GitHub-hosted, ephemeral) rather than the self-hosted runner. The workflow checks out the **base** commit, never the PR branch, so a PR cannot change the script, or the brief, that runs with the API key; changes to the reviewer take effect after merge.
 5. Input to the model:
@@ -77,6 +77,15 @@ The repository has several components (backend, web, mobile, infrastructure, CI,
 - Files are packed by priority (source, configuration, tests, documentation) within a size budget; when a change is too large, each component gets its own model request and the answers are merged. One extra request checks the API contract when the backend and a client change together.
 - Generated files are excluded, key stores and similar files stop the review by name, and the first lines of changed source files are given to the model to avoid "undefined name" mistakes.
 - Costs: up to four component requests plus one contract request on large mixed pull requests; most pull requests remain one request.
+
+### 6. Both reviewers are manual (added 2026-10)
+
+The Gemini workflow now has the same trigger as the Claude one: `workflow_dispatch` only, with a PR number and the optional `components` and `focus` inputs. It no longer runs on `pull_request` events.
+
+- Why: with several components and larger pull requests, an automatic review on every push repeats the cost for work that is still changing, and the owner prefers to decide when a review is worth running.
+- Safety is unchanged or better: no `pull_request` trigger means no fork or Dependabot case to guard, the script and briefs still come from the default branch, and the job still has read-only contents and write access to pull requests only.
+- The model, key and comment format are the same; each reviewer still keeps its own comment, so both can be run on one PR.
+- Trade-off: a pull request gets a review only when someone starts it. The branch rules and the human reviewer remain the gate.
 
 ## Alternatives considered
 

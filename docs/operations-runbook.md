@@ -182,12 +182,12 @@ Safety:
 
 ## Gemini pull request reviewer
 
-Advisory review comment on each non-draft pull request from a branch in this repository (forks and Dependabot are skipped). It is not a required check. See [ADR-0013](adr/0013-gemini-agent-as-pull-request-reviewer.md).
+Advisory review comment on a pull request, **started by hand** (it does not run automatically, so it costs nothing until you ask for it). It can review any PR number. It is not a required check. See [ADR-0013](adr/0013-gemini-agent-as-pull-request-reviewer.md).
 
 - Secret: repository secret `GEMINI_API_KEY` (Settings > Secrets and variables > Actions). Never commit it or print it.
 - Use a paid-tier or Vertex key so submitted code is not retained or used for model training (ADR-0013), and set a budget alert on the Google Cloud project.
 - The model is set in the workflow (`GEMINI_MODEL`, default `gemini-3.8-flash`; if a model is retired, the log shows a 404 and the name to switch to).
-- Manual re-run: Actions > "Gemini Advisory PR Review" > Run workflow, with the PR number.
+- Run: Actions > "Gemini PR Review (manual)" > Run workflow, with the PR number (optional: `components`, `focus`). Run it again after pushing changes; the comment and the review threads are updated, not duplicated.
 - Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review briefs (see "How a review is built" below).
 - The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
 - Review skipped with a notice: the PR looks like it contains a secret (test files are not scanned by the reviewer; `ci-secrets` still covers them). Empty or failed model answers post nothing and fail the job.
@@ -223,7 +223,7 @@ If GitHub refuses the inline comments (for example a line is outside the diff), 
 
 ### Claude review (manual)
 
-A second, on-demand advisory review from the Claude API, run only by hand. It posts its own comment ("Claude Advisory Code Review") next to the Gemini one and uses the same script and review brief.
+A second advisory review from the Claude API. Like the Gemini one it is run only by hand. It posts its own comment ("Claude Advisory Code Review") next to the Gemini one and uses the same script and review brief.
 
 - Secret: repository secret `ANTHROPIC_API_KEY`. Optional variable `CLAUDE_MODEL` (default `claude-sonnet-5-5`).
 - Run: Actions > "Claude PR Review (manual)" > Run workflow, with the PR number.
