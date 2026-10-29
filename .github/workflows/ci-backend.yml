@@ -17,7 +17,9 @@ jobs:
   test:
     name: backend-test
     runs-on: [self-hosted, Linux]
-    # Runs on the Raspberry Pi. Never run code from fork pull requests on it.
+    # Runs on a self-hosted runner (the Raspberry Pi or the Linux x64 container runner). Never run code
+    # from fork pull requests on it. PostgreSQL is started by scripts/ci-postgres.sh because GitHub does
+    # not allow service containers on a runner that runs inside a container.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     defaults:
       run:
@@ -35,17 +37,6 @@ jobs:
       LOGIN_WINDOW_MINUTES: "15"
       REVEAL_MAX_PER_HOUR: "10"
       REVEAL_MAX_PER_DAY: "20"
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: skills
-          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
-          POSTGRES_DB: skills
-        ports: ["5432"]   # random free host port, so it never clashes with the dev database on the Pi
-        options: >-
-          --health-cmd "pg_isready -U skills -d skills"
-          --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - name: Require the CI_DB_PASSWORD repository secret
         # Runs before checkout, so the job's default folder (backend) does not exist yet on a fresh runner.
@@ -65,6 +56,11 @@ jobs:
           fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - name: Start PostgreSQL
+        working-directory: .
+        env:
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
+        run: scripts/ci-postgres.sh start
       - name: Install dependencies
         run: uv sync --python 3.12
       - name: Lint
@@ -76,9 +72,8 @@ jobs:
       - name: Tests (includes migration up/down on PostgreSQL)
         env:
           CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
-          DB_PORT: ${{ job.services.postgres.ports['5432'] }}
         run: |
-          export DATABASE_URL="postgresql+psycopg://skills:${CI_DB_PASSWORD}@localhost:${DB_PORT}/skills"
+          export DATABASE_URL="postgresql+psycopg://skills:${CI_DB_PASSWORD}@${DB_HOST}:${DB_PORT}/skills"
           uv run pytest --cov=app --cov-report=term-missing
       - name: Export OpenAPI schema
         run: uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))" > openapi.json
@@ -86,6 +81,10 @@ jobs:
         with:
           name: openapi-schema
           path: backend/openapi.json
+      - name: Stop PostgreSQL
+        if: always()
+        working-directory: .
+        run: scripts/ci-postgres.sh stop
 
   audit:
     # Never run for pull requests from forks (see docs/operations-runbook.md).
