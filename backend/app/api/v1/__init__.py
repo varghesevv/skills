@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin,
+    app_info,
     auth,
     freelancers,
     labels,
@@ -15,6 +16,7 @@ from app.api.v1 import (
 
 api_v1_router = APIRouter(prefix="/api/v1")
 ROUTERS = (
+    app_info,
     auth,
     me,
     admin,
