@@ -96,7 +96,7 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | not started |
 | GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail, as work host or organisation only (no admin screens). The response never contains email or mobile number; the number comes only from reveal-mobile | not started |
 | GET `/freelancers/{id}/ratings` | * | RatingsPage, detail | Ratings | not started |
-| POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; see [plan](plan.md) sections 4 (phase 3) and 6 | not started |
+| POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07 Secrets and logging](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 (phase 3) and 6 | not started |
 | GET, PUT `/workhosts/me` | W | HostProfilePage | Profile | not started |
 | GET `/workhosts/me/ratings` | W | GivenRatingsPage | Ratings given | not started |
 | POST `/ratings`; PUT `/ratings/{id}` | W | detail, GivenRatingsPage | Rate | not started |
@@ -104,7 +104,7 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | GET, PUT `/organisations/me` | O | OrgProfilePage | Profile | not started |
 | GET `/organisations/me/freelancers` | O | VouchedPage | Vouched list | not started |
 | POST, DELETE `/organisations/me/freelancers/{freelancer_id}` | O | detail, VouchedPage | Vouch / revoke | not started |
-| GET `/search/freelancers` (all filters incl. `name`) | W, O, A | SearchPage | Search | not started |
+| GET `/search/freelancers` (all filters incl. `name`) | W, O, A | SearchPage | Search, as work host or organisation only (no admin screens). Results never contain email or mobile number | not started |
 | GET `/reports`; GET `/reports/{name}` (`vouching_summary`, json/csv) | O (the API also allows A) | organisation ReportsPage | Report screen for organisations only; the app has no admin access | not started |
 | GET `/reports/runs`, `/reports/runs/{id}/download`, `/reports/schedules`; PUT `/reports/schedules/{report}`; POST `/reports/{name}/run` | A | admin pages | none | n/a |
 | GET `/admin/organisations`; POST `/admin/organisations/{id}/approve\|reject` | A | admin pages | none | n/a |
