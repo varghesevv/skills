@@ -19,6 +19,7 @@ import { VOUCHED_KEY } from '../organisation/keys'
 import { GIVEN_KEY } from './GivenRatingsPage'
 import type { Portal } from './SearchPage'
 import { formatRate } from './format'
+import RevealMobile from './RevealMobile'
 
 const detailKey = (id: string) => ['freelancer-public', id] as const
 
@@ -154,11 +155,11 @@ function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal 
             <div>
               <dt>{t('detail.mobile')}</dt>
               <dd>
-                {person.mobile_number ? (
-                  <a href={`tel:${person.mobile_number}`}>{person.mobile_number}</a>
-                ) : (
-                  t('common.none')
-                )}
+                <RevealMobile
+                  freelancerId={person.id}
+                  freelancerName={person.full_name ?? t('search.noName')}
+                  source="detail"
+                />
               </dd>
             </div>
             <div>

@@ -144,6 +144,8 @@ jobs:
             echo "RESET_TOKEN_MINUTES=60"
             echo "LOGIN_MAX_FAILURES=5"
             echo "LOGIN_WINDOW_MINUTES=15"
+            echo "REVEAL_MAX_PER_HOUR=10"
+            echo "REVEAL_MAX_PER_DAY=20"
             echo "BACKUP_BUCKET=${BACKUP_BUCKET}"
             echo "AWS_DEFAULT_REGION=${AWS_REGION}"
             echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"

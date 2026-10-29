@@ -4,6 +4,7 @@ from app.models.base import Base
 from app.models.labels import FreelancerLabel, Label
 from app.models.ratings import UserRating
 from app.models.reports import ReportRun, ReportSchedule
+from app.models.reveals import PhoneReveal
 from app.models.users import Admin, Freelancer, Organisation, WorkHost
 from app.models.vouching import OrgFreelancer
 
@@ -18,6 +19,7 @@ __all__ = [
     "OrgFreelancer",
     "Organisation",
     "PasswordResetToken",
+    "PhoneReveal",
     "RefreshToken",
     "ReportRun",
     "ReportSchedule",

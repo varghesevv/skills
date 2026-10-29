@@ -32,6 +32,7 @@ jobs:
           export CORS_ORIGINS=https://example.test REPORT_TIMEZONE=UTC GHCR_OWNER=owner IMAGE_TAG=test
           export POSTGRES_USER=skills POSTGRES_DB=skills ACCESS_TOKEN_MINUTES=15 REFRESH_TOKEN_DAYS=30
           export RESET_TOKEN_MINUTES=60 LOGIN_MAX_FAILURES=5 LOGIN_WINDOW_MINUTES=15
+          export REVEAL_MAX_PER_HOUR=10 REVEAL_MAX_PER_DAY=20
           export POSTGRES_PASSWORD=$(openssl rand -hex 12) JWT_SECRET=$(openssl rand -hex 24)
           docker compose --env-file /dev/null -f infra/docker/compose.demo.yml config --quiet
 

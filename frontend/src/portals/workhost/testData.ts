@@ -27,7 +27,6 @@ export function makePerson(overrides: Partial<FreelancerPublic> = {}): Freelance
   return {
     id: PERSON_ID,
     full_name: 'Anita Sharma',
-    mobile_number: '+971500000011',
     whatsapp_availability: true,
     nationality: 'Indian',
     primary_language: 'Hindi',

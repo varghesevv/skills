@@ -22,7 +22,7 @@
 | FR-F-04 | Add, edit and delete unavailability periods (from < to). |
 | FR-F-05 | View own ratings and comments. |
 | FR-F-06 | View organisations vouching for them. If Q6 = yes, accept or reject a pending vouch. |
-| FR-F-07 | A public profile MUST NOT expose email or password data. Mobile number visibility is shown only to logged-in work hosts. The full name is shown to logged-in work hosts, organisations and admins, never in the ratings a freelancer receives. |
+| FR-F-07 | A public profile MUST NOT expose email or password data. A freelancer's mobile number is never part of a profile or search response (see FR-W-08). The full name is shown to logged-in work hosts, organisations and admins, never in the ratings a freelancer receives. |
 
 ## Work host
 
@@ -33,6 +33,9 @@
 | FR-W-03 | View a freelancer detail page: labels, rate, ratings, vouching organisations, availability. |
 | FR-W-04 | Rate a freelancer 1-10 with an optional comment. One rating per work host and freelancer, editable (Q5). |
 | FR-W-05 | View ratings they have given. |
+| FR-W-06 | Search results and the detail page MUST show a freelancer's mobile number greyed out (a placeholder, not the real number) with a Reveal button. |
+| FR-W-07 | Reveal MUST ask the server for the number. On a phone or tablet it then opens the dialler (`tel:`); on a computer it shows the number. The number MUST NOT be in the page source, in any search or profile response, or in any browser cache. |
+| FR-W-08 | Only work hosts can reveal. Every reveal MUST be recorded (who, whom, when, phone or computer, page, skills searched). Each work host has an hourly and a daily limit (`REVEAL_MAX_PER_HOUR`, `REVEAL_MAX_PER_DAY`); beyond it the server answers `429` with `Retry-After`. |
 
 ## Organisation
 

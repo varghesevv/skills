@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr, ValidationError
+from pydantic import Field, SecretStr, ValidationError, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -50,8 +50,20 @@ class Settings(BaseSettings):
     reset_token_minutes: int
     login_max_failures: int  # failed logins allowed per email and IP ...
     login_window_minutes: int  # ... within this many minutes
+    # Mobile number reveals allowed per work host per hour and per 24 hours. These two are the
+    # only settings with defaults, because the limits are a safety net, not a deployment choice.
+    reveal_max_per_hour: int = Field(default=10, ge=1)
+    reveal_max_per_day: int = Field(default=20, ge=1)
     jwt_secret: SecretStr | None = None  # required by the API; checked by require_jwt_secret()
     demo_user_password: SecretStr | None = None  # only used by `python -m app.cli seed-demo`
+
+    @field_validator("reveal_max_per_day")
+    @classmethod
+    def _daily_reveals_cover_hourly(cls, daily: int, info: ValidationInfo) -> int:
+        hourly = info.data.get("reveal_max_per_hour")
+        if hourly is not None and daily < hourly:
+            raise ValueError("REVEAL_MAX_PER_DAY must not be lower than REVEAL_MAX_PER_HOUR")
+        return daily
 
     @property
     def cors_origin_list(self) -> list[str]:

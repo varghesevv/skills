@@ -104,6 +104,9 @@ id uuid PK, user_type text (CHECK freelancer/workhost/organisation/admin), user_
 ### user_ratings
 id uuid PK, work_host_id FK, freelancer_id FK, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, updated_at timestamptz null (set when the rating is edited), UNIQUE (work_host_id, freelancer_id) (Q5).
 
+### phone_reveals
+id uuid PK, work_host_id FK (CASCADE), freelancer_id FK (CASCADE), revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10). The number itself is never stored. `channel` and `source` are hints from the web app. Indexes: `(work_host_id, revealed_at)` for rate limiting, `freelancer_id`, `revealed_at`. Migration `0006`.
+
 ### password_reset_tokens
 id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestamptz, used_at timestamptz null.
 
@@ -116,7 +119,7 @@ id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestampt
 
 ## Indexes
 
-`lower(user_email)` on each user table; `labels(label_type, label_name)`; `freelancer_labels(label_id)`; `user_ratings(freelancer_id)`; `login_history(login_time)`, `login_history(login_email, login_time)`; `created_at` on all user tables (reports); `freelancer_unavailability(freelancer_id, unavailable_from, unavailable_to)`.
+`lower(user_email)` on each user table; `labels(label_type, label_name)`; `freelancer_labels(label_id)`; `user_ratings(freelancer_id)`; `phone_reveals(work_host_id, revealed_at)`, `phone_reveals(freelancer_id)`, `phone_reveals(revealed_at)`; `login_history(login_time)`, `login_history(login_email, login_time)`; `created_at` on all user tables (reports); `freelancer_unavailability(freelancer_id, unavailable_from, unavailable_to)`.
 
 ## Seed data (labels)
 

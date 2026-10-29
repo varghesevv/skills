@@ -136,7 +136,6 @@ export type GivenRating = {
 export type FreelancerPublic = {
   id: string
   full_name: string | null
-  mobile_number: string | null
   whatsapp_availability: boolean
   nationality: string | null
   primary_language: string | null
@@ -150,6 +149,14 @@ export type FreelancerPublic = {
   unavailable: Unavailability[]
   my_rating: GivenRating | null
 }
+
+export type RevealRequest = {
+  channel: 'dial' | 'show'
+  source: 'search' | 'detail'
+  searched_skills: string[]
+}
+
+export type RevealedMobile = { mobile_number: string }
 
 export type OrgBrief = { id: string; org_name: string }
 

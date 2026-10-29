@@ -163,7 +163,7 @@ describe('finding someone to vouch for', () => {
   it('vouches from the detail page and hides rating and contact details', async () => {
     const user = ui()
     const api = asOrg({
-      [DETAIL]: () => json(200, makePerson({ mobile_number: null })),
+      [DETAIL]: () => json(200, makePerson()),
       [RATINGS]: () => json(200, page([], 0)),
       [`POST ${PERSON_LINK}`]: () => json(201, vouched({ status: 'pending' })),
     })
@@ -180,7 +180,7 @@ describe('finding someone to vouch for', () => {
   it('shows a clear message when the vouch already exists', async () => {
     const user = ui()
     asOrg({
-      [DETAIL]: () => json(200, makePerson({ mobile_number: null })),
+      [DETAIL]: () => json(200, makePerson()),
       [RATINGS]: () => json(200, page([], 0)),
       [`POST ${PERSON_LINK}`]: () => apiError(409, 'already_vouched'),
     })
@@ -194,7 +194,7 @@ describe('finding someone to vouch for', () => {
   it('does not offer to vouch until the organisation is approved', async () => {
     asOrg(
       {
-        [DETAIL]: () => json(200, makePerson({ mobile_number: null })),
+        [DETAIL]: () => json(200, makePerson()),
         [RATINGS]: () => json(200, page([], 0)),
       },
       { ...org, approval_status: 'pending' },
@@ -206,11 +206,7 @@ describe('finding someone to vouch for', () => {
 
   it('says so when the organisation already vouches', async () => {
     asOrg({
-      [DETAIL]: () =>
-        json(
-          200,
-          makePerson({ mobile_number: null, vouched_by: [{ org_id: ORG_ID, org_name: 'Acme' }] }),
-        ),
+      [DETAIL]: () => json(200, makePerson({ vouched_by: [{ org_id: ORG_ID, org_name: 'Acme' }] })),
       [RATINGS]: () => json(200, page([], 0)),
     })
     renderApp(`/organisation/freelancers/${PERSON_ID}`)

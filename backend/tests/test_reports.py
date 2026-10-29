@@ -17,6 +17,7 @@ from app.models.auth import LoginHistory
 from app.models.availability import FreelancerUnavailability
 from app.models.ratings import UserRating
 from app.models.reports import ReportRun, ReportSchedule
+from app.models.reveals import PhoneReveal
 from app.models.users import Freelancer, Organisation, WorkHost
 from app.models.vouching import OrgFreelancer
 from app.reports.definitions import REGISTRY
@@ -253,12 +254,77 @@ def test_availability_overview_limits_the_range(session: Session) -> None:
         build_report(session, "availability_overview", params(date(2026, 1, 1), date(2026, 6, 1)))
 
 
+def test_phone_reveals_report(session: Session) -> None:
+    plumber = freelancer(session, "pr1@example.com", skills=(("plumbing", None),))
+    cook = freelancer(session, "pr2@example.com", skills=(("electrical", None),))
+    host = make_host(session, "prh1@example.com")
+    other = make_host(session, "prh2@example.com")
+    inside = dubai(10, 12)
+
+    def reveal(
+        who: WorkHost, target: Freelancer, channel: str, source: str, skills: list[str]
+    ) -> None:
+        session.add(
+            PhoneReveal(
+                work_host_id=who.id,
+                freelancer_id=target.id,
+                revealed_at=inside,
+                channel=channel,
+                source=source,
+                searched_skills=skills or None,
+            )
+        )
+
+    reveal(host, plumber, "dial", "search", ["plumbing", "networking"])
+    reveal(host, plumber, "show", "detail", [])  # the same pair again
+    reveal(host, cook, "show", "search", ["plumbing"])
+    reveal(other, plumber, "show", "search", [])
+    session.add(  # outside the window: ignored
+        PhoneReveal(
+            work_host_id=other.id,
+            freelancer_id=cook.id,
+            revealed_at=dubai(20, 12),
+            channel="show",
+            source="search",
+        )
+    )
+    rating = UserRating(
+        work_host_id=host.id, freelancer_id=plumber.id, rating=8, rated_on=dubai(11, 9)
+    )
+    session.add(rating)
+    session.commit()
+
+    window = params(date(2026, 10, 10), date(2026, 10, 12))
+    sections = build_report(session, "phone_reveals", window).sections
+    summary = dict(sections[0].rows)
+    assert summary["reveals"] == 4
+    assert summary["work_hosts"] == 2
+    assert summary["freelancers_revealed"] == 2
+    assert summary["reveals_on_phone_dialler"] == 1
+    assert summary["reveals_from_search_page"] == 3
+    assert summary["host_freelancer_pairs"] == 3
+    assert summary["pairs_rated_afterwards"] == 1
+    assert summary["rated_afterwards_percent"] == 33.3
+    assert sections[2].rows[0][2:4] == [3, 2]  # the busiest work host
+    assert sections[3].rows == [["plumbing", 3, 1], ["electrical", 1, 1]]
+    assert sections[4].rows == [["plumbing", 2], ["networking", 1]]
+    assert sections[5].rows[0][2:] == [3, 2]
+
+
+def test_phone_reveals_report_when_empty(session: Session) -> None:
+    window = params(date(2026, 10, 10), date(2026, 10, 12))
+    sections = build_report(session, "phone_reveals", window).sections
+    assert dict(sections[0].rows)["reveals"] == 0
+    assert dict(sections[0].rows)["rated_afterwards_percent"] == 0
+    assert all(section.rows == [] for section in sections[1:])
+
+
 def test_monthly_summary_runs_every_report(session: Session) -> None:
     freelancer(session, "m1@example.com")
     sections = build_report(
         session, "monthly_summary", params(date(2026, 10, 1), date(2026, 10, 31))
     ).sections
-    assert len(sections) == 8  # RP-01 to RP-07, with RP-04 giving two sections
+    assert len(sections) == 14  # RP-01 to RP-08: RP-04 gives two sections, RP-08 gives six
 
 
 # ---- output files ------------------------------------------------------------------------

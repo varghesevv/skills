@@ -5,18 +5,32 @@ from datetime import timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Date, Select, and_, cast, func, literal_column, select, text, union_all
+from sqlalchemy import (
+    Date,
+    Select,
+    and_,
+    cast,
+    exists,
+    func,
+    literal_column,
+    select,
+    text,
+    true,
+    union_all,
+)
 from sqlalchemy.orm import Session
 
 from app.models.auth import LoginHistory
 from app.models.labels import FreelancerLabel, Label
 from app.models.ratings import UserRating
+from app.models.reveals import PhoneReveal
 from app.models.users import Admin, Freelancer, Organisation, WorkHost
 from app.models.vouching import OrgFreelancer
 from app.reports.types import ReportDef, ReportError, ReportParams, Section, cell
 
 MAX_AVAILABILITY_DAYS = 93
 TOP_RATED_LIMIT = 50
+REVEAL_LIST_LIMIT = 50
 SELF_REGISTERED = (
     ("freelancer", Freelancer),
     ("workhost", WorkHost),
@@ -249,6 +263,146 @@ def availability_overview(db: Session, p: ReportParams) -> list[Section]:
     ]
 
 
+# ---- RP-08 ---------------------------------------------------------------------------------
+
+
+def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
+    """How often work hosts asked for a mobile number, who asked, and for whom."""
+    in_window = and_(PhoneReveal.revealed_at >= p.start, PhoneReveal.revealed_at < p.end)
+    reveals = func.count(PhoneReveal.id)
+
+    total, hosts, freelancers, dial, search = db.execute(
+        select(
+            reveals,
+            func.count(func.distinct(PhoneReveal.work_host_id)),
+            func.count(func.distinct(PhoneReveal.freelancer_id)),
+            reveals.filter(PhoneReveal.channel == "dial"),
+            reveals.filter(PhoneReveal.source == "search"),
+        ).where(in_window)
+    ).one()
+
+    pairs = (
+        select(
+            PhoneReveal.work_host_id,
+            PhoneReveal.freelancer_id,
+            func.min(PhoneReveal.revealed_at).label("first_reveal"),
+        )
+        .where(in_window)
+        .group_by(PhoneReveal.work_host_id, PhoneReveal.freelancer_id)
+        .subquery()
+    )
+    pair_count = db.scalar(select(func.count()).select_from(pairs)) or 0
+    # A pair counts as "rated afterwards" when the same host rated that freelancer after the reveal.
+    rated_after = (
+        db.scalar(
+            select(func.count())
+            .select_from(pairs)
+            .where(
+                exists().where(
+                    UserRating.work_host_id == pairs.c.work_host_id,
+                    UserRating.freelancer_id == pairs.c.freelancer_id,
+                    UserRating.rated_on >= pairs.c.first_reveal,
+                )
+            )
+        )
+        or 0
+    )
+    summary = [
+        ("reveals", total),
+        ("work_hosts", hosts),
+        ("freelancers_revealed", freelancers),
+        ("reveals_on_phone_dialler", dial),
+        ("reveals_shown_on_screen", total - dial),
+        ("reveals_from_search_page", search),
+        ("reveals_from_detail_page", total - search),
+        ("host_freelancer_pairs", pair_count),
+        ("pairs_rated_afterwards", rated_after),
+        ("rated_afterwards_percent", round(100 * rated_after / pair_count, 1) if pair_count else 0),
+    ]
+
+    day = cast(func.timezone(p.timezone, PhoneReveal.revealed_at), Date)
+    per_day = db.execute(
+        select(day, PhoneReveal.channel, reveals)
+        .where(in_window)
+        .group_by(day, PhoneReveal.channel)
+        .order_by(day, PhoneReveal.channel)
+    ).all()
+
+    per_host = db.execute(
+        select(
+            PhoneReveal.work_host_id,
+            WorkHost.full_name,
+            reveals,
+            func.count(func.distinct(PhoneReveal.freelancer_id)),
+            func.max(PhoneReveal.revealed_at),
+        )
+        .join(WorkHost, WorkHost.id == PhoneReveal.work_host_id)
+        .where(in_window)
+        .group_by(PhoneReveal.work_host_id, WorkHost.full_name)
+        .order_by(reveals.desc(), WorkHost.full_name, PhoneReveal.work_host_id)
+        .limit(REVEAL_LIST_LIMIT)
+    ).all()
+
+    per_skill = db.execute(
+        select(Label.label_name, reveals, func.count(func.distinct(PhoneReveal.freelancer_id)))
+        .select_from(PhoneReveal)
+        .join(FreelancerLabel, FreelancerLabel.freelancer_id == PhoneReveal.freelancer_id)
+        .join(Label, and_(Label.id == FreelancerLabel.label_id, Label.label_type == "skill"))
+        .where(in_window)
+        .group_by(Label.label_name)
+        .order_by(reveals.desc(), Label.label_name)
+    ).all()
+
+    # The reveals' own skill lists, one row per skill. LATERAL lets the function read the
+    # list of the reveal row it is joined to, so the reveal row must come first in FROM.
+    # render_derived() names the output column (AS alias(skill)); unnest has no column name of
+    # its own.
+    searched = (
+        func.unnest(PhoneReveal.searched_skills).table_valued("skill").render_derived().lateral()
+    )
+    per_searched = db.execute(
+        select(searched.c.skill, func.count())
+        .select_from(PhoneReveal)
+        .join(searched, true())
+        .where(in_window)
+        .group_by(searched.c.skill)
+        .order_by(func.count().desc(), searched.c.skill)
+    ).all()
+
+    most_revealed = db.execute(
+        select(
+            PhoneReveal.freelancer_id,
+            Freelancer.full_name,
+            reveals,
+            func.count(func.distinct(PhoneReveal.work_host_id)),
+        )
+        .join(Freelancer, Freelancer.id == PhoneReveal.freelancer_id)
+        .where(in_window)
+        .group_by(PhoneReveal.freelancer_id, Freelancer.full_name)
+        .order_by(reveals.desc(), Freelancer.full_name, PhoneReveal.freelancer_id)
+        .limit(REVEAL_LIST_LIMIT)
+    ).all()
+
+    return [
+        section("Mobile number reveals: summary", ["measure", "value"], summary),
+        section("Reveals per day", ["day", "channel", "reveals"], per_day),
+        section(
+            "Reveals per work host",
+            ["work_host_id", "work_host", "reveals", "freelancers", "last_reveal"],
+            per_host,
+        ),
+        section(
+            "Reveals per skill of the freelancer", ["skill", "reveals", "freelancers"], per_skill
+        ),
+        section("Skills searched for before a reveal", ["skill", "reveals"], per_searched),
+        section(
+            "Most revealed freelancers",
+            ["freelancer_id", "freelancer", "reveals", "work_hosts"],
+            most_revealed,
+        ),
+    ]
+
+
 # ---- scheduled reports ---------------------------------------------------------------------
 
 
@@ -284,6 +438,7 @@ def monthly_summary(db: Session, p: ReportParams) -> list[Section]:
         vouching_summary,
         rate_distribution,
         availability_overview,
+        phone_reveals,
     ):
         sections.extend(build(db, p))
     return sections
@@ -343,6 +498,14 @@ REPORTS: list[ReportDef] = [
         "Freelancer availability overview",
         "Searchable freelancers available on each day (at most 93 days).",
         availability_overview,
+    ),
+    ReportDef(
+        "phone_reveals",
+        "RP-08",
+        "Mobile number reveals",
+        "How often work hosts revealed mobile numbers: per day, per work host, per skill, "
+        "most revealed freelancers and how many reveals were followed by a rating.",
+        phone_reveals,
     ),
     ReportDef(
         "users_registered_daily",

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_principal, require_roles
+from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
@@ -24,6 +25,8 @@ from app.schemas.profiles import (
     GivenRating,
     LabelsUpdate,
     PublicRating,
+    RevealedMobile,
+    RevealRequest,
     UnavailabilityIn,
     UnavailabilityOut,
     VouchingOrg,
@@ -36,6 +39,7 @@ from app.services.profiles import (
     to_float,
     utc_now,
 )
+from app.services.reveals import reveal_mobile_number
 
 router = APIRouter(prefix="/freelancers", tags=["freelancers"])
 
@@ -270,7 +274,6 @@ def public_profile(
     freelancer = db.get(Freelancer, freelancer_id)
     if freelancer is None:
         raise ApiError(404, "not_found", "Freelancer not found")
-    sees_mobile = principal.user_type in ("workhost", "admin")
     average, count = rating_summary(db, freelancer.id)
     orgs = db.execute(
         select(Organisation.id, Organisation.org_name)
@@ -311,8 +314,6 @@ def public_profile(
     return FreelancerPublic(
         id=freelancer.id,
         full_name=freelancer.full_name,
-        # Mobile numbers are shown to work hosts (and admins) only.
-        mobile_number=freelancer.mobile_number if sees_mobile else None,
         whatsapp_availability=freelancer.whatsapp_availability,
         nationality=freelancer.nationality,
         primary_language=freelancer.primary_language,
@@ -326,6 +327,29 @@ def public_profile(
         unavailable=[_unavailability_out(row) for row in upcoming],
         my_rating=mine,
     )
+
+
+HostOnly = Annotated[Principal, Depends(require_roles("workhost"))]
+
+
+@router.post("/{freelancer_id}/reveal-mobile")
+def reveal_mobile(
+    freelancer_id: uuid.UUID,
+    body: RevealRequest,
+    principal: HostOnly,
+    response: Response,
+    db: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> RevealedMobile:
+    """The only place a freelancer's mobile number is returned to anyone else.
+
+    Every call is recorded, and each work host has an hourly and a daily limit.
+    """
+    number = reveal_mobile_number(
+        db, settings, host_id=principal.user_id, freelancer_id=freelancer_id, body=body
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return RevealedMobile(mobile_number=number)
 
 
 @router.get("/{freelancer_id}/ratings")

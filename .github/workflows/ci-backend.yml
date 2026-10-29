@@ -33,6 +33,8 @@ jobs:
       RESET_TOKEN_MINUTES: "60"
       LOGIN_MAX_FAILURES: "5"
       LOGIN_WINDOW_MINUTES: "15"
+      REVEAL_MAX_PER_HOUR: "10"
+      REVEAL_MAX_PER_DAY: "20"
     services:
       postgres:
         image: postgres:16-alpine
