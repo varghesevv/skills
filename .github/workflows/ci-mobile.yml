@@ -18,6 +18,8 @@ concurrency:
 env:
   # Flutter is cloned from the official repository at a fixed release tag (no third-party action).
   FLUTTER_VERSION: "3.47.8"
+  # The commit that tag points to; checked after the clone so a moved tag cannot change the build.
+  FLUTTER_SHA: "737ba8f885dc774b53b442759999a312c9461e4e"
 
 jobs:
   analyze:
@@ -32,6 +34,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Did this pull request change mobile/?
         id: changed
         working-directory: .
@@ -43,7 +46,18 @@ jobs:
         if: steps.changed.outputs.run == 'true'
         run: |
           git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Cache pub and Gradle downloads
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
+          restore-keys: mobile-${{ runner.os }}-
       - name: Dependencies
         if: steps.changed.outputs.run == 'true'
         run: flutter pub get
@@ -65,6 +79,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Did this pull request change mobile/?
         id: changed
         working-directory: .
@@ -76,7 +91,18 @@ jobs:
         if: steps.changed.outputs.run == 'true'
         run: |
           git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Cache pub and Gradle downloads
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
+          restore-keys: mobile-${{ runner.os }}-
       - name: Test with coverage
         if: steps.changed.outputs.run == 'true'
         run: flutter test --coverage
@@ -96,6 +122,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Did this pull request change mobile/?
         id: changed
         working-directory: .
@@ -107,7 +134,18 @@ jobs:
         if: steps.changed.outputs.run == 'true'
         run: |
           git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Cache pub and Gradle downloads
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
+          restore-keys: mobile-${{ runner.os }}-
       # A debug build for testers. The address is not a secret; this placeholder is never used.
       - name: Build the demo debug APK
         if: steps.changed.outputs.run == 'true'
