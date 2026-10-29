@@ -1,0 +1,4 @@
+- Check that specs (`docs/specification/`), ADRs, the runbook and the plans agree with each other and with the behaviour the PR changes. A contradiction between two documents is a finding; style is not.
+- Role words: use the actual `user_type` values or the documented neutral names; never invent states, endpoints or settings that the specs do not define without saying they are proposals.
+- No secrets, private team notes (church name, pricing, domain, legal) or real personal data in documents. Commands and examples must use placeholders.
+- Decisions that change the architecture need an ADR (`docs/adr/`), and new settings need a runbook line.

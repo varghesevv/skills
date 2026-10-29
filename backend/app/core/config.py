@@ -1,7 +1,14 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, ValidationError, ValidationInfo, field_validator
+from pydantic import (
+    Field,
+    SecretStr,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -14,6 +21,13 @@ MIN_STRICT_JWT_SECRET_LENGTH = 32
 WEAK_SECRETS = frozenset(
     {"password", "postgres", "changeme", "admin", "secret", "skills", "123456", "123456789"}
 )
+
+
+VERSION_PATTERN = r"^\d{1,5}\.\d{1,5}\.\d{1,5}$"  # X.Y.Z, as in the app's pubspec version
+
+
+def _version_tuple(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
 
 
 class ConfigError(RuntimeError):
@@ -54,6 +68,11 @@ class Settings(BaseSettings):
     # only settings with defaults, because the limits are a safety net, not a deployment choice.
     reveal_max_per_hour: int = Field(default=10, ge=1)
     reveal_max_per_day: int = Field(default=20, ge=1)
+    # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
+    # default word profile, and no minimum version (every app version is accepted).
+    terminology_profile: str = "default"
+    app_min_version: str = Field(default="0.0.0", pattern=VERSION_PATTERN)
+    app_latest_version: str = Field(default="0.0.0", pattern=VERSION_PATTERN)
     jwt_secret: SecretStr | None = None  # required by the API; checked by require_jwt_secret()
     demo_user_password: SecretStr | None = None  # only used by `python -m app.cli seed-demo`
 
@@ -64,6 +83,13 @@ class Settings(BaseSettings):
         if hourly is not None and daily < hourly:
             raise ValueError("REVEAL_MAX_PER_DAY must not be lower than REVEAL_MAX_PER_HOUR")
         return daily
+
+    @model_validator(mode="after")
+    def _minimum_version_not_above_latest(self) -> "Settings":
+        """A minimum above the latest version would lock every app on the update screen."""
+        if _version_tuple(self.app_min_version) > _version_tuple(self.app_latest_version):
+            raise ValueError("APP_MIN_VERSION must not be higher than APP_LATEST_VERSION")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -132,7 +158,14 @@ def get_settings() -> Settings:
         settings = Settings()  # every value comes from the environment
     except ValidationError as exc:
         names = sorted({str(error["loc"][0]).upper() for error in exc.errors() if error["loc"]})
-        raise ConfigError(f"Missing or invalid environment variables: {', '.join(names)}") from None
+        # Cross-setting checks (no single field) carry our own message, which names variables only.
+        problems = [
+            str(error["msg"]).removeprefix("Value error, ")
+            for error in exc.errors()
+            if not error["loc"]
+        ]
+        detail = "; ".join([*([", ".join(names)] if names else []), *problems])
+        raise ConfigError(f"Missing or invalid environment variables: {detail}") from None
     validate_secrets(settings)
     for value in settings.secret_values():
         register_secret(value)

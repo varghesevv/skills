@@ -1,0 +1,6 @@
+- React + TypeScript (Vite) served by nginx; wording from `src/terminology/` and `src/i18n/`. User-visible text goes through `t()`; role words through terms, never literals.
+- **Security:** strict CSP (`script-src 'self'`); flag `unsafe-inline`, `unsafe-eval`, unescaped `dangerouslySetInnerHTML`. Tokens only in the token store; never in URLs, logs or query keys.
+- **Mobile number:** the number may only come from the reveal call, live in component state, and never in query cache, URL or logs.
+- **Data:** React Query keys include every input; mutations invalidate what they change; errors map to `errorMessage()` (no raw server text with user input).
+- **Accessibility and layout:** controls at least 44x44 px, labels on every control, no horizontal page scroll from 320 px, focus management for dialogs and drawers.
+- **Tests:** Vitest + Testing Library for each screen (loading, empty, error, validation); Playwright responsive checks for key pages.

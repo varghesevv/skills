@@ -2,6 +2,10 @@
 
 Several people will work on this project. These rules keep the work consistent.
 
+## Licence
+
+Skills is released under the [MIT licence](LICENSE). By opening a pull request you agree that your contribution is licensed under the same terms.
+
 ## Before you start
 
 1. Read the [specification](docs/specification/README.md) and the [ADRs](docs/adr/README.md).

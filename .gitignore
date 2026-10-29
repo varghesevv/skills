@@ -250,3 +250,6 @@ GoogleService-Info.plist
 
 # The Flutter app source folder (the Python rule above ignores every lib/)
 !/mobile/lib/
+
+# the reviewer workflow writes the pull request diff here
+pr_raw.diff

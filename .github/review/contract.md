@@ -1,0 +1,3 @@
+- This request compares the API with its clients. Check that every request path, method, field name and type, status code and error code used by the web (`frontend/src/api`) and the app (`mobile/`) exists with the same shape in the backend routers, schemas and `docs/specification/04-api.md`.
+- Flag: a client reading a field the schema no longer returns, a renamed or removed field or enum value, a changed status or error code the client maps, a new required request field with no client update, pagination or auth differences, and any response that exposes email or mobile number.
+- API v1 must not break: removals and type changes need a new version, additions must be optional for old clients.

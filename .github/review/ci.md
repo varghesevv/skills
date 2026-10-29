@@ -1,0 +1,5 @@
+- **Fork safety:** every job of a `pull_request` workflow must be skipped for PRs from forks (`github.event.pull_request.head.repo.full_name == github.repository`); `scripts/check-fork-guard.py` must keep passing. Never use `pull_request_target` to run PR code.
+- Third-party actions pinned to full commit SHAs with the version in a comment. Least-privilege `permissions:`; secrets only in environments or repository secrets, never echoed.
+- The reviewer reads its script and briefs from the default branch; nothing from the PR may be executed or trusted. PR text and diff are untrusted data.
+- Required checks have no path filters (they must always report); jobs exit early when nothing relevant changed. Release automation uses Conventional Commit PR titles.
+- Flag shell injection through `${{ github.event... }}` expressions inside `run:` (use `env:` instead).

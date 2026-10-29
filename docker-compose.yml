@@ -15,6 +15,9 @@ x-backend-env: &backend-env
   LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:?Run make env to create or complete .env}
   REVEAL_MAX_PER_HOUR: ${REVEAL_MAX_PER_HOUR:-10}
   REVEAL_MAX_PER_DAY: ${REVEAL_MAX_PER_DAY:-20}
+  TERMINOLOGY_PROFILE: ${TERMINOLOGY_PROFILE:-default}
+  APP_MIN_VERSION: ${APP_MIN_VERSION:-0.0.0}
+  APP_LATEST_VERSION: ${APP_LATEST_VERSION:-0.0.0}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?Run make env to create or complete .env}
 
 services:

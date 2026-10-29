@@ -1,0 +1,21 @@
+{
+  "comment": "Maps changed files to components so each pull request is reviewed with the right rules and its own share of the size budget. Read from the default branch, never from the pull request. Longest matching prefix wins; files that match nothing are 'other'. Add a component by adding an entry here and a brief in this folder.",
+  "components": [
+    {"name": "backend", "brief": "backend.md", "paths": ["backend/"]},
+    {"name": "frontend", "brief": "frontend.md", "paths": ["frontend/"]},
+    {"name": "mobile", "brief": "mobile.md", "paths": ["mobile/"]},
+    {"name": "infra", "brief": "infra.md", "paths": ["infra/", "docker-compose.yml", ".env.example", "Makefile"]},
+    {"name": "ci", "brief": "ci.md", "paths": [".github/", "scripts/"]},
+    {"name": "docs", "brief": "docs.md", "paths": ["docs/", "README.md", "CONTRIBUTING.md", "CHANGELOG.md"]}
+  ],
+  "clients": ["frontend", "mobile"],
+  "contract_paths": [
+    "backend/app/api/",
+    "backend/app/schemas/",
+    "backend/app/chat/",
+    "docs/specification/04-api.md",
+    "frontend/src/api/",
+    "mobile/lib/core/api/",
+    "mobile/lib/core/network/"
+  ]
+}

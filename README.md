@@ -23,6 +23,10 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 | [docs/open-questions.md](docs/open-questions.md) | Decisions still needed from the product owner |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute: workflow, conventions, definition of done |
 
+## Licence and use at your own risk
+
+Skills is open source under the [MIT licence](LICENSE). Anyone may download it, run their own instance and change it, on their own terms. It comes **as is, without warranty and without obligation** from the authors. Whoever hosts an instance is responsible for it: its data, its users, its rules and the law that applies to them.
+
 ## Quick start (local)
 
 New to the project? Follow the [detailed local development guide](docs/local-development.md). It covers installing the tools on macOS, Windows (WSL) and Linux, starting the application, creating demo data, running the tests and fixing common problems.

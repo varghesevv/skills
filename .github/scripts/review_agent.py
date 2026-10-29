@@ -11,6 +11,7 @@ Secrets come from the environment only and are never printed. PR text and diff a
 untrusted data: they are sent inside a randomly delimited block to a model with no tools.
 """
 
+import base64
 import hashlib
 import json
 import os
@@ -19,7 +20,10 @@ import secrets
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
+
+import review_components as rc
 
 PROVIDER = os.environ.get("REVIEW_PROVIDER", "gemini").lower()
 PROVIDER_NAMES = {"gemini": "Gemini", "claude": "Claude"}
@@ -47,16 +51,19 @@ SECRET_PATTERNS = [
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     re.compile(r"AKIA[0-9A-Z]{16}"),
     re.compile(r"AIza[0-9A-Za-z_\-]{35}"),
+    # Android signing settings written without quotes, as in key.properties.
+    re.compile(r"(?im)^\s*(store|key)Password\s*=\s*[^\s$<{][^\s]{5,}"),
 ]
 
-EXCLUDED_SUFFIXES = (
-    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
-    ".min.js", ".min.css", ".map",
-    "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
-)
-
-# Fixture-style credentials are expected here; the ci-secrets workflow still covers them.
-TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures)/|(^|/)test_[^/]*$|\.(test|spec)\.[jt]sx?$")
+EXCLUDED_SUFFIXES = rc.EXCLUDED_SUFFIXES
+TEST_PATH = rc.TEST_PATH
+CONTEXT_PATH = ".github/review_context.md"
+COMPONENTS_FILE = ".github/review/components.json"
+BRIEF_DIR = ".github/review"
+MAX_HEAD_FILES = 10
+MAX_HEAD_LINES = 60
+MAX_HEAD_CHARS_PER_FILE = 2500
+MAX_HEAD_CHARS_TOTAL = 12000
 
 
 def scan_text_for_secrets(text: str) -> bool:
@@ -64,8 +71,10 @@ def scan_text_for_secrets(text: str) -> bool:
 
 
 def diff_filename(chunk: str) -> str:
-    match = re.search(r"b/(.+)$", chunk.split("\n", 1)[0])
-    return match.group(1) if match else "unknown"
+    # "diff --git a/<path> b/<path>": take the path after the last " b/". (Matching a bare "b/" would
+    # cut "mobile/lib/x.dart" at "lib/", because "lib/" ends in "b/".)
+    match = re.match(r"diff --git a/(.+) b/(.+)$", chunk.split("\n", 1)[0])
+    return match.group(2) if match else "unknown"
 
 
 def split_diff(raw_diff: str) -> list[str]:
@@ -77,7 +86,7 @@ def extract_additions_and_metadata(raw_diff: str, title: str, body: str) -> str:
     """Title, body and added lines (excluding test files) for the secret scan."""
     added: list[str] = []
     for chunk in split_diff(raw_diff):
-        if TEST_PATH.search(diff_filename(chunk)):
+        if TEST_PATH.search(diff_filename(chunk)) or rc.is_excluded(diff_filename(chunk)):
             continue
         added += [
             line[1:] for line in chunk.splitlines()
@@ -86,17 +95,24 @@ def extract_additions_and_metadata(raw_diff: str, title: str, body: str) -> str:
     return f"{title}\n{body}\n" + "\n".join(added)
 
 
-def filter_and_truncate_diff(raw_diff: str, max_chars: int = MAX_DIFF_CHARS):
-    """Drop generated assets, cut at hunk boundaries, and list every omitted file."""
-    chunks = split_diff(raw_diff)
-    kept: list[str] = []
+def pack_chunks(chunks: list[str], max_chars: int = MAX_DIFF_CHARS):
+    """Keep what fits, most important files first; list every file that was left out.
+
+    Order: source, configuration, tests, documentation. Generated assets are dropped. A file that
+    does not fit is cut at a hunk boundary and the rest are listed as omitted.
+    """
     omitted: list[str] = []
-    used = 0
+    wanted: list[tuple[int, int, str, str]] = []
     for i, chunk in enumerate(chunks):
         name = diff_filename(chunk)
-        if name.endswith(EXCLUDED_SUFFIXES):
+        if rc.is_excluded(name):
             omitted.append(f"{name} (excluded asset)")
             continue
+        wanted.append((rc.rank(name), i, name, chunk))
+    wanted.sort(key=lambda item: (item[0], item[1]))
+    kept: list[str] = []
+    used = 0
+    for position, (_, _, name, chunk) in enumerate(wanted):
         if used + len(chunk) <= max_chars:
             kept.append(chunk)
             used += len(chunk)
@@ -110,12 +126,14 @@ def filter_and_truncate_diff(raw_diff: str, max_chars: int = MAX_DIFF_CHARS):
         if len(partial) > 1:  # header plus at least one whole hunk
             kept.append("".join(partial) + "\n[... diff truncated at hunk boundary ...]\n")
         omitted.append(f"{name} (truncated or omitted: size limit)")
-        for rest in chunks[i + 1:]:
-            rest_name = diff_filename(rest)
-            reason = "excluded asset" if rest_name.endswith(EXCLUDED_SUFFIXES) else "omitted: size limit"
-            omitted.append(f"{rest_name} ({reason})")
+        omitted += [f"{rest[2]} (omitted: size limit)" for rest in wanted[position + 1:]]
         break
     return "".join(kept), omitted
+
+
+def filter_and_truncate_diff(raw_diff: str, max_chars: int = MAX_DIFF_CHARS):
+    """Drop generated assets, cut at hunk boundaries, and list every omitted file."""
+    return pack_chunks(split_diff(raw_diff), max_chars)
 
 
 def neutralise_mentions(text: str) -> str:
@@ -318,9 +336,27 @@ def format_prior(prior: list[dict]) -> str:
     return "\n".join(blocks)
 
 
-def build_prompts(context: str, omitted: list[str], title: str, body: str, diff: str, prior: list[dict]):
+def build_prompts(
+    context: str,
+    omitted: list[str],
+    title: str,
+    body: str,
+    diff: str,
+    prior: list[dict],
+    scope: str = "",
+    focus: str = "",
+    heads: str = "",
+):
     tag = secrets.token_hex(8)
     omitted_str = "\n".join(f"- {f}" for f in omitted) or "None"
+    scope_rule = (
+        f"- This request covers only: {scope}. Other files of the pull request are reviewed in separate "
+        "requests, so do not report parts of the change as missing just because they are not in this diff.\n"
+        if scope else ""
+    )
+    focus_rule = (
+        f"- A maintainer asked for extra attention to: {defang(focus[:300])}\n" if focus.strip() else ""
+    )
     system = f"""You are a principal software engineer giving an advisory review of a pull request.
 
 ### REVIEW BRIEF
@@ -334,7 +370,10 @@ def build_prompts(context: str, omitted: list[str], title: str, body: str, diff:
 - Prefer a few well-evidenced findings. An empty findings list is a valid result.
 - The diff is annotated: added and unchanged lines start with their line number in the new file, then "|".
   Use exactly those numbers for "line". Use null when a finding is not tied to one such line.
-- "Earlier findings" lists points you raised before, with replies from people. Do not raise them again.
+- Only the diff is shown, so a name that is not defined in it may be imported or defined elsewhere in the file.
+  Check the start-of-file excerpts when they are given, and when the evidence is still not enough, say so in
+  the finding or leave it out instead of calling it a defect.
+{scope_rule}{focus_rule}- "Earlier findings" lists points you raised before, with replies from people. Do not raise them again.
   If a reply explains a false positive or an accepted risk, accept it unless it is clearly wrong; in that case
   say so in a new finding that quotes the reply.
 
@@ -354,7 +393,8 @@ Files not sent to you (list them in the summary if relevant):
     user = (
         f"<<<UNTRUSTED_{tag}_START>>>\nPR title: {defang(title)}\nPR description:\n{defang(body)}\n\n"
         f"Earlier findings and replies:\n{format_prior(prior)}\n\n"
-        f"Diff:\n{diff}\n<<<UNTRUSTED_{tag}_END>>>\n"
+        + (f"Start of some changed files (imports and names only; not part of the diff):\n{defang(heads)}\n\n" if heads else "")
+        + f"Diff:\n{diff}\n<<<UNTRUSTED_{tag}_END>>>\n"
     )
     return system, user
 
@@ -477,6 +517,56 @@ PROVIDER_SETTINGS = {
 
 
 
+def fetch_head_sha(repo: str, pr_num: str, token: str) -> str:
+    try:
+        data = github_request(f"https://api.github.com/repos/{repo}/pulls/{pr_num}", token)
+        return str((data or {}).get("head", {}).get("sha", ""))
+    except Exception as e:  # context is a bonus; the review works without it
+        print(f"Warning: could not read the PR head ({type(e).__name__}).")
+        return ""
+
+
+def fetch_file_heads(repo: str, token: str, sha: str, names: list[str]) -> str:
+    """The first lines (imports) of changed source files, so names defined elsewhere are not called missing."""
+    if not sha:
+        return ""
+    parts: list[str] = []
+    total = 0
+    for name in names:
+        if len(parts) >= MAX_HEAD_FILES or total >= MAX_HEAD_CHARS_TOTAL:
+            break
+        if not name.endswith(rc.HEAD_CONTEXT_SUFFIXES) or rc.is_test(name) or rc.is_excluded(name):
+            continue
+        try:
+            url = (f"https://api.github.com/repos/{repo}/contents/{urllib.parse.quote(name)}"
+                   f"?ref={urllib.parse.quote(sha)}")
+            data = github_request(url, token) or {}
+            text = base64.b64decode(data.get("content", "")).decode("utf-8", errors="ignore")
+        except Exception:  # missing, deleted or too large: skip silently
+            continue
+        head = "\n".join(text.splitlines()[:MAX_HEAD_LINES])[:MAX_HEAD_CHARS_PER_FILE]
+        if scan_text_for_secrets(head):
+            continue  # never forward something that looks like a credential
+        parts.append(f"--- {name}\n{head}")
+        total += len(head)
+    return "\n".join(parts)
+
+
+def dedupe_findings(findings) -> list:
+    """The same point can come from two requests (a component and the contract pass): keep one."""
+    seen: set[tuple[str, str]] = set()
+    kept: list = []
+    for f in findings if isinstance(findings, list) else []:
+        if not isinstance(f, dict):
+            continue
+        key = (str(f.get("path") or ""), fingerprint(str(f.get("path") or ""), str(f.get("title") or "")))
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(f)
+    return kept
+
+
 def main() -> int:
     if PROVIDER not in PROVIDER_SETTINGS:
         print(f"Error: unknown REVIEW_PROVIDER '{PROVIDER}'.")
@@ -509,21 +599,65 @@ def main() -> int:
         ))
         return 0
 
-    diff, omitted = filter_and_truncate_diff(raw_diff)
-    if not diff.strip():
-        print("Nothing to review after filtering.")
+    chunks = split_diff(raw_diff)
+    sensitive = sorted(
+        {diff_filename(c) for c in chunks if rc.is_sensitive_file(diff_filename(c)) and not rc.is_test(diff_filename(c))}
+    )
+    if sensitive:
+        print("A file that must not be in git is part of the PR; review skipped.")
+        listed = "\n".join(f"- `{name}`" for name in sensitive)
+        post_or_update_comment(repo, pr_num, token, (
+            f"{COMMENT_HEADING}\n\n⚠️ **Review skipped**: the change contains files that hold keys, "
+            f"certificates or environment settings and must not be committed:\n\n{listed}\n\n"
+            "Remove them from the branch (and rotate anything that was exposed), keep a `.example` file "
+            "instead, and follow ADR-0011."
+        ))
         return 0
 
-    context_path = ".github/review_context.md"
+    config = rc.load_config(COMPONENTS_FILE)
+    wanted = {c.strip() for c in os.environ.get("REVIEW_COMPONENTS", "").split(",") if c.strip()}
+    if wanted:
+        chunks = [c for c in chunks if config.component_of(diff_filename(c)) in wanted]
+        if not chunks:
+            print("No changed files in the requested components.")
+            return 0
+    focus = os.environ.get("REVIEW_FOCUS", "")
+
     try:
-        with open(context_path, encoding="utf-8") as f:
-            context = f.read()
-    except OSError:
-        print(f"Error: required file {context_path} not found.")
+        common = rc.load_brief(os.path.dirname(CONTEXT_PATH) or ".", os.path.basename(CONTEXT_PATH), MAX_CONTEXT_CHARS)
+        briefs = {
+            comp["name"]: rc.load_brief(BRIEF_DIR, comp.get("brief"), rc.MAX_COMPONENT_BRIEF_CHARS)
+            for comp in config.components
+        }
+        briefs["contract"] = rc.load_brief(BRIEF_DIR, "contract.md", rc.MAX_COMPONENT_BRIEF_CHARS)
+    except ValueError as e:
+        print(f"Error: {e}")
         return 1
-    if len(context) > MAX_CONTEXT_CHARS:
-        print(f"Error: {context_path} is over {MAX_CONTEXT_CHARS} characters; shorten it.")
+    if not common:
+        print(f"Error: required file {CONTEXT_PATH} not found or empty.")
         return 1
+
+    # Group the changed files by component and decide which components share a model call.
+    by_component: dict[str, list[str]] = {}
+    base_omitted: list[str] = []
+    for chunk in chunks:
+        name = diff_filename(chunk)
+        if rc.is_excluded(name):
+            base_omitted.append(f"{name} (excluded asset)")
+            continue
+        by_component.setdefault(config.component_of(name), []).append(chunk)
+    if not by_component:
+        print("Nothing to review after filtering.")
+        return 0
+    sizes = {comp: sum(len(c) for c in items) for comp, items in by_component.items()}
+    calls: list[tuple[list[str], list[str], str]] = []
+    for group in rc.plan_groups(sizes, MAX_DIFF_CHARS):
+        calls.append((group, [c for comp in group for c in by_component[comp]], ", ".join(group)))
+    if rc.needs_contract_pass(config, set(by_component)):
+        contract = [c for items in by_component.values() for c in items if config.is_contract_file(diff_filename(c))]
+        if contract and len(contract) < sum(len(v) for v in by_component.values()):
+            calls.append((["contract"], contract, "the API contract between the backend and its clients "
+                          "(requests, responses, status codes, field names and types must agree)"))
 
     try:
         prior = fetch_prior_threads(repo, pr_num, token)
@@ -531,16 +665,36 @@ def main() -> int:
         print(f"Warning: could not read earlier review comments ({type(e).__name__}).")
         prior = []
 
-    annotated, valid = annotate_diff(diff)
-    system, user = build_prompts(context, omitted, title, body, annotated, prior)
-    print(f"Sending request to {PROVIDER_NAMES[PROVIDER]} ({model})...")
-    text, truncated = call(api_key, model, system, user)
-    if not text:
-        print("Empty model response; nothing posted.")
-        return 1
+    head_sha = fetch_head_sha(repo, pr_num, token)
+    results: list[dict] = []
+    valid: dict[str, set[int]] = {}
+    omitted: list[str] = list(base_omitted)
+    truncated = False
+    failed: list[str] = []
+    for index, (group, group_chunks, scope) in enumerate(calls, start=1):
+        diff, group_omitted = pack_chunks(group_chunks, MAX_DIFF_CHARS)
+        omitted += [o for o in group_omitted if o not in omitted]
+        if not diff.strip():
+            continue
+        annotated, group_valid = annotate_diff(diff)
+        for path, lines in group_valid.items():
+            valid.setdefault(path, set()).update(lines)
+        context = rc.assemble_brief(common, briefs, group)
+        heads = fetch_file_heads(repo, token, head_sha, sorted(group_valid))
+        system, user = build_prompts(
+            context, group_omitted, title, body, annotated, prior,
+            scope=scope if len(calls) > 1 else "", focus=focus, heads=heads,
+        )
+        print(f"Sending request {index} of {len(calls)} ({scope}) to {PROVIDER_NAMES[PROVIDER]} ({model})...")
+        text, was_truncated = call(api_key, model, system, user)
+        truncated = truncated or was_truncated
+        parsed = parse_review(text) if text else None
+        if parsed is None:
+            failed.append(group[0] if len(group) == 1 else "+".join(group))
+            continue
+        results.append(parsed)
 
-    data = parse_review(text)
-    if data is None:
+    if not results:
         # Never post the raw answer: it can contain the model's working notes.
         reason = "it hit the output limit" if truncated else "it was not in the expected format"
         print(f"Model answer could not be read ({reason}); posting a notice only.")
@@ -550,6 +704,11 @@ def main() -> int:
             f"{reason}. Push a commit or run the workflow again to retry.\n\n_Advisory automated review._",
         )
         return 0
+
+    data = rc.merge_results(results)
+    data["findings"] = dedupe_findings(data.get("findings"))
+    if failed:
+        data["summary"] = f"{data.get('summary', '')} (No usable answer for: {', '.join(failed)}; run again to retry those.)"
 
     inline, general = clean_findings(data, valid)
     seen_fp = {t["fp"] for t in prior}

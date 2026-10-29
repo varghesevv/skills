@@ -116,6 +116,13 @@ web addresses from `frontend/src/terminology/profiles.json`, for example `church
 GitHub, re-run `deploy-demo`, and the site serves the new words. Existing bookmarks to the old
 addresses (for example `/organisation`) stop working after a change.
 
+The API reads the same `TERMINOLOGY_PROFILE` and serves the words at the public `GET /api/v1/app/config`
+for the mobile apps. The backend keeps its own copy of the profile file (`backend/app/core/terminology_profiles.json`);
+a backend test fails if it differs from the web file, so edit both together. `APP_MIN_VERSION` and
+`APP_LATEST_VERSION` (`X.Y.Z`, not secrets, default `0.0.0` = nothing blocked) tell the apps which version they
+must at least run and which is newest. The demo deploy does not set them yet, so the defaults apply until the
+mobile release workflow does.
+
 The small label at the top of the navigation menu (the role badge) has its own words, so it can differ
 from the rest of the screen text: `badge_organisation`, `badge_workhost` and `badge_freelancer` in each
 profile. In the `default` profile they are Organisation, Work host and Freelancer. Edit them in
@@ -182,15 +189,30 @@ Safety:
 
 ## Gemini pull request reviewer
 
-Advisory review comment on each non-draft pull request from a branch in this repository (forks and Dependabot are skipped). It is not a required check. See [ADR-0013](adr/0013-gemini-agent-as-pull-request-reviewer.md).
+Advisory review comment on a pull request, **started by hand** (it does not run automatically, so it costs nothing until you ask for it). It can review any PR number. It is not a required check. See [ADR-0013](adr/0013-gemini-agent-as-pull-request-reviewer.md).
 
 - Secret: repository secret `GEMINI_API_KEY` (Settings > Secrets and variables > Actions). Never commit it or print it.
 - Use a paid-tier or Vertex key so submitted code is not retained or used for model training (ADR-0013), and set a budget alert on the Google Cloud project.
 - The model is set in the workflow (`GEMINI_MODEL`, default `gemini-3.8-flash`; if a model is retired, the log shows a 404 and the name to switch to).
-- Manual re-run: Actions > "Gemini Advisory PR Review" > Run workflow, with the PR number.
-- Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review brief `.github/review_context.md` (max 6000 characters; the script fails if it is missing or longer).
+- Run: Actions > "Gemini PR Review (manual)" > Run workflow, with the PR number (optional: `components`, `focus`). Run it again after pushing changes; the comment and the review threads are updated, not duplicated.
+- Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review briefs (see "How a review is built" below).
 - The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
 - Review skipped with a notice: the PR looks like it contains a secret (test files are not scanned by the reviewer; `ci-secrets` still covers them). Empty or failed model answers post nothing and fail the job.
+
+### How a review is built (components)
+
+One workflow per reviewer and one script serve every component. The script groups the changed files by component using `.github/review/components.json` (backend, frontend, mobile, infra, ci, docs; longest path prefix wins, anything else is "other") and builds each request from:
+
+- the common brief `.github/review_context.md` (max 6000 characters), plus
+- one short brief per component that changed, in `.github/review/<name>.md` (max 3000 characters each; `contract.md` for the API-contract pass). The script fails with a clear message if a brief is too long.
+
+Size handling: generated and bulky files are dropped (lock files, `*.g.dart`, `build/`, images, Gradle wrapper, ...) and listed as "excluded asset". Within the budget (40 000 characters per request) files are taken in the order source, configuration, tests, documentation. When the whole change does not fit, each component is reviewed in its own request (at most four, smallest merged) and the answers are merged into the one summary comment. If the backend and a client (web or mobile) changed together, one extra request compares the API files with the client files (the contract pass). Each request also gets the first lines of the changed source files, so a name imported at the top of a file is not reported as undefined.
+
+Added a component? Add an entry to `components.json`, a brief in `.github/review/`, and (if it has generated files or its own test layout) the patterns in `scripts/review_components.py` with a test. Like the script, the map and briefs are read from the default branch.
+
+Files that must not be in git (key stores, `key.properties`, `google-services.json`, `.env` files, private keys) make the reviewer stop with a notice that names them; the diff is not sent to a model.
+
+Manual runs accept two optional inputs: `components` (for example `mobile,docs`) to review only those components, and `focus` (up to 300 characters) to say what to look at most closely.
 
 ### Reading and answering the review
 
@@ -208,7 +230,7 @@ If GitHub refuses the inline comments (for example a line is outside the diff), 
 
 ### Claude review (manual)
 
-A second, on-demand advisory review from the Claude API, run only by hand. It posts its own comment ("Claude Advisory Code Review") next to the Gemini one and uses the same script and review brief.
+A second advisory review from the Claude API. Like the Gemini one it is run only by hand. It posts its own comment ("Claude Advisory Code Review") next to the Gemini one and uses the same script and review brief.
 
 - Secret: repository secret `ANTHROPIC_API_KEY`. Optional variable `CLAUDE_MODEL` (default `claude-sonnet-5-5`).
 - Run: Actions > "Claude PR Review (manual)" > Run workflow, with the PR number.

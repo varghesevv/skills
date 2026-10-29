@@ -11,6 +11,7 @@
 | FR-C-05 | Repeated failed logins MUST be throttled (default 5 failures per 15 minutes per email and IP). |
 | FR-C-06 | A user MUST be able to view and edit only their own profile. |
 | FR-C-07 | `last_login_at` MUST be updated on successful login. |
+| FR-C-08 | Before login, a client MUST be able to read the installation's words for the three kinds of people and the minimum and latest mobile app version from one public endpoint (`GET /api/v1/app/config`), so apps carry no copy of the word profiles. |
 
 ## Freelancer
 
