@@ -24,8 +24,7 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 
 | # | Question | Default if unanswered |
 |---|---|---|
-| Q-A1 | App name and application ID (cannot change after the first store upload) | Blocking only for the first signed build. Local builds use `com.example.skills.dev` |
-| Q-A2 | Which machine builds and runs the app during development? | Answered for now: this server with a phone over wireless debugging, see [android/environment.md](android/environment.md) |
+| Q-A1 | App name and application ID (cannot change after the first store upload) | Use the placeholder `com.example.skills.dev` until answered; it blocks only the first signed build |
 | Q-A3 | May an admin read a conversation? | Only conversations that someone reported, and each access is logged |
 | Q-A4 | How long are chat messages kept? | Until either account is deleted, then anonymised; revisit with the privacy page |
 | Q-A5 | May a freelancer start a chat after a work host revealed their number? | No (work host starts). Revisit with real usage |
@@ -35,6 +34,7 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 ## Resolved
 
 - **Q10** Database: PostgreSQL only, no SQLite. Confirmed 2026-10-20. See [ADR-0002](adr/0002-postgresql-as-the-only-database.md).
+- **Q-A2** Development machine: this Linux server over Remote-SSH, with a physical phone over wireless debugging. Resolved 2026-10-29, see [android/environment.md](android/environment.md).
 
 ## Open (production, see ADR-0012)
 

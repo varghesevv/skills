@@ -94,9 +94,9 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | not started |
 | GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | not started |
 | GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | not started |
-| GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail | not started |
+| GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail, as work host or organisation only (no admin screens). The response never contains email or mobile number; the number comes only from reveal-mobile | not started |
 | GET `/freelancers/{id}/ratings` | * | RatingsPage, detail | Ratings | not started |
-| POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial) | not started |
+| POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; see [plan](plan.md) sections 4 (phase 3) and 6 | not started |
 | GET, PUT `/workhosts/me` | W | HostProfilePage | Profile | not started |
 | GET `/workhosts/me/ratings` | W | GivenRatingsPage | Ratings given | not started |
 | POST `/ratings`; PUT `/ratings/{id}` | W | detail, GivenRatingsPage | Rate | not started |
@@ -105,19 +105,22 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | GET `/organisations/me/freelancers` | O | VouchedPage | Vouched list | not started |
 | POST, DELETE `/organisations/me/freelancers/{freelancer_id}` | O | detail, VouchedPage | Vouch / revoke | not started |
 | GET `/search/freelancers` (all filters incl. `name`) | W, O, A | SearchPage | Search | not started |
-| GET `/reports`; GET `/reports/{name}` (`vouching_summary`, json/csv) | O (A) | organisation ReportsPage | Report screen | not started |
+| GET `/reports`; GET `/reports/{name}` (`vouching_summary`, json/csv) | O (the API also allows A) | organisation ReportsPage | Report screen for organisations only; the app has no admin access | not started |
 | GET `/reports/runs`, `/reports/runs/{id}/download`, `/reports/schedules`; PUT `/reports/schedules/{report}`; POST `/reports/{name}/run` | A | admin pages | none | n/a |
 | GET `/admin/organisations`; POST `/admin/organisations/{id}/approve\|reject` | A | admin pages | none | n/a |
 | GET `/labels?include_inactive=true`; POST `/labels`; PATCH `/labels/{id}` | A | AdminLabelsPage | none | n/a |
 | GET `/health` | public | ops | release smoke test | not started |
 
-## 3. New endpoints (needed by the app, added in separate backend PRs for web and app)
+## 3. New endpoints the app needs (separate backend PRs, so the web can use them too)
+
+Ids follow [plan](plan.md) section 3 and are listed in order. The reveal endpoint already exists on `main`, so it is a normal row in section 2.
 
 | Id | Endpoint | Why | Status |
 |---|---|---|---|
-| B1 | GET `/app/config` (public): terminology words and slugs, minimum and latest app version | role words; update check | not started |
-| B7 | `docs/openapi.json` exported and checked in CI | generated Dart models, drift check | not started |
-| B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}` | test builds behind login | not started |
+| B1 | GET `/app/config` (public): terminology words and slugs, minimum and latest app version | role words; update check | done (merged, PR #79) |
+| B2 | none: the app sends `X-App-Version` and `X-App-Platform`; the API never rejects old apps by header, the app reads `min_version` from B1 | minimum-version check | no server code needed |
 | B3 | DELETE `/me` with password confirmation | store requirement | not started |
+| B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}` | test builds behind login | not started |
 | B5 | POST `/devices`, DELETE `/devices/{id}`, outbox, FCM sender | push | not started |
 | B6 | `/chat/*` REST, `/chat/ws`, moderation, RP-09, RP-10 | chat | not started |
+| B7 | `docs/openapi.json` exported and checked in CI | generated Dart models, drift check | not started |

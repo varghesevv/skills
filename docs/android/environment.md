@@ -6,12 +6,12 @@ Status: phase 0 result, checked on 2026-10-29 on the development host (the machi
 
 | Check | Result | Verdict |
 |---|---|---|
-| CPU and OS | x86_64, Ubuntu 26.04 LTS, kernel 6.6 (NAS host, probably a container) | Good: the Android SDK tools work. |
+| CPU and OS | x86_64, Ubuntu 26.04 LTS (Linux server reached over Remote-SSH) | Good: the Android SDK tools work. |
 | Java | OpenJDK 17.0.20 (`/usr/bin/java`) | Good (JDK 17 or 21 needed). |
 | Flutter | 3.47.8 stable (Dart 3.13.7) in `~/flutter`; **not on `PATH`** | Works when `~/flutter/bin` is on `PATH`. `flutter doctor -v`: no issues. |
 | Android SDK | `ANDROID_HOME=~/android-sdk`; platform-tools 37.0.1, platforms android-34 and android-36, build-tools 28.0.3, 34.0.0 and 36.0.0, NDK r28c; all licences accepted | Good. Build-tools 36 and the NDK were added by Flutter on the first build (user-level, inside the SDK folder). |
 | Emulator | No `/dev/kvm`, no `emulator` package, no system images | **Not available.** Do not plan on an emulator on this host. |
-| Real phone | One Pixel 6 Pro, Android 16 (API 36), arm64, connected over **wireless debugging**; `adb devices` lists it twice (a paired mDNS entry and an IP:port entry) | Good. Option 1 of plan section 2. |
+| Real phone | One Android 16 (API 36) arm64 phone, connected over **wireless debugging**; `adb devices` lists it twice (a paired mDNS entry and an IP:port entry) | Good. Option 1 of plan section 2. |
 | Disk | About 3.9 TB free | Good. |
 | RAM | 31 GB total, about 6 GB available at the time (other workloads on the host); 60 GB swap; 8 cores | Good enough. Gradle daemon is the main consumer. |
 | Other tools | git 2.53, Python 3.14, Docker 29 present; **Node is not installed**; `sudo` needs a password | See section 4. |
@@ -35,8 +35,10 @@ Gradle and pub caches live in `~/.gradle` and `~/.pub-cache`. The server address
 
 ## 4. Things the owner must do
 
-1. Put `~/flutter/bin` on `PATH` in `~/.bashrc` (or tell Claude to do it), and install the VS Code Flutter and Dart extensions on the remote.
+1. Put `~/flutter/bin` on `PATH` (in `~/.bashrc` for bash or `~/.zshrc` for zsh), and install the VS Code Flutter and Dart extensions on the remote.
 2. Keep the phone awake, on the same network as this host, with wireless debugging on, while testing. Phase 6 acceptance needs a **second device** (a second phone, or a CI emulator) for two-sided chat tests.
 3. Node.js is only needed when the web front end changes (`npm` scripts). If a web PR is needed, install it user-level (for example with nvm) or confirm it may be installed; until then web checks cannot be run here.
 4. Answer Q-A1 (app name, application ID) before the first signed build; local builds use `com.example.skills.dev`.
 5. Later: Firebase project (free) and Google Play Console account; neither is needed before phase 6 and phase 7.
+
+General local setup (backend, web, Docker) is in [local-development.md](../local-development.md).

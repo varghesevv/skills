@@ -28,10 +28,11 @@ Build one app in **Flutter** (Dart, Material 3) in the `mobile/` folder of this 
 
 ## Consequences
 
-- One code base for Android and, later, iOS; the mobile release train is separate from the web
-  (release-please package `mobile`).
+- One code base for Android and, later, iOS. Planned: a mobile release train separate from the web
+  (a release-please package `mobile`, decision 2 in [mobile-app-plan.md](../mobile-app-plan.md)).
 - A Dart toolchain joins the repository: `flutter analyze`, `dart format`, `flutter test` run in
-  `ci-mobile`. Models are generated from the exported OpenAPI file so the app cannot drift from the API.
+  `ci-mobile`. Planned (backend item B7): models are generated from an exported, CI-checked OpenAPI
+  file so the app cannot drift from the API.
 - Tokens are kept in the platform keystore through `flutter_secure_storage`; server addresses are
   build settings, signing and Firebase files are CI secrets and never committed
   ([ADR-0011](0011-secrets-from-environment-only.md)).
