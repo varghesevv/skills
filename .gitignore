@@ -239,3 +239,11 @@ backend.hcl
 # Generated demo login lists (they contain the shared demo password)
 demo-logins*.csv
 *-logins.csv
+
+# Android app: signing and Firebase material is supplied by CI, never committed
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json

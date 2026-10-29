@@ -126,6 +126,7 @@ Rules: `.env` and `*.tfvars` are git-ignored; secrets never appear in logs or im
 |---|---|---|
 | `ci-backend.yml` | PR and push touching `backend/**` | Python 3.12; install; `ruff` lint + format check; `mypy`; `pytest` with a **PostgreSQL 16 service container**; Alembic `upgrade head` then `downgrade base` check; OpenAPI schema export and diff; coverage report; `pip-audit` |
 | `ci-frontend.yml` | PR and push touching `frontend/**` | Node LTS; install with lockfile; ESLint; Prettier check; `tsc --noEmit`; Vitest; build; `npm audit` (high only) |
+| `ci-mobile.yml` | every PR (finishes early when `mobile/` is unchanged); push to `main` touching `mobile/**` | GitHub-hosted runner, Flutter cloned at a fixed tag (no third-party action). `mobile-analyze` (format, analyze), `mobile-test` (tests with coverage, floor 70 %), `mobile-build-android` (demo debug APK kept 5 days). Fork guard on every job. |
 | `ci-infra.yml` | PR touching `infra/**` | `terraform fmt -check`, `validate`, `tflint`, `trivy config`; `terraform plan` for `envs/demo` using OIDC role `skills-terraform`; plan posted as PR comment |
 | `ci-secrets.yml` | every PR; push to `main` | `scripts/check-secrets.sh` and Gitleaks over the PR's commits (`--redact`); required check |
 | `ci-docs.yml` | PR touching `docs/**` or `*.md` | Markdown lint and link check; verify ADR index lists every ADR file |
@@ -134,7 +135,7 @@ Rules: `.env` and `*.tfvars` are git-ignored; secrets never appear in logs or im
 | `deploy-demo.yml` | after successful `build-images.yml` on `main`, or manual with a chosen image tag; Environment `demo` | See section 7 |
 | `codeql.yml` | weekly and on PR | CodeQL for Python and JavaScript |
 
-Branch protection on `main`: required status checks (`ci-backend`, `ci-frontend`, `ci-docs`, `ci-infra` where relevant), one approving review, no direct pushes, up-to-date branch before merge. `CODEOWNERS` assigns reviewers for `infra/`, `docs/adr/` and `backend/migrations/`. Dependabot updates for pip, npm, GitHub Actions, Docker and Terraform. All third-party actions pinned to a version (commit SHA preferred).
+Branch protection on `main`: required status checks (`ci-backend`, `ci-frontend`, `ci-mobile`, `ci-docs`, `ci-infra` where relevant), one approving review, no direct pushes, up-to-date branch before merge. `CODEOWNERS` assigns reviewers for `infra/`, `docs/adr/` and `backend/migrations/`. Dependabot updates for pip, npm, GitHub Actions, Docker and Terraform. All third-party actions pinned to a version (commit SHA preferred).
 
 ## 7. Deployment procedure (`deploy-demo.yml` and `deploy.sh`)
 
