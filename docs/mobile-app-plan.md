@@ -1,5 +1,9 @@
 # Mobile app plan (Flutter, iOS and Android)
 
+> **Android work is now planned in [docs/android/](android/plan.md).** Where that folder differs from this
+> plan (phases, backend additions, chat, device and CI details), `docs/android/` wins for Android. This
+> file stays the reference for the iPhone and the store rules.
+
 Status: proposal for discussion. Nothing here is built yet. Versions of tools and packages are not pinned in this plan; pin them when the project starts and re-check store rules then, because they change.
 
 ## 1. Goals

@@ -20,6 +20,18 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 | Q8 | Time zone for scheduled reports; which currencies are supported? | Report windows, rate display | Asia/Dubai; AED, INR, USD, EUR |
 | Q9 | UI languages (English only, or Hindi/Tamil/Malayalam too)? | i18n setup in frontend | English only, i18n-ready |
 
+## Open (Android app, see [android/understanding.md](android/understanding.md))
+
+| # | Question | Default if unanswered |
+|---|---|---|
+| Q-A1 | App name and application ID (cannot change after the first store upload) | Blocking only for the first signed build. Local builds use `com.example.skills.dev` |
+| Q-A2 | Which machine builds and runs the app during development? | Answered for now: this server with a phone over wireless debugging, see [android/environment.md](android/environment.md) |
+| Q-A3 | May an admin read a conversation? | Only conversations that someone reported, and each access is logged |
+| Q-A4 | How long are chat messages kept? | Until either account is deleted, then anonymised; revisit with the privacy page |
+| Q-A5 | May a freelancer start a chat after a work host revealed their number? | No (work host starts). Revisit with real usage |
+| Q-A6 | Attachments (photos, documents) in chat? | Text only in version 1 |
+| Q-A7 | Chat on the web? | Later; the API already supports it |
+
 ## Resolved
 
 - **Q10** Database: PostgreSQL only, no SQLite. Confirmed 2026-10-20. See [ADR-0002](adr/0002-postgresql-as-the-only-database.md).
