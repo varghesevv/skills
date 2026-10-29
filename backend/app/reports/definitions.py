@@ -355,7 +355,11 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
 
     # The reveals' own skill lists, one row per skill. LATERAL lets the function read the
     # list of the reveal row it is joined to, so the reveal row must come first in FROM.
-    searched = func.unnest(PhoneReveal.searched_skills).table_valued("skill").lateral()
+    # render_derived() names the output column (AS alias(skill)); unnest has no column name of
+    # its own.
+    searched = (
+        func.unnest(PhoneReveal.searched_skills).table_valued("skill").render_derived().lateral()
+    )
     per_searched = db.execute(
         select(searched.c.skill, func.count())
         .select_from(PhoneReveal)
