@@ -85,4 +85,24 @@ void main() {
       'Something went wrong. Please try again.',
     );
   });
+
+  test('texts do not talk about reloading a page', () {
+    for (final code in [
+      'not_found',
+      'vouch_not_pending',
+      'already_rated',
+      'unknown_label',
+    ]) {
+      expect(
+        messageFor(error(code), base).toLowerCase(),
+        isNot(contains('reload')),
+        reason: code,
+      );
+      expect(
+        messageFor(error(code), base).toLowerCase(),
+        isNot(contains('page')),
+        reason: code,
+      );
+    }
+  });
 }

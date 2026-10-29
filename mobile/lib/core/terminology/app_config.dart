@@ -1,4 +1,5 @@
 import '../api/api_client.dart';
+import '../api/parse.dart';
 import 'terms.dart';
 
 /// The public configuration of the installation (`GET /api/v1/app/config`, no login needed).
@@ -61,6 +62,6 @@ class AppConfigRepository {
 
   Future<AppConfig> fetch() async {
     final data = await _api.get('/app/config', auth: false);
-    return AppConfig.fromJson(Map<String, Object?>.from(data! as Map));
+    return parseResponse(data, AppConfig.fromJson);
   }
 }

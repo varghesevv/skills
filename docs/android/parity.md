@@ -76,6 +76,13 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Loading, empty and error states on every list | spec 06 | not started |
 | Accessibility: 48 dp targets, labels, 2.0 text scale, dark mode | plan section 1 | not started |
 
+### Known differences from the web (on purpose)
+
+| Topic | Web | App | Why |
+|---|---|---|---|
+| Error texts that mention the page (`not_found`, `vouch_not_pending`, `already_rated`, label errors) | "Reload the page ..." | "Go back and try again." / "Open your rating to change it." | An app has no page to reload. The web texts are left as they are; the codes and meaning are the same. |
+| Reset-password link | opens `/reset-password` | opens in the browser (version 1) | The link is an email address on the web site. |
+
 ## 2. API endpoints used by the web (`/api/v1`)
 
 Role column: F freelancer, W work host, O organisation, A admin, * any logged in.

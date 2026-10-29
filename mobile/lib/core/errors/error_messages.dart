@@ -45,17 +45,17 @@ String? _byCode(ApiException e) {
     case 'invalid_level':
     case 'duplicate_label':
     case 'level_not_selectable':
-      return 'One of the selected labels is no longer available. Reload and try again.';
+      return 'One of the selected labels is no longer available. Go back and try again.';
     case 'not_found':
-      return 'That item no longer exists. Reload the page.';
+      return 'That item no longer exists. Go back and try again.';
     case 'vouch_not_pending':
-      return 'This vouch was already decided. Reload the page.';
+      return 'This vouch was already decided. Go back and try again.';
     case 'organisation_not_approved':
       return 'Your {organisation} must be approved by an admin first.';
     case 'already_vouched':
       return 'You already vouch for this {freelancer}.';
     case 'already_rated':
-      return 'You already rated this {freelancer}. Reload the page to change your rating.';
+      return 'You already rated this {freelancer}. Open your rating to change it.';
     case 'forbidden':
       return 'You are not allowed to do this.';
     case 'currency_required':

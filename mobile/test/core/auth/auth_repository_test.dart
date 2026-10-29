@@ -83,6 +83,77 @@ void main() {
     },
   );
 
+  test(
+    'a login answer without tokens is a bad response and stores nothing',
+    () async {
+      adapter.reply(
+        'POST',
+        '/auth/login',
+        FakeReply(200, {'unexpected': true}),
+      );
+      await expectLater(
+        auth.login(
+          email: 'person@example.test',
+          password: fresh('pw'),
+          type: UserType.freelancer,
+        ),
+        throwsA(
+          isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
+        ),
+      );
+      expect(store.accessToken, isNull);
+      expect(await store.readRefreshToken(), isNull);
+    },
+  );
+
+  test(
+    'a login whose account cannot be loaded leaves no session behind',
+    () async {
+      adapter
+        ..reply(
+          'POST',
+          '/auth/login',
+          FakeReply(200, tokens(fresh('a'), fresh('r'))),
+        )
+        ..reply(
+          'GET',
+          '/me',
+          FakeReply(200, {'id': 'u1', 'user_type': 'admin'}),
+        );
+      await expectLater(
+        auth.login(
+          email: 'person@example.test',
+          password: fresh('pw'),
+          type: UserType.freelancer,
+        ),
+        throwsA(
+          isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
+        ),
+      );
+      expect(store.accessToken, isNull);
+      expect(await store.readRefreshToken(), isNull);
+    },
+  );
+
+  test('a server error while loading the account after login also clears the session', () async {
+    adapter
+      ..reply(
+        'POST',
+        '/auth/login',
+        FakeReply(200, tokens(fresh('a'), fresh('r'))),
+      )
+      ..reply('GET', '/me', FakeReply(503, apiError('service_unavailable')));
+    await expectLater(
+      auth.login(
+        email: 'person@example.test',
+        password: fresh('pw'),
+        type: UserType.freelancer,
+      ),
+      throwsA(isA<ApiException>().having((e) => e.status, 'status', 503)),
+    );
+    expect(await store.readRefreshToken(), isNull);
+  });
+
   test('an organisation shows its name', () async {
     adapter.reply('GET', '/me', FakeReply(200, meJson('organisation')));
     expect((await auth.me()).displayName, 'Example Org');
