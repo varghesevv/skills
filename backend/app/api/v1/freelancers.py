@@ -1,6 +1,4 @@
-import math
 import uuid
-from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
@@ -16,8 +14,7 @@ from app.core.security import Principal
 from app.models.availability import FreelancerUnavailability
 from app.models.labels import FreelancerLabel, Label
 from app.models.ratings import UserRating
-from app.models.reveals import PhoneReveal
-from app.models.users import Freelancer, Organisation, WorkHost
+from app.models.users import Freelancer, Organisation
 from app.models.vouching import OrgFreelancer
 from app.schemas.common import Page, Pagination, pagination
 from app.schemas.profiles import (
@@ -42,6 +39,7 @@ from app.services.profiles import (
     to_float,
     utc_now,
 )
+from app.services.reveals import reveal_mobile_number
 
 router = APIRouter(prefix="/freelancers", tags=["freelancers"])
 
@@ -334,28 +332,6 @@ def public_profile(
 HostOnly = Annotated[Principal, Depends(require_roles("workhost"))]
 
 
-def _check_reveal_limits(db: Session, settings: Settings, host_id: uuid.UUID) -> None:
-    """Answer 429 when this work host has asked for too many numbers lately."""
-    now = utc_now()
-    for window, limit in (
-        (timedelta(hours=1), settings.reveal_max_per_hour),
-        (timedelta(days=1), settings.reveal_max_per_day),
-    ):
-        times = db.scalars(
-            select(PhoneReveal.revealed_at)
-            .where(PhoneReveal.work_host_id == host_id, PhoneReveal.revealed_at > now - window)
-            .order_by(PhoneReveal.revealed_at)
-        ).all()
-        if len(times) >= limit:
-            wait = math.ceil((times[len(times) - limit] + window - now).total_seconds())
-            raise ApiError(
-                429,
-                "reveal_limit_reached",
-                "You have revealed too many mobile numbers. Try again later.",
-                headers={"Retry-After": str(max(wait, 1))},
-            )
-
-
 @router.post("/{freelancer_id}/reveal-mobile")
 def reveal_mobile(
     freelancer_id: uuid.UUID,
@@ -369,24 +345,11 @@ def reveal_mobile(
 
     Every call is recorded, and each work host has an hourly and a daily limit.
     """
-    freelancer = db.get(Freelancer, freelancer_id)
-    if freelancer is None:
-        raise ApiError(404, "not_found", "Freelancer not found")
-    # Lock the work host's row so two parallel requests cannot both slip under the limit.
-    db.execute(select(WorkHost.id).where(WorkHost.id == principal.user_id).with_for_update())
-    _check_reveal_limits(db, settings, principal.user_id)
-    db.add(
-        PhoneReveal(
-            work_host_id=principal.user_id,
-            freelancer_id=freelancer.id,
-            channel=body.channel,
-            source=body.source,
-            searched_skills=body.searched_skills or None,
-        )
+    number = reveal_mobile_number(
+        db, settings, host_id=principal.user_id, freelancer_id=freelancer_id, body=body
     )
-    db.commit()
     response.headers["Cache-Control"] = "no-store"
-    return RevealedMobile(mobile_number=freelancer.mobile_number)
+    return RevealedMobile(mobile_number=number)
 
 
 @router.get("/{freelancer_id}/ratings")

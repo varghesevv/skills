@@ -106,3 +106,19 @@ def test_weak_jwt_secret_is_rejected_in_demo() -> None:
     with pytest.raises(SecretsError) as error:
         validate_secrets(settings)
     assert settings.jwt_secret.get_secret_value() not in str(error.value)
+
+
+def test_reveal_limits_default_and_are_checked(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import ValidationError
+
+    monkeypatch.delenv("REVEAL_MAX_PER_HOUR", raising=False)
+    monkeypatch.delenv("REVEAL_MAX_PER_DAY", raising=False)
+    defaults = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert (defaults.reveal_max_per_hour, defaults.reveal_max_per_day) == (10, 20)
+
+    for hourly, daily in ((0, 20), (-1, 20), (10, 0), (30, 20)):
+        with pytest.raises(ValidationError) as error:
+            Settings(  # type: ignore[call-arg]
+                _env_file=None, reveal_max_per_hour=hourly, reveal_max_per_day=daily
+            )
+        assert "reveal_max_per" in str(error.value)

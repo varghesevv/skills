@@ -265,17 +265,6 @@ def availability_overview(db: Session, p: ReportParams) -> list[Section]:
 # ---- RP-08 ---------------------------------------------------------------------------------
 
 
-_SEARCHED_SKILLS_SQL = text(
-    """
-    SELECT skill, count(*) AS reveals
-    FROM phone_reveals, unnest(searched_skills) AS skill
-    WHERE revealed_at >= :start AND revealed_at < :end
-    GROUP BY skill
-    ORDER BY reveals DESC, skill
-    """
-)
-
-
 def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
     """How often work hosts asked for a mobile number, who asked, and for whom."""
     in_window = and_(PhoneReveal.revealed_at >= p.start, PhoneReveal.revealed_at < p.end)
@@ -363,7 +352,13 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
         .order_by(reveals.desc(), Label.label_name)
     ).all()
 
-    per_searched = db.execute(_SEARCHED_SKILLS_SQL, {"start": p.start, "end": p.end}).all()
+    searched = func.unnest(PhoneReveal.searched_skills).column_valued("skill")
+    per_searched = db.execute(
+        select(searched, func.count())
+        .where(in_window)
+        .group_by(searched)
+        .order_by(func.count().desc(), searched)
+    ).all()
 
     most_revealed = db.execute(
         select(
