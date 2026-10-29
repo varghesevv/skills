@@ -247,3 +247,6 @@ key.properties
 google-services.json
 GoogleService-Info.plist
 *firebase-adminsdk*.json
+
+# The Flutter app source folder (the Python rule above ignores every lib/)
+!/mobile/lib/

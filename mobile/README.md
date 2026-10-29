@@ -1,6 +1,6 @@
 # Skills Android app
 
-Flutter (Material 3) client for the Skills API. Plan: [docs/android/plan.md](../docs/android/plan.md); how to run on a device: [docs/android/environment.md](../docs/android/environment.md); web parity: [docs/android/parity.md](../docs/android/parity.md).
+Flutter (Material 3) client for the Skills API. Plan: [docs/android/plan.md](../docs/android/plan.md). How to run on a device (`docs/android/environment.md`) and the web parity table (`docs/android/parity.md`) are added by the docs pull request.
 
 ```bash
 export PATH="$HOME/flutter/bin:$PATH"
