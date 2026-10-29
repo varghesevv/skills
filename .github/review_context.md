@@ -1,41 +1,24 @@
-# Repository Review Brief & Architecture Rules
+# Repository Review Brief (common rules)
 
-## 1. Folder Structure & Runtime Components
-- **backend/**: FastAPI application (Python, SQLAlchemy 2, Alembic, Pydantic). Routers in `app/api/v1/`, domain logic in `app/services/`, database models in `app/models/`, schemas in `app/schemas/`.
-- **frontend/**: React + TypeScript (Vite) SPA served via nginx. Wording mapping in `src/terminology/`.
-- **infra/**: Docker Compose (demo), Caddyfile, and Terraform (AWS Lightsail, S3 backups, OIDC).
-- **Runtime Flow**: Caddy (TLS, CSP, reverse proxy) -> nginx (static SPA) / FastAPI (`/api/*`) -> PostgreSQL. APScheduler handles background report generation.
+## 1. What this is
+"Skills" is a marketplace for **Freelancers**, **Work hosts** and **Organisations**, supervised by an **Administrator**. Components: `backend/` (FastAPI, PostgreSQL), `frontend/` (React web), `mobile/` (Flutter Android app, later iPhone), `infra/` (Docker, Caddy, Terraform), `.github/` (CI and this reviewer), `docs/`. Web and mobile use the same `/api/v1` API. Runtime: Caddy (TLS, CSP) -> nginx (SPA) / FastAPI (`/api/*`) -> PostgreSQL; APScheduler runs reports.
+Per-component rules follow this section when files of that component changed.
 
-## 2. Core Domain & Terminology Isolation
-"Skills" is a marketplace for **Freelancers**, **Work hosts**, and **Organisations**, supervised by an **Administrator**.
-- Admin approval gates overall account visibility.
-- Display terms (e.g., Church vs. Organisation) are dynamic installation settings. **API paths, database `user_type` values, report names, and email schemas must never change with display terminology.** Hardcoding dynamic terms into backend models or API routes is a defect.
+## 2. Terminology isolation
+Display words (e.g. Church vs Organisation) are installation settings served by the API. **API paths, stored `user_type` values (`freelancer`, `workhost`, `organisation`, `admin`), report names and email schemas never change with wording.** Hard-coding display words in backend models, API routes or client logic is a defect.
 
-## 3. Critical Security Rules (Any violation is a Blocker)
-1. **Secrets:** No hardcoded passwords, tokens, API keys, or connection strings in code, tests, docs, or workflows. Secrets come strictly from environment variables (ADR-0011).
-2. **Logging:** No credentials or tokens in log output. (The demo password-reset link in logs is the sole documented exception).
-3. **Authorization (IDOR):** Every handler must enforce role AND resource ownership (e.g., a freelancer edits only their own record). Unrestricted object lookups without owner verification are Blockers.
-4. **Token Handling:** HS256 JWT access tokens (15m), rotating refresh tokens with family reuse detection. Invalidating account status must immediately revoke refresh tokens.
-5. **Login Throttling:** Keyed by `(email, user_type, IP)`. IP must come from trusted proxy headers (Caddy) and not unverified `X-Forwarded-For`.
-6. **Frontend Security:** Strict CSP in Caddyfile (`script-src 'self'`). Flag any additions of `unsafe-inline`, `unsafe-eval`, or unescaped `dangerouslySetInnerHTML`.
-7. **Input/Output Safety:** Pydantic validates inputs (`page_size` capped at 100). SQLAlchemy expressions only (no raw SQL strings). User free-text must be escaped on output.
-8. **Reports:** Validate path handling, recipient addresses, and prevent CSV formula injection (cells starting with `=`, `+`, `-`, `@`).
+## 3. Critical Security Rules (any violation is a Blocker)
+1. **Secrets:** no password, token, API key, key store or connection string in code, tests, docs, workflows or config files. Secrets come from environment variables or CI secrets only (ADR-0011).
+2. **Logging:** never log credentials, tokens, device tokens, message text or phone numbers. (The demo password-reset link is the one documented exception.)
+3. **Authorization (IDOR):** every handler enforces role AND resource ownership. A lookup by id without an owner/participant check is a Blocker. Do not reveal that a resource exists to someone who may not see it (use 404).
+4. **Tokens:** HS256 JWT access tokens (15 min), rotating refresh tokens with reuse detection; disabling an account revokes its refresh tokens. Login throttling is keyed by (email, user_type, IP) and the IP comes from trusted proxy headers only.
+5. **Untrusted input and output:** validate with Pydantic or typed models; escape user text on output.
 
-## 4. Performance & Database Guidelines
-- **Search Hot Path:** Query filters must avoid N+1 loads, unbounded results, and `COUNT(*)` over wide joins. Every new filter/sort column requires a matching database index.
-- **Aggregates:** Rating aggregates must be computed in SQL, not iterated over in Python per row.
-- **Async Safety:** No blocking I/O or synchronous SQLAlchemy calls inside `async def` route handlers.
-- **Migrations:** Large table index additions must use `CONCURRENTLY`. Long table-rewriting `ALTER` operations require explicit approval plans.
-
-## 5. Structural Flaws & Process Invariants
-- **Layering:** Routers handle HTTP/auth; services contain business rules; models enforce persistence. Business logic only in routers or the frontend is a defect.
-- **State Machines:** Organisation approval (`pending` -> `approved`/`rejected`; only approved organisations can log in). Vouch (`pending` -> `approved` when the freelancer accepts, or `revoked`; revoking sets it inactive; vouching again restarts at `pending`; only approved AND active vouches are shown). Flag illegal transitions, double-submits, and `status`/`is_active` disagreeing.
-- **Data Integrity:** Database constraints (`UNIQUE`, `FOREIGN KEY`, `CHECK`) must back code-level checks.
-- **Time Handling:** Store and compare timezone-aware UTC (`datetime.now(timezone.utc)`), never naive `datetime.utcnow()`.
-- **Process Invariants:**
-  - Admin approves organisations before they can use the system; do not add a bypass.
-  - A freelancer appears in search once they have at least one skill. A rate or rating is NOT required (newcomers must be listed); requiring either is a regression. `min_rating` excludes unrated, `max_rate` needs `currency`.
-  - Only work hosts rate (1-10), one rating per work host and freelancer (`409 already_rated`); they cannot edit freelancers.
-  - Search results never contain email or mobile number.
-  - The admin has no mobile access.
-  - New endpoints need tests for unauthorized, wrong-role and wrong-owner cases.
+## 4. Process invariants
+- Admin approves organisations before they can log in; no bypass.
+- A freelancer is searchable with at least one skill. A rate or rating is NOT required; requiring either is a regression.
+- Only work hosts rate (1-10), one rating per work host and freelancer.
+- Search results and profiles never contain email or mobile number. A mobile number is returned only by `POST /freelancers/{id}/reveal-mobile` (work host only, recorded, rate limited).
+- The admin has no mobile access.
+- New endpoints and screens need tests for unauthorized, wrong-role and wrong-owner cases.
+- Specs (`docs/specification/`), the runbook and ADRs are updated in the same PR as the behaviour they describe.

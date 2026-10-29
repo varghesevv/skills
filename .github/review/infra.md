@@ -1,0 +1,5 @@
+- Docker Compose (demo), Caddyfile, Terraform (AWS Lightsail, S3 backups, GitHub OIDC). Secrets come from the environment; `${VAR:?missing}` style checks stay for required settings; the only settings with defaults are safety limits.
+- New environment variables must be added everywhere they are read: `.env.example`, both compose files, the deploy workflow, CI jobs, test config, and the runbook.
+- Caddy: keep HSTS, `nosniff`, strict CSP, `X-Frame-Options: DENY`; WebSocket upgrades must pass and idle timeouts must exceed the heartbeat (chat). Do not loosen the CSP to fix a page.
+- Terraform: no inline credentials; least-privilege IAM; a plan that replaces the instance or deletes data needs explicit approval. Ports: 22 only to known addresses, 80/443 public.
+- Containers: pinned base images, non-root where possible, health checks, no secrets in image layers or build args.

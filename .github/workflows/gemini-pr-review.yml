@@ -9,6 +9,14 @@ on:
         description: 'Pull Request Number'
         required: true
         type: string
+      components:
+        description: 'Optional: only review these components (comma separated: backend, frontend, mobile, infra, ci, docs)'
+        required: false
+        type: string
+      focus:
+        description: 'Optional: what to look at most closely (up to 300 characters)'
+        required: false
+        type: string
 
 concurrency:
   group: gemini-review-${{ github.event.pull_request.number || inputs.pr_number }}
@@ -26,6 +34,7 @@ jobs:
         )
       )
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
@@ -65,4 +74,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          REVIEW_COMPONENTS: ${{ inputs.components }}
+          REVIEW_FOCUS: ${{ inputs.focus }}
         run: python .github/scripts/review_agent.py

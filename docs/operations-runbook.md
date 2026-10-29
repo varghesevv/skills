@@ -188,9 +188,24 @@ Advisory review comment on each non-draft pull request from a branch in this rep
 - Use a paid-tier or Vertex key so submitted code is not retained or used for model training (ADR-0013), and set a budget alert on the Google Cloud project.
 - The model is set in the workflow (`GEMINI_MODEL`, default `gemini-3.8-flash`; if a model is retired, the log shows a 404 and the name to switch to).
 - Manual re-run: Actions > "Gemini Advisory PR Review" > Run workflow, with the PR number.
-- Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review brief `.github/review_context.md` (max 6000 characters; the script fails if it is missing or longer).
+- Files: workflow `.github/workflows/gemini-pr-review.yml`, script `.github/scripts/review_agent.py` with tests `test_review_agent.py`, review briefs (see "How a review is built" below).
 - The workflow checks out the base commit, so changes to the script or brief take effect after they are merged.
 - Review skipped with a notice: the PR looks like it contains a secret (test files are not scanned by the reviewer; `ci-secrets` still covers them). Empty or failed model answers post nothing and fail the job.
+
+### How a review is built (components)
+
+One workflow per reviewer and one script serve every component. The script groups the changed files by component using `.github/review/components.json` (backend, frontend, mobile, infra, ci, docs; longest path prefix wins, anything else is "other") and builds each request from:
+
+- the common brief `.github/review_context.md` (max 6000 characters), plus
+- one short brief per component that changed, in `.github/review/<name>.md` (max 3000 characters each; `contract.md` for the API-contract pass). The script fails with a clear message if a brief is too long.
+
+Size handling: generated and bulky files are dropped (lock files, `*.g.dart`, `build/`, images, Gradle wrapper, ...) and listed as "excluded asset". Within the budget (40 000 characters per request) files are taken in the order source, configuration, tests, documentation. When the whole change does not fit, each component is reviewed in its own request (at most four, smallest merged) and the answers are merged into the one summary comment. If the backend and a client (web or mobile) changed together, one extra request compares the API files with the client files (the contract pass). Each request also gets the first lines of the changed source files, so a name imported at the top of a file is not reported as undefined.
+
+Added a component? Add an entry to `components.json`, a brief in `.github/review/`, and (if it has generated files or its own test layout) the patterns in `scripts/review_components.py` with a test. Like the script, the map and briefs are read from the default branch.
+
+Files that must not be in git (key stores, `key.properties`, `google-services.json`, `.env` files, private keys) make the reviewer stop with a notice that names them; the diff is not sent to a model.
+
+Manual runs accept two optional inputs: `components` (for example `mobile,docs`) to review only those components, and `focus` (up to 300 characters) to say what to look at most closely.
 
 ### Reading and answering the review
 

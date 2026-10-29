@@ -1,0 +1,12 @@
+- **Layout:** routers `app/api/v1/` (HTTP, auth, response only), business rules in `app/services/`, models `app/models/`, schemas `app/schemas/`. Business logic only in a router is a defect.
+- **SQL:** SQLAlchemy expressions only, no raw SQL strings. Check bounded queries, no N+1, no unbounded results (`page_size` max 100), no `COUNT(*)` over wide joins. Every new filter/sort column needs an index. Aggregates are computed in SQL.
+- **Async:** no blocking I/O or synchronous SQLAlchemy calls inside `async def` handlers (use the thread pool or a dedicated engine).
+- **Migrations:** Alembic, one per change; large index additions use `CONCURRENTLY`; table-rewriting `ALTER` needs a plan. Constraints (`UNIQUE`, `FK`, `CHECK`) must back code-level checks. Names follow `NAMING_CONVENTION`.
+- **Time:** timezone-aware UTC only. `Base.type_annotation_map` already maps every `Mapped[datetime]` to `DateTime(timezone=True)`, so do not flag it. `utc_now()` lives in `app/services/profiles.py`.
+- **Freelancers have no approval or active flag** (only organisations have an approval status). Do not ask for one on freelancer lookups.
+- **State machines:** organisation approval (`pending` -> `approved`/`rejected`; only approved can log in). Vouch (`pending` -> `approved` when the freelancer accepts, or `revoked`; revoking sets it inactive; vouching again restarts at `pending`; only approved AND active vouches are shown). Flag illegal transitions, double submits, `status`/`is_active` disagreeing.
+- **Settings:** required settings have no default; the only settings with defaults are the safety limits (`REVEAL_MAX_*`, chat limits). Secrets are `SecretStr`, registered with the log redactor.
+- **Rate limits:** parallel requests must not slip past a limit (row lock or equivalent). Retry-After on 429.
+- **Reports:** validate path handling and recipients; CSV cells starting with `=`, `+`, `-`, `@` are neutralised.
+- **WebSocket/chat (when present):** first-frame auth, never a token in the URL; role and participant check on every frame; idempotent send by `client_message_id`; bounded frame size and rate; no message text in logs.
+- **Tests:** pytest; limits set directly in `conftest.py`; no real secrets.
