@@ -32,7 +32,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 
 | Web page | Web source | App screen | Status | Test file |
 |---|---|---|---|---|
-| Profile and rate (name, mobile, WhatsApp, nationality, language, rate, currency, negotiable) | `portals/freelancer/ProfilePage.tsx` | Profile | not started | |
+| Profile and rate (name, mobile, WhatsApp, nationality, language, rate, currency, negotiable) | `portals/freelancer/ProfilePage.tsx` | Profile | done | `test/features/freelancer/profile_test.dart` |
 | Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | Labels editor | not started | |
 | Unavailability (month calendar on tablet/desktop; list on phone) | `AvailabilityPage.tsx`, `MonthCalendar.tsx` | Availability list with add/edit/delete | not started | |
 | My ratings (received, paged) | `RatingsPage.tsx` | Ratings received | not started | |
@@ -70,7 +70,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Behaviour | Web source | Status |
 |---|---|---|
 | Error codes -> messages (`errorMessage`) incl. `invalid_credentials`, `too_many_attempts` (minutes from `Retry-After`), `organisation_pending/rejected` | `shared/errors.ts` | done: `core/errors/error_messages.dart`, used by every form (`test/core/errors/error_messages_test.dart`, `test/features/auth/auth_flow_test.dart`) |
-| Validation rules and tests ported | `shared/validation.ts`, `validation.test.ts` | in progress: login, register, forgot password (`core/validation`, `test/core/validation/validators_test.dart`); profile rules in phase 2 |
+| Validation rules and tests ported | `shared/validation.ts`, `validation.test.ts` | in progress: login, register, forgot password, freelancer profile and rate (`core/validation`, `test/core/validation/validators_test.dart`); the other forms with their features |
 | Date / timezone handling (aware timestamps, local input) | `shared/dates.ts` | not started |
 | Silent refresh on `401`, logout on refresh failure | `api/http.ts` | done: `core/api/api_client.dart` + `test/core/api/api_client_test.dart`; an expired session returns to the welcome screen (`test/features/home/session_test.dart`) |
 | Terminology tokens and `church` profile | `terminology/terms.ts` | done: `core/terminology/` + tests; screens show the server's words under both profiles (`test/features/auth/auth_flow_test.dart`) |
@@ -97,7 +97,7 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | POST `/auth/forgot-password` | public | ForgotPassword | Forgot password | done |
 | POST `/auth/reset-password` | public | ResetPassword | browser in v1 | n/a (v1) |
 | GET `/me` | * | AuthContext, Dashboard | session / dashboard | done |
-| GET, PUT `/freelancers/me` | F | ProfilePage | Profile | not started |
+| GET, PUT `/freelancers/me` | F | ProfilePage | Profile | done |
 | PUT `/freelancers/me/labels` | F | LabelsPage | Labels | not started |
 | GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | not started |
 | GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | not started |

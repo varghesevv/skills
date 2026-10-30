@@ -77,6 +77,8 @@ void main() {
       'POST /auth/register/workhost': '201',
       'POST /auth/register/organisation': '201',
       'GET /me': '200',
+      'GET /freelancers/me': '200',
+      'PUT /freelancers/me': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -185,6 +187,45 @@ void main() {
       expect(required('AppConfig'), {'terminology', 'app'});
       expect(required('Terminology'), {'profile', 'terms'});
       expect(required('AppVersions'), {'min_version', 'latest_version'});
+    });
+  });
+
+  group('freelancer profile', () {
+    test('the update body has the fields the form sends', () {
+      expect(requestSchema('PUT', '/freelancers/me'), 'FreelancerUpdate');
+      expect(
+        properties('FreelancerUpdate'),
+        containsAll([
+          'full_name',
+          'mobile_number',
+          'whatsapp_availability',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+        ]),
+      );
+    });
+
+    test('the profile answer has the fields the app reads', () {
+      expect(responseSchema('GET', '/freelancers/me', '200'), 'FreelancerMe');
+      expect(responseSchema('PUT', '/freelancers/me', '200'), 'FreelancerMe');
+      expect(
+        properties('FreelancerMe'),
+        containsAll([
+          'id',
+          'full_name',
+          'email',
+          'mobile_number',
+          'whatsapp_availability',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+        ]),
+      );
     });
   });
 }

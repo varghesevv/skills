@@ -132,3 +132,21 @@ Future<void> tapKey(WidgetTester tester, String key) async {
   await tester.tap(finder);
   await tester.pumpAndSettle();
 }
+
+/// Seeds a saved session, as after an app restart: only the refresh token survives.
+void signedInAs(
+  FakeAdapter adapter,
+  MemoryTokenStore store,
+  String userType, {
+  String? name,
+}) {
+  store.save(accessToken: fresh('old'), refreshToken: fresh('r'));
+  store.clearAccessForRestart();
+  adapter
+    ..reply(
+      'POST',
+      '/auth/refresh',
+      FakeReply(200, tokens(fresh('a'), fresh('r'))),
+    )
+    ..reply('GET', '/me', FakeReply(200, meJson(userType, name: name)));
+}

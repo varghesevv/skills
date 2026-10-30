@@ -37,6 +37,12 @@ class FakeAdapter implements HttpClientAdapter {
     (_replies['$method $path'] ??= []).add(reply);
   }
 
+  /// Replaces whatever was queued for this request with one reply (for example "the server is
+  /// back" after an error).
+  void setReply(String method, String path, FakeReply reply) {
+    _replies['$method $path'] = [reply];
+  }
+
   int count(String method, String path) =>
       seen.where((r) => r.method == method && r.path == path).length;
 
