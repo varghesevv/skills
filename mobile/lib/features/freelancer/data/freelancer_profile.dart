@@ -22,7 +22,7 @@ class FreelancerProfile {
         whatsappAvailability: json['whatsapp_availability'] as bool,
         nationality: json['nationality'] as String?,
         primaryLanguage: json['primary_language'] as String?,
-        ratePerHour: (json['rate_per_hour'] as num?)?.toDouble(),
+        ratePerHour: _rate(json['rate_per_hour']),
         rateCurrency: json['rate_currency'] as String?,
         isRateNegotiable: json['is_rate_negotiable'] as bool,
       );
@@ -38,6 +38,15 @@ class FreelancerProfile {
   final String? rateCurrency;
   final bool isRateNegotiable;
 }
+
+/// The API sends the rate as a JSON number; a numeric string is accepted too, so a change of the
+/// server's number format cannot break every profile. Anything else is a bad response.
+double? _rate(Object? value) => switch (value) {
+  null => null,
+  num() => value.toDouble(),
+  String() => double.parse(value),
+  _ => throw const FormatException('rate_per_hour'),
+};
 
 /// What the profile form sends (`PUT /freelancers/me`). Empty optional text and an empty rate
 /// are sent as `null`, so the API stores nothing.
