@@ -1,6 +1,6 @@
 # 04 REST API
 
-Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`). Decision record: [ADR-0004](../adr/0004-stateless-token-auth-for-web-and-mobile.md).
+Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`) and committed as [`docs/openapi.json`](../openapi.json), which CI keeps equal to the code (`make openapi` rewrites it). The mobile app's tests read that file (`mobile/test/contract/`), so a change to an endpoint or field the app uses fails in the same pull request. Decision record: [ADR-0004](../adr/0004-stateless-token-auth-for-web-and-mobile.md).
 
 ## Conventions (must work for web and mobile)
 

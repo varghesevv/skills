@@ -31,8 +31,9 @@ Build one app in **Flutter** (Dart, Material 3) in the `mobile/` folder of this 
 - One code base for Android and, later, iOS. Planned: a mobile release train separate from the web
   (a release-please package `mobile`, decision 2 in [mobile-app-plan.md](../mobile-app-plan.md)).
 - A Dart toolchain joins the repository: `flutter analyze`, `dart format`, `flutter test` run in
-  `ci-mobile`. Planned (backend item B7): models are generated from an exported, CI-checked OpenAPI
-  file so the app cannot drift from the API.
+  `ci-mobile`. The API contract is exported to `docs/openapi.json` and checked in CI (backend item B7);
+  the app's contract test reads it so the app cannot drift from the API. Whether the Dart models are
+  also generated from it is decided with the first feature that needs many models (phase 2).
 - Tokens are kept in the platform keystore through `flutter_secure_storage`; server addresses are
   build settings, signing and Firebase files are CI secrets and never committed
   ([ADR-0011](0011-secrets-from-environment-only.md)).

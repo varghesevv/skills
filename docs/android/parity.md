@@ -131,4 +131,4 @@ Ids follow [plan](plan.md) section 3 and are listed in order. The reveal endpoin
 | B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}` | test builds behind login | not started |
 | B5 | POST `/devices`, DELETE `/devices/{id}`, outbox, FCM sender | push | not started |
 | B6 | `/chat/*` REST, `/chat/ws`, moderation, RP-09, RP-10 | chat | not started |
-| B7 | `docs/openapi.json` exported and checked in CI | generated Dart models, drift check | not started |
+| B7 | `docs/openapi.json` exported and checked in CI (`make openapi`); app contract test `mobile/test/contract/api_contract_test.dart` | drift check. Generated Dart models are not part of B7 (see decision in the PR) | done |

@@ -6,7 +6,7 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths: ["mobile/**", ".github/workflows/ci-mobile.yml"]
+    paths: ["mobile/**", "docs/openapi.json", ".github/workflows/ci-mobile.yml"]
 
 permissions:
   contents: read

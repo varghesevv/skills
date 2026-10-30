@@ -56,7 +56,7 @@ Skills is released under the [MIT licence](LICENSE). By opening a pull request y
 - Code follows the specification; spec updated if behaviour changed.
 - Tests added or updated and passing in CI.
 - Migration included and reversible if the schema changed.
-- OpenAPI schema still valid; no breaking change to `/api/v1` once the mobile app has shipped.
+- OpenAPI schema still valid; no breaking change to `/api/v1` once the mobile app has shipped. If you change an endpoint or a schema, run `make openapi` and commit `docs/openapi.json`; `ci-backend` and a backend test fail when it is out of date.
 - No secrets committed or logged (see Secrets above); `ci-secrets` passes. Configuration through environment variables.
 - Reviewed and approved.
 
