@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
@@ -173,9 +174,17 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
         gap(Text(text('profile.lead'))),
-        if (_formError != null) gap(MessageBanner(_formError!)),
-        if (_saved)
-          gap(MessageBanner(text('common.saved'), kind: BannerKind.success)),
+        gap(
+          Card(
+            child: ListTile(
+              key: const Key('open-labels'),
+              leading: const Icon(Icons.sell_outlined),
+              title: Text(text('nav.labels')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/freelancer/profile/labels'),
+            ),
+          ),
+        ),
         gap(Text(text('profile.contact'), style: theme.textTheme.titleMedium)),
         gap(
           AppTextField(
@@ -301,6 +310,10 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           title: Text(text('profile.negotiable')),
         ),
         const SizedBox(height: 8),
+        // Next to the button that was just pressed, so the result is seen on a long form.
+        if (_formError != null) gap(MessageBanner(_formError!)),
+        if (_saved)
+          gap(MessageBanner(text('common.saved'), kind: BannerKind.success)),
         FilledButton(
           key: const Key('profile-save'),
           onPressed: _busy ? null : _save,

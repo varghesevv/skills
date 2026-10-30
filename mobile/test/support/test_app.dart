@@ -150,3 +150,11 @@ void signedInAs(
     )
     ..reply('GET', '/me', FakeReply(200, meJson(userType, name: name)));
 }
+
+/// Taps a tab of the bottom navigation (the same word may also appear on the screen itself).
+Future<void> tapTab(WidgetTester tester, String label) async {
+  await tester.tap(
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
+  );
+  await tester.pumpAndSettle();
+}

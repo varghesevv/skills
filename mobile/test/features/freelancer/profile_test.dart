@@ -51,8 +51,7 @@ Future<TestApp> openProfile(
       );
     },
   );
-  await tester.tap(find.text('Profile'));
-  await tester.pumpAndSettle();
+  await tapTab(tester, 'Profile');
   return app;
 }
 
@@ -65,9 +64,13 @@ void main() {
   group('navigation', () {
     testWidgets('a freelancer has Home, Profile and Settings', (tester) async {
       await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'freelancer'));
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
+      Finder tab(String label) => find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text(label),
+      );
+      expect(tab('Home'), findsOneWidget);
+      expect(tab('Profile'), findsOneWidget);
+      expect(tab('Settings'), findsOneWidget);
     });
 
     testWidgets('a work host has no Profile tab yet', (tester) async {

@@ -23,6 +23,8 @@ class AsyncView<T> extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = ref.watch(appTextProvider);
     return value.when(
+      // Reloading in the background (after a save) keeps the screen and what was typed.
+      skipLoadingOnReload: true,
       data: builder,
       loading: () => Center(
         child: Semantics(

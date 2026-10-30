@@ -21,7 +21,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Forgot password (`/forgot-password`) | `pages/ForgotPassword.tsx` | Forgot password (always shows the generic confirmation) | done | `test/features/auth/auth_flow_test.dart` |
 | Reset password (`/reset-password?token=`) | `pages/ResetPassword.tsx` | v1: link opens in the browser; no app screen | n/a (v1) | |
 | Not found | `pages/NotFound.tsx` | Unknown-route screen | not started | |
-| Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | done (account facts; shortcuts come with the features) | `test/features/home/session_test.dart`, `test/features/auth/auth_flow_test.dart` |
+| Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | done (account facts; "Where to go next" shortcuts for the freelancer, more with the other features) | `test/features/home/session_test.dart`, `test/features/auth/auth_flow_test.dart` |
 | Log out | `auth/AuthContext.tsx` | Settings: log out (revokes refresh token) | done | `test/features/home/session_test.dart` |
 | Downloads page (login protected) | planned, `mobile-app-plan.md` 6.4 (API merged as B4, web page not built yet) | Settings: version and "update available" hint | not started | |
 | (new) Minimum-version / update-required screen | none on web | Blocking screen from the server's `min_version` (B1, merged) | done (blocking screen; the "update available" hint comes with B4) | `test/app/config_gate_test.dart` |
@@ -33,7 +33,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Web page | Web source | App screen | Status | Test file |
 |---|---|---|---|---|
 | Profile and rate (name, mobile, WhatsApp, nationality, language, rate, currency, negotiable) | `portals/freelancer/ProfilePage.tsx` | Profile | done | `test/features/freelancer/profile_test.dart` |
-| Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | Labels editor | not started | |
+| Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | Labels editor | done (opens from the dashboard and the Profile screen; keeps the bottom bar) | `test/features/freelancer/labels_test.dart` |
 | Unavailability (month calendar on tablet/desktop; list on phone) | `AvailabilityPage.tsx`, `MonthCalendar.tsx` | Availability list with add/edit/delete | not started | |
 | My ratings (received, paged) | `RatingsPage.tsx` | Ratings received | not started | |
 | My organisation vouches (accept / reject) | `VouchesPage.tsx` | Vouches | not started | |
@@ -98,8 +98,8 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | POST `/auth/reset-password` | public | ResetPassword | browser in v1 | n/a (v1) |
 | GET `/me` | * | AuthContext, Dashboard | session / dashboard | done |
 | GET, PUT `/freelancers/me` | F | ProfilePage | Profile | done |
-| PUT `/freelancers/me/labels` | F | LabelsPage | Labels | not started |
-| GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | not started |
+| PUT `/freelancers/me/labels` | F | LabelsPage | Labels | done |
+| GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | in progress: the catalogue for the labels screen is done; the filter sheet of the work host search reuses it (phase 3) |
 | GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | not started |
 | GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | not started |
 | GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail, as work host or organisation only (no admin screens). The response never contains email or mobile number; the number comes only from reveal-mobile | not started |
