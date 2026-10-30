@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/app.dart';
 
@@ -99,13 +98,12 @@ Future<TestApp> pumpApp(
   final dio = Dio(BaseOptions(baseUrl: 'https://api.test/api/v1'))
     ..httpClientAdapter = adapter;
   await tester.pumpWidget(
-    ProviderScope(
+    appRoot(
       overrides: [
         dioProvider.overrideWithValue(dio),
         tokenStoreProvider.overrideWithValue(store),
         appVersionProvider.overrideWithValue(appVersion),
       ],
-      child: const SkillsApp(),
     ),
   );
   await tester.pumpAndSettle();

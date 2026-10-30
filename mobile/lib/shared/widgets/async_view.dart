@@ -23,8 +23,11 @@ class AsyncView<T> extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = ref.watch(appTextProvider);
     return value.when(
-      // Reloading in the background (after a save) keeps the screen and what was typed.
-      skipLoadingOnReload: true,
+      // Reloading in the background after a save keeps the screen and what was typed, but only
+      // when there is data to keep: after an error, "Try again" (an invalidate, which Riverpod
+      // calls a refresh) shows the spinner again instead of the old error.
+      skipLoadingOnRefresh: value.hasValue,
+      skipLoadingOnReload: value.hasValue,
       data: builder,
       loading: () => Center(
         child: Semantics(

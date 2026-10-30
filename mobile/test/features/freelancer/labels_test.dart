@@ -274,6 +274,38 @@ void main() {
       });
     });
 
+    testWidgets(
+      'a level the server attached to a non-skill label is not sent back',
+      (tester) async {
+        final app = await openLabels(
+          tester,
+          labels: [
+            chosen(
+              label('s3', 'Plumbing', 'skill'),
+              label('v3', '80%', 'skill_level'),
+            ),
+            // Levels belong to skills; this one could be neither seen nor cleared on this screen.
+            chosen(
+              label('l2', 'English', 'language'),
+              label('v1', 'basic', 'skill_level'),
+            ),
+          ],
+        );
+        app.adapter.reply(
+          'PUT',
+          '/freelancers/me/labels',
+          FakeReply(200, <Object?>[]),
+        );
+        await tapKey(tester, 'labels-save');
+        final body =
+            app.adapter.seen.firstWhere((r) => r.method == 'PUT').body! as Map;
+        expect(body['labels'], [
+          {'label_id': 's3', 'level_label_id': 'v3'},
+          {'label_id': 'l2', 'level_label_id': null},
+        ]);
+      },
+    );
+
     testWidgets('choosing nothing at all is saved as an empty set', (
       tester,
     ) async {

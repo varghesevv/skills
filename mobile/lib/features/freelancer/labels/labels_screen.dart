@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
+import '../../../core/strings/app_text.dart';
 import '../../../shared/widgets/async_view.dart';
 import '../../../shared/widgets/message_banner.dart';
 import '../data/freelancer_profile.dart';
@@ -69,7 +70,12 @@ class _LabelsFormState extends ConsumerState<_LabelsForm> {
     _selection = {
       for (final item in widget.profile.labels)
         if (active.contains(item.label.id))
-          item.label.id: item.level != null && active.contains(item.level!.id)
+          // A level belongs to a skill only; one on any other kind is not kept (it could not be
+          // seen or cleared on this screen).
+          item.label.id:
+              item.label.type == 'skill' &&
+                  item.level != null &&
+                  active.contains(item.level!.id)
               ? item.level!.id
               : null,
     };
@@ -150,7 +156,7 @@ class _LabelsFormState extends ConsumerState<_LabelsForm> {
   }
 
   Widget _group(
-    dynamic text,
+    AppText text,
     ThemeData theme,
     String type,
     String titleKey,

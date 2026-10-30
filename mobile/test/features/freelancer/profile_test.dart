@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -159,6 +161,43 @@ void main() {
       await tester.pumpAndSettle();
       expect(fieldText(tester, 'Full name'), 'Pat Example');
     });
+
+    testWidgets(
+      '"Try again" shows the spinner again while the new answer is awaited',
+      (tester) async {
+        final app = await openProfile(
+          tester,
+          reply: FakeReply(503, apiError('service_unavailable')),
+        );
+        expect(
+          find.text(
+            'The service is temporarily unavailable. Please try again soon.',
+          ),
+          findsOneWidget,
+        );
+        final gate = Completer<void>();
+        app.adapter.setReply(
+          'GET',
+          '/freelancers/me',
+          FakeReply(200, profileJson(), const {}, gate.future),
+        );
+        await tester.tap(find.text('Try again'));
+        // The request is in flight and the server has not answered yet.
+        await tester.pump();
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          find.text(
+            'The service is temporarily unavailable. Please try again soon.',
+          ),
+          findsNothing,
+        );
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(fieldText(tester, 'Full name'), 'Pat Example');
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
 
     testWidgets('checks the fields before saving', (tester) async {
       final app = await openProfile(tester);
