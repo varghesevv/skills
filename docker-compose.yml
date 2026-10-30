@@ -40,7 +40,11 @@ services:
   api:
     build: ./backend
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      # Empty = test builds off locally. Only the api reads these.
+      DOWNLOADS_DIR: ${DOWNLOADS_DIR:-}
+      DOWNLOAD_MAX_PER_HOUR: ${DOWNLOAD_MAX_PER_HOUR:-20}
     ports:
       - "${API_PORT:?Run make env to create or complete .env}:8000"
     volumes:

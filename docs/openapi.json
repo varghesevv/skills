@@ -35,6 +35,71 @@
         "title": "AppVersions",
         "type": "object"
       },
+      "DownloadList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DownloadOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DownloadList",
+        "type": "object"
+      },
+      "DownloadOut": {
+        "properties": {
+          "build": {
+            "title": "Build",
+            "type": "integer"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "released_at": {
+            "format": "date-time",
+            "title": "Released At",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform",
+          "version",
+          "build",
+          "released_at",
+          "size_bytes",
+          "sha256",
+          "notes",
+          "filename"
+        ],
+        "title": "DownloadOut",
+        "type": "object"
+      },
       "ForgotPasswordRequest": {
         "properties": {
           "email": {
@@ -2311,6 +2376,74 @@
           }
         },
         "summary": "App Config",
+        "tags": [
+          "app"
+        ]
+      }
+    },
+    "/api/v1/app/downloads": {
+      "get": {
+        "description": "Test builds of the mobile app. Any logged-in person; nobody else can see them.",
+        "operationId": "list_downloads_api_v1_app_downloads_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Downloads",
+        "tags": [
+          "app"
+        ]
+      }
+    },
+    "/api/v1/app/downloads/android/{version}": {
+      "get": {
+        "description": "The APK of one published version, with the bearer token like every other request.",
+        "operationId": "download_android_api_v1_app_downloads_android__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download Android",
         "tags": [
           "app"
         ]
