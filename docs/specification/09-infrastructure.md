@@ -197,7 +197,7 @@ Build the demo so production is a configuration change, not a rewrite:
 ## Implementation notes (phase 7b-1: containers and server scripts)
 
 - Files: `infra/docker/compose.demo.yml`, `infra/docker/Caddyfile`, `infra/docker/demo.env.example`, `infra/scripts/{bootstrap-server,deploy,backup,restore}.sh`, workflows `build-images.yml` and `ci-infra.yml` (shellcheck, compose and Caddyfile validation). See `infra/README.md`.
-- No separate data disk (section 0): PostgreSQL data is bind-mounted from `/opt/skills/data/postgres` and report files from `/opt/skills/data/reports`; mobile test builds live in `/opt/skills/data/downloads`, mounted read-only into the API only.
+- No separate data disk (section 0): PostgreSQL data is bind-mounted from `/opt/skills/data/postgres` and report files from `/opt/skills/data/reports`; mobile test builds live in `/opt/skills/data/downloads`, mounted read-only into the API only. The API's hourly download limit is counted in each process's memory; before running more than one API task (production, ADR-0012) it must move to a shared store such as a database table.
 - `build-images.yml` runs on GitHub-hosted runners (images are `linux/amd64`, as the Lightsail instance is x86_64), scans each image with Trivy before pushing and fails on critical findings. Third-party actions are pinned to a version tag; pinning to commit SHAs is part of hardening (phase 8).
 - The api runs with `--proxy-headers --forwarded-allow-ips=*` behind Caddy so login throttling sees the real client address. This is safe only because Caddy is the sole way in.
 - Caddy serves HTTP/1.1 and HTTP/2 only, so no UDP port is needed. A Content-Security-Policy header is left for phase 8.

@@ -1,8 +1,10 @@
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import unittest
+from unittest import mock
 from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -68,6 +70,61 @@ class AddDownloadTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.add("1.0.0", notes="x" * 4001)
         self.assertFalse(self.folder.exists() and any(self.folder.rglob("*.apk")))
+
+    def test_a_damaged_index_stops_before_anything_is_copied(self) -> None:
+        self.folder.mkdir()
+        for content in ("{ not json", "[]", '{"android": "x"}', '{"android": [{"version": "../x", "build": 1}]}',
+                        '{"android": [{"version": "1.0.0", "build": "one"}]}', '{"android": [1]}'):
+            (self.folder / "index.json").write_text(content, encoding="utf-8")
+            with self.assertRaises(ValueError, msg=content):
+                self.add("2.0.0")
+            self.assertFalse((self.folder / "android").exists(), content)
+        self.assertEqual((self.folder / "index.json").read_text("utf-8"), '{"android": [1]}')  # untouched
+
+    def test_a_version_from_the_index_can_never_delete_outside_the_android_folder(self) -> None:
+        outside = self.root / "keep-me"
+        outside.mkdir()
+        (outside / "important.txt").write_text("data", encoding="utf-8")
+        self.add("1.0.0")
+        index = self.index()
+        index["android"].append({"version": "..", "build": 1})
+        (self.folder / "index.json").write_text(json.dumps(index), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.add("1.1.0", keep=1)
+        self.assertTrue((outside / "important.txt").exists())
+
+    def test_nothing_is_left_behind_when_a_step_fails(self) -> None:
+        with mock.patch.object(add_download.shutil, "copyfile", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                self.add("1.0.0")
+        leftovers = [p for p in self.folder.rglob("*") if p.is_file()]
+        self.assertEqual(leftovers, [])
+
+    def test_the_index_is_written_before_old_builds_are_deleted(self) -> None:
+        for minor in range(3):
+            self.add(f"1.{minor}.0", keep=3)
+        real_write = add_download.write_atomic
+
+        def failing_write(path, data):
+            if path.name == "index.json":
+                raise OSError("cannot write")
+            real_write(path, data)
+
+        with mock.patch.object(add_download, "write_atomic", side_effect=failing_write):
+            with self.assertRaises(OSError):
+                self.add("1.3.0", keep=3)
+        self.assertTrue((self.folder / "android" / "1.0.0").exists())  # still there
+
+    def test_files_and_folders_are_readable_by_another_user_even_with_a_strict_umask(self) -> None:
+        previous = os.umask(0o077)
+        try:
+            self.add("1.0.0")
+        finally:
+            os.umask(previous)
+        for folder in (self.folder, self.folder / "android", self.folder / "android" / "1.0.0"):
+            self.assertEqual(folder.stat().st_mode & 0o777, 0o755, folder)
+        for file in (self.folder / "index.json", self.folder / "android" / "1.0.0" / "skills-demo-1.0.0.apk"):
+            self.assertEqual(file.stat().st_mode & 0o777, 0o644, file)
 
     def test_missing_apk_is_an_error(self) -> None:
         with self.assertRaises(ValueError):

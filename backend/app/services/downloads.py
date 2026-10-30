@@ -14,8 +14,9 @@ import json
 import logging
 import math
 import re
+import threading
 import time
-from collections import defaultdict, deque
+from collections import deque
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -99,35 +100,60 @@ def android_file(settings: Settings, version: str) -> tuple[Path, IndexEntry]:
     path = (base / "android" / entry.version / entry.file).resolve()
     if not path.is_relative_to(base) or not path.is_file():
         raise not_found
-    logger.info("download android version=%s", entry.version)  # no person is recorded
     return path, entry
 
 
 class DownloadLimiter:
     """At most `limit` downloads per person per hour. Kept in this process's memory, which is
-    enough for one API instance; with several instances each allows its own share."""
+    enough for one API instance; with several instances each allows its own share (see
+    docs/specification/09-infrastructure.md).
+
+    Requests run in a thread pool, so the read-prune-compare-append sequence is guarded by a lock:
+    parallel requests cannot both slip under the limit."""
+
+    # Above this many people the idle ones are dropped, so the memory stays bounded.
+    SWEEP_ABOVE = 1000
 
     def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
         self._clock = clock
-        self._seen: dict[str, deque[float]] = defaultdict(deque)
+        self._lock = threading.Lock()
+        self._seen: dict[str, deque[float]] = {}
 
     def check(self, person: str, limit: int) -> None:
-        now = self._clock()
-        times = self._seen[person]
+        with self._lock:
+            now = self._clock()
+            if len(self._seen) > self.SWEEP_ABOVE:
+                self._sweep(now)
+            times = self._seen.setdefault(person, deque())
+            self._prune(times, now)
+            if len(times) >= limit:
+                wait = math.ceil(WINDOW_SECONDS - (now - times[0]))
+                raise ApiError(
+                    429,
+                    "download_limit_reached",
+                    "You have downloaded too many files. Try again later.",
+                    headers={"Retry-After": str(max(wait, 1))},
+                )
+            times.append(now)
+
+    @staticmethod
+    def _prune(times: deque[float], now: float) -> None:
         while times and now - times[0] >= WINDOW_SECONDS:
             times.popleft()
-        if len(times) >= limit:
-            wait = math.ceil(WINDOW_SECONDS - (now - times[0]))
-            raise ApiError(
-                429,
-                "download_limit_reached",
-                "You have downloaded too many files. Try again later.",
-                headers={"Retry-After": str(max(wait, 1))},
-            )
-        times.append(now)
+
+    def _sweep(self, now: float) -> None:
+        for person in list(self._seen):
+            self._prune(self._seen[person], now)
+            if not self._seen[person]:
+                del self._seen[person]
 
     def reset(self) -> None:
-        self._seen.clear()
+        with self._lock:
+            self._seen.clear()
+
+    def tracked_people(self) -> int:
+        with self._lock:
+            return len(self._seen)
 
 
 limiter = DownloadLimiter()

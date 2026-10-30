@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
@@ -10,6 +11,8 @@ from app.schemas.app_config import AppConfig
 from app.schemas.downloads import DownloadList
 from app.services import downloads
 from app.services.app_config import build_app_config
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/app", tags=["app"])
 
@@ -48,6 +51,8 @@ def download_android(
     downloads.limiter.check(
         f"{principal.user_type}:{principal.user_id}", settings.download_max_per_hour
     )
+    # Logged only after the limit check passed, and only the version: no person, no token.
+    logger.info("download android version=%s", entry.version)
     return FileResponse(
         path,
         media_type=downloads.APK_MEDIA_TYPE,

@@ -132,13 +132,22 @@ profile. In the `default` profile they are Organisation, Work host and Freelance
 
 Logged-in people (any role) can list and download Android test builds through the API; there is no public file address and the proxy does not serve the folder.
 
-- **Where:** `/opt/skills/data/downloads` on the server, mounted **read-only** at `/data/downloads` in the API container (`DOWNLOADS_DIR`). On a server that was set up before this existed, create it once: `sudo install -d -m 755 -o deploy -g deploy /opt/skills/data/downloads`, then deploy. (Without it Docker creates a root-owned folder and publishing fails.)
+| Setting | Default | Meaning |
+|---|---|---|
+| `DOWNLOADS_DIR` | empty (off); the demo sets `/data/downloads` | Folder with `index.json` and `android/<version>/`. Read by the **api** only; the worker has no mount. |
+| `DOWNLOAD_MAX_PER_HOUR` | `20` | Downloads per person per hour (`429 download_limit_reached`, `Retry-After`). Counted in the memory of one API process; see below. |
+
+Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deploy workflow writes the defaults above into the server's `.env` (`deploy-demo.yml`), so nothing has to be set in GitHub; change the numbers there if you need other values.
+
+- **Where:** `/opt/skills/data/downloads` on the server, mounted **read-only** at `/data/downloads` in the API container. On a server that was set up before this existed, create it once: `sudo install -d -m 755 -o deploy -g deploy /opt/skills/data/downloads`, then deploy. (Without it Docker creates a root-owned folder and publishing fails.)
 - **Publish a build** (as the deploy user, with a signed release APK; never a debug build):
   `python3 scripts/add-download.py --dir /opt/skills/data/downloads --apk app-release.apk --version 1.2.0 --build 17 --notes-file notes.md`
-  It writes `android/<version>/skills-demo-<version>.apk` and `index.json` (version, build, date, size, SHA-256, notes), replaces the same version, and keeps the newest 10. It prints only the version, size and SHA-256.
+  It writes `android/<version>/skills-demo-<version>.apk` and `index.json` (version, build, date, size, SHA-256, notes), replaces the same version, and keeps the newest 10. It prints only the version, size and SHA-256. Files are made mode `0644` and folders `0755` whatever the umask, because the API runs as another user (uid 10001). A damaged `index.json` is refused **before** anything is copied; the script says so and you fix or remove the file.
+- **Check after the first publish:** the API must be able to read it: `docker compose -f /opt/skills/compose.demo.yml exec api ls -l /data/downloads/android/<version>` shows the file, and `GET /api/v1/app/downloads` (logged in) lists the build.
 - **Remove a build:** delete its entry from `index.json` and its `android/<version>` folder. A file that is not in `index.json` can never be fetched.
-- **API:** `GET /api/v1/app/downloads` (list, newest first) and `GET /api/v1/app/downloads/android/{version}` (the APK, `Cache-Control: private, no-store`). Each download is logged with the version only, never the person or the token. If `index.json` is unreadable the list is empty and an error without content is logged.
-- **Install on a phone:** log in to the web app, open Downloads (a page for this is added separately), install, and allow "install from this source" once. Compare the SHA-256 shown in the list if you want to verify the file.
+- **API:** `GET /api/v1/app/downloads` (list, newest first) and `GET /api/v1/app/downloads/android/{version}` (the APK, `Cache-Control: private, no-store`). A download is logged with the version only, never the person or the token, and only after the limit check passed. If `index.json` is unreadable the list is empty and an error without content is logged.
+- **Several API instances:** the hourly counter lives in each process's memory, so each instance allows its own share. Before running more than one API task (ECS, ADR-0012), replace it with a shared counter (for example a database table, like the reveal limits).
+- **Install on a phone:** the web **Downloads page is not built yet** (it is a separate change), and the API needs the bearer token, so a phone browser cannot fetch the APK on its own. Until the page exists, the operator gives testers the file directly (for example `adb install`, or a file transfer) and testers compare the SHA-256 from the list. After the page ships: log in, open Downloads, install, allow "install from this source" once.
 
 ## 8. Security headers and limits
 

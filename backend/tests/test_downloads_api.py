@@ -2,6 +2,7 @@ import json
 import logging
 import subprocess
 import sys
+import threading
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -10,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.core.errors import ApiError
 from app.core.security import Principal, create_access_token
 from app.main import app
 from app.services import downloads
@@ -59,7 +61,15 @@ def auth(user_type: str = "freelancer", user_id: uuid.UUID | None = None) -> dic
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.mark.parametrize("path", [LIST_URL, f"{LIST_URL}/android/1.10.0"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        LIST_URL,
+        f"{LIST_URL}/android/1.10.0",
+        f"{LIST_URL}/android/9.9.9",
+        f"{LIST_URL}/android/latest",
+    ],
+)
 def test_a_login_is_required(client: TestClient, folder: Path, path: str) -> None:
     assert client.get(path).status_code == 401
     assert client.get(path, headers={"Authorization": "Bearer not-a-token"}).status_code == 401
@@ -136,6 +146,16 @@ def test_a_file_that_is_not_in_the_index_cannot_be_fetched(
     assert client.get(f"{LIST_URL}/android/secret.txt", headers=auth()).status_code == 404
 
 
+def test_every_kind_of_not_found_looks_the_same(client: TestClient, folder: Path) -> None:
+    """The caller cannot tell a missing build from a bad version or a missing file."""
+    (folder / "android" / "1.9.0" / "skills-demo-1.9.0.apk").unlink()  # listed, file gone
+    answers = {
+        client.get(f"{LIST_URL}/android/{version}", headers=auth()).text
+        for version in ("9.9.9", "latest", "1.2", "1.9.0")
+    }
+    assert len(answers) == 1
+
+
 def test_a_listed_version_whose_file_is_gone_is_404(client: TestClient, folder: Path) -> None:
     (folder / "android" / "1.10.0" / "skills-demo-1.10.0.apk").unlink()
     assert client.get(f"{LIST_URL}/android/1.10.0", headers=auth()).status_code == 404
@@ -204,10 +224,61 @@ def test_a_download_is_logged_without_the_person_or_the_token(
     client: TestClient, folder: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     headers = auth("freelancer", uuid.uuid4())
-    with caplog.at_level(logging.INFO, logger="app.services.downloads"):
+    with caplog.at_level(logging.INFO, logger="app.api.v1.app_info"):
         client.get(f"{LIST_URL}/android/1.10.0", headers=headers)
     assert "download android version=1.10.0" in caplog.text
     assert headers["Authorization"].split()[-1] not in caplog.text
+
+
+def test_parallel_requests_cannot_exceed_the_limit() -> None:
+    """The check runs in a thread pool: 40 threads against a limit of 2 let exactly 2 through."""
+    limiter = downloads.DownloadLimiter()
+    allowed: list[int] = []
+    refused: list[int] = []
+    gate = threading.Barrier(40)
+
+    def attempt(number: int) -> None:
+        gate.wait()
+        try:
+            limiter.check("same-person", 2)
+            allowed.append(number)
+        except ApiError:
+            refused.append(number)
+
+    threads = [threading.Thread(target=attempt, args=(n,)) for n in range(40)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert len(allowed) == 2
+    assert len(refused) == 38
+
+
+def test_idle_people_are_dropped_so_memory_stays_bounded() -> None:
+    now = [0.0]
+    limiter = downloads.DownloadLimiter(clock=lambda: now[0])
+    for number in range(downloads.DownloadLimiter.SWEEP_ABOVE + 5):
+        limiter.check(f"person-{number}", 5)
+    assert limiter.tracked_people() > downloads.DownloadLimiter.SWEEP_ABOVE
+    now[0] = downloads.WINDOW_SECONDS + 1  # an hour later, nobody is counted any more
+    limiter.check("someone-new", 5)
+    assert limiter.tracked_people() == 1
+
+
+def test_a_refused_download_is_not_logged_as_a_download(
+    client: TestClient,
+    folder: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setenv("DOWNLOAD_MAX_PER_HOUR", "1")
+    get_settings.cache_clear()
+    headers = auth("workhost", uuid.uuid4())
+    url = f"{LIST_URL}/android/1.10.0"
+    with caplog.at_level(logging.INFO, logger="app.api.v1.app_info"):
+        assert client.get(url, headers=headers).status_code == 200
+        assert client.get(url, headers=headers).status_code == 429
+    assert caplog.text.count("download android version=1.10.0") == 1
 
 
 def test_settings_default_to_off_and_twenty(monkeypatch: pytest.MonkeyPatch) -> None:

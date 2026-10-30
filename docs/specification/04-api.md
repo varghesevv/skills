@@ -23,7 +23,7 @@ Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`) and committed as
 | Method | Path | Notes |
 |---|---|---|
 | GET | /app/downloads | Any logged-in role. `{"items": [...]}`, newest first by version number; each item has `platform`, `version`, `build`, `released_at`, `size_bytes`, `sha256`, `notes`, `filename`. Empty when `DOWNLOADS_DIR` is not set. `Cache-Control: private, no-store`. |
-| GET | /app/downloads/android/{version} | Any logged-in role. The APK (`application/vnd.android.package-archive`, attachment). Only versions listed in `index.json` exist; anything else is `404`. At most `DOWNLOAD_MAX_PER_HOUR` per person per hour, then `429 download_limit_reached` with `Retry-After`. The token travels in the `Authorization` header, never in the address. |
+| GET | /app/downloads/android/{version} | Any logged-in role. The APK (`application/vnd.android.package-archive`, attachment). `{version}` is `X.Y.Z` (digits only). **Errors:** `401` for a missing, malformed or expired token (checked first); `404 not_found` for every other failure alike, without saying which: a version that is not `X.Y.Z`, a version that is not in `index.json`, a listed file that is missing, and a path that would leave the downloads folder; `429 download_limit_reached` with `Retry-After` after `DOWNLOAD_MAX_PER_HOUR` downloads per person per hour (counted per API process, see the operations runbook). The token travels in the `Authorization` header, never in the address. |
 
 ### Auth
 | Method | Path | Notes |

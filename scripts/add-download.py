@@ -17,6 +17,7 @@ Prints the version, size and SHA-256 only. Standard library only.
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import sys
@@ -41,13 +42,68 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
+def make_dir(path: Path) -> None:
+    """Creates a folder (and any missing parents) that the API container, another user, can
+    enter, whatever the umask is. Folders that already exist are left as they are."""
+    missing = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        current = current.parent
+    for folder in reversed(missing):
+        folder.mkdir()
+        os.chmod(folder, 0o755)
+
+
 def write_atomic(path: Path, data: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
-        handle.write(data)
-        temp = Path(handle.name)
-    temp.chmod(0o644)
-    temp.replace(path)
+    make_dir(path.parent)
+    handle = tempfile.NamedTemporaryFile(dir=path.parent, delete=False)
+    temp = Path(handle.name)
+    try:
+        with handle:
+            handle.write(data)
+        temp.chmod(0o644)
+        temp.replace(path)
+    finally:
+        temp.unlink(missing_ok=True)  # nothing is left behind when a step fails
+
+
+def copy_atomic(source: Path, path: Path) -> None:
+    make_dir(path.parent)
+    handle = tempfile.NamedTemporaryFile(dir=path.parent, delete=False)
+    temp = Path(handle.name)
+    handle.close()
+    try:
+        shutil.copyfile(source, temp)
+        temp.chmod(0o644)  # the API runs as another user and must be able to read it
+        temp.replace(path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def load_index(index_path: Path) -> dict:
+    """The existing index, checked for the shape this script and the API rely on.
+
+    Raises ValueError (before anything is copied) when it is not usable, so a damaged index never
+    leaves a half-published build behind."""
+    if not index_path.is_file():
+        return {}
+    try:
+        index = json.loads(index_path.read_text("utf-8"))
+    except (OSError, ValueError):
+        raise ValueError("index.json is not valid JSON; fix or remove it first") from None
+    entries = index.get("android", []) if isinstance(index, dict) else None
+    if not isinstance(entries, list):
+        raise ValueError("index.json has an unexpected shape; fix or remove it first")
+    for entry in entries:
+        if not (
+            isinstance(entry, dict)
+            and isinstance(entry.get("version"), str)
+            and VERSION_RE.fullmatch(entry["version"])
+            and isinstance(entry.get("build"), int)
+        ):
+            raise ValueError("index.json has an invalid entry; fix or remove it first")
+    return index
 
 
 def add_download(
@@ -75,13 +131,11 @@ def add_download(
     if not apk.is_file():
         raise ValueError("the APK file does not exist")
 
+    index_path = folder / "index.json"
+    index = load_index(index_path)  # before anything is written
+
     target = folder / "android" / version / name
-    target.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as handle:
-        temp = Path(handle.name)
-    shutil.copyfile(apk, temp)
-    temp.chmod(0o644)
-    temp.replace(target)
+    copy_atomic(apk, target)
 
     entry: dict[str, object] = {
         "version": version,
@@ -92,15 +146,18 @@ def add_download(
         "notes": notes,
         "file": name,
     }
-    index_path = folder / "index.json"
-    index = json.loads(index_path.read_text("utf-8")) if index_path.is_file() else {}
     entries = [e for e in index.get("android", []) if e.get("version") != version]
     entries.append(entry)
     entries.sort(key=lambda e: (version_key(e["version"]), e["build"]), reverse=True)
-    for old in entries[keep:]:
-        shutil.rmtree(folder / "android" / old["version"], ignore_errors=True)
     index["android"] = entries[:keep]
+    # The index goes first: if it cannot be written, no build has been deleted yet.
     write_atomic(index_path, (json.dumps(index, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+    android = (folder / "android").resolve()
+    for old in entries[keep:]:
+        # Versions were checked in load_index; the path must also stay inside the android folder.
+        doomed = (android / old["version"]).resolve()
+        if doomed.parent == android:
+            shutil.rmtree(doomed, ignore_errors=True)
     return entry
 
 

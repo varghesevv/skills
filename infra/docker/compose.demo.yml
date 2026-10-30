@@ -29,8 +29,6 @@ x-backend-env: &backend-env
   TERMINOLOGY_PROFILE: ${TERMINOLOGY_PROFILE:-default}
   APP_MIN_VERSION: ${APP_MIN_VERSION:-0.0.0}
   APP_LATEST_VERSION: ${APP_LATEST_VERSION:-0.0.0}
-  DOWNLOADS_DIR: /data/downloads
-  DOWNLOAD_MAX_PER_HOUR: ${DOWNLOAD_MAX_PER_HOUR:-20}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?missing in .env}
 
 services:
@@ -67,7 +65,11 @@ services:
     # Behind the proxy: trust the forwarded client address so login throttling sees real
     # addresses. Safe because only the proxy can reach this container.
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      # Only the api serves test builds (the worker has no downloads mount).
+      DOWNLOADS_DIR: ${DOWNLOADS_DIR:-/data/downloads}
+      DOWNLOAD_MAX_PER_HOUR: ${DOWNLOAD_MAX_PER_HOUR:-20}
     volumes:
       - /opt/skills/data/reports:/data/reports
       # Test builds of the mobile app. Read-only: the API can never change them, and the proxy
