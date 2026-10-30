@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     # only settings with defaults, because the limits are a safety net, not a deployment choice.
     reveal_max_per_hour: int = Field(default=10, ge=1)
     reveal_max_per_day: int = Field(default=20, ge=1)
+    # Test builds of the mobile app (GET /api/v1/app/downloads). An empty folder means the feature
+    # is off and the list is empty. The folder is mounted read-only into the API container.
+    downloads_dir: str = ""
+    download_max_per_hour: int = Field(default=20, ge=1)  # downloads per person per hour
     # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
     # default word profile, and no minimum version (every app version is accepted).
     terminology_profile: str = "default"

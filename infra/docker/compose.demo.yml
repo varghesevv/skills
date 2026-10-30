@@ -29,6 +29,8 @@ x-backend-env: &backend-env
   TERMINOLOGY_PROFILE: ${TERMINOLOGY_PROFILE:-default}
   APP_MIN_VERSION: ${APP_MIN_VERSION:-0.0.0}
   APP_LATEST_VERSION: ${APP_LATEST_VERSION:-0.0.0}
+  DOWNLOADS_DIR: /data/downloads
+  DOWNLOAD_MAX_PER_HOUR: ${DOWNLOAD_MAX_PER_HOUR:-20}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?missing in .env}
 
 services:
@@ -68,6 +70,9 @@ services:
     environment: *backend-env
     volumes:
       - /opt/skills/data/reports:/data/reports
+      # Test builds of the mobile app. Read-only: the API can never change them, and the proxy
+      # does not serve this folder, so there is no public address for a file.
+      - /opt/skills/data/downloads:/data/downloads:ro
     depends_on:
       db:
         condition: service_healthy

@@ -128,10 +128,23 @@ from the rest of the screen text: `badge_organisation`, `badge_workhost` and `ba
 profile. In the `default` profile they are Organisation, Work host and Freelancer. Edit them in
 `profiles.json` and redeploy; every profile must define all three.
 
+### Test builds of the mobile app (Downloads)
+
+Logged-in people (any role) can list and download Android test builds through the API; there is no public file address and the proxy does not serve the folder.
+
+- **Where:** `/opt/skills/data/downloads` on the server, mounted **read-only** at `/data/downloads` in the API container (`DOWNLOADS_DIR`). On a server that was set up before this existed, create it once: `sudo install -d -m 755 -o deploy -g deploy /opt/skills/data/downloads`, then deploy. (Without it Docker creates a root-owned folder and publishing fails.)
+- **Publish a build** (as the deploy user, with a signed release APK; never a debug build):
+  `python3 scripts/add-download.py --dir /opt/skills/data/downloads --apk app-release.apk --version 1.2.0 --build 17 --notes-file notes.md`
+  It writes `android/<version>/skills-demo-<version>.apk` and `index.json` (version, build, date, size, SHA-256, notes), replaces the same version, and keeps the newest 10. It prints only the version, size and SHA-256.
+- **Remove a build:** delete its entry from `index.json` and its `android/<version>` folder. A file that is not in `index.json` can never be fetched.
+- **API:** `GET /api/v1/app/downloads` (list, newest first) and `GET /api/v1/app/downloads/android/{version}` (the APK, `Cache-Control: private, no-store`). Each download is logged with the version only, never the person or the token. If `index.json` is unreadable the list is empty and an error without content is logged.
+- **Install on a phone:** log in to the web app, open Downloads (a page for this is added separately), install, and allow "install from this source" once. Compare the SHA-256 shown in the list if you want to verify the file.
+
 ## 8. Security headers and limits
 
 - Caddy adds HSTS, `nosniff`, a strict Content-Security-Policy (everything from the site's own origin), `X-Frame-Options: DENY`, a Permissions-Policy and removes the `Server` header. A page that suddenly breaks after a change may be blocked by the policy: open the browser developer console and look for "Content Security Policy" messages, then fix the page rather than loosening the policy.
 - Login throttling: five failed passwords for the same email and account type from the same address lock that login for 15 minutes (HTTP 429). There is no general request rate limit at the proxy in the demo; production adds one at the edge (ADR-0012).
+- Downloads of mobile test builds: each person may download `DOWNLOAD_MAX_PER_HOUR` files per hour (default 20); beyond that HTTP 429 `download_limit_reached` with `Retry-After`. The count is kept in the memory of one API process, so with several instances each allows its own share.
 - Mobile number reveals: each work host may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `phone_reveals` (no number is stored); the admin report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per work host".
 - Port 22 is open only to your addresses; ports 80 and 443 to the world.
 

@@ -19,6 +19,12 @@ Contract: OpenAPI 3 served at `/openapi.json` (docs at `/docs`) and committed as
 |---|---|---|
 | GET | /app/config | Public (no login). `{"terminology": {"profile", "terms": {...}}, "app": {"min_version", "latest_version"}}`. `terms` holds the words and address slugs of the active profile (`TERMINOLOGY_PROFILE`; an unknown name gives `default`), the same keys as `frontend/src/terminology/profiles.json`; a test fails when the two files differ. Versions are `X.Y.Z` from `APP_MIN_VERSION` and `APP_LATEST_VERSION` (default `0.0.0`, so nothing is blocked); the minimum must not be higher than the latest, otherwise the API refuses to start. `Cache-Control: public, max-age=300`. Stored `user_type` values and API paths never change with the words. Old apps are never rejected by the API; the app reads `min_version` and shows an update screen. |
 
+### Test builds of the mobile app
+| Method | Path | Notes |
+|---|---|---|
+| GET | /app/downloads | Any logged-in role. `{"items": [...]}`, newest first by version number; each item has `platform`, `version`, `build`, `released_at`, `size_bytes`, `sha256`, `notes`, `filename`. Empty when `DOWNLOADS_DIR` is not set. `Cache-Control: private, no-store`. |
+| GET | /app/downloads/android/{version} | Any logged-in role. The APK (`application/vnd.android.package-archive`, attachment). Only versions listed in `index.json` exist; anything else is `404`. At most `DOWNLOAD_MAX_PER_HOUR` per person per hour, then `429 download_limit_reached` with `Retry-After`. The token travels in the `Authorization` header, never in the address. |
+
 ### Auth
 | Method | Path | Notes |
 |---|---|---|

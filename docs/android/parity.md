@@ -23,7 +23,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Not found | `pages/NotFound.tsx` | Unknown-route screen | not started | |
 | Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | done (account facts; shortcuts come with the features) | `test/features/home/session_test.dart`, `test/features/auth/auth_flow_test.dart` |
 | Log out | `auth/AuthContext.tsx` | Settings: log out (revokes refresh token) | done | `test/features/home/session_test.dart` |
-| Downloads page (login protected) | planned, `mobile-app-plan.md` 6.4 | Settings: version and "update available" hint | backend B4 | |
+| Downloads page (login protected) | planned, `mobile-app-plan.md` 6.4 (API merged as B4, web page not built yet) | Settings: version and "update available" hint | not started | |
 | (new) Minimum-version / update-required screen | none on web | Blocking screen from the server's `min_version` (B1, merged) | done (blocking screen; the "update available" hint comes with B4) | `test/app/config_gate_test.dart` |
 | (new) "This build is not configured" screen (release builds only) | none on web | Names the missing `API_BASE_URL` / `APP_VERSION`; never shows values | done | `test/core/env_test.dart` |
 | (new) Settings: about, privacy link, version, delete account | none on web | Settings | in progress: version and log out done; privacy link (phase 4) and delete account (backend B3) later | `test/features/home/session_test.dart` |
@@ -128,7 +128,7 @@ Ids follow [plan](plan.md) section 3 and are listed in order. The reveal endpoin
 | B1 | GET `/app/config` (public): terminology words and slugs, minimum and latest app version | role words; update check | done (merged, PR #79) |
 | B2 | none: the app sends `X-App-Version` and `X-App-Platform`; the API never rejects old apps by header, the app reads `min_version` from B1 | minimum-version check | no server code needed |
 | B3 | DELETE `/me` with password confirmation | store requirement | not started |
-| B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}` | test builds behind login | not started |
+| B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}`; `scripts/add-download.py` publishes a build | test builds behind login | API done (web Downloads page and the publish step of `mobile-release` still to do) |
 | B5 | POST `/devices`, DELETE `/devices/{id}`, outbox, FCM sender | push | not started |
 | B6 | `/chat/*` REST, `/chat/ws`, moderation, RP-09, RP-10 | chat | not started |
 | B7 | `docs/openapi.json` exported and checked in CI (`make openapi`); app contract test `mobile/test/contract/api_contract_test.dart` | drift check. Generated Dart models are not part of B7 (see decision in the PR) | done |

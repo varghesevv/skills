@@ -12,6 +12,7 @@
 | FR-C-06 | A user MUST be able to view and edit only their own profile. |
 | FR-C-07 | `last_login_at` MUST be updated on successful login. |
 | FR-C-08 | Before login, a client MUST be able to read the installation's words for the three kinds of people and the minimum and latest mobile app version from one public endpoint (`GET /api/v1/app/config`), so apps carry no copy of the word profiles. |
+| FR-C-09 | A logged-in person of any role MUST be able to list and download the published Android test builds of the mobile app, with version, build number, date, size, SHA-256 and release notes. Nobody who is not logged in can see or fetch them, there is no public file address, and each person has an hourly download limit (`DOWNLOAD_MAX_PER_HOUR`). |
 
 ## Freelancer
 

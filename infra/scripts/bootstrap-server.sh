@@ -85,6 +85,9 @@ install -d -m 750 -o deploy -g deploy /opt/skills/data
 install -d -m 700 /opt/skills/data/postgres # the postgres image takes ownership on first start
 # The app user in the image (uid 10001) writes here; the deploy group may read, so backup.sh works.
 install -d -m 750 -o 10001 -g deploy /opt/skills/data/reports
+# Test builds of the mobile app: the deploy user writes them (scripts/add-download.py), the API
+# container reads them (read-only mount). Nothing here is served by the proxy.
+install -d -m 755 -o deploy -g deploy /opt/skills/data/downloads
 
 # ---- unattended security upgrades ----
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'

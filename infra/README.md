@@ -31,6 +31,7 @@ Demo environment on one AWS Lightsail instance. Specification: `docs/specificati
   compose.demo.yml     Caddyfile   deploy.sh   backup.sh   restore.sh
   data/postgres        PostgreSQL data (bind mount)
   data/reports         generated report files (bind mount)
+  data/downloads       test builds of the mobile app (read-only bind mount into the api)
 ```
 
 Only Caddy publishes ports (80 and 443). The database is never reachable from outside the compose network.
