@@ -5,6 +5,7 @@ import '../core/api/api_exception.dart';
 import '../core/errors/error_messages.dart';
 import '../core/providers.dart';
 import '../core/strings/app_text.dart';
+import '../core/strings/bootstrap_strings.dart';
 import '../core/terminology/terms.dart';
 
 /// Keeps every screen behind the server's configuration. There is no built-in copy of the role
@@ -32,10 +33,10 @@ class ConfigGate extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) => _Notice(
-        title: 'Skills',
+        title: BootstrapStrings.appName,
         // No words are known yet, so the neutral (empty) terms are used for the message.
         message: startupMessage(error),
-        retryLabel: 'Try again',
+        retryLabel: BootstrapStrings.tryAgain,
         onRetry: () => ref.invalidate(appConfigProvider),
       ),
     );
@@ -44,16 +45,16 @@ class ConfigGate extends ConsumerWidget {
 
 /// The text shown when the server's configuration cannot be loaded at start-up.
 ///
-/// A server that answers 404 does not have `GET /app/config` yet (it runs an older version than
-/// this app needs) and an answer of the wrong shape means the same kind of mismatch. Saying "that
-/// item no longer exists" there would send the person looking for the wrong problem. No role words
-/// are known yet, so the texts here are fixed English.
+/// A `404` means the server has no `GET /app/config` (it runs an older version than this app
+/// needs), **or** the app points at the wrong address: a proxy or another site answers 404 too,
+/// and the app cannot tell them apart from here. An answer of the wrong shape is the same kind of
+/// mismatch. Saying "that item no longer exists" there would send the person looking for the wrong
+/// problem, so the text names both causes. Other failures keep their own messages.
 @visibleForTesting
 String startupMessage(Object error) {
   if (error is ApiException &&
       (error.status == 404 || error.code == 'bad_response')) {
-    return 'This server is not ready for this version of the app. '
-        'Ask the administrator to update the server, then try again.';
+    return BootstrapStrings.serverMismatch;
   }
   return messageFor(error, const Terms({}));
 }
