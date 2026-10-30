@@ -60,30 +60,3 @@ class SecureTokenStore implements TokenStore {
     }
   }
 }
-
-/// A store that keeps everything in memory. For tests and previews only.
-class MemoryTokenStore implements TokenStore {
-  String? _access;
-  String? _refresh;
-
-  @override
-  String? get accessToken => _access;
-
-  @override
-  Future<String?> readRefreshToken() async => _refresh;
-
-  @override
-  Future<void> save({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
-    _access = accessToken;
-    _refresh = refreshToken;
-  }
-
-  @override
-  Future<void> clear() async {
-    _access = null;
-    _refresh = null;
-  }
-}

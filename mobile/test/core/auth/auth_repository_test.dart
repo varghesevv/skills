@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/core/api/api_client.dart';
 import 'package:skills_app/core/api/api_exception.dart';
 import 'package:skills_app/core/auth/auth_repository.dart';
-import 'package:skills_app/core/auth/token_store.dart';
+
+import '../../support/memory_token_store.dart';
+
 import 'package:skills_app/core/auth/user_type.dart';
 
 import '../../support/fake_api.dart';
