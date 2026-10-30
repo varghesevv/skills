@@ -8,7 +8,7 @@ base="${2:-}"
 run=true
 if [ "$event" = "pull_request" ] && [ -n "$base" ]; then
   # The checkout has full history (fetch-depth: 0), so origin/<base> exists.
-  if git diff --quiet "origin/$base...HEAD" -- mobile .github/workflows/ci-mobile.yml scripts/mobile-changed.sh scripts/check-dart-coverage.py 2>/dev/null; then
+  if git diff --quiet "origin/$base...HEAD" -- mobile .github/workflows/ci-mobile.yml scripts/mobile-changed.sh scripts/check-dart-coverage.py docs/openapi.json 2>/dev/null; then
     run=false
   fi
 fi

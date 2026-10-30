@@ -362,6 +362,7 @@ The backend tests use a real PostgreSQL database, which the project starts for y
 make be-install             # uv sync: installs Python libraries
 make be-test                # starts the database, then runs pytest
 make be-check               # lint, format check and type check
+make openapi                # rewrite docs/openapi.json after you change an endpoint or a schema
 ```
 
 Running only some tests:

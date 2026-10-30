@@ -75,12 +75,8 @@ jobs:
         run: |
           export DATABASE_URL="postgresql+psycopg://skills:${CI_DB_PASSWORD}@${DB_HOST}:${DB_PORT}/skills"
           uv run pytest --cov=app --cov-report=term-missing
-      - name: Export OpenAPI schema
-        run: uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2, sort_keys=True))" > openapi.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: openapi-schema
-          path: backend/openapi.json
+      - name: OpenAPI contract is current (docs/openapi.json)
+        run: uv run python -m app.openapi_export --check
       - name: Stop PostgreSQL
         if: always()
         working-directory: .

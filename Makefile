@@ -13,7 +13,7 @@ PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf 
 
 .DEFAULT_GOAL := help
 
-.PHONY: help env check-secrets install-hooks up down logs ps reset-db be-install be-check be-test be-migrate fe-install fe-check \
+.PHONY: help env check-secrets install-hooks up down logs ps reset-db be-install be-check be-test be-migrate openapi fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
 	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-format pi-shell \
 	pi-lock pi-migrate pi-seed-demo pi-create-admin \
@@ -50,6 +50,8 @@ be-check: ## Lint, format check and type check backend
 be-test: ## Backend tests incl. PostgreSQL tests (starts db first)
 	docker compose up -d --wait db
 	$(DB_ENV) && cd backend && uv run pytest
+openapi: ## Regenerate docs/openapi.json after an API change (CI fails when it is out of date)
+	cd backend && uv run python -m app.openapi_export --write
 be-migrate: ## Apply database migrations
 	docker compose up -d --wait db
 	$(DB_ENV) && cd backend && uv run alembic upgrade head

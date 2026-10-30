@@ -124,9 +124,9 @@ Rules: `.env` and `*.tfvars` are git-ignored; secrets never appear in logs or im
 
 | Workflow | Trigger | Jobs |
 |---|---|---|
-| `ci-backend.yml` | PR and push touching `backend/**` | Python 3.12; install; `ruff` lint + format check; `mypy`; `pytest` with a **PostgreSQL 16 service container**; Alembic `upgrade head` then `downgrade base` check; OpenAPI schema export and diff; coverage report; `pip-audit` |
+| `ci-backend.yml` | PR and push touching `backend/**` | Python 3.12; install; `ruff` lint + format check; `mypy`; `pytest` with a **PostgreSQL 16 service container**; Alembic `upgrade head` then `downgrade base` check; `docs/openapi.json` must equal the schema the code produces (`python -m app.openapi_export --check`); coverage report; `pip-audit` |
 | `ci-frontend.yml` | PR and push touching `frontend/**` | Node LTS; install with lockfile; ESLint; Prettier check; `tsc --noEmit`; Vitest; build; `npm audit` (high only) |
-| `ci-mobile.yml` | every PR (finishes early when `mobile/` is unchanged); push to `main` touching `mobile/**` | GitHub-hosted runner, Flutter cloned at a fixed tag (no third-party action). `mobile-analyze` (format, analyze), `mobile-test` (tests with coverage, floor 70 %), `mobile-build-android` (demo debug APK kept 5 days). Fork guard on every job. |
+| `ci-mobile.yml` | every PR (finishes early when `mobile/` or `docs/openapi.json` is unchanged); push to `main` touching `mobile/**` or `docs/openapi.json` | GitHub-hosted runner, Flutter cloned at a fixed tag (no third-party action). `mobile-analyze` (format, analyze), `mobile-test` (tests with coverage, floor 70 %), `mobile-build-android` (demo debug APK kept 5 days). Fork guard on every job. |
 | `ci-infra.yml` | PR touching `infra/**` | `terraform fmt -check`, `validate`, `tflint`, `trivy config`; `terraform plan` for `envs/demo` using OIDC role `skills-terraform`; plan posted as PR comment |
 | `ci-secrets.yml` | every PR; push to `main` | `scripts/check-secrets.sh` and Gitleaks over the PR's commits (`--redact`); required check |
 | `ci-docs.yml` | PR touching `docs/**` or `*.md` | Markdown lint and link check; verify ADR index lists every ADR file |
