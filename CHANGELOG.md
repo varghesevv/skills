@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.0](https://github.com/varghesevv/skills/compare/skills-v0.5.0...skills-v0.6.0) (2026-10-30)
+
+
+### Features
+
+* **api:** login-protected downloads of the mobile app test builds ([b4936a3](https://github.com/varghesevv/skills/commit/b4936a306880e6aa6e6316446d1a29f058714f11))
+* **mobile:** freelancer navigation and profile and rate screen ([4457efc](https://github.com/varghesevv/skills/commit/4457efcb4b0ddc36ed82645d80bd3cd4d5454f74))
+
+
+### Bug Fixes
+
+* **api:** make the download limiter atomic, harden the publish script and document the settings ([774c00e](https://github.com/varghesevv/skills/commit/774c00e6aabebc32f2010f6662065a5bfe62d128))
+* **mobile:** check field types in the contract test and accept a numeric rate string ([bd7e1b0](https://github.com/varghesevv/skills/commit/bd7e1b0d680382e084c9dc62b06aac8c740bc667))
+* **mobile:** name both causes of a failed config load and keep start-up texts together ([d0b4113](https://github.com/varghesevv/skills/commit/d0b4113e67d17b66bb44749be8bda76a8f2e62c5))
+* **mobile:** say clearly when the server is too old for the app ([10fed4b](https://github.com/varghesevv/skills/commit/10fed4bbe20ae9edc3f514c28af53facf6396ed7))
+* **mobile:** say clearly when the server is too old for the app ([bf6dc96](https://github.com/varghesevv/skills/commit/bf6dc963bb31816abf18cf7a26345a5704a352a9))
+
 ## [0.5.0](https://github.com/varghesevv/skills/compare/skills-v0.4.2...skills-v0.5.0) (2026-10-30)
 
 
