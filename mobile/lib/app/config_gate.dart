@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/env.dart';
 import '../core/errors/error_messages.dart';
 import '../core/providers.dart';
 import '../core/strings/app_text.dart';
@@ -18,9 +17,10 @@ class ConfigGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final config = ref.watch(appConfigProvider);
+    final version = ref.watch(appVersionProvider);
     return config.when(
       data: (data) {
-        if (Env.appVersion.isNotEmpty && data.requiresUpdate(Env.appVersion)) {
+        if (version.isNotEmpty && data.requiresUpdate(version)) {
           return _Notice(
             title: AppText(data.terms)('update.title'),
             message: AppText(data.terms)('update.text'),

@@ -24,8 +24,9 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | done (account facts; shortcuts come with the features) | `test/features/home/session_test.dart`, `test/features/auth/auth_flow_test.dart` |
 | Log out | `auth/AuthContext.tsx` | Settings: log out (revokes refresh token) | done | `test/features/home/session_test.dart` |
 | Downloads page (login protected) | planned, `mobile-app-plan.md` 6.4 | Settings: version and "update available" hint | backend B4 | |
-| (new) Minimum-version / update-required screen | none on web | Blocking screen | backend B1 | |
-| (new) Settings: about, privacy link, version, delete account | none on web | Settings | backend B3 | |
+| (new) Minimum-version / update-required screen | none on web | Blocking screen from the server's `min_version` (B1, merged) | done (blocking screen; the "update available" hint comes with B4) | `test/app/config_gate_test.dart` |
+| (new) "This build is not configured" screen (release builds only) | none on web | Names the missing `API_BASE_URL` / `APP_VERSION`; never shows values | done | `test/core/env_test.dart` |
+| (new) Settings: about, privacy link, version, delete account | none on web | Settings | in progress: version and log out done; privacy link (phase 4) and delete account (backend B3) later | `test/features/home/session_test.dart` |
 
 ### Freelancer portal
 

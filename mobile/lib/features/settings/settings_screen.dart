@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/env.dart';
 import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
 
@@ -12,6 +11,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = ref.watch(appTextProvider);
+    final version = ref.watch(appVersionProvider);
     return Scaffold(
       appBar: AppBar(title: Text(text('settings.title'))),
       body: SafeArea(
@@ -19,7 +19,7 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             ListTile(
               title: Text(text('settings.version')),
-              subtitle: Text(Env.appVersion.isEmpty ? 'dev' : Env.appVersion),
+              subtitle: Text(version.isEmpty ? 'dev' : version),
             ),
             ListTile(
               key: const Key('log-out'),

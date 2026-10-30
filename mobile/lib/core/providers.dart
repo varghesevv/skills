@@ -22,6 +22,9 @@ final sessionExpiredProvider = NotifierProvider<SessionExpiry, int>(
   SessionExpiry.new,
 );
 
+/// The running app's version (`X.Y.Z`); empty in debug and test runs. Overridden in tests.
+final appVersionProvider = Provider<String>((ref) => Env.appVersion);
+
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 
 final dioProvider = Provider<Dio>((ref) {

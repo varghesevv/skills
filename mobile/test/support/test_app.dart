@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/app.dart';
-import 'package:skills_app/core/auth/token_store.dart';
+
+import 'memory_token_store.dart';
+
 import 'package:skills_app/core/providers.dart';
 
 import 'fake_api.dart';
@@ -77,6 +79,7 @@ Future<TestApp> pumpApp(
   WidgetTester tester, {
   Map<String, String> words = defaultWords,
   String minVersion = '0.0.0',
+  String appVersion = '',
   void Function(FakeAdapter adapter, MemoryTokenStore store)? arrange,
   Size size = const Size(400, 800),
   double textScale = 1.0,
@@ -100,6 +103,7 @@ Future<TestApp> pumpApp(
       overrides: [
         dioProvider.overrideWithValue(dio),
         tokenStoreProvider.overrideWithValue(store),
+        appVersionProvider.overrideWithValue(appVersion),
       ],
       child: const SkillsApp(),
     ),
