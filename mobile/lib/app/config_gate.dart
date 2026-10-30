@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/api/api_exception.dart';
 import '../core/errors/error_messages.dart';
 import '../core/providers.dart';
 import '../core/strings/app_text.dart';
@@ -33,12 +34,28 @@ class ConfigGate extends ConsumerWidget {
       error: (error, _) => _Notice(
         title: 'Skills',
         // No words are known yet, so the neutral (empty) terms are used for the message.
-        message: messageFor(error, const Terms({})),
+        message: startupMessage(error),
         retryLabel: 'Try again',
         onRetry: () => ref.invalidate(appConfigProvider),
       ),
     );
   }
+}
+
+/// The text shown when the server's configuration cannot be loaded at start-up.
+///
+/// A server that answers 404 does not have `GET /app/config` yet (it runs an older version than
+/// this app needs) and an answer of the wrong shape means the same kind of mismatch. Saying "that
+/// item no longer exists" there would send the person looking for the wrong problem. No role words
+/// are known yet, so the texts here are fixed English.
+@visibleForTesting
+String startupMessage(Object error) {
+  if (error is ApiException &&
+      (error.status == 404 || error.code == 'bad_response')) {
+    return 'This server is not ready for this version of the app. '
+        'Ask the administrator to update the server, then try again.';
+  }
+  return messageFor(error, const Terms({}));
 }
 
 class _Notice extends StatelessWidget {
