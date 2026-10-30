@@ -21,6 +21,9 @@ class ConfigGate extends ConsumerWidget {
     final config = ref.watch(appConfigProvider);
     final version = ref.watch(appVersionProvider);
     return config.when(
+      // "Try again" is a refresh: show the spinner while waiting, not the old error.
+      skipLoadingOnRefresh: false,
+      skipLoadingOnReload: false,
       data: (data) {
         if (version.isNotEmpty && data.requiresUpdate(version)) {
           return _Notice(

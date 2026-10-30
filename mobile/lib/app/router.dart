@@ -92,6 +92,7 @@ StatefulShellRoute _shellFor(UserType type) {
             GoRoute(
               path: '/${type.wire}/${destination.path}',
               builder: (context, state) => destination.builder(),
+              routes: destination.routes,
             ),
           ],
         ),

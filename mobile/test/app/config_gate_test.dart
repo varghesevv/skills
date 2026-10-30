@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/core/strings/bootstrap_strings.dart';
 
@@ -155,4 +158,57 @@ void main() {
       );
     }
   });
+
+  testWidgets(
+    'a failed config load is asked for once, not retried behind the spinner',
+    (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) => adapter.setReply(
+          'GET',
+          '/app/config',
+          FakeReply(503, apiError('service_unavailable')),
+        ),
+      );
+      expect(find.text('Try again'), findsOneWidget);
+      // Riverpod 3 would retry on its own after 0.2 s, 0.4 s, 0.8 s ... for about 40 seconds.
+      await tester.pump(const Duration(seconds: 60));
+      await tester.pumpAndSettle();
+      expect(app.adapter.count('GET', '/app/config'), 1);
+      expect(find.text('Try again'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"Try again" shows the spinner while the server is slow to answer',
+    (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) => adapter.setReply(
+          'GET',
+          '/app/config',
+          FakeReply(503, apiError('service_unavailable')),
+        ),
+      );
+      final gate = Completer<void>();
+      app.adapter.setReply(
+        'GET',
+        '/app/config',
+        FakeReply(200, configJson(), const {}, gate.future),
+      );
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        find.text(
+          'The service is temporarily unavailable. Please try again soon.',
+        ),
+        findsNothing,
+      );
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('I am a freelancer'), findsOneWidget);
+    },
+  );
 }
