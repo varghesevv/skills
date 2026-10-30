@@ -95,3 +95,45 @@ FieldKeys validateRegistration({
     },
   });
 }
+
+/// Up to 8 digits and 2 decimals (the API stores numeric(10,2)). Empty means "no rate".
+String? rate(String value) =>
+    RegExp(r'^(\d{1,8}(\.\d{1,2})?)?$').hasMatch(value.trim())
+    ? null
+    : 'validation.rate';
+
+/// Three letters (ISO 4217), typed in any case; use [normaliseCurrency] for the value to send.
+String? currency(String value) =>
+    RegExp(r'^([A-Z]{3})?$').hasMatch(normaliseCurrency(value))
+    ? null
+    : 'validation.currency';
+
+String normaliseCurrency(String value) => value.trim().toUpperCase();
+
+FieldKeys validateFreelancerProfile({
+  required String fullNameValue,
+  required String mobileNumber,
+  required String nationality,
+  required String primaryLanguage,
+  required String ratePerHour,
+  required String rateCurrency,
+}) {
+  final failed = _collect({
+    'full_name': () => fullName(fullNameValue),
+    'mobile_number': () => mobile(mobileNumber),
+    'nationality': () => optionalText(nationality),
+    'primary_language': () => optionalText(primaryLanguage),
+    'rate_per_hour': () => rate(ratePerHour),
+    'rate_currency': () => currency(rateCurrency),
+  });
+  // A rate and its currency go together: both or neither.
+  final noRate = ratePerHour.trim().isEmpty;
+  final noCurrency = normaliseCurrency(rateCurrency).isEmpty;
+  if (noRate != noCurrency) {
+    failed.putIfAbsent(
+      noRate ? 'rate_per_hour' : 'rate_currency',
+      () => 'validation.rateTogether',
+    );
+  }
+  return failed;
+}

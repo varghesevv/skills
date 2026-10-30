@@ -16,6 +16,10 @@ class AppTextField extends StatelessWidget {
     this.obscure = false,
     this.suffix,
     this.enabled = true,
+    this.onChanged,
+    this.focusNode,
+    this.capitalization = TextCapitalization.none,
+    this.maxLength,
   });
 
   final String label;
@@ -29,12 +33,20 @@ class AppTextField extends StatelessWidget {
   final bool obscure;
   final Widget? suffix;
   final bool enabled;
+  final VoidCallback? onChanged;
+  final FocusNode? focusNode;
+  final TextCapitalization capitalization;
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       enabled: enabled,
+      textCapitalization: capitalization,
+      maxLength: maxLength,
+      onChanged: onChanged == null ? null : (_) => onChanged!(),
       obscureText: obscure,
       keyboardType: keyboardType,
       autofillHints: autofillHints,
@@ -48,6 +60,7 @@ class AppTextField extends StatelessWidget {
         helperMaxLines: 3,
         errorText: error,
         errorMaxLines: 3,
+        counterText: '',
         suffixIcon: suffix,
         border: const OutlineInputBorder(),
       ),

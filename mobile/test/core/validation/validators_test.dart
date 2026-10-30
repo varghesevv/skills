@@ -126,4 +126,66 @@ void main() {
       );
     });
   });
+
+  group('freelancer profile', () {
+    FieldKeys check({
+      String name = 'Pat Example',
+      String mobileNumber = '+971501234567',
+      String nationality = '',
+      String language = '',
+      String rate = '',
+      String currency = '',
+    }) => validateFreelancerProfile(
+      fullNameValue: name,
+      mobileNumber: mobileNumber,
+      nationality: nationality,
+      primaryLanguage: language,
+      ratePerHour: rate,
+      rateCurrency: currency,
+    );
+
+    test('a profile without a rate is valid', () => expect(check(), isEmpty));
+
+    test('rates have up to 8 digits and 2 decimals', () {
+      for (final good in ['45', '45.5', '45.50', '12345678', '0.99', ' 45 ']) {
+        expect(rate(good), isNull, reason: good);
+      }
+      for (final bad in ['45.555', '123456789', '-5', '4,5', 'abc', '.5']) {
+        expect(rate(bad), 'validation.rate', reason: bad);
+      }
+    });
+
+    test('currency is three letters in any case', () {
+      expect(currency('aed'), isNull);
+      expect(currency(' USD '), isNull);
+      expect(normaliseCurrency(' usd '), 'USD');
+      expect(currency('US'), 'validation.currency');
+      expect(currency('USDX'), 'validation.currency');
+      expect(currency('U5D'), 'validation.currency');
+    });
+
+    test('a rate and a currency go together', () {
+      expect(check(rate: '30', currency: 'AED'), isEmpty);
+      expect(check(rate: '30')['rate_currency'], 'validation.rateTogether');
+      expect(
+        check(currency: 'AED')['rate_per_hour'],
+        'validation.rateTogether',
+      );
+    });
+
+    test('the other fields use the same rules as registration', () {
+      final failed = check(
+        name: 'P',
+        mobileNumber: '12',
+        nationality: 'a' * 101,
+        language: 'b' * 101,
+      );
+      expect(failed.keys.toSet(), {
+        'full_name',
+        'mobile_number',
+        'nationality',
+        'primary_language',
+      });
+    });
+  });
 }

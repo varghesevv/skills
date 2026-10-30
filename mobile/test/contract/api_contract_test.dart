@@ -47,6 +47,19 @@ void main() {
           .cast<String>()
           .toSet();
 
+  /// The JSON types a property accepts: `type`, or the `type`s inside `anyOf`.
+  Set<String> typesOf(String schema, String field) {
+    final property = Map<String, Object?>.from(
+      (schemaNamed(schema)['properties'] as Map)[field] as Map,
+    );
+    final direct = property['type'];
+    if (direct is String) return {direct};
+    return {
+      for (final option in (property['anyOf'] as List? ?? const []))
+        (option as Map)['type'] as String,
+    };
+  }
+
   String? refName(Object? node) =>
       node is Map ? (node[r'$ref'] as String?)?.split('/').last : null;
 
@@ -77,6 +90,8 @@ void main() {
       'POST /auth/register/workhost': '201',
       'POST /auth/register/organisation': '201',
       'GET /me': '200',
+      'GET /freelancers/me': '200',
+      'PUT /freelancers/me': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -185,6 +200,91 @@ void main() {
       expect(required('AppConfig'), {'terminology', 'app'});
       expect(required('Terminology'), {'profile', 'terms'});
       expect(required('AppVersions'), {'min_version', 'latest_version'});
+    });
+  });
+
+  group('freelancer profile', () {
+    test('the update body has the fields the form sends', () {
+      expect(requestSchema('PUT', '/freelancers/me'), 'FreelancerUpdate');
+      expect(
+        properties('FreelancerUpdate'),
+        containsAll([
+          'full_name',
+          'mobile_number',
+          'whatsapp_availability',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+        ]),
+      );
+    });
+
+    test('the profile answer has the fields the app reads', () {
+      expect(responseSchema('GET', '/freelancers/me', '200'), 'FreelancerMe');
+      expect(responseSchema('PUT', '/freelancers/me', '200'), 'FreelancerMe');
+      expect(
+        properties('FreelancerMe'),
+        containsAll([
+          'id',
+          'full_name',
+          'email',
+          'mobile_number',
+          'whatsapp_availability',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+        ]),
+      );
+    });
+  });
+
+  group('freelancer profile field types', () {
+    test('the answer has the types `FreelancerProfile.fromJson` casts to', () {
+      const expected = {
+        'id': {'string'},
+        'full_name': {'string', 'null'},
+        'email': {'string'},
+        'mobile_number': {'string'},
+        'whatsapp_availability': {'boolean'},
+        'nationality': {'string', 'null'},
+        'primary_language': {'string', 'null'},
+        'rate_per_hour': {'number', 'null'},
+        'rate_currency': {'string', 'null'},
+        'is_rate_negotiable': {'boolean'},
+      };
+      expected.forEach((field, types) {
+        expect(
+          typesOf('FreelancerMe', field),
+          types,
+          reason: 'FreelancerMe.$field',
+        );
+      });
+    });
+
+    test('what the form sends is accepted by the update schema', () {
+      // The app sends a JSON number for the rate, null for empty text and an empty rate.
+      expect(
+        typesOf('FreelancerUpdate', 'rate_per_hour'),
+        containsAll(['number', 'null']),
+      );
+      for (final field in [
+        'nationality',
+        'primary_language',
+        'rate_currency',
+      ]) {
+        expect(
+          typesOf('FreelancerUpdate', field),
+          containsAll(['string', 'null']),
+          reason: field,
+        );
+      }
+      expect(typesOf('FreelancerUpdate', 'mobile_number'), {'string'});
+      expect(typesOf('FreelancerUpdate', 'whatsapp_availability'), {'boolean'});
+      expect(typesOf('FreelancerUpdate', 'is_rate_negotiable'), {'boolean'});
     });
   });
 }

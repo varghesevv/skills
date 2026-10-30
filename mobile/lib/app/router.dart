@@ -9,8 +9,7 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/welcome_screen.dart';
-import '../features/home/dashboard_screen.dart';
-import '../features/settings/settings_screen.dart';
+import 'destinations.dart';
 import 'shell.dart';
 
 const _signedOutPrefixes = [
@@ -37,11 +36,19 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
       if (session.isLoading) return '/splash';
-      final signedIn = session.value != null;
+      final me = session.value;
       final path = state.matchedLocation;
       final onSignedOut = _signedOutPrefixes.any(path.startsWith);
-      if (!signedIn) return onSignedOut ? null : '/welcome';
-      return onSignedOut || path == '/splash' ? '/home' : null;
+      if (me == null) return onSignedOut ? null : '/welcome';
+      final home = '/${me.userType.wire}/home';
+      if (onSignedOut || path == '/splash' || path == '/home') return home;
+      // Each role lives below its own prefix; another role's pages are never shown.
+      for (final type in UserType.values) {
+        if (path.startsWith('/${type.wire}/') && type != me.userType) {
+          return home;
+        }
+      }
+      return null;
     },
     routes: [
       GoRoute(
@@ -68,30 +75,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             _forType(state, (type) => ForgotPasswordScreen(type: type)),
       ),
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => AppShell(navigationShell: shell),
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/home',
-                builder: (context, state) => const DashboardScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/settings',
-                builder: (context, state) => const SettingsScreen(),
-              ),
-            ],
-          ),
-        ],
-      ),
+      for (final type in UserType.values) _shellFor(type),
     ],
   );
 });
+
+StatefulShellRoute _shellFor(UserType type) {
+  final destinations = destinationsFor(type);
+  return StatefulShellRoute.indexedStack(
+    builder: (context, state, shell) =>
+        AppShell(navigationShell: shell, destinations: destinations),
+    branches: [
+      for (final destination in destinations)
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/${type.wire}/${destination.path}',
+              builder: (context, state) => destination.builder(),
+            ),
+          ],
+        ),
+    ],
+  );
+}
 
 Widget _forType(GoRouterState state, Widget Function(UserType type) build) {
   final type = userTypeFromRoute(state.pathParameters['type']);
