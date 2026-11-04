@@ -6,7 +6,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 |---|---|
 | **Providers** | These list theirs skills, availability and hourly rate. |
 | **Searchers** | Who seek a particular set of providers for a job they require doing. |
-| **Verifiers** | Vouches for providers and searches within their church. |
+| **[Verifiers](docs/verification.md)** | Vouches for providers and searches within their church. |
 
 **Status:** the application is built (API, web portals, reports) and runs as a demo on AWS. Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
@@ -20,6 +20,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 | [docs/specification/](docs/specification/README.md) | What we are building: requirements, data model, API, reports, frontend, non-functional requirements |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records: why we chose what we chose |
 | [docs/specification/09-infrastructure.md](docs/specification/09-infrastructure.md) | Demo deployment on AWS Lightsail, Terraform, GitHub Actions |
+| [docs/verification.md](docs/verification.md) | Verification rules: who can vouch, what searchers and providers need, verifier sign-off |
 | [docs/open-questions.md](docs/open-questions.md) | Decisions still needed from the product owner |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute: workflow, conventions, definition of done |
 
