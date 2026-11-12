@@ -9,7 +9,7 @@ from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal, TokenError, decode_access_token
 from app.models.church import Person
-from app.models.enums import STATUS_RANK
+from app.models.enums import STATUS_RANK, Status
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -61,13 +61,16 @@ def get_principal(
 
 
 def current_person(
-    min_status: str = "pending", *, allow_revoked: bool = False
+    min_status: Status = "pending", *, allow_revoked: bool = False
 ) -> Callable[..., Person]:
     """Dependency that returns the calling person, checked against the database.
 
     `min_status` is the lowest status allowed ("at least X"); a lower one is `403 not_admitted`.
     Only the few endpoints a revoked person may still use set `allow_revoked`.
     """
+
+    if min_status not in STATUS_RANK:  # a typo in a route fails at start-up, not per request
+        raise ValueError(f"unknown status {min_status!r}")
 
     def check(
         credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),

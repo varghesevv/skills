@@ -182,7 +182,7 @@ def login(
 
     stored_hash = account.password_hash if account is not None else None
     if account is None or stored_hash is None or not verify_password(stored_hash, password):
-        if account is None:
+        if account is None or stored_hash is None:
             verify_dummy(password)  # same cost as a real check
         record(account.id if account else None, succeeded=False)
         db.commit()

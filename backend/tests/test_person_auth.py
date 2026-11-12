@@ -389,3 +389,24 @@ def test_an_expired_or_forged_token_is_refused(guarded: TestClient, world: World
     response = guarded.get(f"{API}/test/anyone", headers={"Authorization": f"Bearer {forged}"})
     assert response.status_code == 401
     assert guarded.get(f"{API}/test/anyone").status_code == 401
+
+
+def test_an_unknown_status_in_a_route_fails_at_start_up() -> None:
+    with pytest.raises(ValueError):
+        current_person("kng")  # type: ignore[arg-type]
+
+
+def test_an_account_without_a_password_hash_costs_the_same_as_an_unknown_email(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The schema forbids an open account without a hash, so the branch is reached with a stub."""
+    import app.services.auth as auth_service
+
+    member = add_member(world, "searcher")
+    stub = type("Stub", (), {"id": member.person.id, "password_hash": None})()
+    monkeypatch.setattr(auth_service, "get_by_email", lambda *_args, **_kwargs: stub)
+    calls: list[int] = []
+    monkeypatch.setattr(auth_service, "verify_dummy", lambda _password: calls.append(1))
+    response = client.post(f"{API}/auth/login", json={"email": member.email, "password": "x" * 12})
+    assert response.status_code == 401
+    assert calls == [1]
