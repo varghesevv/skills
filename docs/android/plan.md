@@ -50,7 +50,7 @@ Each item is one small PR with tests, spec updates (04 API, 02 requirements, 03 
 |---|---|---|---|
 | B1 | `GET /api/v1/app/config`: terminology map (words and slugs), minimum supported app version, latest version | Phase 1 | Public (no login) so the login screen has the right words. Cache headers; no secrets. |
 | B2 | Minimum version check: the app sends `X-App-Version` and `X-App-Platform`; if below the minimum, the API still answers normally but `app/config` tells the app to block. | Phase 1 | Never reject API calls from old apps by header alone in v1. |
-| B3 | Delete my account (`DELETE /me`, password confirmation) with the anonymising rules | Phase 4 (store requirement) | Ratings and vouches stay, name removed. |
+| B3 | Close my account (`DELETE /me`, password confirmation); this is the store's "delete account" | S4.4 and S4.10 (store requirement) | The row stays with `closed_at`, personal details are cleared, ratings, vouches and the history stay (FR-X-03). |
 | B4 | Login-protected Downloads API (`/app/downloads`) | Phase 1 (first APK) | As in `mobile-app-plan.md` 6.4. |
 | B5 | Device tokens (`POST /devices`, `DELETE /devices/{id}`), `notification_outbox`, the worker's FCM sender | Phase 6 | Shared by chat and later notifications. `PUSH_ENABLED` setting, default false. |
 | B6 | Chat REST + WebSocket + moderation + reports RP-10, RP-11 | Phases 5 and 6 | See [chat design](chat-design.md). Split into: schema + rules + REST; WebSocket + hub + LISTEN/NOTIFY; push; moderation and reports. |

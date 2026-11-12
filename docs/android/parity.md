@@ -8,6 +8,8 @@ Words: the app never hard-codes the role words. The web paths below use the term
 
 ## Screens by status (church trust model)
 
+The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (decision D-11, [FR-O-06](../specification/02-functional-requirements.md)). This narrows the older rule that the platform administrator has no mobile access, because the platform administrator is now the OWNER. [`docs/verification.md`](../verification.md) does not say which channels each role uses, so the decision is recorded in the decision log and the specification, and in [understanding](understanding.md) A2.
+
 [`docs/verification.md`](../verification.md) (ADR-0016, accepted 2026-11-12) and [ADR-0017](../adr/0017-authorisation-by-status.md) replace the portals by one login and screens that depend on the person's **status**: PENDING (applicant), SEARCHER, PROVIDER, VERIFIER, ADMIN; the OWNER works on the web only (decision D-11). The table below is the plan for the app, rewritten on 2026-11-12 from [specification 06](../specification/06-frontend.md) and [04](../specification/04-api.md). The web and backend still have the older model until slices S2 to S5 of the [roadmap](../roadmap-verification-model.md) land on `model/verification`; the **Slice** column says when each row is built. Rows for screens built before the model changed keep their `done` status and are moved onto the new endpoints in the slice named. Status values for the new rows start at `not started`. Words come from `GET /app/config`; the app never writes "searcher", "provider", "church" or "home group" itself.
 
 ## 1. Screens
@@ -22,7 +24,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Join through a group invitation link | new | S2.8 | not started | |
 | Forgot password | `pages/ForgotPassword.tsx` | | done | `test/features/auth/auth_flow_test.dart` |
 | Reset password | `pages/ResetPassword.tsx` | | n/a (v1: the link opens in the browser) | |
-| Applicant home: status, leader, vouches received, my vouch link (share sheet), change choice, leave | new | S2.8 | not started | |
+| Applicant home: status, leader, change choice, leave; vouches received and my vouch link (share sheet) | new | S2.8, S3.6 | not started (in S2.8 the vouch parts show an empty state; they are filled when the vouch endpoints arrive in S3.1 and the app part in S3.6) | |
 | Revoked notice with log out | new | S2.8 | not started | |
 | Navigation by status (bottom bar and routes) | `App.tsx` | S2.8 | not started (built per user type today) | |
 | Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
@@ -54,7 +56,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Ratings given (edit) | `GivenRatingsPage.tsx` | S5.10 | not started | |
 | Profile (name, mobile) | `/me` | S5.10 | not started | |
 | Vouch from a received link (shows who asks) | new | S3.6 | not started | |
-| Share my vouch link; apply to become a provider | new | S3.9 | not started | |
+| Share my vouch link (S3.6); apply to become a provider (S3.9) | new | S3.6, S3.9 | not started | |
 | Start a home group (request); move requests that concern me | new | S4.10 | not started | |
 | (new) Message a provider | none on web | S8 | backend B6 | |
 
@@ -63,7 +65,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
 | Applicants with vouches (most-vouched first), admit, decline | new | S3.7 | not started | |
-| Members; person view with status history (mobile number shown here only, each view logged) | new | S3.7 | not started | |
+| Members; person view with status history. The mobile number is shown here only, one person at a time, each view logged without the number: the exception defined in [spec 07 Privacy of verifier views](../specification/07-non-functional.md) and decision D-17. Same handling as Reveal: held in memory only, never logged, cached, written to disk or sent to crash or analytics tools | new | S3.7 | not started | |
 | Revoked list, revoke, reinstate; flagged people, re-confirm | new | S4.10 | not started | |
 | Group invitation link (share) | new | S4.10 | not started | |
 | Step down and succession | new | S4.10 | not started | |
@@ -114,7 +116,9 @@ Status column: "at least X" means that status or higher.
 | POST `/auth/forgot-password` | public | Forgot password | | done |
 | POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
 | GET `/churches`, GET `/churches/{id}/home-groups`, GET `/group-invitations/{token}` | public | Sign-up wizard, join link | S2.8 | not started |
-| GET, PUT, DELETE `/me`; PUT `/me/application`; POST `/me/apply-provider` | any, PENDING, SEARCHER | Session, applicant home, close account | S2.8, S4.10 | GET `/me` done on the older shape |
+| GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` done on the older shape |
+| DELETE `/me` | any | Close account | S4.10 | not started |
+| POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | not started |
 | GET, POST `/me/vouch-link`, `/me/vouch-link/rotate`; GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link, who vouched | S3.6 | not started |
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any | Notifications | S3.6 | not started |
 | GET `/vouch-links/{token}`; POST `/vouch-links/{token}/vouch`; DELETE `/vouches/{id}` | at least SEARCHER | Vouch from a link | S3.6 | not started |
@@ -144,7 +148,7 @@ Ids follow [plan](plan.md) section 3 and are listed in order. The reveal endpoin
 |---|---|---|---|
 | B1 | GET `/app/config` (public): terminology words and slugs, minimum and latest app version | role words; update check | done (merged, PR #79) |
 | B2 | none: the app sends `X-App-Version` and `X-App-Platform`; the API never rejects old apps by header, the app reads `min_version` from B1 | minimum-version check | no server code needed |
-| B3 | DELETE `/me` with password confirmation | store requirement | not started |
+| B3 | DELETE `/me` with password confirmation: closes the account (the row stays with `closed_at`, personal details cleared, trust record kept; [FR-X-03](../specification/02-functional-requirements.md)); this is the store's "delete account" | store requirement | not started (S4.4 backend, S4.10 app) |
 | B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}`; `scripts/add-download.py` publishes a build | test builds behind login | API done (web Downloads page and the publish step of `mobile-release` still to do) |
 | B5 | POST `/devices`, DELETE `/devices/{id}`, outbox, FCM sender | push | not started |
 | B6 | `/chat/*` REST, `/chat/ws`, moderation, RP-10, RP-11 | chat | not started |
