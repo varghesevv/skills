@@ -14,5 +14,5 @@ Version 0.1 (draft). Single source of truth for what Skills must do. Technical r
 | 08 | [delivery-plan.md](08-delivery-plan.md) | Phases and definition of done |
 | 09 | [infrastructure.md](09-infrastructure.md) | AWS Lightsail demo, Terraform, Docker, GitHub Actions CI/CD, backups |
 
-Requirement IDs (for example `FR-F-03`) are stable: use them in issues, PRs and tests.
+Requirement IDs (for example `FR-P-03`) are stable from 2026-11-12: use them in issues, PRs and tests. The church trust model (2026-11-12) renumbered them by group: FR-C common, FR-J joining, FR-V verifier, FR-L church structure, FR-X leaving, FR-O owner and admin, FR-P provider, FR-M searcher, FR-S search. Old IDs are not carried over, and some letters now mean something else: old FR-F is now FR-P, old FR-W is now FR-M, old FR-O (organisation) and FR-A (platform admin) are gone and the new FR-O means OWNER and ADMIN. Do not follow an old ID found in an issue, a test or a comment; check it against the date.
 Keywords MUST, SHOULD, MAY follow RFC 2119.

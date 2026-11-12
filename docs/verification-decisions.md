@@ -32,3 +32,4 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | O-03 | Retention of the log of verifier views of phone numbers | Kept with the trust record | S1.4, S3.2 |
 | O-04 | The terminology keys for searcher, provider, verifier, admin, owner, church and home group | One key each, backend and web copies kept equal | S2.9 |
 | O-05 | Fate of each old table (organisations, vouches, admin accounts) | Removed by the destructive migration | S1.2, S2.1 |
+| O-06 | Whether the list of churches, home groups and leader names is public (needed before an account exists) or shown only after the first sign-up step, and how it is rate limited against scraping | Shown inside the sign-up flow and to PENDING applicants, names only, rate limited | S1.3, S1.4 |

@@ -48,7 +48,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 |---|---|---|---|---|
 | Search with filters, name search, sort, chips, paging | `SearchPage.tsx`, `FilterForm.tsx`, `searchParams.ts`, `activeFilters.ts` | Search + filter sheet | not started | |
 | Freelancer detail (labels, rate, ratings, vouching organisations, availability, my rating, rate form) | `FreelancerDetailPage.tsx` | Detail | not started | |
-| Mobile number on detail and result cards (greyed placeholder, Reveal, wait time on `429`) | `workhost/RevealMobile.tsx`, spec FR-W-06 to FR-W-08 | **Reveal** button: `POST /freelancers/{id}/reveal-mobile` with `channel=dial`, `source`, `searched_skills`, then `tel:`; number only in memory, cleared on leaving | not started | |
+| Mobile number on detail and result cards (greyed placeholder, Reveal, wait time on `429`) | `workhost/RevealMobile.tsx`, spec FR-M-05 to FR-M-07 | **Reveal** button: `POST /freelancers/{id}/reveal-mobile` with `channel=dial`, `source`, `searched_skills`, then `tel:`; number only in memory, cleared on leaving | not started | |
 | Ratings given (edit) | `GivenRatingsPage.tsx` | Ratings given | not started | |
 | Profile and available days | `HostProfilePage.tsx` | Profile | not started | |
 | (new) Message a freelancer | none on web | Start chat | backend B6 | |
