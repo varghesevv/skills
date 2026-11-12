@@ -23,7 +23,7 @@ These requirements follow the [verification rules](../verification.md) ([ADR-001
 
 | ID | Requirement |
 |---|---|
-| FR-J-01 | Anyone MUST be able to sign up. The applicant MUST choose a church, then one of its home groups (each shown with its name and its leader's name), and whether they apply as a searcher or a provider. Sign-up is complete only when a group is chosen, so nobody is PENDING without a home group. |
+| FR-J-01 | Anyone MUST be able to sign up. The applicant MUST choose a church, then one of its home groups (each shown with its name and its leader's name), and whether they apply as a searcher or a provider. Sign-up is complete only when a group is chosen, so nobody is PENDING without a home group. The list of churches, groups and leader names is shown inside the sign-up flow and to PENDING applicants; whether it is also public and how it is rate limited is open (O-06). |
 | FR-J-02 | Signing up through a home group's invitation link MUST select the church and the group automatically. |
 | FR-J-03 | A new account starts as PENDING. The chosen group's leader MUST be notified. |
 | FR-J-04 | While PENDING, an applicant MUST be able to choose a different church or group, or change what they apply for. The newly chosen leader is notified, and vouches already received still count. |
@@ -45,7 +45,7 @@ A VERIFIER's scope is their home group (and people revoked from it), an ADMIN's 
 | FR-V-02 | A verifier MUST be able to change the status of people in scope only within the limits of the rules: the OWNER anyone but themselves below OWNER; an ADMIN anyone in the church below ADMIN, from REVOKED to VERIFIER; a VERIFIER anyone in the group below VERIFIER, to REVOKED, SEARCHER or PROVIDER. Nobody changes their own status, except in a handover or when closing their own group. |
 | FR-V-03 | A verifier MUST NOT override a revocation or leader appointment made by a higher verifier. |
 | FR-V-04 | Every status change MUST be written to a permanent history with who made it, the old and the new status, and when. Each profile records who set its current status. |
-| FR-V-05 | A verifier MUST be able to see the mobile numbers of people in scope on the verifier screens only. Each such view MUST be logged. Search results and provider pages never show a number. |
+| FR-V-05 | A verifier MUST be able to see the mobile numbers of people in scope on the verifier screens only. Each such view MUST be logged. Search results and provider pages never show a number. This is the one exception to the rule that only the reveal endpoint returns a number (decision D-07); who may see it, in which scope, whether PENDING applicants are included, the log content and any limits are fixed in the privacy part of [07](07-non-functional.md) (S1.4). |
 | FR-V-06 | A verifier MUST be able to share an invitation link to their home group. |
 | FR-V-07 | Revoking a person MUST remove them from their home group and any role, keep them on their church's revoked list with the group they were removed from, and block sign-up with their email or mobile number. If they led a group or a church, the successor is appointed in the same transaction. |
 | FR-V-08 | Revoking a VERIFIER, ADMIN or OWNER MUST flag everyone whose current status that person set. Flagged people keep their access. A verifier at the revoked leader's level or higher MUST be able to re-confirm them, which clears the flag and makes the re-confirming verifier the new link in their chain of trust. |
@@ -83,7 +83,7 @@ A VERIFIER's scope is their home group (and people revoked from it), an ADMIN's 
 | FR-O-03 | The OWNER MUST be able to appoint or replace an ADMIN only through succession. |
 | FR-O-04 | The OWNER MUST be able to manage labels (add, rename, deactivate). Labels in use MUST NOT be hard-deleted. |
 | FR-O-05 | The OWNER and each ADMIN MUST be able to view the verification reports for their scope and the scheduled-run history, and trigger a report run and download its output (see [05](05-reports.md)). |
-| FR-O-06 | OWNER actions are available on the web. ADMIN and VERIFIER actions are available on the web and in the mobile app. |
+| FR-O-06 | OWNER actions are available on the web only. ADMIN and VERIFIER actions are available on the web and in the mobile app (decision D-11). This replaces the earlier rule that the platform administrator has no mobile access: the old platform admin is the OWNER, who stays web only. |
 
 ## Provider (PROVIDER and above)
 
