@@ -22,6 +22,7 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | D-12 | 2026-11-12 | Closing an account keeps the person's row with `closedAt` set, clears the personal fields (name, email, phone, picture), and keeps the status history with the ids of who changed what. Nothing is ever hard-deleted. The same flow is the in-app "delete account" the stores require. | The chain of trust must stay readable. | #101 | decided |
 | D-13 | 2026-11-12 | Merge policy: a pull request is merged when every required check is green and the review comments are handled. Pull requests that touch `.github/` or `infra/` wait for the owner. The demo is deployed only at the cut-over, with the owner's go-ahead. | See [CONTRIBUTING](../CONTRIBUTING.md). | #102 | decided |
 | D-14 | 2026-11-12 | The planning answers were not given in writing, so the defaults of the [roadmap](roadmap-verification-model.md) section 8 are in force until the owner corrects them. | Work must not wait. | #102 | decided |
+| D-15 | 2026-11-12 | A revoked person can still log in with the correct password but every endpoint except their own status, token refresh, logout, password reset and app config answers `account_revoked`; a pending applicant reaches only their own application, the list of churches and groups, and notifications. A person out of a verifier's scope is reported as not found. | Lets people see why they have no access, without revealing who exists. | S1.3 | decided |
 
 ## Open details, to be settled in the named pull request
 
@@ -32,5 +33,5 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | O-03 | Retention of the log of verifier views of phone numbers | Kept with the trust record | S1.4, S3.2 |
 | O-04 | The terminology keys for searcher, provider, verifier, admin, owner, church and home group | One key each, backend and web copies kept equal | S2.9 |
 | O-05 | Fate of each old table (organisations, vouches, admin accounts) | Removed by the destructive migration | S1.2, S2.1 |
-| O-06 | Whether the list of churches, home groups and leader names is public (needed before an account exists) or shown only after the first sign-up step, and how it is rate limited against scraping | Shown inside the sign-up flow and to PENDING applicants, names only, rate limited | S1.3, S1.4 |
+| O-06 | Whether the list of churches, home groups and leader names is public (needed before an account exists) or shown only after the first sign-up step, and how it is rate limited against scraping | Public, names only, rate limited per IP (the sign-up screen has no token) | S1.3, S1.4 |
 | O-07 | Retention of login history rows with no person (failed attempts) and of expired admin invitations | Keep login history 12 months, delete expired invitations after 30 days | S1.4 |
