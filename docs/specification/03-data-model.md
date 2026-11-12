@@ -1,83 +1,135 @@
 # 03 Data model (PostgreSQL)
 
-Decision: PostgreSQL only, SQLite is not supported (confirmed 2026-10-20, [ADR-0002](../adr/0002-postgresql-as-the-only-database.md)). Migrations: Alembic, one history, in `backend/migrations/`.
+Decision: PostgreSQL only, SQLite is not supported (confirmed 2026-10-20, [ADR-0002](../adr/0002-postgresql-as-the-only-database.md)). Migrations: Alembic, one history, in `backend/migrations/versions/`.
+
+This file describes the **target** schema of the church trust model ([verification rules](../verification.md), [ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md)). It is built by one destructive migration in slice S2.1 (the demo data is wiped, decision D-03). Until then the code still has the older schema (work hosts, freelancers, organisations, admins); the table "Fate of the old tables" shows how each maps.
 
 ## Conventions
 
 - Table names plural snake_case. Primary keys: `uuid` (default `gen_random_uuid()`), so ids are not guessable and are safe to expose to web and mobile.
-- Timestamps: `timestamptz`, stored in UTC, columns `created_at` and `updated_at` (`updated_at` maintained by the application or trigger).
-- Emails stored lowercase; uniqueness on `lower(user_email)` (or `citext`).
-- Enumerated values use `text` with `CHECK` constraints (easy to migrate).
-- Never store plain passwords or plain reset tokens.
+- Timestamps: `timestamptz`, stored in UTC, columns `created_at` and `updated_at` where a row changes.
+- Emails stored lowercase; uniqueness on `lower(email)`.
+- Enumerated values use `text` with `CHECK` constraints (easy to migrate). Statuses are ordered by the SQL function `status_rank(text)` (revoked 0, pending 1, searcher 2, provider 3, verifier 4, admin 5, owner 6).
+- Never store plain passwords, plain reset tokens or plain link tokens: store hashes.
+- Closing is never deleting: rows of people, groups and churches stay, with `closed_at` set.
+- Personal data (name, email, mobile number, password hash) is held on `people` and is cleared when the account is closed. Other tables hold ids, never copies. Two tables hold a little more and are the named exceptions: `login_history` (email, address and browser of attempts; cleared for a person's rows when their account is closed) and `admin_invitations` (the invited email, cleared when the invitation is accepted, cancelled or expired). Retention of both is open detail O-07.
 
-## Corrections to the original proposal
+## Fate of the old tables
 
-- Typos fixed: `last_udpdated_at` -> `updated_at`, `unavalable_from` -> `unavailable_from`, `freelance_id` -> `freelancer_id`.
-- `part_time_freelancers` -> `freelancers`.
-- `forget_password_hash` columns replaced by one `password_reset_tokens` table (expiry, single use).
-- `skill_level` added to the label type list (it was used but not listed).
-- `login_history` gains `user_id`, `ip_address`, `user_agent`; column `succeed` -> `succeeded`.
-- Skill level is attached per skill via `freelancer_labels.level_label_id` (Q3).
-
-## Implementation status
-
-Implemented in phase 2: models in `backend/app/models/`, migration `0001` (schema) and `0002` (seed labels and report schedules) in `backend/migrations/versions/`. Tests in `backend/tests/` run against a separate database (`skills_test`) and check every rule below.
-
-Delete behaviour: deleting a freelancer removes their labels, unavailability, vouches and ratings (`ON DELETE CASCADE`); deleting a work host removes the ratings they gave; labels in use cannot be deleted (`RESTRICT`); `login_history` has no foreign keys so history survives account deletion. Other rules: `rate_per_hour` and `rate_currency` must both be set or both empty; currency is three upper-case letters.
+| Old table | Fate |
+|---|---|
+| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. |
+| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. |
+| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. |
+| `labels` | Kept unchanged. |
+| `freelancer_labels` | Renamed `person_labels`, key `person_id`. |
+| `freelancer_unavailability` | Renamed `person_unavailability`, key `person_id`. |
+| `user_ratings` | Kept as `ratings`, with `rater_id` and `provider_id` pointing at `people`. |
+| `phone_reveals` | Kept, with `revealer_id` and `provider_id`. |
+| `login_history` | Kept; `user_type` dropped, `person_id` added. |
+| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. |
+| `report_schedules`, `report_runs` | Kept; the report set changes in S5.3. |
 
 ## Tables
 
-### work_hosts
+### churches
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| user_email | text NOT NULL | unique, lowercase |
-| full_name | varchar(200) | required at registration; empty only for accounts created before names existed |
-| mobile_number | text NOT NULL | E.164 format |
-| password_hash | text NOT NULL | argon2id |
-| avail_sun .. avail_sat | boolean NOT NULL default false | seven columns, one per day |
+| name | varchar(200) NOT NULL | unique among open churches (`lower(name)`, `WHERE closed_at IS NULL`) |
+| admin_id | uuid NOT NULL FK people | `DEFERRABLE INITIALLY DEFERRED`; the church's ADMIN, or the OWNER in the OWNER's own church |
+| created_at | timestamptz NOT NULL | |
+| closed_at | timestamptz | set when the OWNER closes the church; the row and its revoked list are kept |
+
+### home_groups
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| church_id | uuid NOT NULL FK churches | UNIQUE (id, church_id) so `people` can reference both |
+| name | varchar(200) NOT NULL | unique per church among open groups |
+| leader_id | uuid NOT NULL FK people | `DEFERRABLE INITIALLY DEFERRED`. A person leads at most one open group: `EXCLUDE USING btree (leader_id WITH =) WHERE (closed_at IS NULL) DEFERRABLE INITIALLY DEFERRED`. A closed group keeps its last leader as history only |
+| created_at | timestamptz NOT NULL | |
+| closed_at | timestamptz | set when the group is closed |
+
+### people
+One row per person, whatever their status.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| status | text NOT NULL | CHECK in (revoked, pending, searcher, provider, verifier, admin, owner) |
+| church_id | uuid NOT NULL FK churches | revoked people stay on their church's revoked list |
+| home_group_id | uuid FK home_groups | NULL if and only if the person is revoked or closed (the CHECK below); composite FK (home_group_id, church_id) to `home_groups (id, church_id)` |
+| last_home_group_id | uuid FK home_groups | set on revocation: the group they were removed from, so its leader keeps them in scope |
+| full_name | varchar(200) | 2 to 200 characters; NULL only when closed |
+| email | text | lowercase; NULL only when closed |
+| mobile_number | text | E.164; NULL only when closed |
+| password_hash | text | argon2id; NULL only when closed |
+| requested_status | text | CHECK in (searcher, provider); what the applicant applies for, also set when a searcher applies to provide |
+| status_set_by_id | uuid FK people | who set the current status; NULL for new applicants, the first OWNER, and an OWNER appointed by the operators |
+| flagged_for_recheck | boolean NOT NULL default false | set when whoever set their current status is revoked |
+| whatsapp_availability | boolean NOT NULL default false | provider profile |
+| nationality, primary_language | text | provider profile |
+| rate_per_hour | numeric(10,2) | CHECK >= 0 |
+| rate_currency | char(3) | ISO 4217; with `rate_per_hour` both set or both empty |
+| is_rate_negotiable | boolean NOT NULL default false | |
 | created_at, updated_at | timestamptz NOT NULL | |
 | last_login_at | timestamptz | |
+| closed_at | timestamptz | set when the account is closed; personal fields are cleared in the same statement |
 
-### freelancers
+The picture is not stored; clients draw an initials avatar (decision D-08).
+
+### status_changes
+Permanent, append-only history. The chain of trust is built from it.
+
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| user_email | text NOT NULL | unique, lowercase |
-| full_name | varchar(200) | required at registration; empty only for accounts created before names existed |
-| mobile_number | text NOT NULL | E.164 |
-| whatsapp_availability | boolean NOT NULL default false | |
-| password_hash | text NOT NULL | |
-| nationality | text | |
-| primary_language | text | |
-| rate_per_hour | numeric(10,2) | CHECK >= 0 |
-| rate_currency | char(3) | ISO 4217 |
-| is_rate_negotiable | boolean NOT NULL default false | |
-| created_at, updated_at, last_login_at | timestamptz | |
+| person_id | uuid NOT NULL FK people | |
+| from_status | text | NULL at account creation |
+| to_status | text NOT NULL | |
+| changed_by_id | uuid FK people | NULL if and only if `kind` is `signup` or `operator` (an operator change in the database); CHECK (changed_by_id IS DISTINCT FROM person_id OR kind = 'handover'), because nobody changes their own status except the OWNER in a handover |
+| kind | text NOT NULL | CHECK in (signup, admit, appoint, step-down, revoke, reinstate, reconfirm, handover, operator) |
+| at | timestamptz NOT NULL | |
 
-### organisations
+A trigger refuses `UPDATE` and `DELETE` on this table. `people.status_set_by_id` is the `changed_by_id` of the latest row, so both are NULL for a new applicant.
+
+### vouches
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid PK | |
-| org_name | text NOT NULL | shown as "Organisation Name" |
-| approval_status | text NOT NULL | `pending` (default), `approved`, `rejected`. Only approved organisations can log in |
-| approved_at, approved_by_admin_id | timestamptz, uuid FK admins | set when an admin decides |
-| user_email | text NOT NULL | unique, lowercase |
-| mobile_number | text NOT NULL | |
-| password_hash | text NOT NULL | |
-| created_at, updated_at, last_login_at | timestamptz | |
+| applicant_id | uuid NOT NULL FK people | a PENDING applicant, or a SEARCHER applying to be a PROVIDER |
+| voucher_id | uuid NOT NULL FK people | must be SEARCHER or above and not revoked when the vouch is given (trigger); CHECK (voucher_id <> applicant_id) |
+| created_at | timestamptz NOT NULL | |
+| withdrawn_at | timestamptz | can be set until the applicant is admitted |
 
-### admins
-Same shape as work_hosts without availability: id, user_email, password_hash, created_at, updated_at, last_login_at. Seeded by CLI, never self-registered.
+UNIQUE (applicant_id, voucher_id). A vouch is *live* when it is not withdrawn and its voucher is not revoked; that is computed when reading, not stored.
 
-### org_freelancers
-| Column | Type | Notes |
-|---|---|---|
-| org_id | uuid FK organisations | PK part |
-| freelancer_id | uuid FK freelancers | PK part |
-| is_active | boolean NOT NULL default true | |
-| status | text NOT NULL default 'pending' | CHECK in (pending, approved, revoked). A vouch starts pending until the freelancer accepts (Q6 default) |
-| created_at | timestamptz | |
+### vouch_links and group_invitations
+| Table | Columns |
+|---|---|
+| vouch_links | id, person_id FK (the applicant), token_hash text UNIQUE, expires_at, revoked_at, created_at |
+| group_invitations | id, home_group_id FK, created_by_id FK people, token_hash text UNIQUE, expires_at, revoked_at, created_at |
+
+Tokens are long random values; only the hash is stored (open detail O-01 fixes length, lifetime and limits).
+
+### group_requests
+id, requester_id FK people, church_id FK, group_name varchar(200), state text CHECK in (open, approved, declined), decided_by_id FK people null, decided_at null, created_at. At most one open request per requester (partial unique index).
+
+### admin_invitations
+id, email text, church_name varchar(200), invited_by_id FK people (the OWNER), token_hash UNIQUE, expires_at, accepted_at null, created_at. The church is created when the invitation is accepted, so it never exists without an ADMIN. On acceptance the email is cleared.
+
+### handover_requests
+id, owner_id FK people, new_owner_id FK people (an ADMIN of another church), successor_admin_id FK people null, successor_leader_id FK people null, created_at, accepted_at null, cancelled_at null. At most one open request (partial unique index).
+
+### move_requests
+id, person_id FK people, from_group_id FK, to_group_id FK (same church, CHECK in the service), agreed_by_person_at, agreed_by_from_leader_at, agreed_by_to_leader_at (each null until given), created_at, completed_at null, cancelled_at null. The move happens, in one transaction, when all three are set.
+
+### notifications
+id, person_id FK people, kind text, subject_id uuid null (the person or group the event is about), created_at, read_at null. No names or numbers are stored; clients load details through the normal endpoints. Index `(person_id, read_at, created_at)`. Retention is open detail O-02.
+
+### contact_views
+id, viewer_id FK people, person_id FK people, screen text, viewed_at. One row each time a verifier screen shows a mobile number (decision D-07). The number itself is never stored. Retention is open detail O-03.
 
 ### labels
 | Column | Type | Notes |
@@ -88,38 +140,60 @@ Same shape as work_hosts without availability: id, user_email, password_hash, cr
 | is_active | boolean NOT NULL default true | |
 | | | UNIQUE (label_type, label_name) |
 
-### freelancer_labels
+### person_labels
 | Column | Type | Notes |
 |---|---|---|
-| freelancer_id | uuid FK | PK part |
+| person_id | uuid FK people | PK part |
 | label_id | uuid FK labels | PK part |
-| level_label_id | uuid FK labels, nullable | only for skill labels; must point to a `skill_level` label. Enforced by the database trigger `freelancer_labels_level_check` (migration 0001) and a CHECK that it differs from `label_id` |
+| level_label_id | uuid FK labels, nullable | only for skill labels; must point to a `skill_level` label. Enforced by a database trigger and a CHECK that it differs from `label_id` |
 
-### freelancer_unavailability
-id uuid PK, freelancer_id FK, unavailable_from timestamptz, unavailable_to timestamptz, CHECK (unavailable_from < unavailable_to). An exclusion constraint (`btree_gist` extension) prevents overlapping periods for the same freelancer; back-to-back periods are allowed.
+### person_unavailability
+id uuid PK, person_id FK, unavailable_from timestamptz, unavailable_to timestamptz, CHECK (unavailable_from < unavailable_to). An exclusion constraint (`btree_gist` extension) prevents overlapping periods for the same person; back-to-back periods are allowed.
 
-### login_history
-id uuid PK, user_type text (CHECK freelancer/workhost/organisation/admin), user_id uuid null, login_email text, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null.
-
-### user_ratings
-id uuid PK, work_host_id FK, freelancer_id FK, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, updated_at timestamptz null (set when the rating is edited), UNIQUE (work_host_id, freelancer_id) (Q5).
+### ratings
+id uuid PK, rater_id FK people, provider_id FK people, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, updated_at timestamptz null (set when the rating is edited), UNIQUE (rater_id, provider_id) (Q5), CHECK (rater_id <> provider_id). Ratings stay when a person's account is closed; the rater is never shown to the provider.
 
 ### phone_reveals
-id uuid PK, work_host_id FK (CASCADE), freelancer_id FK (CASCADE), revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10). The number itself is never stored. `channel` and `source` are hints from the web app. Indexes: `(work_host_id, revealed_at)` for rate limiting, `freelancer_id`, `revealed_at`. Migration `0006`.
+id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
+
+### login_history
+id uuid PK, person_id uuid null, login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so rows survive account closing; when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions).
 
 ### password_reset_tokens
-id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestamptz, used_at timestamptz null.
+id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, used_at timestamptz null.
 
 ### refresh_tokens
-id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestamptz, revoked_at timestamptz null, created_at timestamptz, replaced_by uuid null (rotation).
+id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, revoked_at timestamptz null, created_at timestamptz, replaced_by uuid null (rotation).
 
 ### report_schedules and report_runs
 - `report_schedules`: id, report_name, cron_expression, timezone, is_enabled, recipients (text).
 - `report_runs`: id, report_name, window_from, window_to, started_at, finished_at, status (running/succeeded/failed), file_path, row_count, error_message. UNIQUE (report_name, window_from, window_to) for idempotency.
 
+## The six invariants as database constraints
+
+Numbers are those of the [data model summary](../verification.md#data-model-summary). Everything that must hold only at the end of a transaction is declared deferrable and is checked at `COMMIT`: the foreign keys, the constraint triggers, and the "only one" rules, which are **exclusion constraints** (`EXCLUDE USING btree ... DEFERRABLE INITIALLY DEFERRED`, with the `btree_gist` extension already in use) because a partial unique index cannot be deferred. That is what lets a succession or handover change two rows in one transaction in any order.
+
+| # | Rule | Enforced by |
+|---|---|---|
+| 1 | Exactly one OWNER | `EXCLUDE USING btree (status WITH =) WHERE (status = 'owner' AND closed_at IS NULL) DEFERRABLE INITIALLY DEFERRED` (at most one); a deferred constraint trigger fails the commit if no open OWNER exists |
+| 2 | Every open, non-revoked person has a home group of their own church | `CHECK ((home_group_id IS NULL) = (status = 'revoked' OR closed_at IS NOT NULL))` and the composite foreign key `(home_group_id, church_id)` |
+| 3 | Every open church has exactly one ADMIN | `EXCLUDE USING btree (church_id WITH =) WHERE (status = 'admin' AND closed_at IS NULL) DEFERRABLE INITIALLY DEFERRED`; deferred constraint trigger: `churches.admin_id` is that ADMIN, or the OWNER in the OWNER's own church (which then has no `admin` person) |
+| 4 | Every open home group has exactly one leader, who belongs to it | the exclusion constraint on `home_groups.leader_id` above (open groups only); deferred constraint trigger: the leader has `status_rank >= 4`, is open, and has `home_group_id` equal to the group |
+| 5 | Every VERIFIER leads their own group | Deferred constraint trigger on `people`: if `status = 'verifier'` then the group in `home_group_id` has this person as `leader_id` |
+| 6 | A leader never stops leading without a successor in the same transaction | The deferred triggers of rules 3 and 4 fail the commit otherwise; closing a group or church sets `closed_at` in the same transaction, which exempts it |
+
+The service layer decides who may do what (the permission module of S2.2); the constraints are the last line of defence and are tested one by one.
+
 ## Indexes
 
-`lower(user_email)` on each user table; `labels(label_type, label_name)`; `freelancer_labels(label_id)`; `user_ratings(freelancer_id)`; `phone_reveals(work_host_id, revealed_at)`, `phone_reveals(freelancer_id)`, `phone_reveals(revealed_at)`; `login_history(login_time)`, `login_history(login_email, login_time)`; `created_at` on all user tables (reports); `freelancer_unavailability(freelancer_id, unavailable_from, unavailable_to)`.
+- `people`: unique indexes on `lower(email)` and on `mobile_number`, each `WHERE closed_at IS NULL` (immediate; a person's own email is not swapped within a transaction) (revoked accounts count as open, which stops a revoked person signing up again); `(church_id, status)`; `(home_group_id, status)`; `(last_home_group_id)`; partial index on providers for search `(status) WHERE status_rank(status) >= 3 AND closed_at IS NULL`; `created_at` (reports).
+- `status_changes (person_id, at)`, `(changed_by_id)` (re-check flags and the chain of trust).
+- `vouches (applicant_id)`, `(voucher_id)`.
+- `labels (label_type, label_name)`; `person_labels (label_id)`; `ratings (provider_id)`; `phone_reveals (revealer_id, revealed_at)`, `(provider_id)`, `(revealed_at)`.
+- `login_history (login_time)`, `(login_email, login_time)`.
+- `person_unavailability (person_id, unavailable_from, unavailable_to)`.
+- `notifications (person_id, read_at, created_at)`.
+- Search at 10 000 people and 4 000 providers is measured in S5.2; indexes are adjusted then.
 
 ## Seed data (labels)
 
@@ -131,4 +205,4 @@ id uuid PK, user_type text, user_id uuid, token_hash text, expires_at timestampt
 | nativity | Indian, Srilankan, Keralite, Bangla, Philippines |
 | skill_level | basic, 50%, 80% |
 
-Seeding is done by migration `0002` so every environment has the same base labels. The same migration seeds `report_schedules`: `users_registered_daily` (`5 0 * * *`), `weekly_summary` (`0 6 * * 1`), `monthly_summary` (`0 6 1 * *`), timezone Asia/Dubai.
+Seeding is done by a migration so every environment has the same base labels. The report schedules are seeded in the same way (timezone Asia/Dubai); the set follows the redefined reports of S5.3. The first church, home group and OWNER are not seeded: the operator command of S2.4 creates them.
