@@ -58,7 +58,7 @@ A backend package, for example `backend/app/trust/`, with no database or web cod
 3. **One function per operation** from the summary's Operations table, such as `admit`, `decline`, `appoint_successor`, `step_down`, `revoke`, `reinstate`, `clear_flag`, `move_member`, `close_group`, `close_church` and `hand_over_owner`. Each takes the actor, the targets and the relevant current state, and returns either:
    - a refusal with a reason code (for example `not_in_scope`, `target_not_below_actor`, `needs_voucher`, `no_successor`, `closed`), or
    - a **change set**: every field to update and every `StatusChange` row to add, so a caller can apply it in one transaction.
-4. **Invariant check:** `check_invariants(state)` checks invariants 1 to 6 from the summary, so tests can verify the state after every operation.
+4. **Invariant check:** `check_invariants(state)` checks every invariant in the Data model summary, so tests can verify the state after every operation.
 5. **Allowed actions:** `allowed_actions(actor, target, state)` lists which operations the actor may perform on the target. The API will later serve this so web and mobile show only the buttons that work, without copying the rules.
 6. **Capability questions:** `can_search`, `can_be_listed`, `can_vouch` and similar, so features ask what a person may do rather than reading their status.
 7. **Storage port:** an interface for loading state and applying a change set, with an in-memory version for tests. The database version comes with the data model story.
@@ -72,15 +72,17 @@ A backend package, for example `backend/app/trust/`, with no database or web cod
 5. **History is always written.** Every change set that changes a status includes a matching `StatusChange` row with the right `kind`, `from`, `to` and `changedById`.
 6. **Override rule.** A VERIFIER cannot undo a revocation or appointment made by an ADMIN or the OWNER. Tested both ways.
 7. **No self-changes.** Nobody can change their own status through a status operation. Handing over the OWNER role and closing your own group are separate operations, tested separately.
-8. **Pure logic.** The decision code imports nothing from the database layer or the web framework, and its tests run without a database, using the in-memory storage.
-9. **Independence is enforced.** An import-contract check in CI, for example `import-linter`, fails if the rules module imports anything from the rest of the app.
-10. **Capability questions.** `can_search`, `can_be_listed` and `can_vouch` are tested for every status, including REVOKED, PENDING and closed accounts.
+8. **Nothing is deleted.** No change set deletes a person, home group, church, vouch or history row. Closing sets `closedAt`, and withdrawing a vouch sets `withdrawnAt`.
+9. **Revoking a leader flags, not changes.** Revoking someone sets `flaggedForRecheck` on everyone whose current status they set, and leaves those people's statuses unchanged.
+10. **Pure logic.** The decision code imports nothing from the database layer or the web framework, and its tests run without a database, using the in-memory storage.
+11. **Independence is enforced.** An import-contract check in CI, for example `import-linter`, fails if the rules module imports anything from the rest of the app.
+12. **Capability questions.** `can_search`, `can_be_listed` and `can_vouch` are tested for every status, including REVOKED, PENDING and closed accounts.
 
 ## Out of scope
 
 - Database tables, constraints and migrations for the new model, and the database storage adapter (a later story, after the specification is updated).
 - Changing existing features to use the capability questions.
-- API endpoints, including the allowed-actions endpoint, and web or mobile screens.
+- API endpoints, including the allowed-actions endpoint, and web or mobile screens. When the API story serves these, a refusal because the target is out of the caller's scope must answer 404, with no reason code, so callers cannot learn that someone they may not see exists.
 - Linking the new statuses to the stored `user_type` values.
 - Notifications, such as telling a leader about a new applicant.
 - Ordinary profile edits.
