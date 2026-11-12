@@ -30,8 +30,8 @@ Migration `0007` creates the tables of this file that belong to the new identity
 | `freelancer_unavailability` | Renamed `person_unavailability`, key `person_id`. | S5.1 |
 | `user_ratings` | Kept as `ratings`, with `rater_id` and `provider_id` pointing at `people`. | S5.2 |
 | `phone_reveals` | Kept, with `revealer_id` and `provider_id`. | S5.2 |
-| `login_history` | Kept; `user_type` dropped, `person_id` added. | S2.3 |
-| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. | S2.3 |
+| `login_history` | Kept; `user_type` dropped, `person_id` added. | S2.3 accepts `person` in `user_type` (migration 0008), the person's id goes in `user_id`; the column is dropped with the last older account type (S5.2) |
+| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. | Same as `login_history` |
 | `report_schedules`, `report_runs` | Kept; the report set changes. | S5.3 |
 
 The last pull request that removes an old table also removes the old identity tables, so the old and the new identity never coexist at the cut-over.

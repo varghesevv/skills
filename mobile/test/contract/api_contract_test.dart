@@ -116,7 +116,10 @@ void main() {
   group('requests the app sends', () {
     test('login body', () {
       expect(requestSchema('POST', '/auth/login'), 'LoginRequest');
-      expect(required('LoginRequest'), {'email', 'password', 'user_type'});
+      // user_type became optional with the church trust model (ADR-0017): a request without
+      // it logs in as a person. The older app still sends it, and the server still accepts it.
+      expect(required('LoginRequest'), {'email', 'password'});
+      expect(properties('LoginRequest'), contains('user_type'));
     });
 
     test(
@@ -140,7 +143,8 @@ void main() {
     });
 
     test('forgot-password body', () {
-      expect(required('ForgotPasswordRequest'), {'email', 'user_type'});
+      expect(required('ForgotPasswordRequest'), {'email'});
+      expect(properties('ForgotPasswordRequest'), contains('user_type'));
     });
 
     test('registration bodies carry the fields the forms send', () {

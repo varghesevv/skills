@@ -6,6 +6,9 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, SecretStr, StringConstraints
 
 UserType = Literal["freelancer", "workhost", "organisation", "admin"]
+# What login and password reset accept: "person" is the one identity of the church trust model.
+# It is the default, so a client that sends no user type uses it.
+AuthUserType = Literal["freelancer", "workhost", "organisation", "admin", "person"]
 
 MIN_PASSWORD_LENGTH = 10
 MAX_PASSWORD_LENGTH = 128
@@ -66,7 +69,7 @@ class LoginRequest(BaseModel):
     email: Email
     # Not length-checked: a wrong password must be a normal 401, never a validation hint.
     password: Annotated[SecretStr, Field(max_length=1024)]
-    user_type: UserType
+    user_type: AuthUserType = "person"
 
 
 class TokenResponse(BaseModel):
@@ -82,7 +85,7 @@ class RefreshRequest(BaseModel):
 
 class ForgotPasswordRequest(BaseModel):
     email: Email
-    user_type: UserType
+    user_type: AuthUserType = "person"
 
 
 class ResetPasswordRequest(BaseModel):

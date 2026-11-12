@@ -5,6 +5,7 @@ from app.api.deps import get_principal
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
+from app.models.church import Person
 from app.models.users import Organisation
 from app.schemas.auth import MeResponse
 from app.services.accounts import get_by_id
@@ -19,6 +20,9 @@ def me(
     account = get_by_id(db, principal.user_type, principal.user_id)
     if account is None:
         raise ApiError(401, "invalid_token", "The account no longer exists")
+    if isinstance(account, Person):
+        # The /me of the church trust model arrives with slice S2.5.
+        raise ApiError(403, "forbidden", "Not available for this kind of account yet")
     org = account if isinstance(account, Organisation) else None
     return MeResponse(
         id=account.id,
