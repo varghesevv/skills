@@ -12,7 +12,7 @@ This file describes the **target** schema of the church trust model ([verificati
 - Enumerated values use `text` with `CHECK` constraints (easy to migrate). Statuses are ordered by the SQL function `status_rank(text)` (revoked 0, pending 1, searcher 2, provider 3, verifier 4, admin 5, owner 6).
 - Never store plain passwords, plain reset tokens or plain link tokens: store hashes.
 - Closing is never deleting: rows of people, groups and churches stay, with `closed_at` set.
-- Personal data (name, email, mobile number, password hash) is held only on `people` and is cleared when the account is closed. Other tables hold ids, never copies of personal data.
+- Personal data (name, email, mobile number, password hash) is held on `people` and is cleared when the account is closed. Other tables hold ids, never copies. Two tables hold a little more and are the named exceptions: `login_history` (email, address and browser of attempts; cleared for a person's rows when their account is closed) and `admin_invitations` (the invited email, cleared when the invitation is accepted, cancelled or expired). Retention of both is open detail O-07.
 
 ## Fate of the old tables
 
@@ -47,7 +47,7 @@ This file describes the **target** schema of the church trust model ([verificati
 | id | uuid PK | |
 | church_id | uuid NOT NULL FK churches | UNIQUE (id, church_id) so `people` can reference both |
 | name | varchar(200) NOT NULL | unique per church among open groups |
-| leader_id | uuid NOT NULL FK people | `DEFERRABLE INITIALLY DEFERRED`; UNIQUE (a person leads at most one group) |
+| leader_id | uuid NOT NULL FK people | `DEFERRABLE INITIALLY DEFERRED`. A person leads at most one open group: `EXCLUDE USING btree (leader_id WITH =) WHERE (closed_at IS NULL) DEFERRABLE INITIALLY DEFERRED`. A closed group keeps its last leader as history only |
 | created_at | timestamptz NOT NULL | |
 | closed_at | timestamptz | set when the group is closed |
 
@@ -59,7 +59,7 @@ One row per person, whatever their status.
 | id | uuid PK | |
 | status | text NOT NULL | CHECK in (revoked, pending, searcher, provider, verifier, admin, owner) |
 | church_id | uuid NOT NULL FK churches | revoked people stay on their church's revoked list |
-| home_group_id | uuid FK home_groups | NULL if and only if the person is revoked or closed; composite FK (home_group_id, church_id) to `home_groups (id, church_id)` |
+| home_group_id | uuid FK home_groups | NULL if and only if the person is revoked or closed (the CHECK below); composite FK (home_group_id, church_id) to `home_groups (id, church_id)` |
 | last_home_group_id | uuid FK home_groups | set on revocation: the group they were removed from, so its leader keeps them in scope |
 | full_name | varchar(200) | 2 to 200 characters; NULL only when closed |
 | email | text | lowercase; NULL only when closed |
@@ -88,11 +88,11 @@ Permanent, append-only history. The chain of trust is built from it.
 | person_id | uuid NOT NULL FK people | |
 | from_status | text | NULL at account creation |
 | to_status | text NOT NULL | |
-| changed_by_id | uuid FK people | NULL only for an operator change in the database |
+| changed_by_id | uuid FK people | NULL if and only if `kind` is `signup` or `operator` (an operator change in the database); CHECK (changed_by_id IS DISTINCT FROM person_id OR kind = 'handover'), because nobody changes their own status except the OWNER in a handover |
 | kind | text NOT NULL | CHECK in (signup, admit, appoint, step-down, revoke, reinstate, reconfirm, handover, operator) |
 | at | timestamptz NOT NULL | |
 
-A trigger refuses `UPDATE` and `DELETE` on this table.
+A trigger refuses `UPDATE` and `DELETE` on this table. `people.status_set_by_id` is the `changed_by_id` of the latest row, so both are NULL for a new applicant.
 
 ### vouches
 | Column | Type | Notes |
@@ -157,7 +157,7 @@ id uuid PK, rater_id FK people, provider_id FK people, rating smallint CHECK (ra
 id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
 
 ### login_history
-id uuid PK, person_id uuid null, login_email text, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so history survives account closing.
+id uuid PK, person_id uuid null, login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so rows survive account closing; when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions).
 
 ### password_reset_tokens
 id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, used_at timestamptz null.
@@ -171,14 +171,14 @@ id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, revoke
 
 ## The six invariants as database constraints
 
-Numbers are those of the [data model summary](../verification.md#data-model-summary). The circular references (a church needs its ADMIN, a person needs a church) are allowed by deferred foreign keys and deferred constraint triggers, which are checked at `COMMIT`. That is what lets succession change two rows in one transaction.
+Numbers are those of the [data model summary](../verification.md#data-model-summary). Everything that must hold only at the end of a transaction is declared deferrable and is checked at `COMMIT`: the foreign keys, the constraint triggers, and the "only one" rules, which are **exclusion constraints** (`EXCLUDE USING btree ... DEFERRABLE INITIALLY DEFERRED`, with the `btree_gist` extension already in use) because a partial unique index cannot be deferred. That is what lets a succession or handover change two rows in one transaction in any order.
 
 | # | Rule | Enforced by |
 |---|---|---|
-| 1 | Exactly one OWNER | Partial unique index on `people ((true)) WHERE status = 'owner' AND closed_at IS NULL`; a deferred constraint trigger fails the commit if no open OWNER exists |
-| 2 | Every open, non-revoked person has a home group of their own church | `CHECK ((closed_at IS NOT NULL) OR ((status = 'revoked') = (home_group_id IS NULL)))` and the composite foreign key `(home_group_id, church_id)` |
-| 3 | Every open church has exactly one ADMIN | Partial unique index on `people (church_id) WHERE status = 'admin' AND closed_at IS NULL`; deferred constraint trigger: `churches.admin_id` is that ADMIN, or the OWNER in the OWNER's own church (which then has no `admin` person) |
-| 4 | Every open home group has exactly one leader, who belongs to it | `home_groups.leader_id` unique; deferred constraint trigger: the leader has `status_rank >= 4`, is open, and has `home_group_id` equal to the group |
+| 1 | Exactly one OWNER | `EXCLUDE USING btree (status WITH =) WHERE (status = 'owner' AND closed_at IS NULL) DEFERRABLE INITIALLY DEFERRED` (at most one); a deferred constraint trigger fails the commit if no open OWNER exists |
+| 2 | Every open, non-revoked person has a home group of their own church | `CHECK ((home_group_id IS NULL) = (status = 'revoked' OR closed_at IS NOT NULL))` and the composite foreign key `(home_group_id, church_id)` |
+| 3 | Every open church has exactly one ADMIN | `EXCLUDE USING btree (church_id WITH =) WHERE (status = 'admin' AND closed_at IS NULL) DEFERRABLE INITIALLY DEFERRED`; deferred constraint trigger: `churches.admin_id` is that ADMIN, or the OWNER in the OWNER's own church (which then has no `admin` person) |
+| 4 | Every open home group has exactly one leader, who belongs to it | the exclusion constraint on `home_groups.leader_id` above (open groups only); deferred constraint trigger: the leader has `status_rank >= 4`, is open, and has `home_group_id` equal to the group |
 | 5 | Every VERIFIER leads their own group | Deferred constraint trigger on `people`: if `status = 'verifier'` then the group in `home_group_id` has this person as `leader_id` |
 | 6 | A leader never stops leading without a successor in the same transaction | The deferred triggers of rules 3 and 4 fail the commit otherwise; closing a group or church sets `closed_at` in the same transaction, which exempts it |
 
@@ -186,7 +186,7 @@ The service layer decides who may do what (the permission module of S2.2); the c
 
 ## Indexes
 
-- `people`: unique `lower(email)` and unique `mobile_number` `WHERE closed_at IS NULL` (revoked accounts count as open, which stops a revoked person signing up again); `(church_id, status)`; `(home_group_id, status)`; `(last_home_group_id)`; partial index on providers for search `(status) WHERE status_rank(status) >= 3 AND closed_at IS NULL`; `created_at` (reports).
+- `people`: unique indexes on `lower(email)` and on `mobile_number`, each `WHERE closed_at IS NULL` (immediate; a person's own email is not swapped within a transaction) (revoked accounts count as open, which stops a revoked person signing up again); `(church_id, status)`; `(home_group_id, status)`; `(last_home_group_id)`; partial index on providers for search `(status) WHERE status_rank(status) >= 3 AND closed_at IS NULL`; `created_at` (reports).
 - `status_changes (person_id, at)`, `(changed_by_id)` (re-check flags and the chain of trust).
 - `vouches (applicant_id)`, `(voucher_id)`.
 - `labels (label_type, label_name)`; `person_labels (label_id)`; `ratings (provider_id)`; `phone_reveals (revealer_id, revealed_at)`, `(provider_id)`, `(revealed_at)`.
