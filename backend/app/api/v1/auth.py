@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import client_address
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.models.users import Organisation
@@ -72,10 +73,6 @@ def register_organisation(
     return _register(db, "organisation", body, org_name=body.org_name)
 
 
-def _client_address(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
-
-
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(
     body: SignupRequest,
@@ -84,7 +81,7 @@ def signup(
     settings: Settings = Depends(get_settings),
 ) -> SignupResponse:
     """Public. Creates a PENDING person in the chosen home group and tells its leader."""
-    signup_limiter.check(_client_address(request), settings.signup_max_per_hour)
+    signup_limiter.check(client_address(request), settings.signup_max_per_hour)
     person = signup_service.sign_up(
         db,
         settings,

@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
+from app.api.deps import client_address
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
@@ -20,8 +21,7 @@ limiter = SlidingWindowLimiter(
 
 
 def _limit(request: Request, settings: Settings) -> None:
-    client = request.client.host if request.client else "unknown"
-    limiter.check(client, settings.public_list_max_per_minute)
+    limiter.check(client_address(request), settings.public_list_max_per_minute)
 
 
 @router.get("")

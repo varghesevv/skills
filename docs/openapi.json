@@ -745,6 +745,21 @@
         "title": "GroupInvitationList",
         "type": "object"
       },
+      "GroupInvitationLookup": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "GroupInvitationLookup",
+        "type": "object"
+      },
       "GroupInvitationSummary": {
         "properties": {
           "created_at": {
@@ -3924,21 +3939,20 @@
         ]
       }
     },
-    "/api/v1/group-invitations/{token}": {
-      "get": {
-        "description": "Public: the church and group a link leads to, for the sign-up screen. Rate limited per IP;\nevery failure (no such link, expired, revoked, group closed) is the same `404`.",
-        "operationId": "group_invitation_api_v1_group_invitations__token__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "token",
-            "required": true,
-            "schema": {
-              "title": "Token",
-              "type": "string"
+    "/api/v1/group-invitations/lookup": {
+      "post": {
+        "description": "Public: the church and group a link leads to, for the sign-up screen. The token is in the\nbody, not the path, so it never reaches an access log of the API. Rate limited per IP; every\nfailure (no such link, expired, revoked, group closed) is the same `404`.",
+        "operationId": "lookup_group_invitation_api_v1_group_invitations_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupInvitationLookup"
+              }
             }
-          }
-        ],
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -3961,7 +3975,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Group Invitation",
+        "summary": "Lookup Group Invitation",
         "tags": [
           "group-invitations"
         ]

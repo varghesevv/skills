@@ -6,17 +6,17 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.api.v1 import churches
 from app.core.config import get_settings
-from app.core.security import hash_token
+from app.core.security import hash_password, hash_token
 from app.models import GroupInvitation, Notification, Person, StatusChange, Vouch
 from app.services import rate_limit
 from tests.api_helpers import API
 from tests.test_person_auth import Member, add_member, bearer, login
-from tests.trust_helpers import World, check_rules
+from tests.trust_helpers import World, check_rules, make_person
 
 pytestmark = pytest.mark.db
 
@@ -357,7 +357,7 @@ def test_a_link_leads_to_its_group_and_signing_up_through_it_chooses_the_group(
     leader.person.status = "verifier"
     headers = bearer(login(client, leader))
     token = client.post(f"{API}/verifier/group-invitations", headers=headers).json()["token"]
-    info = client.get(f"{API}/group-invitations/{token}")  # no login needed
+    info = client.post(f"{API}/group-invitations/lookup", json={"token": token})  # no login needed
     assert info.status_code == 200
     assert info.json() == {
         "church_name": "First church",
@@ -397,7 +397,7 @@ def test_every_failure_of_a_link_looks_the_same(
         leader.person.status = "provider"
         leader.person.home_group_id = world.group.id
         check_rules(session)
-    lookup = client.get(f"{API}/group-invitations/{token}")
+    lookup = client.post(f"{API}/group-invitations/lookup", json={"token": token})
     signup_attempt = client.post(f"{API}/auth/signup", json=details(invitation_token=token))
     assert lookup.status_code == 404
     assert lookup.json()["error"]["code"] == "not_found"
@@ -415,7 +415,10 @@ def test_a_revoked_link_stops_working_and_leaves_the_list(client: TestClient, wo
         == 204
     )
     assert client.get(f"{API}/verifier/group-invitations", headers=headers).json()["items"] == []
-    assert client.get(f"{API}/group-invitations/{created['token']}").status_code == 404
+    assert (
+        client.post(f"{API}/group-invitations/lookup", json={"token": created["token"]}).status_code
+        == 404
+    )
 
 
 def test_a_leader_cannot_revoke_a_link_of_another_group(client: TestClient, world: World) -> None:
@@ -433,7 +436,10 @@ def test_a_leader_cannot_revoke_a_link_of_another_group(client: TestClient, worl
         f"{API}/verifier/group-invitations/{created['id']}", headers=other_headers
     )
     assert response.status_code == 404
-    assert client.get(f"{API}/group-invitations/{created['token']}").status_code == 200
+    assert (
+        client.post(f"{API}/group-invitations/lookup", json={"token": created["token"]}).status_code
+        == 200
+    )
 
 
 @pytest.mark.parametrize("status", ["pending", "searcher", "provider"])
@@ -456,9 +462,116 @@ def test_link_lookups_are_limited_per_address(
     get_settings.cache_clear()
     try:
         codes = [
-            client.get(f"{API}/group-invitations/{secrets.token_urlsafe(32)}").status_code
+            client.post(
+                f"{API}/group-invitations/lookup", json={"token": secrets.token_urlsafe(32)}
+            ).status_code
             for _ in range(3)
         ]
         assert codes == [404, 404, 429]
     finally:
         get_settings.cache_clear()
+
+
+def test_a_group_invitation_lookup_keeps_the_token_out_of_the_address(
+    client: TestClient, world: World
+) -> None:
+    headers = leader_headers(client, world)
+    token = client.post(f"{API}/verifier/group-invitations", headers=headers).json()["token"]
+    assert client.get(f"{API}/group-invitations/{token}").status_code in (404, 405)
+    assert client.post(f"{API}/group-invitations/lookup", json={"token": token}).status_code == 200
+
+
+def test_each_address_has_its_own_sign_up_and_link_limit(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.main import app
+
+    monkeypatch.setenv("SIGNUP_MAX_PER_HOUR", "1")
+    monkeypatch.setenv("LINK_LOOKUP_MAX_PER_HOUR", "1")
+    get_settings.cache_clear()
+    try:
+        lookup = {"token": secrets.token_urlsafe(32)}
+        with (
+            TestClient(app, client=("198.51.100.1", 1)) as first,
+            TestClient(app, client=("198.51.100.2", 1)) as second,
+        ):
+            for tc, expected in ((first, [201, 429]), (second, [201, 429])):
+                body = {**details(), "home_group_id": str(world.group.id)}
+                again = {**details(), "home_group_id": str(world.group.id)}
+                codes = [tc.post(f"{API}/auth/signup", json=b).status_code for b in (body, again)]
+                assert codes == expected
+            assert first.post(f"{API}/group-invitations/lookup", json=lookup).status_code == 404
+            assert first.post(f"{API}/group-invitations/lookup", json=lookup).status_code == 429
+            assert second.post(f"{API}/group-invitations/lookup", json=lookup).status_code == 404
+    finally:
+        get_settings.cache_clear()
+
+
+def test_a_leader_who_handed_their_group_on_has_no_links_to_give(
+    client: TestClient, world: World
+) -> None:
+    """An ADMIN can be a member of a group without leading it: links come from the leader."""
+    church, group, admin = world.add_church("Elsewhere")
+    successor = make_person(church, group, "verifier")
+    world.session.add(successor)
+    world.session.flush()
+    group.leader_id = successor.id  # the ADMIN hands the group on and keeps their status
+    check_rules(world.session)
+    password = secrets.token_urlsafe(16)
+    admin.password_hash = hash_password(password)
+    world.session.flush()
+    headers = bearer(login(client, Member(admin, password)))
+    for call in (
+        lambda: client.post(f"{API}/verifier/group-invitations", headers=headers),
+        lambda: client.get(f"{API}/verifier/group-invitations", headers=headers),
+    ):
+        response = call()
+        assert (response.status_code, response.json()["error"]["code"]) == (409, "no_home_group")
+
+
+def test_an_admin_who_leads_their_group_can_give_links(client: TestClient, world: World) -> None:
+    _church, _group, admin = world.add_church("Elsewhere")
+    password = secrets.token_urlsafe(16)
+    admin.password_hash = hash_password(password)
+    world.session.flush()
+    headers = bearer(login(client, Member(admin, password)))
+    assert client.post(f"{API}/verifier/group-invitations", headers=headers).status_code == 201
+
+
+def test_an_application_admitted_in_the_meantime_is_not_changed(
+    client: TestClient, session: Session, world: World
+) -> None:
+    """The person was loaded as pending, then admitted by a leader before the change ran."""
+    member = applicant(world)
+    headers = bearer(login(client, member))
+    other_leader = world.add_person("provider")
+    other = world.add_group(other_leader, "Other group")
+    # A change made behind the loaded copy, as another request would make it.
+    session.execute(
+        update(Person)
+        .where(Person.id == member.person.id)
+        .values(status="searcher")
+        .execution_options(synchronize_session=False)  # the loaded copy stays "pending"
+    )
+    response = client.put(
+        f"{API}/me/application", headers=headers, json={"home_group_id": str(other.id)}
+    )
+    assert (response.status_code, response.json()["error"]["code"]) == (409, "not_pending")
+    session.expire_all()
+    assert member.person.home_group_id == world.group.id
+
+
+def test_a_refused_choice_leaves_nothing_half_changed(client: TestClient, world: World) -> None:
+    member = applicant(world)
+    headers = bearer(login(client, member))
+    response = client.put(
+        f"{API}/me/application",
+        headers=headers,
+        json={
+            "home_group_id": "00000000-0000-4000-8000-000000000000",
+            "requested_status": "provider",
+        },
+    )
+    assert response.status_code == 422
+    world.session.expire_all()
+    assert member.person.requested_status == "searcher"

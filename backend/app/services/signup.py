@@ -119,15 +119,22 @@ def change_application(
 ) -> None:
     """While PENDING: choose another group (even in another church) or another status to apply
     for. Vouches already received stay; a newly chosen leader is notified."""
+    # Read the person again and hold the row: if a leader admits them at this moment, the answer
+    # is "not pending" instead of moving someone who has just been admitted.
+    db.refresh(person, with_for_update=True)
     if person.status != "pending":
+        db.rollback()
         raise ApiError(409, "not_pending", "Only a pending application can be changed")
+    chosen: tuple[HomeGroup, Church] | None = None
+    if home_group_id is not None and home_group_id != person.home_group_id:
+        chosen = open_group(db, home_group_id)
+        if chosen is None:  # nothing has been changed yet
+            db.rollback()
+            raise _invalid_choice()
     if requested_status is not None:
         person.requested_status = requested_status
-    if home_group_id is not None and home_group_id != person.home_group_id:
-        found = open_group(db, home_group_id)
-        if found is None:
-            raise _invalid_choice()
-        group, church = found
+    if chosen is not None:
+        group, church = chosen
         person.church_id = church.id
         person.home_group_id = group.id
         _notify_leader(db, group, person.id)
@@ -137,15 +144,23 @@ def change_application(
 # ---- group invitation links ---------------------------------------------------------------
 
 
+def led_group(db: Session, person: Person) -> HomeGroup:
+    """The open home group this person leads. An ADMIN or the OWNER may be a member of a group
+    without leading it (after handing it on); they have no links of their own to give."""
+    group = db.get(HomeGroup, person.home_group_id) if person.home_group_id else None
+    if group is None or group.closed_at is not None or group.leader_id != person.id:
+        raise ApiError(409, "no_home_group", "You do not lead a home group")
+    return group
+
+
 def create_group_invitation(
     db: Session, settings: Settings, leader: Person
 ) -> tuple[GroupInvitation, str]:
-    """A new link into the leader's own home group. The token is returned once."""
-    if leader.home_group_id is None:
-        raise ApiError(409, "no_home_group", "You do not lead a home group")
+    """A new link into the home group the leader leads. The token is returned once."""
+    group = led_group(db, leader)
     token = new_opaque_token()
     invitation = GroupInvitation(
-        home_group_id=leader.home_group_id,
+        home_group_id=group.id,
         created_by_id=leader.id,
         token_hash=hash_token(token),
         expires_at=datetime.now(UTC) + timedelta(days=settings.invitation_link_days),
@@ -156,12 +171,13 @@ def create_group_invitation(
 
 
 def active_invitations(db: Session, leader: Person) -> list[GroupInvitation]:
+    group = led_group(db, leader)
     now = datetime.now(UTC)
     return list(
         db.scalars(
             select(GroupInvitation)
             .where(
-                GroupInvitation.home_group_id == leader.home_group_id,
+                GroupInvitation.home_group_id == group.id,
                 GroupInvitation.revoked_at.is_(None),
                 GroupInvitation.expires_at > now,
             )
@@ -171,8 +187,9 @@ def active_invitations(db: Session, leader: Person) -> list[GroupInvitation]:
 
 
 def revoke_invitation(db: Session, leader: Person, invitation_id: uuid.UUID) -> None:
+    group = led_group(db, leader)
     invitation = db.get(GroupInvitation, invitation_id)
-    if invitation is None or invitation.home_group_id != leader.home_group_id:
+    if invitation is None or invitation.home_group_id != group.id:
         raise ApiError(404, "not_found", "There is no such link")
     if invitation.revoked_at is None:
         invitation.revoked_at = datetime.now(UTC)

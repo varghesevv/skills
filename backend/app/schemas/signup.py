@@ -43,6 +43,10 @@ class ApplicationUpdate(BaseModel):
         return self
 
 
+class GroupInvitationLookup(BaseModel):
+    token: Annotated[str, Field(min_length=10, max_length=500)]
+
+
 class GroupInvitationInfo(BaseModel):
     """What the sign-up screen shows for an invitation link."""
 
