@@ -19,7 +19,7 @@ def _normalise_email(value: str) -> str:
     return value.strip().lower()
 
 
-def _check_mobile(value: str) -> str:
+def check_mobile(value: str) -> str:
     value = re.sub(r"[ -]", "", value)
     if not _MOBILE.match(value):
         raise ValueError("mobile number must be 7 to 15 digits, optionally starting with +")
@@ -29,7 +29,7 @@ def _check_mobile(value: str) -> str:
 Email = Annotated[EmailStr, AfterValidator(_normalise_email)]
 # A person's name (freelancers and work hosts). Organisations use org_name instead.
 PersonName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=200)]
-Mobile = Annotated[str, AfterValidator(_check_mobile)]
+Mobile = Annotated[str, AfterValidator(check_mobile)]
 # SecretStr keeps passwords out of repr() and logs.
 NewPassword = Annotated[
     SecretStr, Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)

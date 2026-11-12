@@ -211,4 +211,4 @@ The service layer decides who may do what (the permission module of S2.2); the c
 | nativity | Indian, Srilankan, Keralite, Bangla, Philippines |
 | skill_level | basic, 50%, 80% |
 
-Seeding is done by a migration so every environment has the same base labels. The report schedules are seeded in the same way (timezone Asia/Dubai); the set follows the redefined reports of S5.3. The first church, home group and OWNER are not seeded: the operator command of S2.4 creates them.
+Seeding is done by a migration so every environment has the same base labels. The report schedules are seeded in the same way (timezone Asia/Dubai); the set follows the redefined reports of S5.3. The first church, home group and OWNER are not seeded: the operator command `create-owner` (S2.4) creates them.
