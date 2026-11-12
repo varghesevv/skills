@@ -23,15 +23,16 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | D-13 | 2026-11-12 | Merge policy: a pull request is merged when every required check is green and the review comments are handled. Pull requests that touch `.github/` or `infra/` wait for the owner. The demo is deployed only at the cut-over, with the owner's go-ahead. | See [CONTRIBUTING](../CONTRIBUTING.md). | #102 | decided |
 | D-14 | 2026-11-12 | The planning answers were not given in writing, so the defaults of the [roadmap](roadmap-verification-model.md) section 8 are in force until the owner corrects them. | Work must not wait. | #102 | decided |
 | D-15 | 2026-11-12 | A revoked person can still log in with the correct password but every endpoint except their own status, token refresh, logout, password reset and app config answers `account_revoked`; a pending applicant reaches only their own application, the list of churches and groups, and notifications. A person out of a verifier's scope is reported as not found. | Lets people see why they have no access, without revealing who exists. | S1.3 | decided |
+| D-16 | 2026-11-12 | Link and invitation tokens: at least 128 bits, stored hashed, vouch and group links expire after 30 days, admin invitations after 14, identical `404` for every failure. Limits per hour as in specification 07. | Settles O-01. | S1.4 | decided |
+| D-17 | 2026-11-12 | A verifier sees a mobile number only in `GET /verifier/people/{id}`, one person at a time, within scope; lists never carry numbers; each call is logged without the number and the log is readable by the OWNER only. | Settles the detail of D-07. | S1.4 | decided |
+| D-18 | 2026-11-12 | Notifications are rows written in the same transaction as their event; clients poll every 60 seconds while open. | Settles the delivery part of O-02; which events notify and the retention stay open. | S1.4 | decided |
 
 ## Open details, to be settled in the named pull request
 
 | # | Detail | Default until settled | Settled in |
 |---|---|---|---|
-| O-01 | Lifetime and entropy of a vouch link and of a group invitation link; rate limits for them | Long random token stored hashed, expiry, rate limits, nothing revealed about whether a link exists (roadmap section 5) | S1.4, S3.1 |
-| O-02 | Which events create an in-app notification, and how long they are kept | The events the model names | S1.4, S3.3 |
-| O-03 | Retention of the log of verifier views of phone numbers | Kept with the trust record | S1.4, S3.2 |
+| O-02 | Which events create an in-app notification, and how long they are kept | The events the model names; kept 12 months | S3.3 |
+| O-03 | Retention of the log of verifier views of phone numbers | Kept 12 months | S3.2 |
 | O-04 | The terminology keys for searcher, provider, verifier, admin, owner, church and home group | One key each, backend and web copies kept equal | S2.9 |
-| O-05 | Fate of each old table (organisations, vouches, admin accounts) | Removed by the destructive migration | S1.2, S2.1 |
 | O-06 | Whether the list of churches, home groups and leader names is public (needed before an account exists) or shown only after the first sign-up step, and how it is rate limited against scraping | Public, names only, rate limited per IP (the sign-up screen has no token) | S1.3, S1.4 |
-| O-07 | Retention of login history rows with no person (failed attempts) and of expired admin invitations | Keep login history 12 months, delete expired invitations after 30 days | S1.4 |
+| O-07 | Retention of login history rows with no person (failed attempts) and of expired admin invitations | Keep login history 12 months, delete expired invitations after 30 days | S2.3 |

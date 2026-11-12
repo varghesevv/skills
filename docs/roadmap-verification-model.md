@@ -5,9 +5,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 ## 0. State (update in every pull request)
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
-- Done also: S0.4 (104), S1.1 (105), S1.2 (106).
-- In progress: S1.3 (API) on `model/verification`.
-- Next: S1.4 (reports, frontend, non-functional).
+- Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107).
+- In progress: S1.4 (reports, frontend, non-functional) on `model/verification`.
+- Next: S1.5 (Android documents and parity table).
 - Waiting on the owner: see section 7. The planning answers were not given in writing, so the defaults of section 8 are in force. The owner allowed merging with the administrator override while the review rule stays in place (2026-11-12).
 ## 1. Why this shape (changes from the first draft)
 
@@ -55,7 +55,7 @@ Counts are targets; a pull request may split.
 - [x] 1.1 Functional requirements (02): replace organisation and vouching requirements with sign-up, vouching, admission, succession, revocation, moving, leaving; keep the provider and searcher requirements.
 - [x] 1.2 Data model (03): `people`, `churches`, `home_groups`, `status_changes`, `vouches`, `group_requests`, `admin_invitations`, `handover_requests`, `move_requests`, `notifications`; the fate of each old table; the six invariants as database constraints; indexes.
 - [x] 1.3 API (04): the target contract: sign-up, session, `/me`, churches and groups, membership and verifier operations, search, detail, ratings and Reveal by status, notifications. Resource paths for providers and searchers stay (compatibility); authorisation changes to status.
-- [ ] 1.4 Reports (05), frontend (06), non-functional (07): reports redefined, screens by status, terminology keys, privacy of verifier views (who may see phone numbers and how it is logged), abuse limits for links, notification delivery.
+- [x] 1.4 Reports (05), frontend (06), non-functional (07): reports redefined, screens by status, terminology keys, privacy of verifier views (who may see phone numbers and how it is logged), abuse limits for links, notification delivery.
 - [ ] 1.5 Android documents and parity table rewritten for the new screens (replaces the older phase 3 and 4 descriptions).
 
 ### S2. Identity and sign-up — 9 pull requests
