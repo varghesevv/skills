@@ -21,6 +21,21 @@ const _churchWords = {
   'freelancers': 'Providers',
 }; // fmt: skip
 
+const _structureDefault = {
+  'homegroup': 'Home group',
+  'homegroups': 'Home groups',
+  'verifier': 'Verifier',
+  'admin': 'Admin',
+  'owner': 'Owner',
+}; // fmt: skip
+const _structureChurch = {
+  'homegroup': 'Home group',
+  'homegroups': 'Home groups',
+  'verifier': 'Group leader',
+  'admin': 'Church admin',
+  'owner': 'Owner',
+}; // fmt: skip
+
 void main() {
   const base = Terms(_defaultWords);
   const church = Terms(_churchWords);
@@ -53,6 +68,23 @@ void main() {
         'Find providers, a provider',
       );
       expect(church.apply('{Organisation} Name'), 'Church Name');
+    });
+
+    test('knows the words of the church trust model', () {
+      const plain = Terms({..._defaultWords, ..._structureDefault});
+      const churchy = Terms({..._churchWords, ..._structureChurch});
+      expect(
+        plain.apply('{Homegroup}, {homegroups}, {verifier}, {Admin}'),
+        'Home group, home groups, verifier, Admin',
+      );
+      expect(
+        churchy.apply('{Verifier} and {admin} and {Owner}'),
+        'Group leader and church admin and Owner',
+      );
+      expect(
+        churchy.apply('{a_verifier}, {a_admin}'),
+        'a group leader, a church admin',
+      );
     });
 
     test('leaves other placeholders alone', () {

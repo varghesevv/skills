@@ -28,6 +28,12 @@ const defaultWords = {
   'badge_freelancer': 'Freelancer',
   'homegroup': 'Home group',
   'homegroups': 'Home groups',
+  'verifier': 'Verifier',
+  'verifiers': 'Verifiers',
+  'admin': 'Admin',
+  'admins': 'Admins',
+  'owner': 'Owner',
+  'owners': 'Owners',
 }; // fmt: skip
 const churchWords = {
   'organisation': 'Church',
@@ -46,6 +52,12 @@ const churchWords = {
   'badge_freelancer': 'Provider',
   'homegroup': 'Home group',
   'homegroups': 'Home groups',
+  'verifier': 'Group leader',
+  'verifiers': 'Group leaders',
+  'admin': 'Church admin',
+  'admins': 'Church admins',
+  'owner': 'Owner',
+  'owners': 'Owners',
 }; // fmt: skip
 
 Map<String, Object?> configJson({

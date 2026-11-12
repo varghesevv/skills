@@ -31,6 +31,7 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | D-21 | 2026-11-13 | The owner confirmed the defaults of section 8 of the roadmap (D-14) in this session and asked to proceed with S2. | Settles D-14: the planning answers are no longer assumptions. | S2 | decided |
 | D-22 | 2026-11-13 | While the older accounts exist, login, refresh, logout and password reset serve both: `person` is a fifth `user_type` in login history and the token tables (migration 0008), the person's id is stored in `user_id`, and `user_type` is optional in the login and forgot-password requests (default `person`). The column and the field go with the last older account type (S5.2). | Keeps every older feature and its tests working while the identity moves. | S2.3 | decided |
 | D-23 | 2026-11-13 | A sign-up or invitation failure never says why: an unknown, closed, expired or revoked group or link is `422 invalid_choice` (sign-up) or `404` (link lookup), and an email or mobile number in use is `409 account_exists`. Sign-up hashes the password before looking for a clash, so the time does not tell either. | Settles the abuse rule of O-01 for these endpoints. | S2.6 | decided |
+| D-24 | 2026-11-13 | The words for the home group, the verifier, the ADMIN and the OWNER are keys of the terminology profiles (`homegroup`, `verifier`, `admin`, `owner`, with plurals for the last three), served by `GET /app/config` and kept equal in the backend and web copies; the church profile says "Group leader" and "Church admin". The older words (church, searcher, provider) stay the `organisation`, `workhost` and `freelancer` keys until the older names are retired. | Settles O-04. | S2.9 | decided |
 
 ## Open details, to be settled in the named pull request
 
@@ -38,5 +39,4 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 |---|---|---|---|
 | O-02 | Which events create an in-app notification, and how long they are kept | The events the model names; kept 12 months | S3.3 |
 | O-03 | Retention of the log of verifier views of phone numbers | Kept 12 months | S3.2 |
-| O-04 | The terminology keys for searcher, provider, verifier, admin, owner, church and home group | One key each, backend and web copies kept equal | S2.9 |
 | O-07 | Retention of login history rows with no person (failed attempts) and of expired admin invitations | Keep login history 12 months, delete expired invitations after 30 days | S2.3 |

@@ -35,6 +35,19 @@ describe('terminology profiles', () => {
   })
 })
 
+describe('the words of the church trust model', () => {
+  it('give each profile its words for the structure and the leaders', () => {
+    expect(applyTerms('{Homegroup}, {homegroups}, {verifier}, {Admin}, {owners}')).toBe(
+      'Home group, home groups, verifier, Admin, owners',
+    )
+    setProfile('church')
+    expect(applyTerms('{Verifier} and {admin} and {Owner}')).toBe(
+      'Group leader and church admin and Owner',
+    )
+    expect(applyTerms('{a_verifier}, {a_admin}')).toBe('a group leader, a church admin')
+  })
+})
+
 describe('applyTerms', () => {
   it('keeps the default words', () => {
     expect(applyTerms('Vouch for {freelancers}. {Organisations} and {workhosts}.')).toBe(
