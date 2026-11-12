@@ -9,7 +9,7 @@ import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -28,6 +28,16 @@ class FirstOwner:
     home_group_id: uuid.UUID
 
 
+_ALREADY_SET_UP = "Skills is already set up: there is an OWNER."
+
+
+def _owner_exists(db: Session) -> bool:
+    return (
+        db.scalar(select(Person.id).where(Person.status == "owner", Person.closed_at.is_(None)))
+        is not None
+    )
+
+
 def create_first_owner(
     db: Session,
     *,
@@ -43,39 +53,44 @@ def create_first_owner(
     All in one transaction, committed here. Refuses when an open OWNER already exists: there is
     always exactly one, and a replacement goes through a handover or an operator change.
     """
-    if db.scalar(select(Person.id).where(Person.status == "owner", Person.closed_at.is_(None))):
-        raise SetupError("Skills is already set up: there is an OWNER.")
+    if _owner_exists(db):
+        raise SetupError(_ALREADY_SET_UP)
     owner_id, church_id, group_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-    # The three rows refer to each other; the references are checked when the transaction commits.
-    db.add(Church(id=church_id, name=church_name.strip(), admin_id=owner_id))
-    db.flush()
-    db.add(HomeGroup(id=group_id, church_id=church_id, name=group_name.strip(), leader_id=owner_id))
-    db.flush()
-    db.add(
-        Person(
-            id=owner_id,
-            status="owner",
-            church_id=church_id,
-            home_group_id=group_id,
-            full_name=full_name.strip(),
-            email=email.strip().lower(),
-            mobile_number=mobile_number,
-            password_hash=hash_password(password),
-        )
-    )
-    db.add(
-        StatusChange(
-            person_id=owner_id,
-            from_status=None,
-            to_status="owner",
-            changed_by_id=None,
-            kind="operator",
-        )
-    )
     try:
+        # The three rows refer to each other; the references are checked at commit.
+        db.add(Church(id=church_id, name=church_name.strip(), admin_id=owner_id))
+        db.flush()
+        db.add(
+            HomeGroup(id=group_id, church_id=church_id, name=group_name.strip(), leader_id=owner_id)
+        )
+        db.flush()
+        db.add(
+            Person(
+                id=owner_id,
+                status="owner",
+                church_id=church_id,
+                home_group_id=group_id,
+                full_name=full_name.strip(),
+                email=email.strip().lower(),
+                mobile_number=mobile_number,
+                password_hash=hash_password(password),
+            )
+        )
+        db.add(
+            StatusChange(
+                person_id=owner_id,
+                from_status=None,
+                to_status="owner",
+                changed_by_id=None,
+                kind="operator",
+            )
+        )
         db.commit()
-    except IntegrityError:
+    except (IntegrityError, DataError):
         db.rollback()
+        # Two setups at once: the database allows one OWNER, so the other one lost.
+        if _owner_exists(db):
+            raise SetupError(_ALREADY_SET_UP) from None
         raise SetupError(
             "The OWNER could not be created: check the name lengths and that the email address "
             "and mobile number are not in use."

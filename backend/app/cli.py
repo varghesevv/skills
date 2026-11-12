@@ -19,17 +19,28 @@ import sys
 from dataclasses import dataclass
 from typing import TextIO
 
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import MIN_STRICT_SECRET_LENGTH, WEAK_SECRETS, get_settings
 from app.core.db import get_engine
 from app.core.logging_config import configure_logging
 from app.demo_data import DEMO_DATA_DOMAIN, CredentialRow, generate, remove_generated
-from app.schemas.auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, check_mobile
+from app.schemas.auth import (
+    MAX_PASSWORD_LENGTH,
+    MIN_PASSWORD_LENGTH,
+    Email,
+    PersonName,
+    check_mobile,
+)
 from app.services.accounts import create_account, get_by_email
 from app.services.operators import SetupError, create_first_owner
 
 DEMO_DOMAIN = "example.com"
+
+# The same rules as the API applies to a sign-up.
+_EMAIL: TypeAdapter[str] = TypeAdapter(Email)
+_PERSON_NAME: TypeAdapter[str] = TypeAdapter(PersonName)
 
 
 @dataclass(frozen=True)
@@ -123,8 +134,17 @@ def create_owner(
     except ValueError as error:
         print(error, file=sys.stderr)
         return 1
-    if len(name.strip()) < 2 or not church.strip() or not group.strip():
-        print("The name, the church and the home group must not be empty.", file=sys.stderr)
+    try:
+        name = _PERSON_NAME.validate_python(name)
+        email = str(_EMAIL.validate_python(email))
+    except ValidationError as error:
+        print("; ".join(str(e["msg"]) for e in error.errors()), file=sys.stderr)
+        return 1
+    if not church.strip() or not group.strip():
+        print("The church and the home group must not be empty.", file=sys.stderr)
+        return 1
+    if len(church.strip()) > 200 or len(group.strip()) > 200:
+        print("The church and the home group names are at most 200 characters.", file=sys.stderr)
         return 1
     password = _ask_password(use_stdin)
     if password is None:
