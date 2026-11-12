@@ -23,7 +23,7 @@ These requirements follow the [verification rules](../verification.md) ([ADR-001
 
 | ID | Requirement |
 |---|---|
-| FR-J-01 | Anyone MUST be able to sign up. The applicant MUST choose a church, then one of its home groups (each shown with its name and its leader's name), and whether they apply as a searcher or a provider. Sign-up is complete only when a group is chosen, so nobody is PENDING without a home group. The list of churches, groups and leader names is public (the sign-up screen has no account yet) and rate limited per IP; whether leader names should be hidden from anonymous callers is open (O-06). |
+| FR-J-01 | Anyone MUST be able to sign up. The applicant MUST choose a church, then one of its home groups (each shown with its name and its leader's name), and whether they apply as a searcher or a provider. Sign-up is complete only when a group is chosen, so nobody is PENDING without a home group. The list of churches, groups and leader names is public (the sign-up screen has no account yet) and rate limited per IP; leader names are shown because choosing a group needs them (D-19). |
 | FR-J-02 | Signing up through a home group's invitation link MUST select the church and the group automatically. |
 | FR-J-03 | A new account starts as PENDING. The chosen group's leader MUST be notified. |
 | FR-J-04 | While PENDING, an applicant MUST be able to choose a different church or group, or change what they apply for. The newly chosen leader is notified, and vouches already received still count. |

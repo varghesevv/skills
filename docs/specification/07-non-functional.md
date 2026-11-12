@@ -22,7 +22,7 @@
 
 Decision D-07; this section settles the detail the functional requirements point to (FR-V-05).
 
-- **Who sees a mobile number.** A searcher or above sees a provider's number only through the reveal endpoint. A verifier sees the numbers of people in their own scope (VERIFIER: their group and people revoked from it; ADMIN: their church; OWNER: everyone) on the verifier screens only, and only for people who are PENDING or above or revoked from that scope. Nobody sees an applicant's number outside their scope.
+- **Who sees a mobile number.** A searcher or above sees a provider's number only through the reveal endpoint. A verifier sees the numbers of people in their own scope on the verifier screens only. The scope of a person is the group they belong to (for an applicant: the group they chose at sign-up; for a revoked person: the group they were removed from), so a VERIFIER's scope is their group, an ADMIN's their church, the OWNER's everyone. **Purpose:** a leader is expected to know the people in their group and must be able to contact applicants and members to do so; the number is not offered for any other use, and applicants who have not chosen a group do not exist (sign-up needs one).
 - **Where.** Only in the response of `GET /verifier/people/{id}`, one person at a time. Lists (`applicants`, `members`, `revoked`, `flagged`) never contain numbers. Search results and provider pages never do.
 - **Logging.** Each call writes one `contact_views` row (who, whom, when, which screen), without the number. The log is readable by the OWNER only. Retention: open detail O-03.
 - **Client handling.** The number is held only in memory while the screen is open, never written to disk, cache, logs, crash reports or analytics; the same rule as for reveal.

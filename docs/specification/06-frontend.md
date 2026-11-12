@@ -2,7 +2,7 @@
 
 The Android app is specified in [docs/android/](../android/plan.md); its screens mirror the portals below ([parity table](../android/parity.md)).
 
-Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React app, role-based portals sharing components. API access only through the generated client.
+Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React app; the screens shown depend on the person's status and share components. API access only through the generated client.
 
 ## Screens by status
 
@@ -52,7 +52,7 @@ paths, status values, report files and emails never change with the words. The k
 
 ## Responsive web design
 
-Every page, in every portal, works on phones, tablets and desktops. This is a release 1 requirement, not a later polish step.
+Every page, for every status, works on phones, tablets and desktops. This is a release 1 requirement, not a later polish step.
 
 ### Approach
 - Mobile first: base styles are for the smallest screen; larger screens add rules with `min-width` media queries.

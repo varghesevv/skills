@@ -4,7 +4,7 @@ Decision record: [ADR-0006](../adr/0006-scheduled-reports-in-a-worker-process.md
 
 ## Who sees reports
 
-Reports are for the OWNER (all churches) and each church's ADMIN (their church only; the server always limits an ADMIN's data to their church). VERIFIERs, providers and searchers see no reports; a VERIFIER has the verifier screens instead. Reports hold **counts and aggregates only**: no name, email or mobile number appears in a report or its files.
+Reports are for the OWNER (all churches) and each church's ADMIN (their church only; the server always limits an ADMIN's data to their church). VERIFIERs, providers and searchers see no reports; a VERIFIER has the verifier screens instead. Reports hold **aggregates**: no name, email or mobile number appears in a report or its files. The few rows that are about one person (RP-04 top-rated providers, and RP-08 per searcher and most revealed providers) show a short reference code (the first 8 characters of the person's id) instead of a name, and those reports are OWNER only.
 
 ## Standard reports (UI pages and API)
 
@@ -32,6 +32,8 @@ Every report supports on-screen table, chart where useful, and CSV download.
 
 Rules:
 
+- **Scheduled runs, run history, kept files and e-mailed reports are OWNER only and cover the whole platform.** An ADMIN gets reports on demand only, limited to their church, and never sees `report_runs`, schedules or files. Recipients of e-mailed reports are set by the OWNER.
+
 - Time zone configurable; default Asia/Dubai (Q8). The window is computed in that zone and stored in UTC.
 - Output as CSV and HTML in a configured output directory; each run recorded in `report_runs` (status, file, row count, error).
 - Idempotent: the same report and window never creates duplicate runs; a failed run retries once.
@@ -42,7 +44,7 @@ Rules:
 
 ## Implementation notes (phase 6)
 
-- Report names (used in URLs, the CLI and `report_schedules`): `registrations_per_day` (RP-01), `active_users` (RP-02), `providers_by_label` (RP-03), `top_rated` (RP-04), `verification_summary` (RP-05, replaces `vouching_summary`), `rate_distribution` (RP-06), `availability_overview` (RP-07, at most 93 days), `phone_reveals` (RP-08), `trust_events` (RP-09), and the scheduled `signups_daily` (replaces `users_registered_daily`), `weekly_summary` (RP-05 and RP-09) and `monthly_summary` (RP-01 to RP-09). The report code is redone in slice S5.3; until then the code keeps the older names.
+- Report names (used in URLs, the CLI and `report_schedules`): `registrations_per_day` (RP-01), `active_users` (RP-02), `providers_by_label` (RP-03), `top_rated` (RP-04), `verification_summary` (RP-05, replaces `vouching_summary`), `rate_distribution` (RP-06), `availability_overview` (RP-07, at most 93 days), `phone_reveals` (RP-08), `trust_events` (RP-09), and the scheduled `signups_daily` (replaces `users_registered_daily`), `weekly_summary` (RP-05 and RP-09) and `monthly_summary` (RP-01 to RP-09). The report code is redone in slice S5.3; until then the code keeps the older names. That slice renames them in the destructive migration: `report_schedules` is reseeded with the new names, old `report_runs` rows and files are dropped (the demo data is wiped, D-03), and the CLI and the operations runbook use the new names. The rule that names do not change applies to wording changes (terminology), not to a change of model.
 - A report returns one or more **sections** (title, columns, rows). `row_count` in the run history is the total number of rows over all sections.
 - Windows are whole days in the report time zone, `[start, end)` stored in UTC. Scheduled windows: yesterday (daily), the previous Monday to Sunday (weekly), the previous calendar month (monthly). On-demand dates (`from`, `to`) include both days; the default is the last 30 days.
 - Files go to `REPORTS_OUTPUT_DIR` as `<report>/<start>_<end>.csv` and `.html` (in docker compose: the `reports_data` volume at `/data/reports`). CSV cells that start with `=`, `+`, `-` or `@` are prefixed with `'` so spreadsheets do not run them as formulas.
