@@ -8,7 +8,7 @@ first, and they give the clear answer to the caller.
 Statuses are strings from `app.models.enums.STATUSES`, ordered by `STATUS_RANK`.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -186,7 +186,7 @@ def can_vouch(voucher: PersonLike, applicant: PersonLike) -> bool:
 
 
 def live_vouches(
-    vouches: Iterable[tuple[UUID, datetime | None]], vouchers: dict[UUID, PersonLike]
+    vouches: Iterable[tuple[UUID, datetime | None]], vouchers: Mapping[UUID, PersonLike]
 ) -> list[UUID]:
     """Voucher ids of the vouches that count.
 

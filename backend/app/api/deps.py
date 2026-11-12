@@ -44,6 +44,21 @@ def _load_person(db: Session, principal: Principal, *, allow_revoked: bool) -> P
     return person
 
 
+def get_principal_even_if_revoked(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    settings: Settings = Depends(get_settings),
+    db: Session = Depends(get_session),
+) -> Principal:
+    """Like `get_principal`, but a revoked person is let through, to see why they have no access.
+
+    Only for the few endpoints a revoked person may use (`/me`). A closed account is still a 401.
+    """
+    principal = _decode(credentials, settings)
+    if principal.user_type == "person":
+        _load_person(db, principal, allow_revoked=True)
+    return principal
+
+
 def get_principal(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     settings: Settings = Depends(get_settings),

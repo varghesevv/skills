@@ -72,6 +72,8 @@ class Settings(BaseSettings):
     # is off and the list is empty. The folder is mounted read-only into the API container.
     downloads_dir: str = ""
     download_max_per_hour: int = Field(default=20, ge=1)  # downloads per person per hour
+    # The list of churches and home groups is public (the sign-up screen has no account yet).
+    public_list_max_per_minute: int = Field(default=60, ge=1)  # requests per IP per minute
     # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
     # default word profile, and no minimum version (every app version is accepted).
     terminology_profile: str = "default"

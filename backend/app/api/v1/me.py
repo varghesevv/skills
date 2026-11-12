@@ -1,28 +1,38 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_principal
+from app.api.deps import current_person, get_principal_even_if_revoked
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
 from app.models.church import Person
 from app.models.users import Organisation
 from app.schemas.auth import MeResponse
+from app.schemas.church import PersonMeResponse, PersonUpdate
+from app.services import directory
 from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
 
+# Every status may change their own name and mobile number, except a revoked person.
+Member = Annotated[Person, Depends(current_person("pending"))]
+
 
 @router.get("/me")
 def me(
-    principal: Principal = Depends(get_principal), db: Session = Depends(get_session)
-) -> MeResponse:
+    principal: Annotated[Principal, Depends(get_principal_even_if_revoked)],
+    db: Annotated[Session, Depends(get_session)],
+) -> MeResponse | PersonMeResponse:
+    """The caller. A person gets the view of the church trust model (a revoked person too, to see
+    why they have no access); the older accounts keep their older answer until they are gone."""
     account = get_by_id(db, principal.user_type, principal.user_id)
     if account is None:
         raise ApiError(401, "invalid_token", "The account no longer exists")
     if isinstance(account, Person):
-        # The /me of the church trust model arrives with slice S2.5.
-        raise ApiError(403, "forbidden", "Not available for this kind of account yet")
+        return directory.person_view(db, account)
     org = account if isinstance(account, Organisation) else None
     return MeResponse(
         id=account.id,
@@ -34,3 +44,22 @@ def me(
         approval_status=org.approval_status if org else None,
         created_at=account.created_at,
     )
+
+
+@router.put("/me")
+def update_me(
+    body: PersonUpdate, person: Member, db: Annotated[Session, Depends(get_session)]
+) -> PersonMeResponse:
+    """Change your own name or mobile number (a field left out keeps its value)."""
+    if body.full_name is not None:
+        person.full_name = body.full_name
+    if body.mobile_number is not None:
+        person.mobile_number = body.mobile_number
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ApiError(
+            409, "account_exists", "An account with these details already exists"
+        ) from None
+    return directory.person_view(db, person)

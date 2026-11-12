@@ -181,9 +181,10 @@ def test_create_owner_command_refuses_bad_input(
 def test_create_owner_command_refuses_a_short_password(
     command: Any, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert command(*OWNER_ARGS, password="short") == 1
+    too_short = secrets.token_hex(2)  # four characters
+    assert command(*OWNER_ARGS, password=too_short) == 1
     output = capsys.readouterr()
-    assert "Password must be" in output.err and "short" not in output.err.replace("short:", "")
+    assert "Password must be" in output.err and too_short not in output.err + output.out
 
 
 def test_a_weak_password_is_refused_in_prod(
@@ -192,7 +193,8 @@ def test_a_weak_password_is_refused_in_prod(
     monkeypatch.setenv("ENVIRONMENT", "prod")
     get_settings.cache_clear()
     try:
-        assert command(*OWNER_ARGS, password="abcdefghij") == 1  # long enough, but not strong
+        weak = "a" * 12  # long enough for the API, but not strong enough for prod
+        assert command(*OWNER_ARGS, password=weak) == 1
         assert "strong" in capsys.readouterr().err
     finally:
         get_settings.cache_clear()

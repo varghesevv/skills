@@ -16,7 +16,7 @@ This file is the **target** contract of the church trust model. `/api/v1` is cha
 
 ## Transition (until the cut-over)
 
-While the older accounts still exist (decision D-20), `POST /auth/login` and `POST /auth/forgot-password` accept an optional `user_type`. Without it, or with `person`, they use the one identity of the church trust model; with `freelancer`, `workhost`, `organisation` or `admin` they use the older accounts. Tokens of a person carry no role or status, and every request reads the person from the database (`403 account_revoked` for a revoked person on every endpoint but the few that allow it, `401` for a closed account). The field is removed with the last older account type (S5.2).
+While the older accounts still exist (decision D-20), `POST /auth/login` and `POST /auth/forgot-password` accept an optional `user_type`. Without it, or with `person`, they use the one identity of the church trust model; with `freelancer`, `workhost`, `organisation` or `admin` they use the older accounts. Tokens of a person carry no role or status, and every request reads the person from the database (`403 account_revoked` for a revoked person on every endpoint but the few that allow it, `401` for a closed account). The field is removed with the last older account type (S5.2). `GET /me` answers a person with `PersonMeResponse` (the shape below) and an older account with the older `MeResponse` until the older accounts are gone; a revoked person can still read it. `PUT /me` is for people only.
 
 ## Authorisation by status
 
@@ -59,8 +59,8 @@ Auth behaviour:
 ### Me
 | Method | Path | Notes |
 |---|---|---|
-| GET | /me | `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count` |
-| PUT | /me | `full_name`, `mobile_number` (the same uniqueness as sign-up) |
+| GET | /me | `user_type` (`person`, which tells this answer from the older one), `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count` |
+| PUT | /me | `full_name`, `mobile_number` (the same uniqueness as sign-up; `409 account_exists` otherwise). A field left out keeps its value; an explicit null is refused. Not for a revoked person. |
 | DELETE | /me | Closes the account. Body: `password`. Keeps the row and the history, clears the personal fields. `409 leads_a_group` or `409 leads_a_church` until succession is done (see below). |
 | PUT | /me/application | PENDING only. `home_group_id` and/or `requested_status`; the newly chosen leader is notified, vouches received still count. |
 | POST | /me/apply-provider | SEARCHER only. Sets `requested_status` to `provider` and returns the vouch link. |
@@ -74,7 +74,7 @@ Auth behaviour:
 ### Churches and home groups
 | Method | Path | Notes |
 |---|---|---|
-| GET | /churches | **Public** (the sign-up screen has no token), rate limited per IP. Open churches by name: `id`, `name`. No contact details. |
+| GET | /churches | **Public** (the sign-up screen has no token), rate limited per IP. Open churches by name: `id`, `name`; at most 500 (the number is small and set by the operators). No contact details. |
 | GET | /churches/{id}/home-groups | Public, rate limited per IP like the one above. Open groups: `id`, `name`, `leader_name` (a name is needed to choose a group; no other detail about the leader). Leader names are shown to anonymous callers on purpose (decision D-19). |
 | GET | /group-invitations/{token} | Public, rate limited. Church and group names for the sign-up screen. `404` for anything wrong, alike. |
 
