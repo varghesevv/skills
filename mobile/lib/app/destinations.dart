@@ -5,6 +5,7 @@ import '../core/auth/user_type.dart';
 import '../features/freelancer/availability/availability_screen.dart';
 import '../features/freelancer/labels/labels_screen.dart';
 import '../features/freelancer/profile/profile_screen.dart';
+import '../features/freelancer/ratings/ratings_screen.dart';
 import '../features/home/dashboard_screen.dart';
 import '../features/settings/settings_screen.dart';
 
@@ -82,6 +83,13 @@ List<Destination> destinationsFor(UserType type) => switch (type) {
       selectedIcon: Icons.event_busy,
       builder: () => const AvailabilityScreen(),
     ),
+    Destination(
+      path: 'ratings',
+      labelKey: 'nav.ratings',
+      icon: Icons.star_outline,
+      selectedIcon: Icons.star,
+      builder: () => const RatingsScreen(),
+    ),
     _settings,
   ],
   UserType.workhost || UserType.organisation => [_home, _settings],
@@ -99,6 +107,11 @@ List<Shortcut> shortcutsFor(UserType type) => switch (type) {
       labelKey: 'nav.availability',
       location: '/freelancer/availability',
       icon: Icons.event_busy_outlined,
+    ),
+    Shortcut(
+      labelKey: 'nav.ratings',
+      location: '/freelancer/ratings',
+      icon: Icons.star_outline,
     ),
     Shortcut(
       labelKey: 'nav.labels',

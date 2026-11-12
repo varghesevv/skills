@@ -39,7 +39,7 @@ Words: the app never hard-codes the role words. The web paths below use the term
 | Profile and rate (name, mobile, WhatsApp, nationality, language, rate, currency, negotiable) | `portals/freelancer/ProfilePage.tsx` | Profile | done | `test/features/freelancer/profile_test.dart` |
 | Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | Labels editor | done (opens from the dashboard and the Profile screen; keeps the bottom bar) | `test/features/freelancer/labels_test.dart` |
 | Unavailability (month calendar on tablet/desktop; list on phone) | `AvailabilityPage.tsx`, `MonthCalendar.tsx` | Availability list with add/edit/delete | done (list with add, edit and delete; the month calendar is for larger screens and is not built) | `test/features/freelancer/availability_test.dart` |
-| My ratings (received, paged) | `RatingsPage.tsx` | Ratings received | not started | |
+| My ratings (received, paged) | `RatingsPage.tsx` | Ratings received | done (newest first, ten at a time with "Show more" and a count; pull down to refresh) | `test/features/freelancer/ratings_test.dart` |
 | My organisation vouches (accept / reject) | `VouchesPage.tsx` | Vouches | blocked: ADR-0016, Q-A8 | |
 
 ### Work host portal
@@ -107,7 +107,7 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | done |
 | GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | blocked: ADR-0016, Q-A8 |
 | GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail, as work host or organisation only (no admin screens). The response never contains email or mobile number; the number comes only from reveal-mobile | not started |
-| GET `/freelancers/{id}/ratings` | * | RatingsPage, detail | Ratings | not started |
+| GET `/freelancers/{id}/ratings` | * | RatingsPage, detail | Ratings | in progress: the freelancer's own ratings are done; the work host detail page uses it in phase 3 |
 | POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07 Secrets and logging](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 (phase 3) and 6 | not started |
 | GET, PUT `/workhosts/me` | W | HostProfilePage | Profile | not started |
 | GET `/workhosts/me/ratings` | W | GivenRatingsPage | Ratings given | not started |
