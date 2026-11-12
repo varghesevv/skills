@@ -94,6 +94,10 @@ void main() {
       'PUT /freelancers/me': '200',
       'GET /labels': '200',
       'PUT /freelancers/me/labels': '200',
+      'GET /freelancers/me/unavailability': '200',
+      'POST /freelancers/me/unavailability': '201',
+      'PUT /freelancers/me/unavailability/{period_id}': '200',
+      'DELETE /freelancers/me/unavailability/{period_id}': '204',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -333,5 +337,36 @@ void main() {
         containsAll(['skill', 'language', 'timing', 'nativity', 'skill_level']),
       );
     });
+  });
+
+  group('unavailability', () {
+    test('a period has the fields and types the app reads and sends', () {
+      expect(typesOf('UnavailabilityOut', 'id'), {'string'});
+      expect(typesOf('UnavailabilityOut', 'unavailable_from'), {'string'});
+      expect(typesOf('UnavailabilityOut', 'unavailable_to'), {'string'});
+      expect(required('UnavailabilityIn'), {
+        'unavailable_from',
+        'unavailable_to',
+      });
+      expect(
+        requestSchema('POST', '/freelancers/me/unavailability'),
+        'UnavailabilityIn',
+      );
+      expect(
+        requestSchema('PUT', '/freelancers/me/unavailability/{period_id}'),
+        'UnavailabilityIn',
+      );
+    });
+
+    test(
+      'the dates are date-times with a time zone, as the app sends them',
+      () {
+        final property =
+            (schemaNamed('UnavailabilityIn')['properties']
+                    as Map)['unavailable_from']
+                as Map;
+        expect(property['format'], 'date-time');
+      },
+    );
   });
 }

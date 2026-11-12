@@ -3,6 +3,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/api/parse.dart';
 import 'freelancer_profile.dart';
 import 'label.dart';
+import 'unavailability.dart';
 
 class FreelancerRepository {
   FreelancerRepository(this._api);
@@ -42,5 +43,38 @@ class FreelancerRepository {
     return [
       for (final item in data) parseResponse(item, ProfileLabel.fromJson),
     ];
+  }
+
+  Future<List<Unavailability>> unavailability() async {
+    final data = await _api.get('/freelancers/me/unavailability');
+    if (data is! List) throw const ApiException.badResponse();
+    return [
+      for (final item in data) parseResponse(item, Unavailability.fromJson),
+    ];
+  }
+
+  Future<Unavailability> addUnavailability(DateTime from, DateTime to) async =>
+      parseResponse(
+        await _api.post(
+          '/freelancers/me/unavailability',
+          body: periodBody(from, to),
+        ),
+        Unavailability.fromJson,
+      );
+
+  Future<Unavailability> updateUnavailability(
+    String id,
+    DateTime from,
+    DateTime to,
+  ) async => parseResponse(
+    await _api.put(
+      '/freelancers/me/unavailability/$id',
+      body: periodBody(from, to),
+    ),
+    Unavailability.fromJson,
+  );
+
+  Future<void> deleteUnavailability(String id) async {
+    await _api.delete('/freelancers/me/unavailability/$id');
   }
 }

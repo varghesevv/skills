@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/auth/user_type.dart';
+import '../features/freelancer/availability/availability_screen.dart';
 import '../features/freelancer/labels/labels_screen.dart';
 import '../features/freelancer/profile/profile_screen.dart';
 import '../features/home/dashboard_screen.dart';
@@ -74,6 +75,13 @@ List<Destination> destinationsFor(UserType type) => switch (type) {
         ),
       ],
     ),
+    Destination(
+      path: 'availability',
+      labelKey: 'nav.availability',
+      icon: Icons.event_busy_outlined,
+      selectedIcon: Icons.event_busy,
+      builder: () => const AvailabilityScreen(),
+    ),
     _settings,
   ],
   UserType.workhost || UserType.organisation => [_home, _settings],
@@ -86,6 +94,11 @@ List<Shortcut> shortcutsFor(UserType type) => switch (type) {
       labelKey: 'nav.profile',
       location: '/freelancer/profile',
       icon: Icons.person_outline,
+    ),
+    Shortcut(
+      labelKey: 'nav.availability',
+      location: '/freelancer/availability',
+      icon: Icons.event_busy_outlined,
     ),
     Shortcut(
       labelKey: 'nav.labels',

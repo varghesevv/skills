@@ -2,9 +2,13 @@
 
 Status: created 2026-10-29 from `frontend/src/App.tsx`, `frontend/src/portals/*`, `frontend/src/api/*` and `backend/app/api/v1/*.py` on branch `feat/android-dev`. **Keep this file current in every PR** that adds, changes or drops an app screen or an endpoint. It is the definition of "the app has every web feature" ([plan](plan.md) section 5).
 
-Status values: `not started`, `in progress`, `done`, `n/a` (admin: no admin screens in the app), `backend` (needs an API PR first; the PR id is given). Test file is filled in when the screen exists.
+Status values: `not started`, `in progress`, `done`, `n/a` (admin: no admin screens in the app), `backend` (needs an API PR first; the PR id is given), `blocked: ADR-0016, Q-A8` (waits for the owner's decision on the verification model, see the note below; the screen is either not built, or built in phase 1 and to be reworked, as the note says). Test file is filled in when the screen exists.
 
 Words: the app never hard-codes the role words. The web paths below use the terminology slugs (`/church`, `/searchers`, ...); the app uses its own routes and the same words from `GET /api/v1/app/config`.
+
+## Verification model (ADR-0016): rows that wait for a decision
+
+`docs/verification.md` replaces organisation vouching with a church trust hierarchy (OWNER, ADMIN per church, VERIFIER per home group, SEARCHER and PROVIDER). Its ADR, ADR-0016, is still **Proposed** (draft of 2026-11-12, awaiting acceptance), but `CLAUDE.md` already makes the model binding for new work: where the specification still describes the older model, the verification model wins, and a request that conflicts with it must stop. The backend, the web and this table still describe the older model. Rows marked `blocked: ADR-0016, Q-A8` are organisation-vouching screens and endpoints that are **not built**, and the sign-up screens built in phase 1 (organisation login, role choice, register forms), which mirror today's web and **are built but will be reworked** when sign-up becomes "choose church, home group and role". Q-A8 (see `docs/open-questions.md`) asks the owner whether to build the organisation-vouching screens as the web has them today, or to wait for the specification, API and web to move to the new model. Until it is answered nothing more is built on the older model.
 
 ## 1. Pages
 
@@ -14,10 +18,10 @@ Words: the app never hard-codes the role words. The web paths below use the term
 |---|---|---|---|---|
 | Landing (`/`) | `pages/Landing.tsx` | Welcome / role choice (sign in, register) | done | `test/features/auth/auth_flow_test.dart` |
 | Log in, freelancer and work host (`/login`, `/login/<slug>`), with switch link | `pages/Login.tsx`, `pages/login/LoginForm.tsx` | Login screen per role | done (a screen per role; no switch link, the welcome screen offers each) | `test/features/auth/auth_flow_test.dart` |
-| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | done (approval notice, link to register) | `test/features/auth/auth_flow_test.dart` |
+| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | blocked: ADR-0016, Q-A8 | `test/features/auth/auth_flow_test.dart` |
 | Admin log in (`/login/admin`) | `pages/login/AdminLogin.tsx` | none: the app never sends `user_type=admin` | n/a | |
-| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | done (the welcome screen) | `test/features/auth/auth_flow_test.dart` |
-| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | done | `test/features/auth/auth_flow_test.dart` |
+| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | blocked: ADR-0016, Q-A8 | `test/features/auth/auth_flow_test.dart` |
+| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | blocked: ADR-0016, Q-A8 | `test/features/auth/auth_flow_test.dart` |
 | Forgot password (`/forgot-password`) | `pages/ForgotPassword.tsx` | Forgot password (always shows the generic confirmation) | done | `test/features/auth/auth_flow_test.dart` |
 | Reset password (`/reset-password?token=`) | `pages/ResetPassword.tsx` | v1: link opens in the browser; no app screen | n/a (v1) | |
 | Not found | `pages/NotFound.tsx` | Unknown-route screen | not started | |
@@ -34,9 +38,9 @@ Words: the app never hard-codes the role words. The web paths below use the term
 |---|---|---|---|---|
 | Profile and rate (name, mobile, WhatsApp, nationality, language, rate, currency, negotiable) | `portals/freelancer/ProfilePage.tsx` | Profile | done | `test/features/freelancer/profile_test.dart` |
 | Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | Labels editor | done (opens from the dashboard and the Profile screen; keeps the bottom bar) | `test/features/freelancer/labels_test.dart` |
-| Unavailability (month calendar on tablet/desktop; list on phone) | `AvailabilityPage.tsx`, `MonthCalendar.tsx` | Availability list with add/edit/delete | not started | |
+| Unavailability (month calendar on tablet/desktop; list on phone) | `AvailabilityPage.tsx`, `MonthCalendar.tsx` | Availability list with add/edit/delete | done (list with add, edit and delete; the month calendar is for larger screens and is not built) | `test/features/freelancer/availability_test.dart` |
 | My ratings (received, paged) | `RatingsPage.tsx` | Ratings received | not started | |
-| My organisation vouches (accept / reject) | `VouchesPage.tsx` | Vouches | not started | |
+| My organisation vouches (accept / reject) | `VouchesPage.tsx` | Vouches | blocked: ADR-0016, Q-A8 | |
 
 ### Work host portal
 
@@ -53,11 +57,11 @@ Words: the app never hard-codes the role words. The web paths below use the term
 
 | Web page | Web source | App screen | Status | Test file |
 |---|---|---|---|---|
-| Vouched freelancers (status, revoke) | `organisation/VouchedPage.tsx` | Vouched list | not started | |
-| Search (same page as work host, vouch from result/detail) | `SearchPage portal="organisation"` | Search | not started | |
-| Freelancer detail (organisation view, vouch/revoke) | `FreelancerDetailPage portal="organisation"` | Detail | not started | |
-| Organisation reports (`vouching_summary`, own data, table, CSV) | `organisation/ReportsPage.tsx` | Report screen (table; CSV via share sheet) | not started | |
-| Profile | `OrgProfilePage.tsx` | Profile; pending-approval state | not started | |
+| Vouched freelancers (status, revoke) | `organisation/VouchedPage.tsx` | Vouched list | blocked: ADR-0016, Q-A8 | |
+| Search (same page as work host, vouch from result/detail) | `SearchPage portal="organisation"` | Search | blocked: ADR-0016, Q-A8 | |
+| Freelancer detail (organisation view, vouch/revoke) | `FreelancerDetailPage portal="organisation"` | Detail | blocked: ADR-0016, Q-A8 | |
+| Organisation reports (`vouching_summary`, own data, table, CSV) | `organisation/ReportsPage.tsx` | Report screen (table; CSV via share sheet) | blocked: ADR-0016, Q-A8 | |
+| Profile | `OrgProfilePage.tsx` | Profile; pending-approval state | blocked: ADR-0016, Q-A8 | |
 
 ### Admin portal (no admin screens in the app)
 
@@ -100,20 +104,20 @@ Role column: F freelancer, W work host, O organisation, A admin, * any logged in
 | GET, PUT `/freelancers/me` | F | ProfilePage | Profile | done |
 | PUT `/freelancers/me/labels` | F | LabelsPage | Labels | done |
 | GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | in progress: the catalogue for the labels screen is done; the filter sheet of the work host search reuses it (phase 3) |
-| GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | not started |
-| GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | not started |
+| GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | done |
+| GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | blocked: ADR-0016, Q-A8 |
 | GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail, as work host or organisation only (no admin screens). The response never contains email or mobile number; the number comes only from reveal-mobile | not started |
 | GET `/freelancers/{id}/ratings` | * | RatingsPage, detail | Ratings | not started |
 | POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07 Secrets and logging](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 (phase 3) and 6 | not started |
 | GET, PUT `/workhosts/me` | W | HostProfilePage | Profile | not started |
 | GET `/workhosts/me/ratings` | W | GivenRatingsPage | Ratings given | not started |
 | POST `/ratings`; PUT `/ratings/{id}` | W | detail, GivenRatingsPage | Rate | not started |
-| GET `/organisations` | W, O, A | filter "vouched by" | Filter sheet | not started |
-| GET, PUT `/organisations/me` | O | OrgProfilePage | Profile | not started |
-| GET `/organisations/me/freelancers` | O | VouchedPage | Vouched list | not started |
-| POST, DELETE `/organisations/me/freelancers/{freelancer_id}` | O | detail, VouchedPage | Vouch / revoke | not started |
+| GET `/organisations` | W, O, A | filter "vouched by" | Filter sheet | blocked: ADR-0016, Q-A8 |
+| GET, PUT `/organisations/me` | O | OrgProfilePage | Profile | blocked: ADR-0016, Q-A8 |
+| GET `/organisations/me/freelancers` | O | VouchedPage | Vouched list | blocked: ADR-0016, Q-A8 |
+| POST, DELETE `/organisations/me/freelancers/{freelancer_id}` | O | detail, VouchedPage | Vouch / revoke | blocked: ADR-0016, Q-A8 |
 | GET `/search/freelancers` (all filters incl. `name`) | W, O, A | SearchPage | Search, as work host or organisation only (no admin screens). Results never contain email or mobile number | not started |
-| GET `/reports`; GET `/reports/{name}` (`vouching_summary`, json/csv) | O (the API also allows A) | organisation ReportsPage | Report screen for organisations only; the app has no admin access | not started |
+| GET `/reports`; GET `/reports/{name}` (`vouching_summary`, json/csv) | O (the API also allows A) | organisation ReportsPage | Report screen for organisations only; the app has no admin access | blocked: ADR-0016, Q-A8 |
 | GET `/reports/runs`, `/reports/runs/{id}/download`, `/reports/schedules`; PUT `/reports/schedules/{report}`; POST `/reports/{name}/run` | A | admin pages | none | n/a |
 | GET `/admin/organisations`; POST `/admin/organisations/{id}/approve\|reject` | A | admin pages | none | n/a |
 | GET `/labels?include_inactive=true`; POST `/labels`; PATCH `/labels/{id}` | A | AdminLabelsPage | none | n/a |

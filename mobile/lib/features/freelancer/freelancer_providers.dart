@@ -4,6 +4,7 @@ import '../../core/providers.dart';
 import 'data/freelancer_profile.dart';
 import 'data/freelancer_repository.dart';
 import 'data/label.dart';
+import 'data/unavailability.dart';
 
 final freelancerRepositoryProvider = Provider<FreelancerRepository>(
   (ref) => FreelancerRepository(ref.watch(apiClientProvider)),
@@ -18,4 +19,14 @@ final freelancerProfileProvider = FutureProvider.autoDispose<FreelancerProfile>(
 /// The active labels a freelancer can choose from.
 final labelCatalogProvider = FutureProvider.autoDispose<List<Label>>(
   (ref) => ref.watch(freelancerRepositoryProvider).labelCatalog(),
+);
+
+/// The freelancer's unavailable periods, oldest first.
+final unavailabilityProvider = FutureProvider.autoDispose<List<Unavailability>>(
+  (ref) async {
+    final periods = await ref
+        .watch(freelancerRepositoryProvider)
+        .unavailability();
+    return [...periods]..sort((a, b) => a.from.compareTo(b.from));
+  },
 );

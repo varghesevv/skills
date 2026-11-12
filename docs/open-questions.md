@@ -30,6 +30,7 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 | Q-A5 | May a freelancer start a chat after a work host revealed their number? | No (work host starts). Revisit with real usage |
 | Q-A6 | Attachments (photos, documents) in chat? | Text only in version 1 |
 | Q-A7 | Chat on the web? | Later; the API already supports it |
+| Q-A8 | Verification model (ADR-0016, merged 2026-11-12): build the organisation-vouching screens of the app as the web has them today (freelancer accepts or rejects a vouch; organisation vouched list, search and vouch, profile, pending approval, vouching report), or wait until the specification, API and web have moved to the church trust hierarchy? | Wait: the app does not build those screens until the owner answers. Everything that does not touch people, roles, statuses, membership, vouching or permissions continues |
 
 ## Resolved
 

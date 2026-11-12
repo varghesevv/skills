@@ -137,3 +137,14 @@ FieldKeys validateFreelancerProfile({
   }
   return failed;
 }
+
+/// An unavailable period: both ends chosen, and the end after the start (same rule as the web).
+FieldKeys validatePeriod({required DateTime? from, required DateTime? to}) {
+  final failed = <String, String>{};
+  if (from == null) failed['from'] = 'validation.periodRequired';
+  if (to == null) failed['to'] = 'validation.periodRequired';
+  if (from != null && to != null && !from.isBefore(to)) {
+    failed['to'] = 'validation.periodOrder';
+  }
+  return failed;
+}
