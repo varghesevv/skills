@@ -610,3 +610,44 @@ def test_move_has_one_outcome(world: World) -> None:
     )
     with pytest.raises(IntegrityError):
         world.session.flush()
+
+
+# ---- the order of the changes inside one transaction does not matter ---------------------------
+
+
+def test_a_leader_can_be_made_a_verifier_before_moving_into_their_group(world: World) -> None:
+    """Rules are checked on the state at commit, not on each intermediate change."""
+    member = world.add_person("provider")
+    group = HomeGroup(id=uuid.uuid4(), church_id=world.church.id, name="New", leader_id=member.id)
+    world.session.add(group)
+    world.session.flush()
+    member.status = "verifier"  # still in the first group: not yet valid on its own ...
+    world.session.flush()
+    member.home_group_id = group.id  # ... but valid once they lead the group they are in
+    check_rules(world.session)
+
+
+def test_the_same_changes_in_the_other_order_also_pass(world: World) -> None:
+    member = world.add_person("provider")
+    group = HomeGroup(id=uuid.uuid4(), church_id=world.church.id, name="New", leader_id=member.id)
+    world.session.add(group)
+    world.session.flush()
+    member.home_group_id = group.id
+    world.session.flush()
+    member.status = "verifier"
+    check_rules(world.session)
+
+
+def test_a_verifier_who_ends_up_outside_the_group_they_lead_is_still_refused(
+    world: World,
+) -> None:
+    member = world.add_person("provider")
+    group = HomeGroup(id=uuid.uuid4(), church_id=world.church.id, name="New", leader_id=member.id)
+    world.session.add(group)
+    world.session.flush()
+    member.home_group_id = group.id
+    member.status = "verifier"
+    world.session.flush()
+    member.home_group_id = world.group.id  # moved out again
+    with pytest.raises(IntegrityError):
+        check_rules(world.session)

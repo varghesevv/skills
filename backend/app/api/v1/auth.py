@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import client_address
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.models.users import Organisation
@@ -18,7 +19,10 @@ from app.schemas.auth import (
     TokenResponse,
     WorkHostRegister,
 )
+from app.schemas.signup import SignupRequest, SignupResponse
 from app.services import accounts, auth
+from app.services import signup as signup_service
+from app.services.rate_limit import signup_limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -67,6 +71,29 @@ def register_organisation(
     body: OrganisationRegister, db: Session = Depends(get_session)
 ) -> RegisterResponse:
     return _register(db, "organisation", body, org_name=body.org_name)
+
+
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
+def signup(
+    body: SignupRequest,
+    request: Request,
+    db: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> SignupResponse:
+    """Public. Creates a PENDING person in the chosen home group and tells its leader."""
+    signup_limiter.check(client_address(request), settings.signup_max_per_hour)
+    person = signup_service.sign_up(
+        db,
+        settings,
+        full_name=body.full_name,
+        email=body.email,
+        mobile_number=body.mobile_number,
+        password=body.password.get_secret_value(),
+        requested_status=body.requested_status,
+        home_group_id=body.home_group_id,
+        invitation_token=body.invitation_token,
+    )
+    return SignupResponse(id=person.id)
 
 
 @router.post("/login")

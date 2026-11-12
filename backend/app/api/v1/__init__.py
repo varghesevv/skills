@@ -6,12 +6,14 @@ from app.api.v1 import (
     auth,
     churches,
     freelancers,
+    group_invitations,
     labels,
     me,
     organisations,
     ratings,
     reports,
     search,
+    verifier,
     workhosts,
 )
 
@@ -20,6 +22,7 @@ ROUTERS = (
     app_info,
     auth,
     churches,
+    group_invitations,
     me,
     admin,
     freelancers,
@@ -29,6 +32,7 @@ ROUTERS = (
     ratings,
     search,
     reports,
+    verifier,
 )
 for module in ROUTERS:
     api_v1_router.include_router(module.router)

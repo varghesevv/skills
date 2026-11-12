@@ -22,9 +22,9 @@ Migration `0007` creates the tables of this file that belong to the new identity
 
 | Old table | Fate | Dropped or changed by |
 |---|---|---|
-| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. | S2.6 (sign-up on `people`); removed with the other identity tables in S5.2 |
-| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. | S2.6 |
-| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. | S2.4 (operator command creates the OWNER) |
+| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. | Sign-up on `people` is S2.6; the table is removed with the last older account type (S5.2) |
+| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. | S5.2, with the older routes that use them |
+| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. | S5.2; the `create-owner` command exists since S2.4 |
 | `labels` | Kept unchanged. | |
 | `freelancer_labels` | Renamed `person_labels`, key `person_id`. | S5.1 |
 | `freelancer_unavailability` | Renamed `person_unavailability`, key `person_id`. | S5.1 |

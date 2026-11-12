@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,13 @@ from app.models.church import Person
 from app.models.enums import STATUS_RANK, Status
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+def client_address(request: Request) -> str:
+    """The caller's address for rate limits. Behind the reverse proxy uvicorn runs with
+    `--proxy-headers`, trusting the forwarded address from the proxy only (docs/specification/
+    09-infrastructure.md), so this is the real client, as for login throttling."""
+    return request.client.host if request.client else "unknown"
 
 
 def _decode(credentials: HTTPAuthorizationCredentials | None, settings: Settings) -> Principal:

@@ -115,7 +115,7 @@ Status column: "at least X" means that status or higher.
 | POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8 | done on the older request shape (`user_type` is dropped in S2.8) |
 | POST `/auth/forgot-password` | public | Forgot password | | done |
 | POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
-| GET `/churches`, GET `/churches/{id}/home-groups`, GET `/group-invitations/{token}` | public | Sign-up wizard, join link | S2.8 | not started |
+| GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | not started |
 | GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` done on the older shape |
 | DELETE `/me` | any | Close account | S4.10 | not started |
 | POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | not started |

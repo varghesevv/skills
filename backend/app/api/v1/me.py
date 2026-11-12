@@ -12,7 +12,8 @@ from app.models.church import Person
 from app.models.users import Organisation
 from app.schemas.auth import MeResponse
 from app.schemas.church import PersonMeResponse, PersonUpdate
-from app.services import directory
+from app.schemas.signup import ApplicationUpdate
+from app.services import directory, signup
 from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
@@ -62,4 +63,16 @@ def update_me(
         raise ApiError(
             409, "account_exists", "An account with these details already exists"
         ) from None
+    return directory.person_view(db, person)
+
+
+@router.put("/me/application")
+def update_application(
+    body: ApplicationUpdate, person: Member, db: Annotated[Session, Depends(get_session)]
+) -> PersonMeResponse:
+    """While pending: choose another home group (even in another church) or another status to
+    apply for. Vouches already received still count; a newly chosen leader is notified."""
+    signup.change_application(
+        db, person, home_group_id=body.home_group_id, requested_status=body.requested_status
+    )
     return directory.person_view(db, person)
