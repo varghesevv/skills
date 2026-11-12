@@ -6,9 +6,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
-- Done also: S2.1 (110), S2.2 (111), S2.3 (112).
-- In progress: S2.4 (`create-owner` command) on `model/verification`.
-- Next: S2.5 (`/me`, churches and home groups).
+- Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113).
+- In progress: S2.5 (`/me`, churches and home groups) on `model/verification`.
+- Next: S2.6 (sign-up, change of choice, group invitation link).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -65,7 +65,7 @@ Backend first, then web and mobile.
 - [x] 2.2 Backend: models (done in 2.1) and the permission module (`in_scope`, `can_set_status`, `can_admit`, `can_decline`, `can_vouch`, settable statuses in `app/services/permissions.py`) mirroring the model; one test per invariant (2.1); the permission matrix test (every actor status against every target status and every new status, with the expected answers written out from the rules, checked by mutating the code).
 - [x] 2.3 Backend: authentication on the new identity per ADR-0017: one login (email and password, `user_type` optional and defaulting to the person identity), password reset, refresh tokens and login history for people, live status check on every request (`current_person`, and `get_principal` for person tokens). Transitional dual use of the auth tables: decision D-22.
 - [x] 2.4 Backend: operator command `create-owner` (the OWNER with the first church and group, one transaction, refused when an OWNER exists; runbook section 9). The operator change of the OWNER moves to 4.5, where it shares its logic with the handover; the older `create-admin` stays until the older accounts go (D-20).
-- [ ] 2.5 Backend: `/me`, list of churches and their home groups with leaders (open to pending applicants).
+- [x] 2.5 Backend: `GET /me` (person view, readable by a revoked person) and `PUT /me`, and the public, rate-limited list of churches and their home groups with leaders (decision D-19).
 - [ ] 2.6 Backend: sign-up (church, group, searcher or provider), change of choice while pending, group invitation link with abuse limits.
 - [ ] 2.7 Web: login, forgot and reset, sign-up wizard, applicant home (status, change choice, leave).
 - [ ] 2.8 Mobile: data layer on the new API, single login, navigation by status instead of user type, sign-up wizard, applicant home.

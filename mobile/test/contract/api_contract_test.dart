@@ -79,6 +79,26 @@ void main() {
     );
   }
 
+  /// Every schema an answer may have: one `$ref`, or the `$ref`s inside `anyOf`.
+  Set<String> responseSchemas(String method, String path, String status) {
+    final response =
+        (operation(method, path)['responses'] as Map)[status] as Map?;
+    expect(response, isNotNull, reason: '$method $path has no $status answer');
+    final schema =
+        ((response!['content'] as Map?)?['application/json']
+            as Map?)?['schema'];
+    final names = <String>{};
+    final direct = refName(schema);
+    if (direct != null) names.add(direct);
+    if (schema is Map) {
+      for (final option in (schema['anyOf'] as List? ?? const [])) {
+        final name = refName(option);
+        if (name != null) names.add(name);
+      }
+    }
+    return names;
+  }
+
   group('endpoints the app calls exist', () {
     const calls = {
       'GET /app/config': '200',
@@ -182,7 +202,12 @@ void main() {
     });
 
     test('the account answer has the fields `Me` reads', () {
-      expect(responseSchema('GET', '/me', '200'), 'MeResponse');
+      // The answer is MeResponse for the older accounts the app uses today, or PersonMeResponse
+      // for a person of the church trust model (the app moves to it in S2.8).
+      expect(
+        responseSchemas('GET', '/me', '200'),
+        containsAll(['MeResponse', 'PersonMeResponse']),
+      );
       expect(
         properties('MeResponse'),
         containsAll([

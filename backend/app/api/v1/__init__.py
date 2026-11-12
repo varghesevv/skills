@@ -4,6 +4,7 @@ from app.api.v1 import (
     admin,
     app_info,
     auth,
+    churches,
     freelancers,
     labels,
     me,
@@ -18,6 +19,7 @@ api_v1_router = APIRouter(prefix="/api/v1")
 ROUTERS = (
     app_info,
     auth,
+    churches,
     me,
     admin,
     freelancers,

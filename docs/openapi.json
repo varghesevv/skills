@@ -35,6 +35,41 @@
         "title": "AppVersions",
         "type": "object"
       },
+      "ChurchList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChurchSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ChurchList",
+        "type": "object"
+      },
+      "ChurchSummary": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ChurchSummary",
+        "type": "object"
+      },
       "DownloadList": {
         "properties": {
           "items": {
@@ -625,6 +660,65 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HomeGroupList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HomeGroupSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "HomeGroupList",
+        "type": "object"
+      },
+      "HomeGroupSummary": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leader_name": {
+            "title": "Leader Name",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "leader_name"
+        ],
+        "title": "HomeGroupSummary",
+        "type": "object"
+      },
+      "IdName": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "IdName",
+        "type": "object"
+      },
       "LabelCreate": {
         "properties": {
           "label_name": {
@@ -859,6 +953,19 @@
           "created_at"
         ],
         "title": "MeResponse",
+        "type": "object"
+      },
+      "NameRef": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NameRef",
         "type": "object"
       },
       "OrganisationBrief": {
@@ -1200,6 +1307,131 @@
           "page_size"
         ],
         "title": "Page[VouchedFreelancer]",
+        "type": "object"
+      },
+      "PersonMeResponse": {
+        "description": "The calling person, as `GET /me` shows them (the status is never in the token).",
+        "properties": {
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leader": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vouch_count": {
+            "minimum": 0.0,
+            "title": "Vouch Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "email",
+          "mobile_number",
+          "status",
+          "requested_status",
+          "church",
+          "home_group",
+          "leader",
+          "status_set_by",
+          "flagged_for_recheck",
+          "vouch_count"
+        ],
+        "title": "PersonMeResponse",
+        "type": "object"
+      },
+      "PersonUpdate": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "mobile_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile Number"
+          }
+        },
+        "title": "PersonUpdate",
         "type": "object"
       },
       "PublicRating": {
@@ -2769,6 +3001,72 @@
         ]
       }
     },
+    "/api/v1/churches": {
+      "get": {
+        "description": "Public: the open churches by name. No contact details.",
+        "operationId": "list_churches_api_v1_churches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Churches",
+        "tags": [
+          "churches"
+        ]
+      }
+    },
+    "/api/v1/churches/{church_id}/home-groups": {
+      "get": {
+        "description": "Public: the open home groups of an open church, each with its leader's name.",
+        "operationId": "list_home_groups_api_v1_churches__church_id__home_groups_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "church_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Church Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeGroupList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Home Groups",
+        "tags": [
+          "churches"
+        ]
+      }
+    },
     "/api/v1/freelancers/me": {
       "get": {
         "operationId": "get_me_api_v1_freelancers_me_get",
@@ -3545,13 +3843,22 @@
     },
     "/api/v1/me": {
       "get": {
+        "description": "The caller. A person gets the view of the church trust model (a revoked person too, to see\nwhy they have no access); the older accounts keep their older answer until they are gone.",
         "operationId": "me_api_v1_me_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MeResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PersonMeResponse"
+                    }
+                  ],
+                  "title": "Response Me Api V1 Me Get"
                 }
               }
             },
@@ -3564,6 +3871,51 @@
           }
         ],
         "summary": "Me",
+        "tags": [
+          "me"
+        ]
+      },
+      "put": {
+        "description": "Change your own name or mobile number (a field left out keeps its value).",
+        "operationId": "update_me_api_v1_me_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonMeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Me",
         "tags": [
           "me"
         ]
