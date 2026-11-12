@@ -47,8 +47,8 @@ def test_church_profile_gives_the_church_words(
     monkeypatch.setenv("TERMINOLOGY_PROFILE", "church")
     terms = client.get("/api/v1/app/config").json()["terminology"]
     assert terms["profile"] == "church"
-    assert terms["terms"]["workhost"] == "Provider"
-    assert terms["terms"]["freelancer"] == "Searcher"
+    assert terms["terms"]["workhost"] == "Searcher"
+    assert terms["terms"]["freelancer"] == "Provider"
     assert terms["terms"]["organisation_path"] == "church"
 
 

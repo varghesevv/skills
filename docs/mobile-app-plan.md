@@ -17,8 +17,8 @@ Status: proposal for discussion. Nothing here is built yet. Versions of tools an
 
 | Role | In the app | Why |
 |---|---|---|
-| Freelancer (Searcher in the `church` profile) | Yes | Phone is where they update availability and see ratings and vouches |
-| Work host (Provider) | Yes | Search, view a person, rate |
+| Freelancer (Provider in the `church` profile) | Yes | Phone is where they update availability and see ratings and vouches |
+| Work host (Searcher) | Yes | Search, view a person, rate |
 | Organisation (Church) | Yes | Vouched list, search and vouching on the phone (phase 4, still part of version 1) |
 | Admin | No | Reports and approvals stay on the web. The app has **no admin login screen** and no admin screens; it never sends `user_type=admin`. |
 

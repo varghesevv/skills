@@ -20,15 +20,15 @@
     "organisations": "Churches",
     "organisation_path": "church",
     "organisations_path": "churches",
-    "workhost": "Provider",
-    "workhosts": "Providers",
-    "workhost_path": "provider",
-    "freelancer": "Searcher",
-    "freelancers": "Searchers",
-    "freelancer_path": "searcher",
-    "freelancers_path": "searchers",
+    "workhost": "Searcher",
+    "workhosts": "Searchers",
+    "workhost_path": "searcher",
+    "freelancer": "Provider",
+    "freelancers": "Providers",
+    "freelancer_path": "provider",
+    "freelancers_path": "providers",
     "badge_organisation": "Church",
-    "badge_workhost": "Provider",
-    "badge_freelancer": "Searcher"
+    "badge_workhost": "Searcher",
+    "badge_freelancer": "Provider"
   }
 }

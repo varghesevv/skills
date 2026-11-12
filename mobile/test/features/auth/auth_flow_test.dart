@@ -16,9 +16,10 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester, words: churchWords);
-      expect(find.text('I am a searcher'), findsOneWidget);
+      expect(find.text('I am a provider'), findsOneWidget);
       expect(find.text('I represent a church'), findsOneWidget);
       expect(find.textContaining('Freelancer'), findsNothing);
+      expect(find.textContaining('Work host'), findsNothing);
       expect(find.textContaining('Organisation'), findsNothing);
     });
 

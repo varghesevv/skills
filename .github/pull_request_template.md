@@ -4,6 +4,7 @@
 - [ ] Linked requirement IDs (FR-*, RP-*) or section: 
 - [ ] Specification updated if behaviour changed
 - [ ] New ADR added if this is an architectural decision
+- [ ] Consistent with the verification model ([docs/verification.md](../docs/verification.md)), or that document updated in this PR
 
 ## Checklist
 - [ ] Tests added or updated and passing
