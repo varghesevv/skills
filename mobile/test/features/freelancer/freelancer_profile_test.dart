@@ -63,4 +63,45 @@ void main() {
       containsAll(['full_name', 'mobile_number', 'is_rate_negotiable']),
     );
   });
+
+  test('reads the chosen labels with their levels', () {
+    final data = json()
+      ..['labels'] = [
+        {
+          'label': {
+            'id': 's1',
+            'label_name': 'Plumbing',
+            'label_type': 'skill',
+            'is_active': true,
+          },
+          'level': {
+            'id': 'v1',
+            'label_name': '80%',
+            'label_type': 'skill_level',
+            'is_active': true,
+          },
+        },
+        {
+          'label': {
+            'id': 'l1',
+            'label_name': 'English',
+            'label_type': 'language',
+            'is_active': true,
+          },
+          'level': null,
+        },
+      ];
+    final profile = parse(data);
+    expect(profile.labels.map((l) => l.label.name), ['Plumbing', 'English']);
+    expect(profile.labels.first.level?.name, '80%');
+    expect(profile.labels.last.level, isNull);
+  });
+
+  test('a label of the wrong shape is a bad response', () {
+    final data = json()
+      ..['labels'] = [
+        {'label': 'oops'},
+      ];
+    expect(() => parse(data), throwsA(isA<ApiException>()));
+  });
 }

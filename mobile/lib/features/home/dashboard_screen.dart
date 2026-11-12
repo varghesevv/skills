@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/destinations.dart';
 import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
 
@@ -15,6 +17,7 @@ class DashboardScreen extends ConsumerWidget {
     final text = ref.watch(appTextProvider);
     final me = ref.watch(sessionProvider).value;
     if (me == null) return const SizedBox.shrink();
+    final shortcuts = shortcutsFor(me.userType);
     final since = DateFormat.yMMMd().format(me.createdAt.toLocal());
     Widget fact(String label, String value) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -63,6 +66,25 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (shortcuts.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Semantics(
+                header: true,
+                child: Text(
+                  text('dashboard.shortcuts'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              for (final shortcut in shortcuts)
+                Card(
+                  child: ListTile(
+                    leading: Icon(shortcut.icon),
+                    title: Text(text(shortcut.labelKey)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go(shortcut.location),
+                  ),
+                ),
+            ],
           ],
         ),
       ),

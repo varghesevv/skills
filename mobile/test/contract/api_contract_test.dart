@@ -92,6 +92,8 @@ void main() {
       'GET /me': '200',
       'GET /freelancers/me': '200',
       'PUT /freelancers/me': '200',
+      'GET /labels': '200',
+      'PUT /freelancers/me/labels': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -285,6 +287,51 @@ void main() {
       expect(typesOf('FreelancerUpdate', 'mobile_number'), {'string'});
       expect(typesOf('FreelancerUpdate', 'whatsapp_availability'), {'boolean'});
       expect(typesOf('FreelancerUpdate', 'is_rate_negotiable'), {'boolean'});
+    });
+  });
+
+  group('labels', () {
+    test(
+      'the catalogue and the choice have the fields and types the app reads',
+      () {
+        expect(typesOf('LabelOut', 'id'), {'string'});
+        expect(typesOf('LabelOut', 'label_name'), {'string'});
+        expect(typesOf('LabelOut', 'label_type'), {'string'});
+        expect(typesOf('LabelOut', 'is_active'), {'boolean'});
+        expect(required('FreelancerLabelOut'), contains('label'));
+        expect(typesOf('FreelancerMe', 'labels'), {'array'});
+      },
+    );
+
+    test('the replace body is {labels: [{label_id, level_label_id}]}', () {
+      expect(requestSchema('PUT', '/freelancers/me/labels'), 'LabelsUpdate');
+      expect(required('LabelsUpdate'), {'labels'});
+      expect(
+        properties('LabelSelection'),
+        containsAll(['label_id', 'level_label_id']),
+      );
+      expect(typesOf('LabelSelection', 'label_id'), {'string'});
+      expect(
+        typesOf('LabelSelection', 'level_label_id'),
+        containsAll(['string', 'null']),
+      );
+    });
+
+    test('the label kinds the screen groups by exist', () {
+      final parameters = (operation('GET', '/labels')['parameters'] as List)
+          .cast<Map>();
+      expect(parameters.map((p) => p['name']), contains('type'));
+      final kinds =
+          ((parameters.firstWhere((p) => p['name'] == 'type')['schema']
+                      as Map)['anyOf']
+                  as List)
+              .cast<Map>()
+              .expand((o) => (o['enum'] as List?) ?? const [])
+              .toSet();
+      expect(
+        kinds,
+        containsAll(['skill', 'language', 'timing', 'nativity', 'skill_level']),
+      );
     });
   });
 }

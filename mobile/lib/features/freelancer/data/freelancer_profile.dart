@@ -1,3 +1,5 @@
+import 'label.dart';
+
 /// The signed-in freelancer's own profile (`GET /freelancers/me`).
 class FreelancerProfile {
   const FreelancerProfile({
@@ -11,6 +13,7 @@ class FreelancerProfile {
     required this.ratePerHour,
     required this.rateCurrency,
     required this.isRateNegotiable,
+    required this.labels,
   });
 
   factory FreelancerProfile.fromJson(Map<String, Object?> json) =>
@@ -25,6 +28,10 @@ class FreelancerProfile {
         ratePerHour: _rate(json['rate_per_hour']),
         rateCurrency: json['rate_currency'] as String?,
         isRateNegotiable: json['is_rate_negotiable'] as bool,
+        labels: [
+          for (final item in (json['labels'] as List? ?? const []))
+            ProfileLabel.fromJson(Map<String, Object?>.from(item as Map)),
+        ],
       );
 
   final String id;
@@ -37,6 +44,7 @@ class FreelancerProfile {
   final double? ratePerHour;
   final String? rateCurrency;
   final bool isRateNegotiable;
+  final List<ProfileLabel> labels;
 }
 
 /// The API sends the rate as a JSON number; a numeric string is accepted too, so a change of the
