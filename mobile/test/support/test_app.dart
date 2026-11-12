@@ -26,6 +26,8 @@ const defaultWords = {
   'badge_organisation': 'Organisation',
   'badge_workhost': 'Work host',
   'badge_freelancer': 'Freelancer',
+  'homegroup': 'Home group',
+  'homegroups': 'Home groups',
 }; // fmt: skip
 const churchWords = {
   'organisation': 'Church',
@@ -42,6 +44,8 @@ const churchWords = {
   'badge_organisation': 'Church',
   'badge_workhost': 'Searcher',
   'badge_freelancer': 'Provider',
+  'homegroup': 'Home group',
+  'homegroups': 'Home groups',
 }; // fmt: skip
 
 Map<String, Object?> configJson({
@@ -53,6 +57,29 @@ Map<String, Object?> configJson({
     'terms': words,
   },
   'app': {'min_version': min, 'latest_version': '9.9.9'},
+};
+
+Map<String, Object?> personJson({
+  String status = 'pending',
+  String? requested = 'searcher',
+  String name = 'Nadia Applicant',
+  int vouches = 0,
+  Map<String, Object?>? group = const {'id': 'group-1', 'name': 'Riverside'},
+  String? leader = 'Lena Leader',
+}) => {
+  'user_type': 'person',
+  'id': 'p1',
+  'full_name': name,
+  'email': 'nadia@example.test',
+  'mobile_number': '+10000000001',
+  'status': status,
+  'requested_status': requested,
+  'church': {'id': 'church-1', 'name': 'Grace Church'},
+  'home_group': group,
+  'leader': leader == null ? null : {'name': leader},
+  'status_set_by': null,
+  'flagged_for_recheck': false,
+  'vouch_count': vouches,
 };
 
 Map<String, Object?> meJson(String type, {String? name}) => {
@@ -150,6 +177,23 @@ void signedInAs(
       FakeReply(200, tokens(fresh('a'), fresh('r'))),
     )
     ..reply('GET', '/me', FakeReply(200, meJson(userType, name: name)));
+}
+
+/// Seeds a saved session of a person of the church trust model.
+void signedInAsPerson(
+  FakeAdapter adapter,
+  MemoryTokenStore store, [
+  Map<String, Object?>? person,
+]) {
+  store.save(accessToken: fresh('old'), refreshToken: fresh('r'));
+  store.clearAccessForRestart();
+  adapter
+    ..reply(
+      'POST',
+      '/auth/refresh',
+      FakeReply(200, tokens(fresh('a'), fresh('r'))),
+    )
+    ..reply('GET', '/me', FakeReply(200, person ?? personJson()));
 }
 
 /// Taps a tab of the bottom navigation. Found by its tooltip (also its screen-reader label),

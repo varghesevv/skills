@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api/api_client.dart';
 import 'auth/auth_repository.dart';
 import 'auth/token_store.dart';
+import '../features/person/data/person_repository.dart';
 import 'env.dart';
 import 'terminology/app_config.dart';
 import 'strings/app_text.dart';
@@ -51,6 +52,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     ref.watch(apiClientProvider),
     ref.watch(tokenStoreProvider),
   );
+});
+
+final personRepositoryProvider = Provider<PersonRepository>((ref) {
+  return PersonRepository(ref.watch(apiClientProvider));
 });
 
 final appConfigRepositoryProvider = Provider<AppConfigRepository>((ref) {

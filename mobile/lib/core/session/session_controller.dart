@@ -2,14 +2,16 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/account.dart';
 import '../auth/me.dart';
+import '../auth/person_me.dart';
 import '../auth/user_type.dart';
 import '../providers.dart';
 
 /// Who is signed in: loading at start-up, then the account or null (signed out).
-class SessionController extends AsyncNotifier<Me?> {
+class SessionController extends AsyncNotifier<Account?> {
   @override
-  Future<Me?> build() async {
+  Future<Account?> build() async {
     // The API client signals when the server rejects the refresh token: the session is over.
     ref.listen(sessionExpiredProvider, (_, _) => expire());
     try {
@@ -32,6 +34,20 @@ class SessionController extends AsyncNotifier<Me?> {
     state = AsyncData(me);
   }
 
+  /// The one login of the church trust model. Throws `ApiException` like [login].
+  Future<void> loginPerson({
+    required String email,
+    required String password,
+  }) async {
+    final person = await ref
+        .read(authRepositoryProvider)
+        .loginPerson(email: email, password: password);
+    state = AsyncData(person);
+  }
+
+  /// A change of the person's own data (the application, for example) came back from the server.
+  void setPerson(PersonMe person) => state = AsyncData(person);
+
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);
@@ -41,6 +57,18 @@ class SessionController extends AsyncNotifier<Me?> {
   void expire() => state = const AsyncData(null);
 }
 
-final sessionProvider = AsyncNotifierProvider<SessionController, Me?>(
+final sessionProvider = AsyncNotifierProvider<SessionController, Account?>(
   SessionController.new,
 );
+
+/// The signed-in older account, or null for a person of the church trust model or nobody.
+final meProvider = Provider<Me?>((ref) {
+  final account = ref.watch(sessionProvider).value;
+  return account is Me ? account : null;
+});
+
+/// The signed-in person of the church trust model, or null.
+final personProvider = Provider<PersonMe?>((ref) {
+  final account = ref.watch(sessionProvider).value;
+  return account is PersonMe ? account : null;
+});

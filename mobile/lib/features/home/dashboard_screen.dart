@@ -15,7 +15,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = ref.watch(appTextProvider);
-    final me = ref.watch(sessionProvider).value;
+    final me = ref.watch(meProvider);
     if (me == null) return const SizedBox.shrink();
     final shortcuts = shortcutsFor(me.userType);
     final since = DateFormat.yMMMd().format(me.createdAt.toLocal());

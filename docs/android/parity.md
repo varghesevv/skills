@@ -18,15 +18,15 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8 | done on the older model; one entry for everyone after S2.8 | `test/features/auth/auth_flow_test.dart` |
-| Log in (one screen for everyone) | `pages/Login.tsx` | S2.8 | done as a screen per kind of account; becomes one screen | `test/features/auth/auth_flow_test.dart` |
-| Sign-up wizard: details, church, home group (with leader name), searcher or provider | `pages/Register.tsx` (redone) | S2.8 | not started (replaces the older register forms) | |
-| Join through a group invitation link | new | S2.8 | not started | |
+| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8 | done: a Join and Sign in card for people next to the older entries, which go with the older accounts (S5) | `test/features/person/person_flow_test.dart`, `test/features/auth/auth_flow_test.dart` |
+| Log in (one screen for everyone) | `pages/person/PersonSignIn.tsx` | S2.8 | done for people at `/sign-in` (no account type sent); the older screens go with the older accounts (S5) | `test/features/person/person_flow_test.dart` |
+| Sign-up wizard: details, church, home group (with leader name), searcher or provider | `pages/person/SignUp.tsx` | S2.8 | done at `/sign-up`; the older register forms go with the older accounts | `test/features/person/person_flow_test.dart` |
+| Join through a group invitation link | `/join/<token>` | S2.8 | done: a link or token pasted on the sign-up screen opens `/join/<token>` (the token goes in a body, never in an address); opening a link from outside the app (app links) is later | `test/features/person/person_flow_test.dart` |
 | Forgot password | `pages/ForgotPassword.tsx` | | done | `test/features/auth/auth_flow_test.dart` |
 | Reset password | `pages/ResetPassword.tsx` | | n/a (v1: the link opens in the browser) | |
-| Applicant home: status, leader, change choice, leave; vouches received and my vouch link (share sheet) | new | S2.8, S3.6 | not started (in S2.8 the vouch parts show an empty state; they are filled when the vouch endpoints arrive in S3.1 and the app part in S3.6) | |
-| Revoked notice with log out | new | S2.8 | not started | |
-| Navigation by status (bottom bar and routes) | `App.tsx` | S2.8 | not started (built per user type today) | |
+| Applicant home: status, leader, change choice, leave; vouches received and my vouch link (share sheet) | `pages/person/ApplicantHome.tsx` | S2.8, S3.6 | done except the vouch link, which arrives with vouching (S3.6); change of group or status, and leaving with the password asked again, are built | `test/features/person/person_home_test.dart` |
+| Revoked notice with log out | `pages/person/PersonHome.tsx` | S2.8 | done | `test/features/person/person_home_test.dart` |
+| Navigation by status (bottom bar and routes) | `App.tsx` | S2.8 | in progress: the router sends a person to `/member` (applicant, revoked, or a welcome for admitted people) and keeps the older accounts on their own tabs; tabs for admitted people come with S3 and S5 | `test/features/person/person_home_test.dart` |
 | Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
 | Log out | `auth/AuthContext.tsx` | | done | `test/features/home/session_test.dart` |
 | Notifications list (mark read) | new | S3.6 | not started | |
@@ -111,13 +111,13 @@ Status column: "at least X" means that status or higher.
 
 | Method and path | Who | App use | Slice | Status |
 |---|---|---|---|---|
-| POST `/auth/signup` | public | Sign-up wizard | S2.8 | not started |
+| POST `/auth/signup` | public | Sign-up wizard | S2.8 | done |
 | POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8 | done on the older request shape (`user_type` is dropped in S2.8) |
 | POST `/auth/forgot-password` | public | Forgot password | | done |
 | POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
-| GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | not started |
-| GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` done on the older shape |
-| DELETE `/me` | any | Close account | S4.10 | not started |
+| GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | done |
+| GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` (both shapes) and `PUT /me/application` done; `PUT /me` (name, mobile) comes with the profile screen (S5.10) |
+| DELETE `/me` | any | Close account | S2.8 (applicant), S4.10 (others) | done for the applicant home; the settings screen of admitted people later |
 | POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | not started |
 | GET, POST `/me/vouch-link`, `/me/vouch-link/rotate`; GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link, who vouched | S3.6 | not started |
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any | Notifications | S3.6 | not started |

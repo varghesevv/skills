@@ -38,7 +38,7 @@ class RatingsController extends AsyncNotifier<RatingsState> {
   Future<RatingsState> build() async {
     final generation = ++_generation;
     _loadedPages = 0;
-    final me = ref.watch(sessionProvider).value;
+    final me = ref.watch(meProvider);
     if (me == null) return const RatingsState(items: [], total: 0);
     final page = await ref
         .read(freelancerRepositoryProvider)
@@ -49,7 +49,7 @@ class RatingsController extends AsyncNotifier<RatingsState> {
 
   Future<void> loadMore() async {
     final current = state.value;
-    final me = ref.read(sessionProvider).value;
+    final me = ref.read(meProvider);
     if (current == null ||
         me == null ||
         current.loadingMore ||

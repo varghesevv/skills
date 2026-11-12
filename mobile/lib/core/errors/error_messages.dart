@@ -29,6 +29,18 @@ String? _byCode(ApiException e) {
       return 'Too many failed attempts. Try again in ${_minutes(e)} minute(s).';
     case 'reveal_limit_reached':
       return 'You have revealed many numbers recently. Try again in ${_minutes(e)} minute(s).';
+    case 'account_exists':
+      return 'An account with these details already exists. Try signing in instead.';
+    case 'invalid_choice':
+      return 'That {homegroup} is not available. Please choose another one.';
+    case 'account_revoked':
+      return 'This account has no access.';
+    case 'not_pending':
+      return 'Your application has already been decided.';
+    case 'invalid_password':
+      return 'The password is not correct.';
+    case 'rate_limited':
+      return 'Too many requests. Please try again in ${_minutes(e)} minute(s).';
     case 'email_taken':
       return 'An account with this email already exists.';
     case 'invalid_reset_token':

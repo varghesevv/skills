@@ -6,9 +6,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
-- Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 backend part (116).
-- In progress: S2.7 (web: sign in, sign-up wizard, applicant home) on `model/verification`.
-- Next: S2.8 (mobile: data layer on the new API, single login, navigation by status, sign-up wizard, applicant home).
+- Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117).
+- In progress: S2.8 (mobile) on `model/verification`.
+- Next: S2.9 (slice check: end-to-end test, terminology keys for searcher, provider, verifier, admin, owner, church, home group).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -68,7 +68,7 @@ Backend first, then web and mobile.
 - [x] 2.5 Backend: `GET /me` (person view, readable by a revoked person) and `PUT /me`, and the public, rate-limited list of churches and their home groups with leaders (decision D-19).
 - [x] 2.6 Backend: `POST /auth/signup`, `PUT /me/application` (change of choice while pending), the group invitation link (`POST /group-invitations/lookup`, `/verifier/group-invitations`), with the abuse limits of specification 07. Migration `0009` fixes a flaw of 0007 found by the sign-up tests: the people rules checked the row as it was when changed, not as it is at commit. The older register routes and account tables stay until the older accounts go (D-20, S5.2).
 - [x] 2.7 Web: sign in (one login, no account type), forgot and reset password for people, the sign-up wizard (also through an invitation link), the home of a person by status (applicant with change of choice and leave, revoked, a placeholder for admitted people), at transitional addresses next to the older pages (specification 06). Backend `DELETE /me` came first (pull request 116).
-- [ ] 2.8 Mobile: data layer on the new API, single login, navigation by status instead of user type, sign-up wizard, applicant home.
+- [x] 2.8 Mobile: data layer on the new API (`PersonRepository`, `PersonMe`, `Account`), single login (`/sign-in`, no account type), navigation by status (the router sends a person to `/member`; applicant, revoked and admitted screens), sign-up wizard (also through a pasted invitation link), applicant home with change of choice and leave. At transitional addresses next to the older screens, like the web (S2.7).
 - [ ] 2.9 Slice check: end-to-end test of create OWNER, sign up, log in on web and mobile; terminology profiles (backend and web copies kept equal) get the keys for searcher, provider, verifier, admin, owner, church, home group.
 
 ### S3. Trust: vouching and admission — 9 pull requests

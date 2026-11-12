@@ -1,7 +1,8 @@
+import 'account.dart';
 import 'user_type.dart';
 
-/// The signed-in account (`GET /me`).
-class Me {
+/// The signed-in older account (`GET /me`).
+class Me extends Account {
   const Me({
     required this.id,
     required this.userType,

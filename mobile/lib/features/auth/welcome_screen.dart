@@ -21,6 +21,39 @@ class WelcomeScreen extends ConsumerWidget {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         Text(text('landing.lead')),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text('landing.member.title'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(text('landing.member.text')),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton(
+                      key: const Key('member-join'),
+                      onPressed: () => context.push('/sign-up'),
+                      child: Text(text('member.signUp.title')),
+                    ),
+                    OutlinedButton(
+                      key: const Key('member-sign-in'),
+                      onPressed: () => context.push('/sign-in'),
+                      child: Text(text('member.signIn.title')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
         for (final type in UserType.values)
           Card(
             child: Padding(

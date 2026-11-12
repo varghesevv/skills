@@ -7,7 +7,8 @@ import '../../support/test_app.dart';
 void main() {
   group('welcome', () {
     testWidgets('shows the default role words', (tester) async {
-      await pumpApp(tester);
+      // A tall screen: the cards of a long list are built only when they are on screen.
+      await pumpApp(tester, size: const Size(400, 1600));
       expect(find.text('I am a freelancer'), findsOneWidget);
       expect(find.text('I represent an organisation'), findsOneWidget);
     });
@@ -15,7 +16,7 @@ void main() {
     testWidgets('shows the words the server sends for the church profile', (
       tester,
     ) async {
-      await pumpApp(tester, words: churchWords);
+      await pumpApp(tester, words: churchWords, size: const Size(400, 1600));
       expect(find.text('I am a provider'), findsOneWidget);
       expect(find.text('I represent a church'), findsOneWidget);
       expect(find.textContaining('Freelancer'), findsNothing);
