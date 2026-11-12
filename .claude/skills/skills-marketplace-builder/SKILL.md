@@ -13,6 +13,7 @@ The specification and ADRs in this repository are the source of truth. Read them
 2. `docs/adr/README.md` and the accepted/proposed ADRs
 3. `docs/open-questions.md` (do not invent answers; use the stated defaults and say so)
 4. `CONTRIBUTING.md` (workflow, conventions, definition of done)
+5. `docs/verification.md`, starting with its **Data model summary** at the end: the trust and verification model (ADR-0016). It overrides the older organisation-vouching description in the specification until the specification is updated.
 
 ## Fixed decisions
 
@@ -40,6 +41,8 @@ The specification and ADRs in this repository are the source of truth. Read them
 - PostgreSQL is never exposed publicly; only the proxy publishes ports 80/443.
 
 ## Do not
+
+- Contradict the verification model in `docs/verification.md`. Any feature that touches people, roles, statuses, membership, vouching or permissions must follow it. If a request conflicts with it, stop and say so; do not work around it. If the model itself should change, update `docs/verification.md` (prose and Data model summary) in the same change.
 
 - Re-add SQLite support without a new ADR.
 - Edit an accepted ADR's decision (supersede it instead).

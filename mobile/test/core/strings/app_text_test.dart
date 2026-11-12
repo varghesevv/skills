@@ -7,8 +7,8 @@ void main() {
     Terms({
       'organisation': 'Church',
       'organisations': 'Churches',
-      'workhost': 'Provider',
-      'freelancer': 'Searcher',
+      'workhost': 'Searcher',
+      'freelancer': 'Provider',
     }),
   );
 

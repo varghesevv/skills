@@ -128,7 +128,7 @@ void main() {
       await openProfile(tester, words: churchWords);
       expect(
         find.text(
-          'Providers see your name, rate and details when they find you.',
+          'Searchers see your name, rate and details when they find you.',
         ),
         findsOneWidget,
       );

@@ -15,10 +15,10 @@ const _defaultWords = {
 const _churchWords = {
   'organisation': 'Church',
   'organisations': 'Churches',
-  'workhost': 'Provider',
-  'workhosts': 'Providers',
-  'freelancer': 'Searcher',
-  'freelancers': 'Searchers',
+  'workhost': 'Searcher',
+  'workhosts': 'Searchers',
+  'freelancer': 'Provider',
+  'freelancers': 'Providers',
 }; // fmt: skip
 
 void main() {
@@ -41,16 +41,16 @@ void main() {
     test('switches to the church words and fixes the article', () {
       expect(
         church.apply('{Organisations} and {workhosts}'),
-        'Churches and providers',
+        'Churches and searchers',
       );
       expect(
         church.apply('I represent {a_organisation}'),
         'I represent a church',
       );
-      expect(church.apply('{A_workhost} helps'), 'A provider helps');
+      expect(church.apply('{A_workhost} helps'), 'A searcher helps');
       expect(
         church.apply('Find {freelancers}, {a_freelancer}'),
-        'Find searchers, a searcher',
+        'Find providers, a provider',
       );
       expect(church.apply('{Organisation} Name'), 'Church Name');
     });
@@ -75,7 +75,7 @@ void main() {
 
     test('reads the server answer', () {
       expect(config.profile, 'church');
-      expect(config.terms.term('workhost'), 'Provider');
+      expect(config.terms.term('workhost'), 'Searcher');
     });
 
     test('compares versions as numbers and ignores the build number', () {

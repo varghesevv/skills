@@ -61,6 +61,7 @@ body:
         - label: Database (new tables or columns, migration)
         - label: Reports
         - label: Login, roles or permissions
+        - label: Statuses, membership, vouching or verification (must follow docs/verification.md)
         - label: Personal data or privacy
         - label: Deployment, infrastructure or CI
         - label: Documentation or specification

@@ -20,7 +20,7 @@ void main() {
     'organisation': 'Organisation',
     'freelancer': 'Freelancer',
   });
-  const church = Terms({'organisation': 'Church', 'freelancer': 'Searcher'});
+  const church = Terms({'organisation': 'Church', 'freelancer': 'Provider'});
 
   test('a wrong password gives the same text as the web', () {
     expect(
@@ -40,7 +40,7 @@ void main() {
     );
     expect(
       messageFor(error('already_vouched'), church),
-      'You already vouch for this searcher.',
+      'You already vouch for this provider.',
     );
   });
 

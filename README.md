@@ -6,7 +6,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 |---|---|
 | **Providers** | These list theirs skills, availability and hourly rate. |
 | **Searchers** | Who seek a particular set of providers for a job they require doing. |
-| **Verifiers** | Vouches for providers and searches within their church. |
+| **[Verifiers](docs/verification.md)** | Admit searchers and providers within their church. |
 
 **Status:** the application is built (API, web portals, reports) and runs as a demo on AWS. Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
@@ -20,6 +20,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 | [docs/specification/](docs/specification/README.md) | What we are building: requirements, data model, API, reports, frontend, non-functional requirements |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records: why we chose what we chose |
 | [docs/specification/09-infrastructure.md](docs/specification/09-infrastructure.md) | Demo deployment on AWS Lightsail, Terraform, GitHub Actions |
+| [docs/verification.md](docs/verification.md) | Verification rules: who can vouch, what searchers and providers need, verifier sign-off |
 | [docs/open-questions.md](docs/open-questions.md) | Decisions still needed from the product owner |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute: workflow, conventions, definition of done |
 
@@ -57,8 +58,8 @@ Opening a protected address while logged out leads to the matching login page. O
 The words for the three kinds of people (Organisation, Work host, Freelancer) and the matching web
 addresses are not fixed. Each installation picks a profile from
 [`frontend/src/terminology/profiles.json`](frontend/src/terminology/profiles.json), a plain file of
-key/value pairs. `default` keeps today's words; `church` shows Church / Provider / Freelancer and
-uses `/church`, `/login/church`, `/provider` and so on.
+key/value pairs. `default` keeps today's words; `church` shows Church / Searcher / Provider and
+uses `/church`, `/login/church`, `/searcher`, `/provider` and so on.
 
 - Demo/production: set the Environment variable `TERMINOLOGY_PROFILE` (for example `church`) and deploy.
   The web container hands it to the browser as `/config.json`; no rebuild is needed.
