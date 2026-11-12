@@ -3,7 +3,7 @@ import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 
-import type { Me } from './api/types'
+import type { Me, PersonMe } from './api/types'
 import App from './App'
 import { setTokens } from './auth/tokenStore'
 
@@ -45,6 +45,25 @@ export function makeMe(overrides: Partial<Me> = {}): Me {
     org_name: null,
     approval_status: null,
     created_at: '2026-10-01T10:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makePerson(overrides: Partial<PersonMe> = {}): PersonMe {
+  return {
+    user_type: 'person',
+    id: '22222222-2222-2222-2222-222222222222',
+    full_name: 'Nadia Applicant',
+    email: 'n@example.com',
+    mobile_number: '+971500000002',
+    status: 'pending',
+    requested_status: 'searcher',
+    church: { id: 'church-1', name: 'Grace Church' },
+    home_group: { id: 'group-1', name: 'Riverside' },
+    leader: { name: 'Lena Leader' },
+    status_set_by: null,
+    flagged_for_recheck: false,
+    vouch_count: 0,
     ...overrides,
   }
 }

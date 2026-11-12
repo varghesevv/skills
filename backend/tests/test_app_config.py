@@ -14,6 +14,7 @@ TERM_KEYS = {
     "workhost", "workhosts", "workhost_path",
     "freelancer", "freelancers", "freelancer_path", "freelancers_path",
     "badge_organisation", "badge_workhost", "badge_freelancer",
+    "homegroup", "homegroups",
 }  # fmt: skip
 WEB_PROFILES = Path(__file__).resolve().parents[2] / "frontend/src/terminology/profiles.json"
 

@@ -410,3 +410,15 @@ def test_an_account_without_a_password_hash_costs_the_same_as_an_unknown_email(
     response = client.post(f"{API}/auth/login", json={"email": member.email, "password": "x" * 12})
     assert response.status_code == 401
     assert calls == [1]
+
+
+def test_forgot_password_accepts_the_person_type_the_web_sends(
+    client: TestClient, world: World, caplog: pytest.LogCaptureFixture
+) -> None:
+    member = add_member(world, "searcher")
+    with caplog.at_level("INFO"):
+        response = client.post(
+            f"{API}/auth/forgot-password", json={"email": member.email, "user_type": "person"}
+        )
+    assert response.status_code == 202
+    assert any(hasattr(r, "reset_link") for r in caplog.records)

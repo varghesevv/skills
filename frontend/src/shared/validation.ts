@@ -106,7 +106,24 @@ export const ratingSchema = z.object({
   comment: z.string().trim().max(2000, 'validation.commentLong'),
 })
 
-export const forgotPasswordSchema = z.object({ email, user_type: userType })
+export const forgotPasswordSchema = z.object({
+  email,
+  user_type: z.enum(['freelancer', 'workhost', 'organisation', 'admin', 'person']),
+})
+
+/** The login of the church trust model: no account type. */
+export const personLoginSchema = z.object({
+  email,
+  password: z.string().min(1, 'validation.required').max(1024, 'validation.tooLong'),
+})
+
+/** About you, in the sign-up wizard; the church, group and status are chosen in other steps. */
+export const signupDetailsSchema = z.object({
+  full_name: fullName,
+  email,
+  mobile_number: mobile,
+  password: newPassword,
+})
 
 export const resetPasswordSchema = z.object({ new_password: newPassword })
 

@@ -2,6 +2,12 @@ import type { RegisterType, UserType } from '../api/types'
 import type { StringKey } from '../i18n'
 import { slugOf, term } from '../terminology/terms'
 
+/** Where a person of the church trust model lives, and the screens that lead there. Until the older
+ * portals go (roadmap S5.6) these have their own addresses next to /login and /register. */
+export const PERSON_HOME = '/member'
+export const PERSON_SIGN_IN = '/sign-in'
+export const PERSON_SIGN_UP = '/sign-up'
+
 export type NavItem = { to: string; labelKey: StringKey; end?: boolean }
 
 export type Portal = {

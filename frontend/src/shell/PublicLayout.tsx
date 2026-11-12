@@ -2,7 +2,7 @@ import { Link, Outlet } from 'react-router-dom'
 
 import { useAuth } from '../auth/AuthContext'
 import { t } from '../i18n'
-import { homePath } from '../portals/config'
+import { homePath, PERSON_HOME } from '../portals/config'
 
 export default function PublicLayout() {
   const { status, user } = useAuth()
@@ -17,7 +17,10 @@ export default function PublicLayout() {
         </Link>
         <nav className="topbar-user" aria-label={t('nav.main')}>
           {user ? (
-            <Link className="btn btn-quiet" to={homePath(user.user_type)}>
+            <Link
+              className="btn btn-quiet"
+              to={user.user_type === 'person' ? PERSON_HOME : homePath(user.user_type)}
+            >
               {t('nav.dashboard')}
             </Link>
           ) : (

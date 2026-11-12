@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 
 import { forgotPasswordRequest } from '../api/auth'
 import { t } from '../i18n'
+import { PERSON_SIGN_IN } from '../portals/config'
 import { errorMessage } from '../shared/errors'
 import { Alert, SelectField, TextField } from '../shared/ui'
 import { usePageTitle } from '../shared/usePageTitle'
@@ -15,7 +16,7 @@ export default function ForgotPassword() {
   const typeParam = params.get('type')
   const [values, setValues] = useState<{ email: string; user_type: string }>({
     email: '',
-    user_type: isUserType(typeParam) ? typeParam : 'freelancer',
+    user_type: typeParam === 'person' ? 'person' : isUserType(typeParam) ? typeParam : 'freelancer',
   })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -57,14 +58,16 @@ export default function ForgotPassword() {
                   {formError}
                 </Alert>
               )}
-              <SelectField
-                label={t('field.userType')}
-                name="user_type"
-                value={values.user_type}
-                onChange={(value) => setValues((current) => ({ ...current, user_type: value }))}
-                options={USER_TYPE_OPTIONS}
-                error={errors.user_type}
-              />
+              {values.user_type !== 'person' && (
+                <SelectField
+                  label={t('field.userType')}
+                  name="user_type"
+                  value={values.user_type}
+                  onChange={(value) => setValues((current) => ({ ...current, user_type: value }))}
+                  options={USER_TYPE_OPTIONS}
+                  error={errors.user_type}
+                />
+              )}
               <TextField
                 label={t('field.email')}
                 name="email"
@@ -82,7 +85,9 @@ export default function ForgotPassword() {
           </>
         )}
         <p>
-          <Link to="/login">{t('forgot.back')}</Link>
+          <Link to={values.user_type === 'person' ? PERSON_SIGN_IN : '/login'}>
+            {t('forgot.back')}
+          </Link>
         </p>
       </div>
     </div>

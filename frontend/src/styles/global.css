@@ -977,3 +977,54 @@ input[aria-invalid='true'] {
 .table-wrap th {
   text-transform: capitalize;
 }
+
+/* ---------- Joining (sign-up wizard) and the applicant home ---------- */
+
+.step-label,
+.hint {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.choice-list {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.choice-list legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+/* One option per row, at least 44 px high so it can be tapped. */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.choice small {
+  display: block;
+  color: var(--muted);
+}
+
+.choice input {
+  flex: none;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
