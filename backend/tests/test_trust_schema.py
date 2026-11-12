@@ -11,7 +11,18 @@ from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Church, ContactView, HomeGroup, Person, StatusChange, Vouch
+from app.models import (
+    AdminInvitation,
+    Church,
+    ContactView,
+    GroupRequest,
+    HandoverRequest,
+    HomeGroup,
+    MoveRequest,
+    Person,
+    StatusChange,
+    Vouch,
+)
 from tests.trust_helpers import World, check_rules, make_person, now
 
 pytestmark = pytest.mark.db
@@ -454,3 +465,148 @@ def test_deleting_is_not_how_people_leave(world: World) -> None:
     """Rows of people are kept; see the closing tests above."""
     person = world.add_person("searcher")
     assert world.session.scalars(select(Person).where(Person.id == person.id)).one() is person
+
+
+# ---- requests, invitations and references stay inside one church --------------------------
+
+
+def test_revoked_persons_last_group_must_be_in_their_church(world: World) -> None:
+    _church, other_group, _admin = world.add_church()
+    person = world.add_person("searcher")
+    person.status = "revoked"
+    person.home_group_id = None
+    person.last_home_group_id = other_group.id
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_revoked_person_keeps_the_group_they_were_removed_from(world: World) -> None:
+    person = world.add_person("searcher")
+    person.status = "revoked"
+    person.home_group_id = None
+    person.last_home_group_id = world.group.id
+    check_rules(world.session)
+
+
+def test_a_move_stays_within_one_church(world: World) -> None:
+    _church, other_group, _admin = world.add_church()
+    member = world.add_person("searcher")
+    world.session.add(
+        MoveRequest(person_id=member.id, from_group_id=world.group.id, to_group_id=other_group.id)
+    )
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_a_move_between_groups_of_one_church_is_accepted(world: World) -> None:
+    leader = world.add_person("provider")
+    group = world.add_group(leader, "Target")
+    member = world.add_person("searcher")
+    world.session.add(
+        MoveRequest(person_id=member.id, from_group_id=world.group.id, to_group_id=group.id)
+    )
+    world.session.flush()
+
+
+@pytest.mark.parametrize(
+    "state, decided",
+    [("open", True), ("approved", False), ("declined", False)],
+)
+def test_group_request_decision_matches_state(world: World, state: str, decided: bool) -> None:
+    member = world.add_person("searcher")
+    values: dict[str, object] = {
+        "requester_id": member.id,
+        "church_id": world.church.id,
+        "group_name": "New",
+        "state": state,
+    }
+    if decided:
+        values.update(decided_by_id=world.owner.id, decided_at=now())
+    world.session.add(GroupRequest(**values))
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_group_request_decided_by_the_admin_is_accepted(world: World) -> None:
+    member = world.add_person("searcher")
+    world.session.add(
+        GroupRequest(
+            requester_id=member.id,
+            church_id=world.church.id,
+            group_name="New",
+            state="approved",
+            decided_by_id=world.owner.id,
+            decided_at=now(),
+        )
+    )
+    world.session.flush()
+
+
+def _admin_invitation(world: World, **extra: object) -> AdminInvitation:
+    values: dict[str, object] = {
+        "email": "invitee@example.com",
+        "church_name": "Third church",
+        "invited_by_id": world.owner.id,
+        "token_hash": uuid.uuid4().hex,
+        "expires_at": now(),
+    }
+    values.update(extra)
+    return AdminInvitation(**values)
+
+
+def test_invitation_has_one_outcome(world: World) -> None:
+    world.session.add(_admin_invitation(world, email=None, accepted_at=now(), cancelled_at=now()))
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_invitation_email_is_cleared_once_decided(world: World) -> None:
+    world.session.add(_admin_invitation(world, accepted_at=now()))
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_open_invitation_keeps_the_email_and_decided_one_does_not(world: World) -> None:
+    world.session.add(_admin_invitation(world))
+    world.session.add(_admin_invitation(world, email=None, accepted_at=now()))
+    world.session.flush()
+
+
+def test_handover_has_one_outcome(world: World) -> None:
+    _church, _group, admin = world.add_church()
+    world.session.add(
+        HandoverRequest(
+            owner_id=world.owner.id,
+            new_owner_id=admin.id,
+            accepted_at=now(),
+            cancelled_at=now(),
+        )
+    )
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_only_one_handover_is_open_at_a_time(world: World) -> None:
+    _church, _group, admin = world.add_church()
+    world.session.add(HandoverRequest(owner_id=world.owner.id, new_owner_id=admin.id))
+    world.session.flush()
+    world.session.add(HandoverRequest(owner_id=world.owner.id, new_owner_id=admin.id))
+    with pytest.raises(IntegrityError):
+        world.session.flush()
+
+
+def test_move_has_one_outcome(world: World) -> None:
+    leader = world.add_person("provider")
+    group = world.add_group(leader, "Target")
+    member = world.add_person("searcher")
+    world.session.add(
+        MoveRequest(
+            person_id=member.id,
+            from_group_id=world.group.id,
+            to_group_id=group.id,
+            completed_at=now(),
+            cancelled_at=now(),
+        )
+    )
+    with pytest.raises(IntegrityError):
+        world.session.flush()

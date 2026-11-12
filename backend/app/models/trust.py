@@ -100,6 +100,10 @@ class GroupRequest(UUIDPrimaryKeyMixin, Base):
 
     __table_args__ = (
         CheckConstraint(sql_in("state", GROUP_REQUEST_STATES), name="state_valid"),
+        CheckConstraint(
+            "(state = 'open') = (decided_at IS NULL AND decided_by_id IS NULL)",
+            name="decision_matches_state",
+        ),
         Index(
             "uq_group_requests_one_open",
             "requester_id",
@@ -125,7 +129,17 @@ class AdminInvitation(UUIDPrimaryKeyMixin, Base):
     cancelled_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    __table_args__ = (Index(None, "invited_by_id"),)
+    __table_args__ = (
+        CheckConstraint(
+            "NOT (accepted_at IS NOT NULL AND cancelled_at IS NOT NULL)", name="one_outcome"
+        ),
+        # The invited address is personal data: gone once the invitation is decided.
+        CheckConstraint(
+            "email IS NULL OR (accepted_at IS NULL AND cancelled_at IS NULL)",
+            name="email_cleared_when_decided",
+        ),
+        Index(None, "invited_by_id"),
+    )
 
 
 class HandoverRequest(UUIDPrimaryKeyMixin, Base):
@@ -143,6 +157,9 @@ class HandoverRequest(UUIDPrimaryKeyMixin, Base):
 
     __table_args__ = (
         CheckConstraint("owner_id <> new_owner_id", name="different_people"),
+        CheckConstraint(
+            "NOT (accepted_at IS NOT NULL AND cancelled_at IS NOT NULL)", name="one_outcome"
+        ),
         Index(
             "uq_handover_requests_one_open",
             "owner_id",
@@ -172,6 +189,9 @@ class MoveRequest(UUIDPrimaryKeyMixin, Base):
 
     __table_args__ = (
         CheckConstraint("from_group_id <> to_group_id", name="different_groups"),
+        CheckConstraint(
+            "NOT (completed_at IS NOT NULL AND cancelled_at IS NOT NULL)", name="one_outcome"
+        ),
         Index(None, "person_id"),
         Index(None, "from_group_id"),
         Index(None, "to_group_id"),

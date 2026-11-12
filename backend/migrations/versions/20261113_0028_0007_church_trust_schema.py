@@ -124,6 +124,18 @@ _FUNCTIONS = [
     END $$
     """,
     """
+    CREATE FUNCTION trg_move_requests_rules() RETURNS trigger LANGUAGE plpgsql AS $$
+    DECLARE from_church uuid; to_church uuid;
+    BEGIN
+        SELECT church_id INTO from_church FROM home_groups WHERE id = NEW.from_group_id;
+        SELECT church_id INTO to_church FROM home_groups WHERE id = NEW.to_group_id;
+        IF from_church IS DISTINCT FROM to_church THEN
+            RAISE EXCEPTION 'a move stays within one church' USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+    END $$
+    """,
+    """
     CREATE FUNCTION trg_vouches_rules() RETURNS trigger LANGUAGE plpgsql AS $$
     DECLARE voucher people%ROWTYPE; applicant people%ROWTYPE;
     BEGIN
@@ -143,6 +155,34 @@ _FUNCTIONS = [
         RETURN NEW;
     END $$
     """,
+]
+
+_LIFECYCLE_CHECKS = [
+    (
+        "group_requests",
+        "decision_matches_state",
+        "(state = 'open') = (decided_at IS NULL AND decided_by_id IS NULL)",
+    ),
+    (
+        "admin_invitations",
+        "one_outcome",
+        "NOT (accepted_at IS NOT NULL AND cancelled_at IS NOT NULL)",
+    ),
+    (
+        "admin_invitations",
+        "email_cleared_when_decided",
+        "email IS NULL OR (accepted_at IS NULL AND cancelled_at IS NULL)",
+    ),
+    (
+        "handover_requests",
+        "one_outcome",
+        "NOT (accepted_at IS NOT NULL AND cancelled_at IS NOT NULL)",
+    ),
+    (
+        "move_requests",
+        "one_outcome",
+        "NOT (completed_at IS NOT NULL AND cancelled_at IS NOT NULL)",
+    ),
 ]
 
 _EXCLUSIONS = [
@@ -185,6 +225,11 @@ _TRIGGERS = [
         FOR EACH ROW EXECUTE FUNCTION trg_status_changes_append_only()
     """,
     """
+    CREATE TRIGGER move_requests_rules
+        BEFORE INSERT ON move_requests
+        FOR EACH ROW EXECUTE FUNCTION trg_move_requests_rules()
+    """,
+    """
     CREATE TRIGGER vouches_rules
         BEFORE INSERT ON vouches
         FOR EACH ROW EXECUTE FUNCTION trg_vouches_rules()
@@ -204,11 +249,13 @@ def _create_rules() -> None:
 def _drop_rules() -> None:
     for statement in (
         "DROP TRIGGER vouches_rules ON vouches",
+        "DROP TRIGGER move_requests_rules ON move_requests",
         "DROP TRIGGER status_changes_append_only ON status_changes",
         "DROP TRIGGER home_groups_rules ON home_groups",
         "DROP TRIGGER churches_rules ON churches",
         "DROP TRIGGER people_rules ON people",
         "DROP FUNCTION trg_vouches_rules()",
+        "DROP FUNCTION trg_move_requests_rules()",
         "DROP FUNCTION trg_status_changes_append_only()",
         "DROP FUNCTION trg_people_rules()",
         "DROP FUNCTION trg_home_groups_rules()",
@@ -360,9 +407,9 @@ def upgrade() -> None:
             name="fk_people_home_group_id_home_groups",
         ),
         sa.ForeignKeyConstraint(
-            ["last_home_group_id"],
-            ["home_groups.id"],
-            name=op.f("fk_people_last_home_group_id_home_groups"),
+            ["last_home_group_id", "church_id"],
+            ["home_groups.id", "home_groups.church_id"],
+            name="fk_people_last_home_group_id_home_groups",
         ),
         sa.ForeignKeyConstraint(
             ["status_set_by_id"], ["people.id"], name=op.f("fk_people_status_set_by_id_people")
@@ -778,6 +825,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("applicant_id", "voucher_id", name=op.f("uq_vouches_applicant_id")),
     )
     op.create_index(op.f("ix_vouches_voucher_id"), "vouches", ["voucher_id"], unique=False)
+    for table, name, condition in _LIFECYCLE_CHECKS:
+        op.create_check_constraint(op.f(f"ck_{table}_{name}"), table, condition)
     _create_rules()
 
 

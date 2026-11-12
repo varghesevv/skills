@@ -86,7 +86,7 @@ class Person(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     church_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("churches.id"))
     # NULL if and only if the person is revoked or the account is closed.
     home_group_id: Mapped[uuid.UUID | None] = mapped_column()
-    last_home_group_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("home_groups.id"))
+    last_home_group_id: Mapped[uuid.UUID | None] = mapped_column()
 
     # Personal details; all NULL once the account is closed.
     full_name: Mapped[str | None] = mapped_column(String(200))
@@ -118,6 +118,12 @@ class Person(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             ["home_group_id", "church_id"],
             ["home_groups.id", "home_groups.church_id"],
             name="fk_people_home_group_id_home_groups",
+        ),
+        # A revoked person stays on their church's list: the group they were removed from is in it.
+        ForeignKeyConstraint(
+            ["last_home_group_id", "church_id"],
+            ["home_groups.id", "home_groups.church_id"],
+            name="fk_people_last_home_group_id_home_groups",
         ),
         CheckConstraint(sql_in("status", STATUSES), name="status_valid"),
         CheckConstraint(

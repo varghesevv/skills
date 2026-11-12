@@ -8,7 +8,7 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - In progress: S2.1 (identity schema migration) on `model/verification`.
 - Next: S2.2 (models and the permission module).
-- Waiting on the owner: see section 7. The planning answers were not given in writing, so the defaults of section 8 are in force. The owner allowed merging with the administrator override while the review rule stays in place (2026-11-12).
+- Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
 The first draft built all of the backend, then the web, then the mobile app. That proves nothing end to end until about the 35th pull request, so a wrong design choice would show up late and cost a lot. It is replaced by **vertical slices**: each slice delivers one capability on the backend, the web and the mobile app, with tests, and ends with a flow that can be shown. Also added after review:
