@@ -4,6 +4,8 @@ Status: draft, **retargeted 2026-11-12** to the church trust model. Phases 3 and
 
 Read [understanding](understanding.md) first, then this plan, then [chat design](chat-design.md). The technical choices (Flutter, Riverpod, go_router, dio, secure storage, generated API models, test levels, CI and release pipeline) are in [mobile-app-plan.md](../mobile-app-plan.md) sections 3 to 7; this plan does not repeat them, it adds Android-specific work, the API additions, chat and the order of work.
 
+**Phase map after the model change** (the [roadmap](../roadmap-verification-model.md) has the order and the pull requests): phase 1 (shell, login) and phase 2 (provider screens) are built; sign-up, navigation by status and the applicant home are S2.8; vouching, notifications and the verifier screens are S3.6 and S3.7; ADMIN screens, moves, succession and close account are S4.10; the provider screens move to the person endpoints in S5.7; the old phase 3 (search, detail, rate, Reveal) is S5.8 to S5.10; settings are S5.11; the old phase 4 organisation screens do not exist. Chat (phases 5 and 6) follows the cut-over as S8. The screen list is in the [parity table](parity.md).
+
 ## 1. Principles
 
 1. **Parity first, chat second.** Phases 1 to 4 deliver what the web does. Chat (phases 5 and 6) comes after, but its backend can be built in parallel by a separate branch.
@@ -48,10 +50,10 @@ Each item is one small PR with tests, spec updates (04 API, 02 requirements, 03 
 |---|---|---|---|
 | B1 | `GET /api/v1/app/config`: terminology map (words and slugs), minimum supported app version, latest version | Phase 1 | Public (no login) so the login screen has the right words. Cache headers; no secrets. |
 | B2 | Minimum version check: the app sends `X-App-Version` and `X-App-Platform`; if below the minimum, the API still answers normally but `app/config` tells the app to block. | Phase 1 | Never reject API calls from old apps by header alone in v1. |
-| B3 | Delete my account (`DELETE /me`, password confirmation) with the anonymising rules | Phase 4 (store requirement) | Ratings and vouches stay, name removed. |
+| B3 | Close my account (`DELETE /me`, password confirmation); this is the store's "delete account" | S4.4 and S4.10 (store requirement) | The row stays with `closed_at`, personal details are cleared, ratings, vouches and the history stay (FR-X-03). |
 | B4 | Login-protected Downloads API (`/app/downloads`) | Phase 1 (first APK) | As in `mobile-app-plan.md` 6.4. |
 | B5 | Device tokens (`POST /devices`, `DELETE /devices/{id}`), `notification_outbox`, the worker's FCM sender | Phase 6 | Shared by chat and later notifications. `PUSH_ENABLED` setting, default false. |
-| B6 | Chat REST + WebSocket + moderation + reports RP-09, RP-10 | Phases 5 and 6 | See [chat design](chat-design.md). Split into: schema + rules + REST; WebSocket + hub + LISTEN/NOTIFY; push; moderation and reports. |
+| B6 | Chat REST + WebSocket + moderation + reports RP-10, RP-11 | Phases 5 and 6 | See [chat design](chat-design.md). Split into: schema + rules + REST; WebSocket + hub + LISTEN/NOTIFY; push; moderation and reports. |
 | B7 | OpenAPI export stored in the repository (`docs/openapi.json`, checked in CI that it is current) and used to generate the Dart models | Phase 1 | Already on the deferred list. Without it the app drifts from the API. |
 
 ## 4. App phases
@@ -135,7 +137,7 @@ One table with a row per web screen and per API endpoint used by the web: status
 | Repositories and API client | Unit tests with a fake HTTP layer: auth refresh, 429 handling, error mapping |
 | Reveal | Widget + unit: number never shown before the call, dialler launched with the right URI, `429` message, number cleared on leaving |
 | Chat client | Unit: outbound queue, dedupe, reconnect back-off (with a fake clock), catch-up; widget: thread states; integration: fake WebSocket server |
-| Backend | pytest per `chat-design.md` section 10; migration test; reports tests for RP-09 and RP-10 |
+| Backend | pytest per `chat-design.md` section 10; migration test; reports tests for RP-10 and RP-11 |
 | Contract | CI check that `docs/openapi.json` matches the running API (B7) so generated models cannot drift |
 | Release | Emulator smoke test of the release build (app starts, login screen, `/health` reachable) |
 
@@ -150,7 +152,7 @@ Coverage floor 70 % for `lib/` at first (as in `mobile-app-plan.md`), raised lat
 | `docs/specification/02-functional-requirements.md` | New FR for chat, app config, device tokens, account deletion |
 | `docs/specification/03-data-model.md` | Chat tables, device tokens, outbox |
 | `docs/specification/04-api.md` | All new endpoints and the WebSocket protocol |
-| `docs/specification/05-reports.md` | RP-09 chat reports, RP-10 chat metrics |
+| `docs/specification/05-reports.md` | RP-10 chat reports, RP-11 chat metrics |
 | `docs/specification/06-frontend.md` | Pointer: the Android app is specified in `docs/android/` |
 | `docs/specification/07-non-functional.md` | Chat privacy and retention, push |
 | `docs/operations-runbook.md` | WebSocket and proxy timeouts, push secrets, chat limits, moderation steps |

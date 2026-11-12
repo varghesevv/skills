@@ -2,126 +2,143 @@
 
 Status: created 2026-10-29 from `frontend/src/App.tsx`, `frontend/src/portals/*`, `frontend/src/api/*` and `backend/app/api/v1/*.py` on branch `feat/android-dev`. **Keep this file current in every PR** that adds, changes or drops an app screen or an endpoint. It is the definition of "the app has every web feature" ([plan](plan.md) section 5).
 
-Status values: `not started`, `in progress`, `done`, `n/a` (admin: no admin screens in the app), `backend` (needs an API PR first; the PR id is given), `replaced` (the web screen belongs to the organisation-vouching model that is being replaced; the app builds the church-model screens listed in the [roadmap](../roadmap-verification-model.md) instead, and this row is redone then, see the note below). Test file is filled in when the screen exists.
+Status values: `not started`, `in progress`, `done`, `n/a` (no app screen, for example the OWNER), `backend` (needs an API PR first; the PR id is given), `replaced` (not used any more: the organisation screens are gone, see the note below). Test file is filled in when the screen exists.
 
 Words: the app never hard-codes the role words. The web paths below use the terminology slugs (`/church`, `/searchers`, ...); the app uses its own routes and the same words from `GET /api/v1/app/config`.
 
-## Verification model (ADR-0016): rows that are replaced
+## Screens by status (church trust model)
 
-[`docs/verification.md`](../verification.md) (ADR-0016, **accepted** 2026-11-12) replaces organisation vouching with a church trust hierarchy (OWNER, ADMIN per church, VERIFIER per home group, SEARCHER and PROVIDER), with one account and one status per person ([ADR-0017](../adr/0017-authorisation-by-status.md)). The backend, the web and this table still describe the older model until the slices of the [roadmap](../roadmap-verification-model.md) land on the integration branch `model/verification`. Rows marked `replaced` are organisation-vouching screens and endpoints that are **not built and will not be built**, and the sign-up screens built in phase 1 (organisation login, role choice, register forms), which are **built and will be reworked** into the single login and the sign-up wizard (choose church, home group and role). Slice S1.5 rewrites this table for the new screens; until then do not add rows or screens on the older model.
+The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (decision D-11, [FR-O-06](../specification/02-functional-requirements.md)). This narrows the older rule that the platform administrator has no mobile access, because the platform administrator is now the OWNER. [`docs/verification.md`](../verification.md) does not say which channels each role uses, so the decision is recorded in the decision log and the specification, and in [understanding](understanding.md) A2.
 
-## 1. Pages
+[`docs/verification.md`](../verification.md) (ADR-0016, accepted 2026-11-12) and [ADR-0017](../adr/0017-authorisation-by-status.md) replace the portals by one login and screens that depend on the person's **status**: PENDING (applicant), SEARCHER, PROVIDER, VERIFIER, ADMIN; the OWNER works on the web only (decision D-11). The table below is the plan for the app, rewritten on 2026-11-12 from [specification 06](../specification/06-frontend.md) and [04](../specification/04-api.md). The web and backend still have the older model until slices S2 to S5 of the [roadmap](../roadmap-verification-model.md) land on `model/verification`; the **Slice** column says when each row is built. Rows for screens built before the model changed keep their `done` status and are moved onto the new endpoints in the slice named. Status values for the new rows start at `not started`. Words come from `GET /app/config`; the app never writes "searcher", "provider", "church" or "home group" itself.
+
+## 1. Screens
 
 ### Public and account
 
-| Web page (route) | Web source | App screen | Status | Test file |
+| Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Landing (`/`) | `pages/Landing.tsx` | Welcome / role choice (sign in, register) | done | `test/features/auth/auth_flow_test.dart` |
-| Log in, freelancer and work host (`/login`, `/login/<slug>`), with switch link | `pages/Login.tsx`, `pages/login/LoginForm.tsx` | Login screen per role | done (a screen per role; no switch link, the welcome screen offers each) | `test/features/auth/auth_flow_test.dart` |
-| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | replaced | `test/features/auth/auth_flow_test.dart` |
-| Admin log in (`/login/admin`) | `pages/login/AdminLogin.tsx` | none: the app never sends `user_type=admin` | n/a | |
-| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | replaced | `test/features/auth/auth_flow_test.dart` |
-| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | replaced | `test/features/auth/auth_flow_test.dart` |
-| Forgot password (`/forgot-password`) | `pages/ForgotPassword.tsx` | Forgot password (always shows the generic confirmation) | done | `test/features/auth/auth_flow_test.dart` |
-| Reset password (`/reset-password?token=`) | `pages/ResetPassword.tsx` | v1: link opens in the browser; no app screen | n/a (v1) | |
-| Not found | `pages/NotFound.tsx` | Unknown-route screen | not started | |
-| Dashboard (account facts, shortcuts) | `pages/Dashboard.tsx` | Home / dashboard per role | done (account facts; "Where to go next" shortcuts for the freelancer, more with the other features) | `test/features/home/session_test.dart`, `test/features/auth/auth_flow_test.dart` |
-| Log out | `auth/AuthContext.tsx` | Settings: log out (revokes refresh token) | done | `test/features/home/session_test.dart` |
-| Downloads page (login protected) | planned, `mobile-app-plan.md` 6.4 (API merged as B4, web page not built yet) | Settings: version and "update available" hint | not started | |
-| (new) Minimum-version / update-required screen | none on web | Blocking screen from the server's `min_version` (B1, merged) | done (blocking screen; the "update available" hint comes with B4) | `test/app/config_gate_test.dart` |
-| (new) "This build is not configured" screen (release builds only) | none on web | Names the missing `API_BASE_URL` / `APP_VERSION`; never shows values | done | `test/core/env_test.dart` |
-| (new) Settings: about, privacy link, version, delete account | none on web | Settings | in progress: version and log out done; privacy link (phase 4) and delete account (backend B3) later | `test/features/home/session_test.dart` |
+| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8 | done on the older model; one entry for everyone after S2.8 | `test/features/auth/auth_flow_test.dart` |
+| Log in (one screen for everyone) | `pages/Login.tsx` | S2.8 | done as a screen per kind of account; becomes one screen | `test/features/auth/auth_flow_test.dart` |
+| Sign-up wizard: details, church, home group (with leader name), searcher or provider | `pages/Register.tsx` (redone) | S2.8 | not started (replaces the older register forms) | |
+| Join through a group invitation link | new | S2.8 | not started | |
+| Forgot password | `pages/ForgotPassword.tsx` | | done | `test/features/auth/auth_flow_test.dart` |
+| Reset password | `pages/ResetPassword.tsx` | | n/a (v1: the link opens in the browser) | |
+| Applicant home: status, leader, change choice, leave; vouches received and my vouch link (share sheet) | new | S2.8, S3.6 | not started (in S2.8 the vouch parts show an empty state; they are filled when the vouch endpoints arrive in S3.1 and the app part in S3.6) | |
+| Revoked notice with log out | new | S2.8 | not started | |
+| Navigation by status (bottom bar and routes) | `App.tsx` | S2.8 | not started (built per user type today) | |
+| Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
+| Log out | `auth/AuthContext.tsx` | | done | `test/features/home/session_test.dart` |
+| Notifications list (mark read) | new | S3.6 | not started | |
+| Settings: about, privacy link, version, close account | new | S5.11, S4.10 | in progress: version and log out done | `test/features/home/session_test.dart` |
+| Minimum-version / update-required screen | none on web | | done | `test/app/config_gate_test.dart` |
+| "This build is not configured" screen | none on web | | done | `test/core/env_test.dart` |
+| Downloads (update hint) | planned | S7.1 | not started | |
+| Not found | `pages/NotFound.tsx` | | not started | |
 
-### Freelancer portal
+### Provider screens (PROVIDER and above)
 
-| Web page | Web source | App screen | Status | Test file |
+| Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Profile and rate (name, mobile, WhatsApp, nationality, language, rate, currency, negotiable) | `portals/freelancer/ProfilePage.tsx` | Profile | done | `test/features/freelancer/profile_test.dart` |
-| Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | Labels editor | done (opens from the dashboard and the Profile screen; keeps the bottom bar) | `test/features/freelancer/labels_test.dart` |
-| Unavailability (month calendar on tablet/desktop; list on phone) | `AvailabilityPage.tsx`, `MonthCalendar.tsx` | Availability list with add/edit/delete | done (list with add, edit and delete; the month calendar is for larger screens and is not built) | `test/features/freelancer/availability_test.dart` |
-| My ratings (received, paged) | `RatingsPage.tsx` | Ratings received | done (newest first, ten at a time with "Show more" and a count; pull down to refresh) | `test/features/freelancer/ratings_test.dart` |
-| My organisation vouches (accept / reject) | `VouchesPage.tsx` | Vouches | replaced | |
+| Profile and rate | `ProfilePage.tsx` | S5.7 | done on `/freelancers/me`, moved to the person endpoints | `test/features/freelancer/profile_test.dart` |
+| Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | S5.7 | done | `test/features/freelancer/labels_test.dart` |
+| Availability list with add, edit, delete | `AvailabilityPage.tsx` | S5.7 | done (month calendar is for larger screens, not built) | `test/features/freelancer/availability_test.dart` |
+| Ratings received | `RatingsPage.tsx` | S5.7 | done | `test/features/freelancer/ratings_test.dart` |
+| Who vouched for me | `/me/vouches` | S3.6 | not started (replaces the organisation vouches screen) | |
 
-### Work host portal
+### Searcher screens (SEARCHER and above)
 
-| Web page | Web source | App screen | Status | Test file |
+| Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Search with filters, name search, sort, chips, paging | `SearchPage.tsx`, `FilterForm.tsx`, `searchParams.ts`, `activeFilters.ts` | Search + filter sheet | not started | |
-| Freelancer detail (labels, rate, ratings, vouching organisations, availability, my rating, rate form) | `FreelancerDetailPage.tsx` | Detail | not started | |
-| Mobile number on detail and result cards (greyed placeholder, Reveal, wait time on `429`) | `workhost/RevealMobile.tsx`, spec FR-M-05 to FR-M-07 | **Reveal** button: `POST /freelancers/{id}/reveal-mobile` with `channel=dial`, `source`, `searched_skills`, then `tel:`; number only in memory, cleared on leaving | not started | |
-| Ratings given (edit) | `GivenRatingsPage.tsx` | Ratings given | not started | |
-| Profile and available days | `HostProfilePage.tsx` | Profile | not started | |
-| (new) Message a freelancer | none on web | Start chat | backend B6 | |
+| Search with filters, name search, sort, chips, paging | `SearchPage.tsx` | S5.8 | not started | |
+| Provider detail (labels, rate, ratings, church and home group, availability, my rating, rate form) | `FreelancerDetailPage.tsx` | S5.9 | not started | |
+| Reveal: greyed placeholder, Reveal, `tel:` (number only in memory) | `RevealMobile.tsx`, FR-M-05 to FR-M-07 | S5.9 | not started | |
+| Ratings given (edit) | `GivenRatingsPage.tsx` | S5.10 | not started | |
+| Profile (name, mobile) | `/me` | S5.10 | not started | |
+| Vouch from a received link (shows who asks) | new | S3.6 | not started | |
+| Share my vouch link (S3.6); apply to become a provider (S3.9) | new | S3.6, S3.9 | not started | |
+| Start a home group (request); move requests that concern me | new | S4.10 | not started | |
+| (new) Message a provider | none on web | S8 | backend B6 | |
 
-### Organisation portal
+### Verifier screens (VERIFIER and above, within scope)
 
-| Web page | Web source | App screen | Status | Test file |
+| Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Vouched freelancers (status, revoke) | `organisation/VouchedPage.tsx` | Vouched list | replaced | |
-| Search (same page as work host, vouch from result/detail) | `SearchPage portal="organisation"` | Search | replaced | |
-| Freelancer detail (organisation view, vouch/revoke) | `FreelancerDetailPage portal="organisation"` | Detail | replaced | |
-| Organisation reports (`vouching_summary`, own data, table, CSV) | `organisation/ReportsPage.tsx` | Report screen (table; CSV via share sheet) | replaced | |
-| Profile | `OrgProfilePage.tsx` | Profile; pending-approval state | replaced | |
+| Applicants with vouches (most-vouched first), admit, decline | new | S3.7 | not started | |
+| Members; person view with status history. The mobile number is shown here only, one person at a time, each view logged without the number: the exception defined in [spec 07 Privacy of verifier views](../specification/07-non-functional.md) and decision D-17. Same handling as Reveal: held in memory only, never logged, cached, written to disk or sent to crash or analytics tools | new | S3.7 | not started | |
+| Revoked list, revoke, reinstate; flagged people, re-confirm | new | S4.10 | not started | |
+| Group invitation link (share) | new | S4.10 | not started | |
+| Step down and succession | new | S4.10 | not started | |
 
-### Admin portal (no admin screens in the app)
+### ADMIN screens (in the app and on the web)
+
+| Screen | Web counterpart | Slice | Status | Test file |
+|---|---|---|---|---|
+| Group requests: approve, decline | new | S4.10 | not started | |
+| Appoint or replace a group leader; move members; the church's people and revoked list | new | S4.10 | not started | |
+| Church reports (table; CSV via share sheet) | RP-01, RP-03, RP-05, RP-07, RP-09 | after S5 | not started | |
+
+### OWNER (web only, no app screens)
 
 | Web page | Status |
 |---|---|
-| Organisation approvals (`AdminOrganisationsPage`), reports (`AdminReportsPage`), report history (`RunsPage`), schedules (`SchedulesPage`), labels (`AdminLabelsPage`) | n/a |
+| Churches, invitations, replace a church's ADMIN, labels, all reports, report history, schedules, handover | n/a |
 
 ### Cross-cutting behaviour to match
 
 | Behaviour | Web source | Status |
 |---|---|---|
-| Error codes -> messages (`errorMessage`) incl. `invalid_credentials`, `too_many_attempts` (minutes from `Retry-After`), `organisation_pending/rejected` | `shared/errors.ts` | done: `core/errors/error_messages.dart`, used by every form (`test/core/errors/error_messages_test.dart`, `test/features/auth/auth_flow_test.dart`) |
-| Validation rules and tests ported | `shared/validation.ts`, `validation.test.ts` | in progress: login, register, forgot password, freelancer profile and rate (`core/validation`, `test/core/validation/validators_test.dart`); the other forms with their features |
+| Error codes -> messages (`errorMessage`) incl. `invalid_credentials`, `too_many_attempts`; new codes of the model (`account_exists`, `account_revoked`, `not_admitted`, `not_enough_vouches`, ...) | `shared/errors.ts` | in progress: older codes done in `core/errors/error_messages.dart`; the new codes come with S2.8 |
+| Validation rules and tests ported | `shared/validation.ts` | in progress: login, forgot password, provider profile and rate (`core/validation`); the sign-up wizard and other forms with their slices |
 | Date / timezone handling (aware timestamps, local input) | `shared/dates.ts` | not started |
-| Silent refresh on `401`, logout on refresh failure | `api/http.ts` | done: `core/api/api_client.dart` + `test/core/api/api_client_test.dart`; an expired session returns to the welcome screen (`test/features/home/session_test.dart`) |
-| Terminology tokens and `church` profile | `terminology/terms.ts` | done: `core/terminology/` + tests; screens show the server's words under both profiles (`test/features/auth/auth_flow_test.dart`) |
+| Silent refresh on `401`, logout on refresh failure | `api/http.ts` | done (`core/api/api_client.dart`) |
+| Status read from `GET /me` on start and after every `403` | `auth/AuthContext.tsx` | not started (S2.8) |
+| Terminology tokens and profiles | `terminology/terms.ts` | done; the new keys (searcher, provider, verifier, admin, owner, church, home group) arrive in S2.9 |
 | Loading, empty and error states on every list | spec 06 | not started |
-| Accessibility: 48 dp targets, labels, 2.0 text scale, dark mode | plan section 1 | not started |
+| Accessibility: 48 dp targets, labels, 2.0 text scale, dark mode | plan section 1 | not started (S5.12) |
 
 ### Known differences from the web (on purpose)
 
 | Topic | Web | App | Why |
 |---|---|---|---|
-| Error texts that mention the page (`not_found`, `vouch_not_pending`, `already_rated`, label errors) | "Reload the page ..." | "Go back and try again." / "Open your rating to change it." | An app has no page to reload. The web texts are left as they are; the codes and meaning are the same. |
-| Reset-password link | opens `/reset-password` | opens in the browser (version 1) | The link is an email address on the web site. |
+| Error texts that mention the page (`not_found`, `already_rated`, label errors) | "Reload the page ..." | "Go back and try again." / "Open your rating to change it." | An app has no page to reload. |
+| Reset-password link | opens `/reset-password` | opens in the browser (version 1) | The link is an address on the web site. |
+| OWNER screens | web | none | Rare, administrative tasks (D-11). |
 
-## 2. API endpoints used by the web (`/api/v1`)
+## 2. API endpoints used (`/api/v1`, target contract in [specification 04](../specification/04-api.md))
 
-Role column: F freelancer, W work host, O organisation, A admin, * any logged in.
+Status column: "at least X" means that status or higher.
 
-| Method and path | Roles | Used by (web) | App use | Status |
+| Method and path | Who | App use | Slice | Status |
 |---|---|---|---|---|
-| POST `/auth/register/freelancer` `/workhost` `/organisation` | public | Register | Register | done |
-| POST `/auth/login` | public | Login | Login | done |
-| POST `/auth/refresh` | public | `http.ts` | token refresh | done (`core/api/api_client.dart`) |
-| POST `/auth/logout` | * | logout | logout | done |
-| POST `/auth/forgot-password` | public | ForgotPassword | Forgot password | done |
-| POST `/auth/reset-password` | public | ResetPassword | browser in v1 | n/a (v1) |
-| GET `/me` | * | AuthContext, Dashboard | session / dashboard | done |
-| GET, PUT `/freelancers/me` | F | ProfilePage | Profile | done |
-| PUT `/freelancers/me/labels` | F | LabelsPage | Labels | done |
-| GET `/labels?type=` | * | Labels, filters | Labels, filter sheet | in progress: the catalogue for the labels screen is done; the filter sheet of the work host search reuses it (phase 3) |
-| GET, POST `/freelancers/me/unavailability`; PUT, DELETE `/freelancers/me/unavailability/{id}` | F | AvailabilityPage | Availability | done |
-| GET `/freelancers/me/vouches`; POST `.../vouches/{org_id}/accept\|reject` | F | VouchesPage | Vouches | replaced |
-| GET `/freelancers/{id}` | W, O, A | FreelancerDetailPage | Detail, as work host or organisation only (no admin screens). The response never contains email or mobile number; the number comes only from reveal-mobile | not started |
-| GET `/freelancers/{id}/ratings` | * | RatingsPage, detail | Ratings | in progress: the freelancer's own ratings are done; the work host detail page uses it in phase 3 |
-| POST `/freelancers/{id}/reveal-mobile` | W | `RevealMobile.tsx` | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07 Secrets and logging](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 (phase 3) and 6 | not started |
-| GET, PUT `/workhosts/me` | W | HostProfilePage | Profile | not started |
-| GET `/workhosts/me/ratings` | W | GivenRatingsPage | Ratings given | not started |
-| POST `/ratings`; PUT `/ratings/{id}` | W | detail, GivenRatingsPage | Rate | not started |
-| GET `/organisations` | W, O, A | filter "vouched by" | Filter sheet | replaced |
-| GET, PUT `/organisations/me` | O | OrgProfilePage | Profile | replaced |
-| GET `/organisations/me/freelancers` | O | VouchedPage | Vouched list | replaced |
-| POST, DELETE `/organisations/me/freelancers/{freelancer_id}` | O | detail, VouchedPage | Vouch / revoke | replaced |
-| GET `/search/freelancers` (all filters incl. `name`) | W, O, A | SearchPage | Search, as work host or organisation only (no admin screens). Results never contain email or mobile number | not started |
-| GET `/reports`; GET `/reports/{name}` (`vouching_summary`, json/csv) | O (the API also allows A) | organisation ReportsPage | Report screen for organisations only; the app has no admin access | replaced |
-| GET `/reports/runs`, `/reports/runs/{id}/download`, `/reports/schedules`; PUT `/reports/schedules/{report}`; POST `/reports/{name}/run` | A | admin pages | none | n/a |
-| GET `/admin/organisations`; POST `/admin/organisations/{id}/approve\|reject` | A | admin pages | none | n/a |
-| GET `/labels?include_inactive=true`; POST `/labels`; PATCH `/labels/{id}` | A | AdminLabelsPage | none | n/a |
-| GET `/health` | public | ops | release smoke test | not started |
+| POST `/auth/signup` | public | Sign-up wizard | S2.8 | not started |
+| POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8 | done on the older request shape (`user_type` is dropped in S2.8) |
+| POST `/auth/forgot-password` | public | Forgot password | | done |
+| POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
+| GET `/churches`, GET `/churches/{id}/home-groups`, GET `/group-invitations/{token}` | public | Sign-up wizard, join link | S2.8 | not started |
+| GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` done on the older shape |
+| DELETE `/me` | any | Close account | S4.10 | not started |
+| POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | not started |
+| GET, POST `/me/vouch-link`, `/me/vouch-link/rotate`; GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link, who vouched | S3.6 | not started |
+| GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any | Notifications | S3.6 | not started |
+| GET `/vouch-links/{token}`; POST `/vouch-links/{token}/vouch`; DELETE `/vouches/{id}` | at least SEARCHER | Vouch from a link | S3.6 | not started |
+| GET `/verifier/applicants`, `/members`, `/revoked`, `/flagged`, `/people/{id}` | at least VERIFIER | Verifier screens | S3.7, S4.10 | not started |
+| POST `/verifier/people/{id}/admit`, `/decline`, `/reconfirm`, `/move`; PUT `.../status` | at least VERIFIER | Verifier screens | S3.7, S4.10 | not started |
+| POST, GET, DELETE `/verifier/group-invitations` | at least VERIFIER | Share group link | S4.10 | not started |
+| POST, GET `/group-requests`; POST `.../{id}/approve`, `/decline` | at least SEARCHER / ADMIN | Start a group, approve | S4.10 | not started |
+| POST, GET `/move-requests`; POST `.../{id}/agree`, `/cancel` | admitted | Moves | S4.10 | not started |
+| PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10 | not started |
+| GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done on the older rules (role -> status) |
+| GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | in progress: labels screen done |
+| GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | ratings received done; detail not started |
+| POST `/freelancers/{id}/reveal-mobile` | at least SEARCHER | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 and 6 | S5.9 | not started |
+| GET `/workhosts/me/ratings`; POST `/ratings`; PUT `/ratings/{id}` | at least SEARCHER | Ratings given, rate | S5.9, S5.10 | not started |
+| GET `/search/freelancers` | at least SEARCHER | Search | S5.8 | not started |
+| GET `/reports`, `/reports/{name}` | ADMIN (church) | Church reports | after S5 | not started |
+| Reports runs, schedules, run; labels management; owner endpoints; handover; admin invitations | OWNER | none | | n/a |
+| GET `/health` | public | release smoke test | | not started |
+
+Removed from the app's use by the model: `/auth/register/*`, `user_type` in login, `/freelancers/me/vouches*`, `/organisations*`, `/admin/organisations*`, `/workhosts/me`.
 
 ## 3. New endpoints the app needs (separate backend PRs, so the web can use them too)
 
@@ -131,8 +148,8 @@ Ids follow [plan](plan.md) section 3 and are listed in order. The reveal endpoin
 |---|---|---|---|
 | B1 | GET `/app/config` (public): terminology words and slugs, minimum and latest app version | role words; update check | done (merged, PR #79) |
 | B2 | none: the app sends `X-App-Version` and `X-App-Platform`; the API never rejects old apps by header, the app reads `min_version` from B1 | minimum-version check | no server code needed |
-| B3 | DELETE `/me` with password confirmation | store requirement | not started |
+| B3 | DELETE `/me` with password confirmation: closes the account (the row stays with `closed_at`, personal details cleared, trust record kept; [FR-X-03](../specification/02-functional-requirements.md)); this is the store's "delete account" | store requirement | not started (S4.4 backend, S4.10 app) |
 | B4 | GET `/app/downloads`, GET `/app/downloads/android/{version}`; `scripts/add-download.py` publishes a build | test builds behind login | API done (web Downloads page and the publish step of `mobile-release` still to do) |
 | B5 | POST `/devices`, DELETE `/devices/{id}`, outbox, FCM sender | push | not started |
-| B6 | `/chat/*` REST, `/chat/ws`, moderation, RP-09, RP-10 | chat | not started |
+| B6 | `/chat/*` REST, `/chat/ws`, moderation, RP-10, RP-11 | chat | not started |
 | B7 | `docs/openapi.json` exported and checked in CI (`make openapi`); app contract test `mobile/test/contract/api_contract_test.dart` | drift check. Generated Dart models are not part of B7 (see decision in the PR) | done |
