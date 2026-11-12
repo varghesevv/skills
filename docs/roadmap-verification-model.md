@@ -48,7 +48,7 @@ Counts are targets; a pull request may split.
 ### S0. Foundations (on `main`) — 4 pull requests
 - [ ] 0.1 Decision records and this roadmap: ADR-0016 accepted, ADR-0004 superseded by ADR-0017, ADR-0005 and ADR-0015 amended, the verification rules marked accepted.
 - [ ] 0.2 Working agreement: the merge policy in the contribution rules; the answers and assumptions below recorded in the open-questions file; the Android plan, understanding and parity documents retargeted to the new model.
-- [ ] 0.3 Backend tests runnable locally (section 6): a helper script that wraps the verified steps, and the documented command.
+- [x] 0.3 Backend tests runnable locally (section 6): a helper script that wraps the verified steps, and the documented command.
 - [ ] 0.4 Decision log (`docs/verification-decisions.md`): where every choice the model leaves open is recorded, with date and pull request.
 
 ### S1. Specification (on `model/verification`) — 5 pull requests, documents only
@@ -159,7 +159,7 @@ cd backend && uv run pytest -q                       # 208 passed, 1 skipped in 
 bash scripts/ci-postgres.sh stop
 ```
 
-Notes: published ports (`127.0.0.1:...`) are not reachable from the development container, but the container's address on the shared network is; a user-level PostgreSQL package without the contrib extensions cannot run the project's migrations. The helper in S0.3 wraps these steps.
+Notes: published ports (`127.0.0.1:...`) are not reachable from the development container, but the container's address on the shared network is; a user-level PostgreSQL package without the contrib extensions cannot run the project's migrations. `scripts/backend-tests-local.sh` wraps these steps (S0.3).
 
 ## 7. Where the owner is needed
 
