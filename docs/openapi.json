@@ -35,6 +35,39 @@
         "title": "AppVersions",
         "type": "object"
       },
+      "ApplicationUpdate": {
+        "properties": {
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "searcher",
+                  "provider"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          }
+        },
+        "title": "ApplicationUpdate",
+        "type": "object"
+      },
       "ChurchList": {
         "properties": {
           "items": {
@@ -645,6 +678,97 @@
           "updated_at"
         ],
         "title": "GivenRating",
+        "type": "object"
+      },
+      "GroupInvitationCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
+        "title": "GroupInvitationCreated",
+        "type": "object"
+      },
+      "GroupInvitationInfo": {
+        "description": "What the sign-up screen shows for an invitation link.",
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "home_group_name": {
+            "title": "Home Group Name",
+            "type": "string"
+          },
+          "leader_name": {
+            "title": "Leader Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "church_name",
+          "home_group_name",
+          "leader_name"
+        ],
+        "title": "GroupInvitationInfo",
+        "type": "object"
+      },
+      "GroupInvitationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupInvitationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GroupInvitationList",
+        "type": "object"
+      },
+      "GroupInvitationSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "GroupInvitationSummary",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2020,6 +2144,95 @@
         "title": "SearchSkill",
         "type": "object"
       },
+      "SignupRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "invitation_token": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitation Token"
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "requested_status": {
+            "enum": [
+              "searcher",
+              "provider"
+            ],
+            "title": "Requested Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "full_name",
+          "email",
+          "mobile_number",
+          "password",
+          "requested_status"
+        ],
+        "title": "SignupRequest",
+        "type": "object"
+      },
+      "SignupResponse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "pending",
+            "default": "pending",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "SignupResponse",
+        "type": "object"
+      },
       "Terminology": {
         "properties": {
           "profile": {
@@ -3007,6 +3220,48 @@
         ]
       }
     },
+    "/api/v1/auth/signup": {
+      "post": {
+        "description": "Public. Creates a PENDING person in the chosen home group and tells its leader.",
+        "operationId": "signup_api_v1_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Signup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/churches": {
       "get": {
         "description": "Public: the open churches by name. No contact details.",
@@ -3669,6 +3924,49 @@
         ]
       }
     },
+    "/api/v1/group-invitations/{token}": {
+      "get": {
+        "description": "Public: the church and group a link leads to, for the sign-up screen. Rate limited per IP;\nevery failure (no such link, expired, revoked, group closed) is the same `404`.",
+        "operationId": "group_invitation_api_v1_group_invitations__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupInvitationInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Group Invitation",
+        "tags": [
+          "group-invitations"
+        ]
+      }
+    },
     "/api/v1/labels": {
       "get": {
         "operationId": "list_labels_api_v1_labels_get",
@@ -3922,6 +4220,53 @@
           }
         ],
         "summary": "Update Me",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/application": {
+      "put": {
+        "description": "While pending: choose another home group (even in another church) or another status to\napply for. Vouches already received still count; a newly chosen leader is notified.",
+        "operationId": "update_application_api_v1_me_application_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonMeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Application",
         "tags": [
           "me"
         ]
@@ -5116,6 +5461,99 @@
         "summary": "Search",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/verifier/group-invitations": {
+      "get": {
+        "description": "The links into your home group that still work (the tokens are not shown again).",
+        "operationId": "list_group_invitations_api_v1_verifier_group_invitations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupInvitationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Group Invitations",
+        "tags": [
+          "verifier"
+        ]
+      },
+      "post": {
+        "description": "A new link into your own home group. The token is shown once; only a hash is kept.",
+        "operationId": "create_group_invitation_api_v1_verifier_group_invitations_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupInvitationCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Group Invitation",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/group-invitations/{invitation_id}": {
+      "delete": {
+        "operationId": "revoke_group_invitation_api_v1_verifier_group_invitations__invitation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Group Invitation",
+        "tags": [
+          "verifier"
         ]
       }
     },

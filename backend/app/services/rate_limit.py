@@ -62,3 +62,13 @@ class SlidingWindowLimiter:
     def reset(self) -> None:
         with self._lock:
             self._seen.clear()
+
+
+# One limiter per kind of open endpoint, each counted per client address. The limits are settings
+# (SIGNUP_MAX_PER_HOUR, LINK_LOOKUP_MAX_PER_HOUR).
+signup_limiter = SlidingWindowLimiter(
+    3600, code="rate_limited", message="Too many sign-ups from this address. Try again later."
+)
+link_lookup_limiter = SlidingWindowLimiter(
+    3600, code="rate_limited", message="Too many requests. Try again later."
+)

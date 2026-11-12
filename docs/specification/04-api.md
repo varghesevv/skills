@@ -39,7 +39,7 @@ While the older accounts still exist (decision D-20), `POST /auth/login` and `PO
 ### Auth
 | Method | Path | Notes |
 |---|---|---|
-| POST | /auth/signup | Public. `full_name`, `email`, `mobile_number`, `password`, `requested_status` (`searcher` or `provider`), and either `home_group_id` or `invitation_token` (a group invitation link, which selects the church and group). Creates a PENDING person in that group and notifies its leader. `409 account_exists` when an open account (revoked ones included) already has the email or the mobile number; one code for both, so the answer does not say which identifier matched or whose it is. Rate limited per IP. |
+| POST | /auth/signup | Public, rate limited per IP (`SIGNUP_MAX_PER_HOUR`, default 10 per hour). `full_name`, `email`, `mobile_number`, `password`, `requested_status` (`searcher` or `provider`), and either `home_group_id` or `invitation_token` (a group invitation link, which selects the church and group). Creates a PENDING person in that group, writes the `signup` history row and notifies its leader. `422 invalid_choice` for a group or link that is closed, unknown, expired or revoked (always the same answer). `409 account_exists` when an open account (revoked ones included) already has the email or the mobile number; one code for both, so the answer does not say which identifier matched or whose it is. Rate limited per IP. |
 | POST | /auth/login | body: `email`, `password`. One login for everyone. Returns access and refresh tokens |
 | POST | /auth/refresh | rotates refresh token |
 | POST | /auth/logout | revokes refresh token |
@@ -76,7 +76,7 @@ Auth behaviour:
 |---|---|---|
 | GET | /churches | **Public** (the sign-up screen has no token), rate limited per IP. Open churches by name: `id`, `name`; at most 500 (the number is small and set by the operators). No contact details. |
 | GET | /churches/{id}/home-groups | Public, rate limited per IP like the one above. Open groups: `id`, `name`, `leader_name` (a name is needed to choose a group; no other detail about the leader). Leader names are shown to anonymous callers on purpose (decision D-19). |
-| GET | /group-invitations/{token} | Public, rate limited. Church and group names for the sign-up screen. `404` for anything wrong, alike. |
+| GET | /group-invitations/{token} | Public, rate limited per IP (`LINK_LOOKUP_MAX_PER_HOUR`, default 30 per hour). Church name, group name and the leader's name for the sign-up screen. `404` for anything wrong, alike. |
 
 ### Vouching
 | Method | Path | Notes |
@@ -98,7 +98,7 @@ Auth behaviour:
 | PUT | /verifier/people/{id}/status | `to` and, for reinstating, `home_group_id`. Within what the actor may set. Revoking appoints a successor in the same call when the person leads (`successor_id`). |
 | POST | /verifier/people/{id}/reconfirm | Clears the re-check flag. |
 | POST | /verifier/people/{id}/move | ADMIN or OWNER. `home_group_id`, same church. |
-| POST, GET, DELETE | /verifier/group-invitations | Create, list and revoke invitation links to the caller's own home group. |
+| POST, GET, DELETE | /verifier/group-invitations | Create, list and revoke invitation links to the caller's own home group. The token (256 bits, url-safe) is returned once at creation and stored only as a hash; a link lives `INVITATION_LINK_DAYS` days (default 30). The list shows links that still work, without tokens. |
 
 ### Church structure and life cycle
 | Method | Path | Notes |
@@ -170,7 +170,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`account_exists`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`, `invitation_invalid`.
+`account_exists`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`, `invitation_invalid`.
 
 ## Authorisation rules (summary)
 

@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     download_max_per_hour: int = Field(default=20, ge=1)  # downloads per person per hour
     # The list of churches and home groups is public (the sign-up screen has no account yet).
     public_list_max_per_minute: int = Field(default=60, ge=1)  # requests per IP per minute
+    # Sign-up and invitation links (docs/specification/07-non-functional.md, abuse limits).
+    signup_max_per_hour: int = Field(default=10, ge=1)  # sign-ups per IP per hour
+    link_lookup_max_per_hour: int = Field(default=30, ge=1)  # link lookups per IP per hour
+    invitation_link_days: int = Field(default=30, ge=1)  # life of a home group invitation link
     # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
     # default word profile, and no minimum version (every app version is accepted).
     terminology_profile: str = "default"
