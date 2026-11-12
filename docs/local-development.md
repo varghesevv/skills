@@ -365,6 +365,13 @@ make be-check               # lint, format check and type check
 make openapi                # rewrite docs/openapi.json after you change an endpoint or a schema
 ```
 
+On a host without `docker compose` (for example a development container that shares the host's Docker daemon), use the helper. It starts a throw-away PostgreSQL 16 with a random password for this run only, runs `pytest` (extra arguments are passed on) and removes the container on exit:
+
+```bash
+bash scripts/backend-tests-local.sh                # about 1 minute; 208 passed, 1 skipped on 2026-11-12
+bash scripts/backend-tests-local.sh -k ratings -v
+```
+
 Running only some tests:
 
 ```bash

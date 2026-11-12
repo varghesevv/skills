@@ -6,8 +6,8 @@
 
 ## Context
 
-The freelancer, work host and organisation features of the web application are wanted on phones,
-Android first, with the iPhone possible later ([android/understanding.md](../android/understanding.md),
+The member features of the web application (searching, listing skills, verifying people) are wanted on
+phones, Android first, with the iPhone possible later ([android/understanding.md](../android/understanding.md),
 [mobile-app-plan.md](../mobile-app-plan.md)). The API is already usable by native clients
 ([ADR-0004](0004-stateless-token-auth-for-web-and-mobile.md)). The team is small and the development
 host is a Linux server reached over Remote-SSH with a physical phone for testing

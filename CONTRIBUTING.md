@@ -16,7 +16,7 @@ Skills is released under the [MIT licence](LICENSE). By opening a pull request y
 
 - Branch from `main`: `feature/<short-name>`, `fix/<short-name>`, `docs/<short-name>`.
 - Keep pull requests small and focused. Link the issue and the specification section.
-- At least one reviewer approves before merge. Do not merge your own PR.
+- Merge policy: a pull request is merged when every required check is green and every review comment is handled (fixed, or answered with evidence). The author may merge it, including an automated assistant working for the owner. Pull requests that touch `.github/` or `infra/` always wait for the owner's approval. The demo server is deployed from `main`, so changes that depend on the church trust model go to the integration branch `model/verification` and reach `main` only in the cut-over pull request, which the owner approves (see the [roadmap](docs/roadmap-verification-model.md)).
 - Squash-merge with a clear message. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, `test:`). The PR title becomes the commit message and decides the next version, so the `pr-title` check must pass. See [docs/releasing.md](docs/releasing.md).
 
 ## Changing the specification or architecture

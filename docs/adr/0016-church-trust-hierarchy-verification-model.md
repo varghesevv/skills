@@ -1,6 +1,6 @@
 # ADR-0016: Church trust hierarchy as the verification model
 
-- Status: Proposed
+- Status: Accepted (2026-11-12, project owner)
 - Date: 2026-11-12
 - Deciders: Project owner
 

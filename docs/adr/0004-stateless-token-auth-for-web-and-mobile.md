@@ -1,6 +1,6 @@
 # ADR-0004: Stateless token auth for web and mobile
 
-- **Status:** Proposed
+- **Status:** Superseded by [ADR-0017](0017-authorisation-by-status.md)
 - **Date:** 2026-10-20
 - **Deciders:** Project owner
 
