@@ -77,7 +77,7 @@ def test_can_set_status_matrix(actor_status: str, target_status: str, to: str) -
         and target_status in BELOW[actor_status]
         and to in EXPECTED_SETTABLE[actor_status]
     )
-    assert can_set_status(actor, target, to) is expected
+    assert can_set_status(actor, target, to, None) is expected
 
 
 def test_nobody_below_verifier_can_set_anything() -> None:
@@ -126,7 +126,7 @@ def test_a_closed_actor_has_no_scope_and_no_rights() -> None:
     closed = person("admin", closed_at=datetime.now(UTC))
     target = person("provider")
     assert not in_scope(closed, target)
-    assert not can_set_status(closed, target, "revoked")
+    assert not can_set_status(closed, target, "revoked", None)
     assert settable_statuses(closed) == frozenset()
     assert not is_verifier(closed)
 
@@ -136,28 +136,28 @@ def test_a_closed_actor_has_no_scope_and_no_rights() -> None:
 
 def test_nobody_changes_their_own_status() -> None:
     admin = person("admin")
-    assert not can_set_status(admin, admin, "provider")
+    assert not can_set_status(admin, admin, "provider", None)
 
 
 def test_the_owner_status_can_never_be_changed_through_the_app() -> None:
     owner = person("owner")
     other_owner_like = person("owner", id=uuid.uuid4())
-    assert not can_set_status(owner, other_owner_like, "provider")
-    assert not can_set_status(person("admin"), other_owner_like, "revoked")
+    assert not can_set_status(owner, other_owner_like, "provider", None)
+    assert not can_set_status(person("admin"), other_owner_like, "revoked", None)
 
 
 def test_out_of_scope_targets_cannot_be_changed() -> None:
     leader = person("verifier")
-    assert not can_set_status(leader, person("provider", home_group_id=GROUP_A2), "revoked")
+    assert not can_set_status(leader, person("provider", home_group_id=GROUP_A2), "revoked", None)
     admin = person("admin")
     assert not can_set_status(
-        admin, person("provider", church_id=CHURCH_B, home_group_id=GROUP_B1), "revoked"
+        admin, person("provider", church_id=CHURCH_B, home_group_id=GROUP_B1), "revoked", None
     )
 
 
 def test_closed_targets_cannot_be_changed() -> None:
     target = person("searcher", closed_at=datetime.now(UTC))
-    assert not can_set_status(person("owner"), target, "provider")
+    assert not can_set_status(person("owner"), target, "provider", None)
 
 
 @pytest.mark.parametrize("kind", ["revoke", "appoint"])
@@ -280,13 +280,32 @@ def test_vouching_is_for_pending_applicants_or_searchers_applying_to_provide() -
     assert not can_vouch(voucher, person("revoked"))
 
 
-def test_live_vouches_skip_withdrawn_and_revoked_vouchers() -> None:
-    good, withdrawn, revoked, pending = (uuid.uuid4() for _ in range(4))
-    statuses = {good: "searcher", withdrawn: "provider", revoked: "revoked", pending: "pending"}
-    vouches = [
-        (good, None),
-        (withdrawn, datetime.now(UTC)),
-        (revoked, None),
-        (pending, None),
-    ]
-    assert live_vouches(vouches, statuses) == [good]
+def test_live_vouches_skip_withdrawn_revoked_pending_and_closed_vouchers() -> None:
+    people = {
+        "good": person("searcher"),
+        "withdrawn": person("provider"),
+        "revoked": person("revoked"),
+        "pending": person("pending"),
+        "closed": person("searcher", closed_at=datetime.now(UTC)),
+        "other_church": person("provider", church_id=CHURCH_B, home_group_id=GROUP_B1),
+    }
+    vouches = [(p.id, None) for name, p in people.items() if name != "withdrawn"]
+    vouches.append((people["withdrawn"].id, datetime.now(UTC)))
+    live = live_vouches(vouches, {p.id: p for p in people.values()})
+    # Any admitted person in any church counts.
+    assert set(live) == {people["good"].id, people["other_church"].id}
+
+
+def test_a_voucher_from_another_church_counts_toward_provider_admission() -> None:
+    outsider = person("searcher", church_id=CHURCH_B, home_group_id=GROUP_B1)
+    leader = person("verifier")
+    assert can_vouch(outsider, person("pending"))
+    assert can_admit(leader, person("pending"), "provider", [outsider.id])
+
+
+@pytest.mark.parametrize("kind", ["revoke", "appoint"])
+def test_a_change_made_by_the_operators_is_not_overridden_through_the_app(kind: str) -> None:
+    change = LastChange(kind=kind, changed_by_status=None)
+    target = person("revoked") if kind == "revoke" else person("provider")
+    assert not can_set_status(person("admin"), target, "searcher", change)
+    assert not can_set_status(person("owner"), target, "searcher", change)

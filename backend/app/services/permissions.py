@@ -38,7 +38,13 @@ class PersonLike(Protocol):
 
 @dataclass(frozen=True)
 class LastChange:
-    """The latest status change of a target and the status of whoever made it."""
+    """The latest status change of a target, and who made it.
+
+    `changed_by_status` is the **current** status of the person who made the change (as in the
+    reference code of docs/verification.md), or None when there was no person (an operator change
+    in the database). A revocation or appointment with no person behind it cannot be overridden
+    through the app.
+    """
 
     kind: str
     changed_by_status: str | None
@@ -91,9 +97,19 @@ def can_set_status(
     actor: PersonLike,
     target: PersonLike,
     to: str,
-    last_change: LastChange | None = None,
+    last_change: LastChange | None,
 ) -> bool:
-    """Whether `actor` may change `target` to status `to`."""
+    """Whether `actor` may change `target` to status `to`.
+
+    `last_change` is the target's latest status change; callers must load it and pass None only
+    when the target has no history. Forgetting it would let a leader override a higher
+    verifier's revocation or appointment, so there is no default.
+
+    This answers whether the actor has authority. A change to a VERIFIER or ADMIN target (or to
+    VERIFIER or ADMIN) also needs a successor, a group or a church, and must go through the
+    succession, group request, invitation or closing flow; the database constraints reject
+    anything else.
+    """
     if target.closed_at is not None:
         return False  # closed accounts cannot be changed
     if actor.id == target.id:
@@ -108,12 +124,11 @@ def can_set_status(
     if to not in settable_statuses(actor):
         return False
     # A revocation or leader appointment made by a higher verifier cannot be overridden.
-    return not (
-        last_change is not None
-        and last_change.kind in ("revoke", "appoint")
-        and last_change.changed_by_status is not None
-        and rank(last_change.changed_by_status) > rank(actor.status)
-    )
+    if last_change is None or last_change.kind not in ("revoke", "appoint"):
+        return True
+    if last_change.changed_by_status is None:
+        return False  # made by the operators: not for the app to undo
+    return rank(last_change.changed_by_status) <= rank(actor.status)
 
 
 def can_admit(
@@ -153,7 +168,11 @@ def can_decline(actor: PersonLike, applicant: PersonLike) -> bool:
 
 
 def can_vouch(voucher: PersonLike, applicant: PersonLike) -> bool:
-    """Whether `voucher` may vouch for `applicant`: admitted, open, not themselves."""
+    """Whether `voucher` may vouch for `applicant`: admitted, open, not themselves.
+
+    Any admitted person in any church may vouch (docs/verification.md, "Joining"), so church and
+    group are not compared.
+    """
     if voucher.closed_at is not None or voucher.id == applicant.id:
         return False
     if rank(voucher.status) < rank("searcher"):
@@ -167,16 +186,19 @@ def can_vouch(voucher: PersonLike, applicant: PersonLike) -> bool:
 
 
 def live_vouches(
-    vouches: Iterable[tuple[UUID, datetime | None]], statuses: dict[UUID, str]
+    vouches: Iterable[tuple[UUID, datetime | None]], vouchers: dict[UUID, PersonLike]
 ) -> list[UUID]:
-    """Voucher ids of the vouches that count: not withdrawn, voucher not revoked.
+    """Voucher ids of the vouches that count.
 
-    `vouches` are (voucher id, withdrawn_at) pairs; `statuses` maps voucher ids to their status.
+    A vouch counts when it is not withdrawn and its voucher is still an open, admitted person
+    (not revoked, not closed). `vouches` are (voucher id, withdrawn_at) pairs; `vouchers` maps
+    voucher ids to the people.
     """
     return [
         voucher_id
         for voucher_id, withdrawn_at in vouches
         if withdrawn_at is None
-        and statuses.get(voucher_id, "revoked") != "revoked"
-        and rank(statuses[voucher_id]) >= rank("searcher")
+        and voucher_id in vouchers
+        and vouchers[voucher_id].closed_at is None
+        and rank(vouchers[voucher_id].status) >= rank("searcher")
     ]
