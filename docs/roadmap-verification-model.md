@@ -6,8 +6,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
-- In progress: S2.1 (identity schema migration) on `model/verification`.
-- Next: S2.2 (models and the permission module).
+- Done also: S2.1 (110).
+- In progress: S2.2 (permission module) on `model/verification`.
+- Next: S2.3 (authentication on the new identity).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -61,7 +62,7 @@ Counts are targets; a pull request may split.
 ### S2. Identity and sign-up — 9 pull requests
 Backend first, then web and mobile.
 - [x] 2.1 Backend: migration `0007` adds the new identity schema (churches, home groups, people, status history, vouching, requests, notifications) next to the old tables, with the invariants as constraints and one test per rule. **Changed from the first plan** (decision D-20): the old tables are not dropped here, because dropping them would break the working code and tests; each old table is dropped in the pull request that moves its feature (tokens and login history in 2.3, identity tables with 2.6, labels and unavailability in 5.1, ratings and reveals in 5.2), and the last one removes the old identity tables.
-- [ ] 2.2 Backend: models and the permission module (`inScope`, `canSetStatus`, `canAdmit`, settable statuses) mirroring the model; one test per invariant; the permission matrix test.
+- [x] 2.2 Backend: models (done in 2.1) and the permission module (`in_scope`, `can_set_status`, `can_admit`, `can_decline`, `can_vouch`, settable statuses in `app/services/permissions.py`) mirroring the model; one test per invariant (2.1); the permission matrix test (every actor status against every target status and every new status, with the expected answers written out from the rules, checked by mutating the code).
 - [ ] 2.3 Backend: authentication on the new identity per ADR-0017: one login (email and password), password reset, refresh tokens and login history by person, live status check on every request.
 - [ ] 2.4 Backend: operator commands: create the OWNER with the first church and group; operator change; the old admin command removed.
 - [ ] 2.5 Backend: `/me`, list of churches and their home groups with leaders (open to pending applicants).

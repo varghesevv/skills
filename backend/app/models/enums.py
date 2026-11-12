@@ -19,6 +19,7 @@ STATUS_CHANGE_KINDS = (
     "handover",
     "operator",
 )
+STATUS_RANK = {status: rank for rank, status in enumerate(STATUSES)}
 GROUP_REQUEST_STATES = ("open", "approved", "declined")
 REPORT_RUN_STATUSES = ("running", "succeeded", "failed")
 
