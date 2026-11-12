@@ -1,12 +1,14 @@
 """Operator commands.
 
+    python -m app.cli create-owner --name "Full Name" --email you@example.com \
+        --mobile +971500000000 --church "Church name" --group "Home group name"
     python -m app.cli create-admin --email you@example.com --mobile +971500000000
     python -m app.cli seed-demo
     python -m app.cli generate-demo-data --csv logins.csv [--reset]
 
 Passwords are never accepted as command-line arguments (they would end up in shell history and
-process lists): create-admin asks for it (or reads one line from stdin), and seed-demo reads
-DEMO_USER_PASSWORD from the environment. Passwords are never printed or logged.
+process lists): create-owner and create-admin ask for it (or read one line from stdin), and
+seed-demo reads DEMO_USER_PASSWORD from the environment. Passwords are never printed or logged.
 """
 
 import argparse
@@ -23,8 +25,9 @@ from app.core.config import MIN_STRICT_SECRET_LENGTH, WEAK_SECRETS, get_settings
 from app.core.db import get_engine
 from app.core.logging_config import configure_logging
 from app.demo_data import DEMO_DATA_DOMAIN, CredentialRow, generate, remove_generated
-from app.schemas.auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
+from app.schemas.auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, check_mobile
 from app.services.accounts import create_account, get_by_email
+from app.services.operators import SetupError, create_first_owner
 
 DEMO_DOMAIN = "example.com"
 
@@ -91,7 +94,8 @@ def _check_password(password: str) -> str | None:
     return None
 
 
-def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
+def _ask_password(use_stdin: bool) -> str | None:
+    """Read and check a new password; print why and return None when it cannot be used."""
     settings = get_settings()
     if use_stdin:
         password = sys.stdin.readline().rstrip("\n")
@@ -99,13 +103,53 @@ def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
         password = getpass.getpass("Password: ")
         if password != getpass.getpass("Repeat password: "):
             print("The passwords do not match.", file=sys.stderr)
-            return 1
+            return None
     problem = _check_password(password)
     weak = password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH
     if problem is None and settings.environment in ("demo", "prod") and weak:
         problem = f"In {settings.environment} the password must be strong and long enough"
     if problem:
         print(problem, file=sys.stderr)
+        return None
+    return password
+
+
+def create_owner(
+    name: str, email: str, mobile: str, church: str, group: str, use_stdin: bool
+) -> int:
+    """Set up Skills: the first OWNER, their church and their home group."""
+    try:
+        mobile = check_mobile(mobile)
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 1
+    if len(name.strip()) < 2 or not church.strip() or not group.strip():
+        print("The name, the church and the home group must not be empty.", file=sys.stderr)
+        return 1
+    password = _ask_password(use_stdin)
+    if password is None:
+        return 1
+    with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
+        try:
+            create_first_owner(
+                db,
+                full_name=name,
+                email=email,
+                mobile_number=mobile,
+                password=password,
+                church_name=church,
+                group_name=group,
+            )
+        except SetupError as error:
+            print(error, file=sys.stderr)
+            return 1
+    print(f"OWNER created: {email.strip().lower()}, church {church.strip()!r}")
+    return 0
+
+
+def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
+    password = _ask_password(use_stdin)
+    if password is None:
         return 1
     with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
         if get_by_email(db, "admin", email) is not None:
@@ -203,7 +247,16 @@ def seed_demo() -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
-    admin = sub.add_parser("create-admin", help="create an admin account")
+    owner = sub.add_parser(
+        "create-owner", help="set up Skills: the first OWNER with their church and home group"
+    )
+    owner.add_argument("--name", required=True)
+    owner.add_argument("--email", required=True)
+    owner.add_argument("--mobile", required=True)
+    owner.add_argument("--church", required=True, help="name of the first church")
+    owner.add_argument("--group", required=True, help="name of the OWNER's home group")
+    owner.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
+    admin = sub.add_parser("create-admin", help="create an admin account (older model)")
     admin.add_argument("--email", required=True)
     admin.add_argument("--mobile", required=True)
     admin.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
@@ -216,6 +269,10 @@ def main(argv: list[str] | None = None) -> int:
     gen.add_argument("--reset", action="store_true", help="remove earlier generated data first")
     args = parser.parse_args(argv)
     configure_logging()
+    if args.command == "create-owner":
+        return create_owner(
+            args.name, args.email, args.mobile, args.church, args.group, args.password_stdin
+        )
     if args.command == "create-admin":
         return create_admin(args.email, args.mobile, args.password_stdin)
     if args.command == "generate-demo-data":

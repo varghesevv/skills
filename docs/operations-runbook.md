@@ -167,6 +167,17 @@ dc run --rm tools python -m app.cli create-admin --email you@example.com --mobil
 dc run --rm tools python -m app.cli seed-demo
 ```
 
+### Set up Skills: the first OWNER (church trust model)
+
+Once per installation, on a database that has the church trust schema (migration `0007` and later), the operators create the OWNER with the first church and home group. The command asks for the password (twice) or reads one line with `--password-stdin`; it is never a command-line argument and is never printed.
+
+```bash
+dc run --rm tools python -m app.cli create-owner --name "Full Name" --email you@example.com \
+    --mobile +971500000000 --church "Church name" --group "Home group name"
+```
+
+It creates the OWNER, the church (the OWNER is its ADMIN) and the home group (the OWNER leads it) in one transaction, and records an operator change in the status history. It refuses when an OWNER already exists; replacing the OWNER is a handover, or an operator change (roadmap S4.5). In `demo` and `prod` the password must be strong and long enough. The older `create-admin` command stays until the older accounts go (decision D-20).
+
 Copy `demo-logins.csv` to your computer with `scp` and delete it from the server. It contains the shared demo password.
 
 ### Look at or edit the database with pgAdmin
