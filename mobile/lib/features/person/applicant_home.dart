@@ -68,6 +68,7 @@ class _ApplicantHomeState extends ConsumerState<ApplicantHome> {
           saved: _saved,
           onStart: () => setState(() => _saved = false),
           onSaved: (updated) {
+            if (!mounted) return;
             ref.read(sessionProvider.notifier).setPerson(updated);
             setState(() => _saved = true);
           },
@@ -117,6 +118,7 @@ class _ChangeChoiceState extends ConsumerState<_ChangeChoice> {
             homeGroupId: _groupId == _keep ? null : _groupId,
             requestedStatus: _applied,
           );
+      if (!mounted) return;
       widget.onSaved(updated);
     } catch (error) {
       if (mounted) {
@@ -302,8 +304,6 @@ class _LeaveState extends ConsumerState<_Leave> {
     });
     try {
       await ref.read(personRepositoryProvider).closeAccount(_password.text);
-      // Every session of the closed account is already ended; forget it here too.
-      await ref.read(sessionProvider.notifier).logout();
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -311,6 +311,14 @@ class _LeaveState extends ConsumerState<_Leave> {
           _busy = false;
         });
       }
+      return;
+    }
+    // The account is closed and every session of it is ended on the server. Forget it here too;
+    // a failure of that call must not be shown as a failure to close (it keeps no session).
+    try {
+      await ref.read(sessionProvider.notifier).logout();
+    } on Exception {
+      ref.read(sessionProvider.notifier).expire();
     }
   }
 

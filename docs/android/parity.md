@@ -18,7 +18,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8 | done on the older model; one entry for everyone after S2.8 | `test/features/auth/auth_flow_test.dart` |
+| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8 | done: a Join and Sign in card for people next to the older entries, which go with the older accounts (S5) | `test/features/person/person_flow_test.dart`, `test/features/auth/auth_flow_test.dart` |
 | Log in (one screen for everyone) | `pages/person/PersonSignIn.tsx` | S2.8 | done for people at `/sign-in` (no account type sent); the older screens go with the older accounts (S5) | `test/features/person/person_flow_test.dart` |
 | Sign-up wizard: details, church, home group (with leader name), searcher or provider | `pages/person/SignUp.tsx` | S2.8 | done at `/sign-up`; the older register forms go with the older accounts | `test/features/person/person_flow_test.dart` |
 | Join through a group invitation link | `/join/<token>` | S2.8 | done: a link or token pasted on the sign-up screen opens `/join/<token>` (the token goes in a body, never in an address); opening a link from outside the app (app links) is later | `test/features/person/person_flow_test.dart` |

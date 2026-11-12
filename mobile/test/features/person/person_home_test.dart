@@ -236,6 +236,34 @@ void main() {
       expect(await app.store.readRefreshToken(), isNull);
     });
 
+    testWidgets('is signed out even if the sign-out call fails afterwards', (
+      tester,
+    ) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter
+            ..reply('DELETE', '/me', FakeReply(204))
+            ..reply(
+              'POST',
+              '/auth/logout',
+              FakeReply(503, apiError('service_unavailable')),
+            );
+        },
+      );
+      await tapKey(tester, 'leave-open');
+      await typeInto(tester, 'Your password, to confirm', fresh('pw'));
+      await tapKey(tester, 'leave-submit');
+      expect(find.byKey(const Key('member-join')), findsOneWidget);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsNothing,
+      );
+      expect(await app.store.readRefreshToken(), isNull);
+    });
+
     testWidgets('stays signed in and says so when the password is wrong', (
       tester,
     ) async {
