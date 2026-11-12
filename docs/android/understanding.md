@@ -1,6 +1,6 @@
 # Android application: understanding
 
-Status: draft for review. Written 2026-10-29. Nothing in this folder is built yet.
+Status: written 2026-10-29. **Retargeted 2026-11-12** to the church trust model ([ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md), [roadmap](../roadmap-verification-model.md)): where this file says freelancer, work host, organisation or `user_type`, read provider, searcher, church and a member's status; one login, one account, one status per person. Screens by status and the new sign-up are specified in slice S1.5.
 Companions: [plan](plan.md), [chat design](chat-design.md), [kick-off prompt](kickoff-prompt.md).
 Builds on: [mobile-app-plan.md](../mobile-app-plan.md) (the earlier Flutter plan, iOS and Android). Where the two differ, this folder wins for Android work and `mobile-app-plan.md` stays the reference for iPhone and the store rules.
 
@@ -16,17 +16,17 @@ Builds on: [mobile-app-plan.md](../mobile-app-plan.md) (the earlier Flutter plan
 | # | Topic | Decision | Why |
 |---|---|---|---|
 | A1 | Technology | **Flutter** (Dart), Material 3, Android first; iPhone stays possible later from the same code | Already chosen in `mobile-app-plan.md`. Works fully from VS Code (no Android Studio needed for daily work). One code base keeps the iPhone option open. Native Kotlin would be a second plan with no reuse. |
-| A2 | Scope | Freelancer, work host, organisation. No admin login screen. | Same as `mobile-app-plan.md` section 2. |
+| A2 | Scope | Applicant, searcher, provider, verifier (home group leader) and church ADMIN. The OWNER works on the web only. | Same as `mobile-app-plan.md` section 2. |
 | A3 | Parity | Every web feature for those three roles, including the new **mobile number reveal** (Reveal calls the reveal endpoint, then opens the dialler) | The app must not be a reduced client. |
 | A4 | Chat | Android first. The API is shared, so the web can add chat later without server changes. | You asked for chat as an app feature. |
 | A5 | Realtime transport | **WebSocket** on FastAPI, with REST for history and as a fallback; **PostgreSQL LISTEN/NOTIFY** to reach every API process | Fits the stack (PostgreSQL is the only database, ADR-0002). gRPC would add a second protocol stack and needs end-to-end HTTP/2. |
 | A6 | Push | **Firebase Cloud Messaging** for messages while the app is closed, sent by the existing worker from an outbox | Matches section 10 of `mobile-app-plan.md`. Message text is never put in the push. |
-| A7 | Who may start a chat | Only a **work host** can start a conversation with a freelancer. The freelancer can reply, mute, block and report. | Stops unsolicited messages to freelancers and matches how the marketplace works (a host looks for a person). |
+| A7 | Who may start a chat | Any admitted **searcher** (or above) may start a conversation with a provider they found. The provider can reply, mute, block and report. | Stops unsolicited messages to freelancers and matches how the marketplace works (a host looks for a person). |
 | A8 | Distribution | Internal first: the login-protected Downloads page and Google Play internal testing. No public listing yet. | Decision 3 in `mobile-app-plan.md`. |
 
 ## 3. What stays the same
 
-- **Roles and words.** Stored `user_type` values (`freelancer`, `workhost`, `organisation`, `admin`) and API paths never change. All user-visible words come from the installation's terminology profile (`GET /api/v1/app/config`, new, planned in `mobile-app-plan.md` section 5). The app never hard-codes "Provider", "Searcher" or "Church".
+- **Roles and words.** Resource paths for providers and searchers stay for compatibility; the stored `user_type` is replaced by the member's status (ADR-0017). All user-visible words come from the installation's terminology profile (`GET /api/v1/app/config`, new, planned in `mobile-app-plan.md` section 5). The app never hard-codes "Provider", "Searcher" or "Church".
 - **Auth.** Argon2id passwords, 15 minute access token, rotating 30 day refresh token, stored only in Android Keystore (`flutter_secure_storage`). Tokens, passwords and phone numbers are never written to logs.
 - **Secrets.** No secret in the repository. The server address is a build setting (`--dart-define`), not a secret. The Firebase service-account key and signing keys are environment/CI secrets.
 - **Search rules.** A freelancer is listed with at least one skill; results never contain email or mobile number; page size at most 100.

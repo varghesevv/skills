@@ -4,10 +4,10 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 
 ## 0. State (update in every pull request)
 
-- Done: nothing merged yet.
-- In progress: S0.1 (decision records and this roadmap), prepared on branch `docs/adr-supersede-for-trust-model`.
-- Next: S0.2 (working agreement) once the owner has answered the questions, then S0.3 (database for tests), then S1 (specification).
-- Waiting on the owner: see section 7.
+- Done: S0.1 (decision records and this roadmap, pull request 101).
+- In progress: S0.2 (working agreement), branch `docs/working-agreement`.
+- Next: S0.3 (database for tests), S0.4 (decision log), then the branch `model/verification` and S1 (specification).
+- Waiting on the owner: see section 7. The planning answers were not given in writing, so the defaults of section 8 are in force. The branch protection still requires a review, so the merge policy cannot take effect until the owner relaxes it. Pull request 100 (mobile ratings) is green and waits for a review.
 
 ## 1. Why this shape (changes from the first draft)
 
@@ -46,8 +46,8 @@ The first draft built all of the backend, then the web, then the mobile app. Tha
 Counts are targets; a pull request may split.
 
 ### S0. Foundations (on `main`) — 4 pull requests
-- [ ] 0.1 Decision records and this roadmap: ADR-0016 accepted, ADR-0004 superseded by ADR-0017, ADR-0005 and ADR-0015 amended, the verification rules marked accepted.
-- [ ] 0.2 Working agreement: the merge policy in the contribution rules; the answers and assumptions below recorded in the open-questions file; the Android plan, understanding and parity documents retargeted to the new model.
+- [x] 0.1 Decision records and this roadmap: ADR-0016 accepted, ADR-0004 superseded by ADR-0017, ADR-0005 and ADR-0015 amended, the verification rules marked accepted.
+- [x] 0.2 Working agreement: the merge policy in the contribution rules; the answers and assumptions below recorded in the open-questions file; the Android plan, understanding and parity documents retargeted to the new model.
 - [ ] 0.3 Backend tests runnable locally (section 6): a helper script that wraps the verified steps, and the documented command.
 - [ ] 0.4 Decision log (`docs/verification-decisions.md`): where every choice the model leaves open is recorded, with date and pull request.
 

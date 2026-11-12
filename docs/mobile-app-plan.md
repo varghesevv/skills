@@ -4,6 +4,8 @@
 > plan (phases, backend additions, chat, device and CI details), `docs/android/` wins for Android. This
 > file stays the reference for the iPhone and the store rules.
 
+> **Roles changed 2026-11-12.** The scope table below (freelancer, work host, organisation) predates the church trust model ([ADR-0016](adr/0016-church-trust-hierarchy-verification-model.md)). The app follows [roadmap-verification-model.md](roadmap-verification-model.md): one login, a member's status decides the screens, and the organisation role is dropped.
+
 Status: proposal for discussion. Nothing here is built yet. Versions of tools and packages are not pinned in this plan; pin them when the project starts and re-check store rules then, because they change.
 
 ## 1. Goals
