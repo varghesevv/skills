@@ -27,6 +27,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
+from app.models.church import Person
 from app.models.users import Organisation
 from app.schemas.auth import TokenResponse
 from app.services.accounts import Account, get_by_email, get_by_id
@@ -142,6 +143,8 @@ def _token_response(
 
 
 def _can_log_in(account: Account) -> ApiError | None:
+    if isinstance(account, Person) and account.closed_at is not None:
+        return _invalid_credentials()  # a closed account is gone; revoked ones may still log in
     if isinstance(account, Organisation) and account.approval_status != "approved":
         if account.approval_status == "rejected":
             return ApiError(403, "organisation_rejected", "This organisation was not approved")
@@ -177,7 +180,8 @@ def login(
             user_agent=user_agent,
         )
 
-    if account is None or not verify_password(account.password_hash, password):
+    stored_hash = account.password_hash if account is not None else None
+    if account is None or stored_hash is None or not verify_password(stored_hash, password):
         if account is None:
             verify_dummy(password)  # same cost as a real check
         record(account.id if account else None, succeeded=False)
@@ -190,7 +194,7 @@ def login(
         db.commit()
         raise blocked
 
-    if password_needs_rehash(account.password_hash):
+    if password_needs_rehash(stored_hash):
         account.password_hash = hash_password(password)
     account.last_login_at = now
     record(account.id, succeeded=True)
@@ -286,7 +290,7 @@ def reset_password(db: Session, *, token: str, new_password: str) -> None:
     if row is None or row.used_at is not None or row.expires_at <= now:
         raise ApiError(400, "invalid_reset_token", "The reset link is invalid or has expired")
     account = get_by_id(db, row.user_type, row.user_id)
-    if account is None:
+    if account is None or (isinstance(account, Person) and account.closed_at is not None):
         raise ApiError(400, "invalid_reset_token", "The reset link is invalid or has expired")
     account.password_hash = hash_password(new_password)
     # Use up every outstanding reset link for this user and end all sessions.

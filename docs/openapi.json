@@ -108,19 +108,20 @@
             "type": "string"
           },
           "user_type": {
+            "default": "person",
             "enum": [
               "freelancer",
               "workhost",
               "organisation",
-              "admin"
+              "admin",
+              "person"
             ],
             "title": "User Type",
             "type": "string"
           }
         },
         "required": [
-          "email",
-          "user_type"
+          "email"
         ],
         "title": "ForgotPasswordRequest",
         "type": "object"
@@ -767,11 +768,13 @@
             "writeOnly": true
           },
           "user_type": {
+            "default": "person",
             "enum": [
               "freelancer",
               "workhost",
               "organisation",
-              "admin"
+              "admin",
+              "person"
             ],
             "title": "User Type",
             "type": "string"
@@ -779,8 +782,7 @@
         },
         "required": [
           "email",
-          "password",
-          "user_type"
+          "password"
         ],
         "title": "LoginRequest",
         "type": "object"

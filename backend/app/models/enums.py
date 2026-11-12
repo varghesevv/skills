@@ -1,6 +1,8 @@
 """Allowed values for text columns that behave like enums (enforced with CHECK constraints)."""
 
-USER_TYPES = ("freelancer", "workhost", "organisation", "admin")
+# "person" is the identity of the church trust model (ADR-0017); the other four are the older
+# accounts and go when their features move to it (decision D-20).
+USER_TYPES = ("freelancer", "workhost", "organisation", "admin", "person")
 LABEL_TYPES = ("skill", "language", "timing", "nativity", "skill_level")
 APPROVAL_STATUSES = ("pending", "approved", "rejected")
 VOUCH_STATUSES = ("pending", "approved", "revoked")

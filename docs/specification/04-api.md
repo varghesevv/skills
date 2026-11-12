@@ -14,6 +14,10 @@ This file is the **target** contract of the church trust model. `/api/v1` is cha
 - CORS origins configured by environment variable.
 - Rate limiting on auth and link endpoints; `429` with `Retry-After`.
 
+## Transition (until the cut-over)
+
+While the older accounts still exist (decision D-20), `POST /auth/login` and `POST /auth/forgot-password` accept an optional `user_type`. Without it, or with `person`, they use the one identity of the church trust model; with `freelancer`, `workhost`, `organisation` or `admin` they use the older accounts. Tokens of a person carry no role or status, and every request reads the person from the database (`403 account_revoked` for a revoked person on every endpoint but the few that allow it, `401` for a closed account). The field is removed with the last older account type (S5.2).
+
 ## Authorisation by status
 
 - The access token identifies the person only. On **every** request the server loads the person (status, closed flag, church, home group) and decides with the permission module (`inScope`, `canSetStatus`, `canAdmit`, ADR-0017). A status change therefore takes effect on the next request. Clients learn the status from `GET /me`, never from the token.

@@ -29,6 +29,7 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | D-19 | 2026-11-12 | The list of churches, home groups and leader names is public, names only, rate limited at 60 requests per minute per IP. Hiding leader names from anonymous callers is not done: choosing a group needs them. | Settles O-06. | S1.4 | decided |
 | D-20 | 2026-11-13 | The new identity schema is added next to the old one (migration 0007) instead of replacing it at once. Each old table is dropped when its feature moves to the new identity; the old identity tables go last. | Keeps the backend and its tests working and CI green while the work is spread over many pull requests. The demo is still wiped at the cut-over (D-03). | S2.1 | decided |
 | D-21 | 2026-11-13 | The owner confirmed the defaults of section 8 of the roadmap (D-14) in this session and asked to proceed with S2. | Settles D-14: the planning answers are no longer assumptions. | S2 | decided |
+| D-22 | 2026-11-13 | While the older accounts exist, login, refresh, logout and password reset serve both: `person` is a fifth `user_type` in login history and the token tables (migration 0008), the person's id is stored in `user_id`, and `user_type` is optional in the login and forgot-password requests (default `person`). The column and the field go with the last older account type (S5.2). | Keeps every older feature and its tests working while the identity moves. | S2.3 | decided |
 
 ## Open details, to be settled in the named pull request
 
