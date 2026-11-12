@@ -93,6 +93,7 @@ void main() {
       'GET /freelancers/me': '200',
       'PUT /freelancers/me': '200',
       'GET /labels': '200',
+      'GET /freelancers/{freelancer_id}/ratings': '200',
       'PUT /freelancers/me/labels': '200',
       'GET /freelancers/me/unavailability': '200',
       'POST /freelancers/me/unavailability': '201',
@@ -368,5 +369,55 @@ void main() {
         expect(property['format'], 'date-time');
       },
     );
+  });
+
+  group('ratings received', () {
+    test('the list is paged with page and page_size, at most 100', () {
+      final parameters =
+          (operation(
+                    'GET',
+                    '/freelancers/{freelancer_id}/ratings',
+                  )['parameters']
+                  as List)
+              .cast<Map>();
+      final byName = {for (final p in parameters) p['name'] as String: p};
+      expect(byName.keys, containsAll(['page', 'page_size']));
+      expect(
+        (byName['page_size']!['schema'] as Map)['maximum'],
+        greaterThanOrEqualTo(10),
+      );
+    });
+
+    test('the page and a rating have the fields and types the app reads', () {
+      expect(
+        responseSchema('GET', '/freelancers/{freelancer_id}/ratings', '200'),
+        'Page_PublicRating_',
+      );
+      expect(required('Page_PublicRating_'), {
+        'items',
+        'total',
+        'page',
+        'page_size',
+      });
+      expect(typesOf('Page_PublicRating_', 'items'), {'array'});
+      for (final field in ['total', 'page', 'page_size']) {
+        expect(typesOf('Page_PublicRating_', field), {
+          'integer',
+        }, reason: field);
+      }
+      expect(typesOf('PublicRating', 'rating'), {'integer'});
+      expect(
+        typesOf('PublicRating', 'comment'),
+        containsAll(['string', 'null']),
+      );
+      expect(typesOf('PublicRating', 'rated_on'), {'string'});
+    });
+
+    test('a received rating never names the work host', () {
+      expect(
+        properties('PublicRating'),
+        unorderedEquals(['rating', 'comment', 'rated_on']),
+      );
+    });
   });
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/errors/error_messages.dart';
 import '../../core/providers.dart';
 import 'message_banner.dart';
 
@@ -38,7 +37,7 @@ class AsyncView<T> extends ConsumerWidget {
       error: (error, _) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          MessageBanner(messageFor(error, ref.watch(termsProvider)!)),
+          MessageBanner(text.error(error)),
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerLeft,

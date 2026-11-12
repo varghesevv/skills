@@ -152,10 +152,14 @@ void signedInAs(
     ..reply('GET', '/me', FakeReply(200, meJson(userType, name: name)));
 }
 
-/// Taps a tab of the bottom navigation (the same word may also appear on the screen itself).
+/// Taps a tab of the bottom navigation. Found by its tooltip (also its screen-reader label),
+/// because at large text only the open tab shows its written label.
 Future<void> tapTab(WidgetTester tester, String label) async {
   await tester.tap(
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
+    find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.byTooltip(label),
+    ),
   );
   await tester.pumpAndSettle();
 }

@@ -156,7 +156,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
       if (!mounted) return;
       setState(() {
         _errors = serverFieldErrors(error);
-        _formError = messageFor(error, ref.read(termsProvider)!);
+        _formError = ref.read(appTextProvider).error(error);
       });
     } finally {
       if (mounted) setState(() => _busy = false);

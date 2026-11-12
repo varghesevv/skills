@@ -1,3 +1,4 @@
+import '../errors/error_messages.dart';
 import '../terminology/terms.dart';
 import 'strings_en.dart';
 
@@ -24,4 +25,8 @@ class AppText {
           (match) => values[match.group(1)] ?? match.group(0)!,
         );
   }
+
+  /// A message safe to show a person for an error, with the role words filled in. Screens use
+  /// this instead of reaching for the (nullable) terms themselves.
+  String error(Object error) => messageFor(error, terms);
 }

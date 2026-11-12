@@ -6,12 +6,19 @@ import 'package:dio/dio.dart';
 
 /// One request the code under test made.
 class SeenRequest {
-  SeenRequest(this.method, this.path, this.headers, this.body);
+  SeenRequest(
+    this.method,
+    this.path,
+    this.headers,
+    this.body, [
+    this.query = const {},
+  ]);
 
   final String method;
   final String path;
   final Map<String, Object?> headers;
   final Object? body;
+  final Map<String, Object?> query;
 
   String? get authorization => headers['Authorization'] as String?;
 }
@@ -58,6 +65,7 @@ class FakeAdapter implements HttpClientAdapter {
         options.path,
         Map.of(options.headers),
         options.data,
+        Map.of(options.queryParameters),
       ),
     );
     if (failWithNetworkError) {

@@ -1,9 +1,14 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/api/paged.dart';
 import '../../../core/api/parse.dart';
 import 'freelancer_profile.dart';
 import 'label.dart';
+import 'received_rating.dart';
 import 'unavailability.dart';
+
+/// Ratings are loaded ten at a time, as on the web.
+const ratingsPageSize = 10;
 
 class FreelancerRepository {
   FreelancerRepository(this._api);
@@ -77,4 +82,17 @@ class FreelancerRepository {
   Future<void> deleteUnavailability(String id) async {
     await _api.delete('/freelancers/me/unavailability/$id');
   }
+
+  /// One page of the ratings a freelancer received, newest first.
+  Future<Paged<ReceivedRating>> ratings(
+    String freelancerId, {
+    required int page,
+    int pageSize = ratingsPageSize,
+  }) async => parseResponse(
+    await _api.get(
+      '/freelancers/$freelancerId/ratings',
+      query: {'page': page, 'page_size': pageSize},
+    ),
+    (json) => Paged.fromJson(json, ReceivedRating.fromJson),
+  );
 }

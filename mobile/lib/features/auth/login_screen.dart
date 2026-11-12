@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/user_type.dart';
-import '../../core/errors/error_messages.dart';
 import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/validation/validators.dart';
@@ -58,9 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         // A wrong password is not kept in the field.
         _password.clear();
-        setState(
-          () => _formError = messageFor(error, ref.read(termsProvider)!),
-        );
+        setState(() => _formError = ref.read(appTextProvider).error(error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

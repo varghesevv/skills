@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/date_time_picker.dart';
-import '../../../core/errors/error_messages.dart';
 import '../../../core/format.dart';
 import '../../../core/providers.dart';
 import '../../../core/validation/validators.dart';
@@ -70,9 +69,7 @@ class _PeriodSheetState extends ConsumerState<PeriodSheet> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
-        setState(
-          () => _formError = messageFor(error, ref.read(termsProvider)!),
-        );
+        setState(() => _formError = ref.read(appTextProvider).error(error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
