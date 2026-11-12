@@ -63,3 +63,9 @@ Skills is released under the [MIT licence](LICENSE). By opening a pull request y
 ## Security
 
 Report security problems privately to the maintainers, not in a public issue.
+
+## Automated review
+
+Pull requests from branches in this repository get an advisory comment from a Gemini reviewer
+([ADR-0013](docs/adr/0013-gemini-agent-as-pull-request-reviewer.md)). It is not a required check and
+never approves or blocks a merge. Treat its findings as hints and the human review as the decision.
