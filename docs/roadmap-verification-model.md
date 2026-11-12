@@ -4,8 +4,8 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 
 ## 0. State (update in every pull request)
 
-- Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103).
-- In progress: S0.4 (decision log).
+- Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
+- In progress: S0.4 (decision log), branch `docs/verification-decisions`.
 - Next: the branch `model/verification` and S1 (specification).
 - Waiting on the owner: see section 7. The planning answers were not given in writing, so the defaults of section 8 are in force. The owner allowed merging with the administrator override while the review rule stays in place (2026-11-12).
 ## 1. Why this shape (changes from the first draft)
@@ -48,7 +48,7 @@ Counts are targets; a pull request may split.
 - [x] 0.1 Decision records and this roadmap: ADR-0016 accepted, ADR-0004 superseded by ADR-0017, ADR-0005 and ADR-0015 amended, the verification rules marked accepted.
 - [x] 0.2 Working agreement: the merge policy in the contribution rules; the answers and assumptions below recorded in the open-questions file; the Android plan, understanding and parity documents retargeted to the new model.
 - [x] 0.3 Backend tests runnable locally (section 6): a helper script that wraps the verified steps, and the documented command.
-- [ ] 0.4 Decision log (`docs/verification-decisions.md`): where every choice the model leaves open is recorded, with date and pull request.
+- [x] 0.4 Decision log (`docs/verification-decisions.md`): where every choice the model leaves open is recorded, with date and pull request.
 
 ### S1. Specification (on `model/verification`) — 5 pull requests, documents only
 - [ ] 1.1 Functional requirements (02): replace organisation and vouching requirements with sign-up, vouching, admission, succession, revocation, moving, leaving; keep the provider and searcher requirements.
