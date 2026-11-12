@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/app.dart';
 
@@ -82,6 +83,7 @@ Future<TestApp> pumpApp(
   void Function(FakeAdapter adapter, MemoryTokenStore store)? arrange,
   Size size = const Size(400, 800),
   double textScale = 1.0,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size * tester.view.devicePixelRatio;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -103,6 +105,7 @@ Future<TestApp> pumpApp(
         dioProvider.overrideWithValue(dio),
         tokenStoreProvider.overrideWithValue(store),
         appVersionProvider.overrideWithValue(appVersion),
+        ...overrides,
       ],
     ),
   );
@@ -155,4 +158,17 @@ Future<void> tapTab(WidgetTester tester, String label) async {
     find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
   );
   await tester.pumpAndSettle();
+}
+
+/// Answers the date picker with prepared moments, in order, instead of showing the dial.
+class FakePicker {
+  FakePicker(List<DateTime?> answers) : _answers = [...answers];
+
+  final List<DateTime?> _answers;
+  final asked = <DateTime?>[]; // the initial value each call was given
+
+  Future<DateTime?> call(BuildContext context, DateTime? initial) async {
+    asked.add(initial);
+    return _answers.isEmpty ? null : _answers.removeAt(0);
+  }
 }

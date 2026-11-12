@@ -380,7 +380,7 @@ void main() {
     testWidgets('the lead text uses the server words', (tester) async {
       await openLabels(tester, words: churchWords);
       expect(
-        find.textContaining('Choose what providers can search for.'),
+        find.textContaining('Choose what searchers can search for.'),
         findsOneWidget,
       );
     });
