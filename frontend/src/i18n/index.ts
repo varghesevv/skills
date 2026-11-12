@@ -75,6 +75,8 @@ const en = {
   'applicant.leave.submit': 'Close my account',
   'applicant.leave.working': 'Closing…',
   'applicant.leave.open': 'I want to leave',
+  'applicant.leave.warning': 'This closes your account for good. Enter your password to confirm.',
+  'applicant.leave.cancel': 'Cancel',
   'revoked.title': 'No access',
   'revoked.text':
     'Your account has no access to Skills. If you think this is a mistake, speak to the leader of your {homegroup}.',

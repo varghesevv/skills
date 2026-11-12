@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { closeAccount, fetchChurches, fetchHomeGroups, updateApplication } from '../../api/person'
@@ -7,7 +7,7 @@ import type { AppliedStatus } from '../../api/types'
 import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
 import { errorMessage } from '../../shared/errors'
-import { Alert, PasswordField, SelectField } from '../../shared/ui'
+import { Alert, LoadingScreen, PasswordField, SelectField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 
 const APPLIED: readonly AppliedStatus[] = ['searcher', 'provider']
@@ -81,6 +81,8 @@ function ChangeChoice({
   })
 
   const unchanged = groupId === KEEP && applied === person.requested_status
+  const loaded = churches.isSuccess && groups.isSuccess
+  const otherGroups = (groups.data?.items ?? []).filter((g) => g.id !== person.home_group?.id)
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -110,6 +112,26 @@ function ChangeChoice({
           </Alert>
         )}
         {saved && <Alert kind="success">{t('applicant.change.saved')}</Alert>}
+        {(churches.isPending || groups.isPending) && <LoadingScreen />}
+        {churches.isError && (
+          <Alert kind="error">
+            {errorMessage(churches.error)}{' '}
+            <button type="button" className="btn btn-quiet" onClick={() => void churches.refetch()}>
+              {t('common.retry')}
+            </button>
+          </Alert>
+        )}
+        {groups.isError && (
+          <Alert kind="error">
+            {errorMessage(groups.error)}{' '}
+            <button type="button" className="btn btn-quiet" onClick={() => void groups.refetch()}>
+              {t('common.retry')}
+            </button>
+          </Alert>
+        )}
+        {groups.data && otherGroups.length === 0 && churchId !== person.church.id && (
+          <p className="span-2">{t('signup.none.group')}</p>
+        )}
         <SelectField
           className="span-2"
           label={t('applicant.change.church')}
@@ -131,12 +153,10 @@ function ChangeChoice({
             ...(churchId === person.church.id
               ? [{ value: KEEP, label: t('applicant.change.keep') }]
               : [{ value: KEEP, label: t('signup.group.choose') }]),
-            ...(groups.data?.items ?? [])
-              .filter((g) => g.id !== person.home_group?.id)
-              .map((g) => ({
-                value: g.id,
-                label: `${g.name} (${t('signup.group.leader', { name: g.leader_name })})`,
-              })),
+            ...otherGroups.map((g) => ({
+              value: g.id,
+              label: `${g.name} (${t('signup.group.leader', { name: g.leader_name })})`,
+            })),
           ]}
         />
         <fieldset className="span-2 choice-list">
@@ -157,7 +177,9 @@ function ChangeChoice({
         <button
           type="submit"
           className="btn btn-primary span-2"
-          disabled={busy || unchanged || (churchId !== person.church.id && groupId === KEEP)}
+          disabled={
+            busy || !loaded || unchanged || (churchId !== person.church.id && groupId === KEEP)
+          }
         >
           {t('applicant.change.save')}
         </button>
@@ -173,6 +195,20 @@ function Leave() {
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const confirmation = useRef<HTMLDivElement>(null)
+
+  // The confirmation replaces the button: move focus to it, and give it back on cancel.
+  useEffect(() => {
+    if (open) confirmation.current?.focus()
+  }, [open])
+
+  function cancel() {
+    setOpen(false)
+    setPassword('')
+    setFormError(null)
+    window.setTimeout(() => trigger.current?.focus(), 0)
+  }
 
   async function leave(event: FormEvent) {
     event.preventDefault()
@@ -194,11 +230,20 @@ function Leave() {
       <h2>{t('applicant.leave.title')}</h2>
       <p>{t('applicant.leave.text')}</p>
       {!open ? (
-        <button type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>
+        <button ref={trigger} type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>
           {t('applicant.leave.open')}
         </button>
       ) : (
         <form onSubmit={leave} noValidate className="form-grid">
+          <div
+            ref={confirmation}
+            tabIndex={-1}
+            className="span-2"
+            role="group"
+            aria-label={t('applicant.leave.title')}
+          >
+            <p>{t('applicant.leave.warning')}</p>
+          </div>
           {formError && (
             <Alert kind="error" focus>
               {formError}
@@ -212,9 +257,14 @@ function Leave() {
             value={password}
             onChange={setPassword}
           />
-          <button type="submit" className="btn btn-danger span-2" disabled={busy}>
-            {busy ? t('applicant.leave.working') : t('applicant.leave.submit')}
-          </button>
+          <div className="form-actions span-2">
+            <button type="button" className="btn btn-quiet" onClick={cancel} disabled={busy}>
+              {t('applicant.leave.cancel')}
+            </button>
+            <button type="submit" className="btn btn-danger" disabled={busy}>
+              {busy ? t('applicant.leave.working') : t('applicant.leave.submit')}
+            </button>
+          </div>
         </form>
       )}
     </section>

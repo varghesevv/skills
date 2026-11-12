@@ -443,3 +443,60 @@ describe('change of choice and leaving', () => {
     expect(api.count('DELETE /me')).toBe(0)
   })
 })
+
+describe('change of choice: loading, empty and error states', () => {
+  it('says so when the churches cannot be loaded, and offers to try again', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    signedInAs(makeMe(), {
+      'GET /me': () => json(200, makePerson()),
+      'GET /churches': () =>
+        ++attempts === 1 ? apiError(503, 'service_unavailable') : json(200, CHURCHES),
+      'GET /churches/church-1/home-groups': () => json(200, GROUPS),
+    })
+    renderApp('/member')
+    await screen.findByRole('heading', { name: 'Your application' })
+    expect(await screen.findByRole('alert')).toHaveTextContent(/unavailable|try again/i)
+    expect(screen.getByRole('button', { name: 'Save my choice' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  })
+
+  it('says when another church has no home group to join', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      'GET /me': () => json(200, makePerson()),
+      'GET /churches': () => json(200, CHURCHES),
+      'GET /churches/church-1/home-groups': () => json(200, GROUPS),
+      'GET /churches/church-2/home-groups': () => json(200, { items: [] }),
+    })
+    renderApp('/member')
+    await screen.findByRole('heading', { name: 'Your application' })
+    await user.selectOptions(await screen.findByLabelText('Another organisation'), 'church-2')
+    expect(await screen.findByText(/no home group to join yet/i)).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Save my choice' })).toBeDisabled()
+  })
+})
+
+describe('leaving: focus and cancelling', () => {
+  const routes = {
+    'GET /churches': () => json(200, CHURCHES),
+    'GET /churches/church-1/home-groups': () => json(200, GROUPS),
+  }
+
+  it('moves focus to the confirmation and gives it back when cancelled', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(makeMe(), { ...routes, 'GET /me': () => json(200, makePerson()) })
+    renderApp('/member')
+    await screen.findByRole('heading', { name: 'Your application' })
+    await user.click(screen.getByRole('button', { name: 'I want to leave' }))
+    expect(screen.getByRole('group', { name: 'Leave' })).toHaveFocus()
+    await user.type(screen.getByLabelText('Your password, to confirm'), PASSWORD)
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'I want to leave' })).toHaveFocus(),
+    )
+    expect(screen.queryByLabelText('Your password, to confirm')).toBeNull()
+    expect(api.count('DELETE /me')).toBe(0)
+  })
+})
