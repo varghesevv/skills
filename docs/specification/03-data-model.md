@@ -4,6 +4,10 @@ Decision: PostgreSQL only, SQLite is not supported (confirmed 2026-10-20, [ADR-0
 
 This file describes the **target** schema of the church trust model ([verification rules](../verification.md), [ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md)). It is built by one destructive migration in slice S2.1 (the demo data is wiped, decision D-03). Until then the code still has the older schema (work hosts, freelancers, organisations, admins); the table "Fate of the old tables" shows how each maps.
 
+## Implementation status
+
+Migration `0007` creates the tables of this file that belong to the new identity (`churches`, `home_groups`, `people`, `status_changes`, `vouches`, `vouch_links`, `group_invitations`, `group_requests`, `admin_invitations`, `handover_requests`, `move_requests`, `notifications`, `contact_views`) with all constraints of "The six invariants as database constraints" and the functions `status_rank`, `check_church_rules` and `check_group_rules`. It leaves the old tables in place (decision D-20); the tables that still point at the old accounts (`person_labels`, `person_unavailability`, `ratings`, `phone_reveals`, `login_history`, `password_reset_tokens`, `refresh_tokens`) move in the pull requests named in the roadmap. Tests: `backend/tests/test_trust_schema.py`, one per rule, using `SET CONSTRAINTS ALL IMMEDIATE` to check at once what PostgreSQL checks at commit.
+
 ## Conventions
 
 - Table names plural snake_case. Primary keys: `uuid` (default `gen_random_uuid()`), so ids are not guessable and are safe to expose to web and mobile.
