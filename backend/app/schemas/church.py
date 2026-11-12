@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
 from app.schemas.auth import Mobile, PersonName
 
@@ -50,6 +50,11 @@ class PersonMeResponse(BaseModel):
     status_set_by: NameRef | None  # none for a new applicant
     flagged_for_recheck: bool
     vouch_count: Annotated[int, Field(ge=0)]  # live vouches received
+
+
+class CloseAccountRequest(BaseModel):
+    # Not length-checked: a wrong password is a normal refusal, not a validation hint.
+    password: Annotated[SecretStr, Field(max_length=1024)]
 
 
 class PersonUpdate(BaseModel):
