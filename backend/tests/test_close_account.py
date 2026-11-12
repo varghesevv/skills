@@ -227,3 +227,44 @@ def test_closing_needs_a_token_and_is_not_for_older_accounts(
         "DELETE", f"{API}/me", headers=older.headers, json={"password": "x" * 12}
     )
     assert response.status_code == 403
+
+
+def test_wrong_passwords_are_counted_and_then_throttled(client: TestClient, world: World) -> None:
+    member = add_member(world, "searcher")
+    headers = bearer(login(client, member))
+    codes = [
+        client.request(
+            "DELETE", f"{API}/me", headers=headers, json={"password": secrets.token_urlsafe(12)}
+        ).status_code
+        for _ in range(6)
+    ]
+    assert codes == [403, 403, 403, 403, 403, 429]
+    blocked = client.request(
+        "DELETE", f"{API}/me", headers=headers, json={"password": member.password}
+    )
+    assert blocked.status_code == 429 and int(blocked.headers["Retry-After"]) > 0
+    assert member.person.closed_at is None
+    failures = world.session.scalars(
+        select(LoginHistory).where(
+            LoginHistory.user_id == member.person.id, LoginHistory.succeeded.is_(False)
+        )
+    ).all()
+    assert len(failures) == 5
+
+
+def test_an_older_account_with_the_same_address_keeps_its_login_trail(
+    client: TestClient, session: Session, world: World
+) -> None:
+    older = signup(client, session, "workhost", "shared@example.com")
+    assert older.headers
+    member = add_member(world, "searcher", email="shared@example.com")
+    client.post(f"{API}/auth/login", json={"email": "Shared@Example.com", "password": "x" * 12})
+    assert close(client, member).status_code == 204  # type: ignore[attr-defined]
+    kept = session.scalars(
+        select(LoginHistory).where(
+            LoginHistory.user_type == "workhost", LoginHistory.login_email == "shared@example.com"
+        )
+    ).all()
+    assert kept, "the older account's login history was erased"
+    cleared = session.scalars(select(LoginHistory).where(LoginHistory.user_type == "person")).all()
+    assert cleared and all(r.login_email is None for r in cleared)

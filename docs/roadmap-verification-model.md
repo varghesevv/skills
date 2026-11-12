@@ -97,7 +97,7 @@ Backend first, then web and mobile.
 
 ### S5. Product features on the new identity — 14 pull requests
 - [ ] 5.1 Backend: provider profile, labels, unavailability owned by the person (paths unchanged).
-- [ ] 5.2 Backend: search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers.
+- [ ] 5.2 Backend: search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers. Closed accounts keep their status as history, so every query and the reveal and rating paths must exclude `closed_at IS NOT NULL`, with a test for a closed provider.
 - [ ] 5.3 Backend: reports redefined (verification reports; the Reveal report stays); schedules; demo data generator and seed; OpenAPI export and contract.
 - [ ] 5.4 Web: member shell and navigation by status; provider pages (profile, labels, availability, ratings received).
 - [ ] 5.5 Web: searcher pages (search, detail, rate, Reveal, ratings given); settings and account.

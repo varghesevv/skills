@@ -8,30 +8,55 @@ admitted is flagged. Leaders step down first; the OWNER hands over. Same flow as
 
 from datetime import UTC, datetime
 
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings
 from app.core.errors import ApiError
 from app.core.security import verify_dummy, verify_password
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
 from app.models.church import Person
 from app.models.trust import GroupInvitation, VouchLink
+from app.services.auth import check_throttle, clean_ip, record_attempt
 
 
-def close_account(db: Session, person: Person, password: str) -> None:
+def close_account(
+    db: Session,
+    settings: Settings,
+    person: Person,
+    password: str,
+    *,
+    ip: str | None,
+    user_agent: str | None,
+) -> None:
     # Hold the row: a leader acting on this person at the same moment waits for us.
     db.refresh(person, with_for_update=True)
+    if person.closed_at is not None or person.status == "revoked":
+        raise ApiError(403, "account_revoked", "This account cannot be closed")
+    email = person.email or ""
+    ip = clean_ip(ip)
+    now = datetime.now(UTC)
+    # The password is asked again, so a stolen access token must not let anyone guess it: the
+    # same throttle as login counts the failures (per address and network address).
+    check_throttle(db, settings, user_type="person", email=email, ip=ip, now=now)
+    if person.password_hash is None:
+        verify_dummy(password)  # not reachable for an open account, but costs the same
     if person.password_hash is None or not verify_password(person.password_hash, password):
-        verify_dummy(password)
+        record_attempt(
+            db,
+            user_type="person",
+            user_id=person.id,
+            email=email,
+            succeeded=False,
+            ip=ip,
+            user_agent=user_agent,
+        )
+        db.commit()  # the failure must be counted although the request fails
         raise ApiError(403, "invalid_password", "The password is not correct")
     if person.status == "verifier":
         raise ApiError(409, "leads_a_group", "Step down as leader of your home group first")
     if person.status in ("admin", "owner"):
         raise ApiError(409, "leads_a_church", "Hand over your role first")
-    if person.status == "revoked" or person.closed_at is not None:
-        raise ApiError(403, "account_revoked", "This account cannot be closed")
-    now = datetime.now(UTC)
-    email = person.email
     person.closed_at = now
     person.home_group_id = None
     person.full_name = person.email = person.mobile_number = person.password_hash = None
@@ -74,7 +99,10 @@ def close_account(db: Session, person: Person, password: str) -> None:
     if email:  # attempts before the person was recognised carry only the address
         db.execute(
             update(LoginHistory)
-            .where(LoginHistory.login_email == email)
+            .where(
+                LoginHistory.user_type == "person",  # an older account keeps its own trail
+                func.lower(LoginHistory.login_email) == email.lower(),
+            )
             .values(login_email=None, ip_address=None, user_agent=None)
         )
     db.commit()

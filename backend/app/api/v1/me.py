@@ -1,10 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import current_person, get_principal_even_if_revoked
+from app.api.deps import client_address, current_person, get_principal_even_if_revoked
+from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
@@ -80,10 +81,21 @@ def update_application(
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 def close_me(
-    body: CloseAccountRequest, person: Member, db: Annotated[Session, Depends(get_session)]
+    body: CloseAccountRequest,
+    request: Request,
+    person: Member,
+    db: Annotated[Session, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> Response:
     """Close your own account (this is the stores' "delete account"). The password is asked
     again. The record stays, the personal details go. A leader steps down first; the OWNER hands
     over; a revoked person stays on their church's list."""
-    account_closing.close_account(db, person, body.password.get_secret_value())
+    account_closing.close_account(
+        db,
+        settings,
+        person,
+        body.password.get_secret_value(),
+        ip=client_address(request),
+        user_agent=request.headers.get("user-agent"),
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
