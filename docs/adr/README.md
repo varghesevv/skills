@@ -17,8 +17,8 @@ An ADR records one significant technical decision: the context, the choice, and 
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
 | [0002](0002-postgresql-as-the-only-database.md) | PostgreSQL as the only database | Accepted |
 | [0003](0003-python-fastapi-backend.md) | Python FastAPI backend with SQLAlchemy and Alembic | Proposed |
-| [0004](0004-stateless-token-auth-for-web-and-mobile.md) | Stateless token auth for web and mobile | Proposed |
-| [0005](0005-react-typescript-frontend.md) | React and TypeScript frontend | Proposed |
+| [0004](0004-stateless-token-auth-for-web-and-mobile.md) | Stateless token auth for web and mobile | Superseded by 0017 |
+| [0005](0005-react-typescript-frontend.md) | React and TypeScript frontend | Proposed (portal structure amended by 0016) |
 | [0006](0006-scheduled-reports-in-a-worker-process.md) | Scheduled reports in a separate worker process | Proposed |
 | [0007](0007-monorepo.md) | Single repository (monorepo) | Proposed |
 | [0008](0008-aws-lightsail-single-instance-demo-deployment.md) | AWS Lightsail single-instance deployment for the demo | Proposed |
@@ -28,6 +28,7 @@ An ADR records one significant technical decision: the context, the choice, and 
 | [0012](0012-production-on-ecs-fargate-and-rds.md) | Production on ECS Fargate and Amazon RDS for PostgreSQL | Proposed |
 | [0013](0013-gemini-agent-as-pull-request-reviewer.md) | Gemini agent as an advisory pull request reviewer | Proposed |
 | [0015](0015-flutter-for-the-mobile-apps.md) | Flutter for the mobile apps | Proposed |
-| [0016](0016-church-trust-hierarchy-verification-model.md) | Church trust hierarchy as the verification model | Proposed |
+| [0016](0016-church-trust-hierarchy-verification-model.md) | Church trust hierarchy as the verification model | Accepted |
+| [0017](0017-authorisation-by-status.md) | Authorisation by status | Proposed |
 
 ADR-0014 (real-time chat over WebSocket) is reserved: it is written with the chat work, after the spike described in [android/chat-design.md](../android/chat-design.md) section 6.

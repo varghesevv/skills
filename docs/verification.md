@@ -6,7 +6,7 @@ Skills is a closed, high-trust community that spans several sister organisations
 
 Trust follows the shape of a church: the minister at the top, then the home group leaders, then the members of their groups. Every change to a person's status records who made it, so every member has a chain of trust that leads back to the top.
 
-Draft, 2026-11-12. These rules replace those agreed with the product owner on 2026-10-24.
+Accepted, 2026-11-12 ([ADR-0016](adr/0016-church-trust-hierarchy-verification-model.md)). These rules replace those agreed with the product owner on 2026-10-24.
 
 ## Context
 
