@@ -111,7 +111,7 @@ UNIQUE (applicant_id, voucher_id). A vouch is *live* when it is not withdrawn an
 | vouch_links | id, person_id FK (the applicant), token_hash text UNIQUE, expires_at, revoked_at, created_at |
 | group_invitations | id, home_group_id FK, created_by_id FK people, token_hash text UNIQUE, expires_at, revoked_at, created_at |
 
-Tokens are long random values; only the hash is stored (open detail O-01 fixes length, lifetime and limits).
+Tokens are long random values; only the hash is stored (length, lifetime and limits: decision D-16).
 
 ### group_requests
 id, requester_id FK people, church_id FK, group_name varchar(200), state text CHECK in (open, approved, declined), decided_by_id FK people null, decided_at null, created_at. At most one open request per requester (partial unique index).

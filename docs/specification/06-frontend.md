@@ -2,58 +2,57 @@
 
 The Android app is specified in [docs/android/](../android/plan.md); its screens mirror the portals below ([parity table](../android/parity.md)).
 
-Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React app, role-based portals sharing components. API access only through the generated client.
+Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React app; the screens shown depend on the person's status and share components. API access only through the generated client.
 
-## Portals and pages
+## Screens by status
+
+One React app and one login. After login the app reads `GET /me` and shows the screens that the person's **status** allows (ADR-0017); there are no separate portals and no login page per kind of account. A higher status sees everything the lower ones see, plus its own screens. Words come from the terminology profile (below).
 
 ### Public
-Landing, register (choose user type), forgot and reset password, and three login pages, each tied to one kind of account (the page, not a dropdown, decides the `user_type` sent to the API):
+Landing, log in, forgot and reset password, and the **sign-up wizard**: details (name, email, mobile number, password), choose a church, choose a home group (each with its leader's name), and choose to apply as a searcher or a provider. A group invitation link (`/join/<token>`) skips the church and group steps. A vouch link (`/vouch/<token>`) asks the visitor to log in first, then shows who is asking and lets an admitted person vouch.
 
-| Page | Address | For |
-|---|---|---|
-| Log in | `/login` and `/login/workhost` | Freelancers and work hosts. Two links at the top of the form switch between them. |
-| Organisation log in | `/login/organisation` | Organisations only. States that a new organisation needs admin approval. Links to organisation sign-up. |
-| Admin log in | `/login/admin` | Admins only. No sign-up link (admins are created by operators). |
+### Applicant (PENDING)
+Application status (church, home group, who the leader is, what they applied for), the vouches received, the person's own vouch link to share, change of church, group or choice, and leave (close the account). Nothing else.
 
-The login pages do not link to each other except the Freelancer / Work host switch; the organisation and admin addresses are shared directly.
+### Revoked
+A single page saying the account has no access, with log out and password reset.
 
-A visitor who opens a protected address is sent to the login page that fits it (for example `/admin/reports` leads to the admin login). Old links of the form `/login?type=organisation` are redirected.
+### Searcher (SEARCHER and above)
+Dashboard; profile; provider search with filters and sorting; provider detail; rate a provider; my ratings given; vouch for applicants through links; share my vouch link when applying to provide; request to start a home group; move requests that concern me; notifications.
 
-### Freelancer portal
-Dashboard; profile; rate and currency; labels (skills with levels, languages, timings, nativity); unavailability calendar; my ratings; my organisation vouches.
+### Provider (PROVIDER and above)
+Everything a searcher has, plus rate and currency; labels (skills with levels, languages, timings, nativity); unavailability calendar; my ratings received; who vouched for me.
 
-### Work host portal
-Dashboard; profile and available days; freelancer search with filters and sorting; freelancer detail; rate a freelancer; my ratings given.
+### Verifier (VERIFIER and above, within scope)
+Applicants with their vouches (most-vouched first) with admit and decline; members; the revoked list with revoke and reinstate; people flagged for re-checking, shown prominently, with re-confirm; the group's invitation link; move agreements; the step-down and succession screens; the leader's view of a person, including the mobile number (privacy rules in [07](07-non-functional.md)).
 
-### Organisation portal
-Dashboard; profile; vouched freelancers (add, revoke, status); organisation reports.
+### ADMIN
+Everything a verifier has for every group in the church, plus: group requests (approve, decline), appoint or replace a group leader, move members, the church's people and revoked list, and church reports.
 
-### Admin portal
-Organisation approvals (waiting, approved and rejected lists; approve or reject); label management (add, rename, deactivate or reactivate, by kind); report pages for all reports (date range plus each report's own filters, table on screen, CSV download); report history (kept runs with CSV and HTML downloads, and running and keeping a report for chosen dates); and schedule editing. Charts are not built yet; tables and CSV cover the reports.
+### OWNER (web only)
+Everything an ADMIN has for every church, plus: churches (create by inviting an ADMIN, close), invitations, replace a church's ADMIN, label management (add, rename, deactivate or reactivate, by kind), all reports (date range plus each report's own filters, table on screen, CSV download), report history and schedules, and the OWNER handover. Charts are not built yet; tables and CSV cover the reports.
 
 ## Installation terminology
 
-Screen text refers to the three kinds of people through tokens such as `{organisation}`,
-`{Workhosts}` and `{a_freelancer}` (see `src/terminology/terms.ts`). The words and the web-address
+Screen text refers to the kinds of people and the structure through tokens such as `{church}`, `{home_group}`, `{Searchers}`, `{a_provider}`, `{verifier}`, `{admin}` and `{owner}` (see `src/terminology/terms.ts`). The words and the web-address
 segments come from the active profile in `src/terminology/profiles.json` (key/value pairs, one block
 per profile). The profile is chosen per installation: the web server serves `/config.json` from its
 `TERMINOLOGY_PROFILE` setting and the app reads it before it starts (development uses
-`VITE_TERMINOLOGY_PROFILE`). An unknown name falls back to `default`. Portal, login and register
-addresses are built from the profile (`/church`, `/login/church`, `/register/church`), while API
-paths, `user_type` values, report files and emails are unchanged.
+`VITE_TERMINOLOGY_PROFILE`). An unknown name falls back to `default`. Web addresses that carry a word (for example the provider pages) are built from the profile, while API
+paths, status values, report files and emails never change with the words. The keys for searcher, provider, verifier, admin, owner, church and home group are added in S2.9; the backend and web copies of the profiles stay equal.
 
 ## UI requirements
 
 - Responsive web design (RWD) on every page, see the next section.
 - Accessible: keyboard navigation, labels on inputs, sufficient contrast (WCAG 2.1 AA target).
 - Form validation with zod mirroring API rules; show API error messages clearly.
-- Access token kept in memory; silent refresh using the refresh token; log out on refresh failure.
+- The screens shown depend on the status from `GET /me`, which is read again on every start and after every `403`. The access token is kept in memory; silent refresh using the refresh token; log out on refresh failure.
 - Loading, empty and error states for every list and page.
 - Strings kept in a translation file so more languages can be added (Q9).
 
 ## Responsive web design
 
-Every page, in every portal, works on phones, tablets and desktops. This is a release 1 requirement, not a later polish step.
+Every page, for every status, works on phones, tablets and desktops. This is a release 1 requirement, not a later polish step.
 
 ### Approach
 - Mobile first: base styles are for the smallest screen; larger screens add rules with `min-width` media queries.
@@ -73,8 +72,8 @@ Every page, in every portal, works on phones, tablets and desktops. This is a re
 - **Navigation:** a top bar with a menu button on mobile, a collapsible side menu on tablet, a persistent side menu on desktop.
 - **Tables** (search results, report sections, run history): on mobile each row becomes a stacked card or the table scrolls horizontally inside its own container; the page itself never scrolls sideways. Key columns stay visible. Report pages keep all columns reachable on every size.
 - **Forms:** single column on mobile, two columns where it helps on wider screens; labels always visible; correct `type`, `inputmode` and `autocomplete` values so phones show the right keyboard.
-- **Mobile number:** shown as a greyed placeholder with a **Reveal** button on work host search results and the freelancer detail page. Reveal calls the server; on a touch device (`hover: none` and `pointer: coarse`) it then opens the dialler, otherwise it shows the number as a `tel:` link. The number lives only in the component state. A refused request (limit reached) shows the wait time and the button stays available.
-- **Filters** on freelancer search: a slide-in panel on mobile and tablet, a side panel on desktop.
+- **Mobile number:** shown as a greyed placeholder with a **Reveal** button on searcher search results and the provider detail page. Reveal calls the server; on a touch device (`hover: none` and `pointer: coarse`) it then opens the dialler, otherwise it shows the number as a `tel:` link. The number lives only in the component state. A refused request (limit reached) shows the wait time and the button stays available.
+- **Filters** on provider search: a slide-in panel on mobile and tablet, a side panel on desktop.
 - **Calendar** (unavailability): month view on tablet and desktop, list view on mobile.
 - **Dialogs and menus:** full-screen sheets on mobile, centred dialogs on larger screens; focus is trapped and returned on close.
 - **Images and charts:** scale to the container; charts redraw on resize.
