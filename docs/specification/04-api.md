@@ -17,7 +17,7 @@ This file is the **target** contract of the church trust model. `/api/v1` is cha
 ## Authorisation by status
 
 - The access token identifies the person only. On **every** request the server loads the person (status, closed flag, church, home group) and decides with the permission module (`inScope`, `canSetStatus`, `canAdmit`, ADR-0017). A status change therefore takes effect on the next request. Clients learn the status from `GET /me`, never from the token.
-- "**at least X**" below means that status or any higher one. Closed accounts and unknown tokens get `401`. A **revoked** person can still log in (correct password) but every endpoint except `/me`, `/auth/logout` and `/app/config` answers `403 account_revoked`. A **pending** applicant may call only `/me`, `/me/application`, `/me/vouch-link`, `/me/notifications`, `/churches` and `/churches/{id}/home-groups`, the auth endpoints and `/app/config`; everything else is `403 not_admitted`.
+- "**at least X**" below means that status or any higher one. Closed accounts and unknown tokens get `401`. A **revoked** person can still log in (correct password) but every endpoint except `/me`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password` and `/app/config` answers `403 account_revoked`, so they keep their session and can see why they have no access. A **pending** applicant may call only `/me`, `/me/application`, `/me/vouch-link`, `/me/notifications`, `/churches` and `/churches/{id}/home-groups` (which are public anyway), the auth endpoints and `/app/config`; everything else is `403 not_admitted`.
 - The scope of a verifier: a VERIFIER acts on people of their own home group (and people revoked from it), an ADMIN on their church, the OWNER on everyone. Out of scope is `404 not_found` for a person who exists, so existence is not revealed.
 - A request that breaks a rule of the model (for example setting a status the actor may not set, or ending leadership without a successor) is `409` with a specific code, listed at the end.
 
@@ -35,7 +35,7 @@ This file is the **target** contract of the church trust model. `/api/v1` is cha
 ### Auth
 | Method | Path | Notes |
 |---|---|---|
-| POST | /auth/signup | Public. `full_name`, `email`, `mobile_number`, `password`, `requested_status` (`searcher` or `provider`), and either `home_group_id` or `invitation_token` (a group invitation link, which selects the church and group). Creates a PENDING person in that group and notifies its leader. `409 email_taken` or `409 mobile_taken` when an open account (revoked ones included) has it, without saying which person. |
+| POST | /auth/signup | Public. `full_name`, `email`, `mobile_number`, `password`, `requested_status` (`searcher` or `provider`), and either `home_group_id` or `invitation_token` (a group invitation link, which selects the church and group). Creates a PENDING person in that group and notifies its leader. `409 account_exists` when an open account (revoked ones included) already has the email or the mobile number; one code for both, so the answer does not say which identifier matched or whose it is. Rate limited per IP. |
 | POST | /auth/login | body: `email`, `password`. One login for everyone. Returns access and refresh tokens |
 | POST | /auth/refresh | rotates refresh token |
 | POST | /auth/logout | revokes refresh token |
@@ -70,8 +70,8 @@ Auth behaviour:
 ### Churches and home groups
 | Method | Path | Notes |
 |---|---|---|
-| GET | /churches | At least PENDING; also open to the sign-up flow (open detail O-06). Open churches by name: `id`, `name`. No contact details. |
-| GET | /churches/{id}/home-groups | Same access. Open groups: `id`, `name`, `leader_name`. |
+| GET | /churches | **Public** (the sign-up screen has no token), rate limited per IP. Open churches by name: `id`, `name`. No contact details. |
+| GET | /churches/{id}/home-groups | Public, rate limited per IP like the one above. Open groups: `id`, `name`, `leader_name` (a name is needed to choose a group; no other detail about the leader). Whether to hide leader names from anonymous callers is open detail O-06. |
 | GET | /group-invitations/{token} | Public, rate limited. Church and group names for the sign-up screen. `404` for anything wrong, alike. |
 
 ### Vouching
@@ -166,7 +166,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`email_taken`, `mobile_taken`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`, `invitation_invalid`.
+`account_exists`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`, `invitation_invalid`.
 
 ## Authorisation rules (summary)
 
