@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/core/api/api_client.dart';
 import 'package:skills_app/core/api/api_exception.dart';
 import 'package:skills_app/core/auth/auth_repository.dart';
+import 'package:skills_app/core/auth/me.dart';
 
 import '../../support/memory_token_store.dart';
 
@@ -158,7 +159,7 @@ void main() {
 
   test('an organisation shows its name', () async {
     adapter.reply('GET', '/me', FakeReply(200, meJson('organisation')));
-    expect((await auth.me()).displayName, 'Example Org');
+    expect(((await auth.me()) as Me).displayName, 'Example Org');
   });
 
   test('restoreSession returns null without a saved session', () async {
@@ -185,7 +186,10 @@ void main() {
         FakeReply(200, tokens(fresh('a'), fresh('r'))),
       )
       ..reply('GET', '/me', FakeReply(200, meJson('freelancer')));
-    expect((await repo.restoreSession())?.userType, UserType.freelancer);
+    expect(
+      ((await repo.restoreSession()) as Me?)?.userType,
+      UserType.freelancer,
+    );
   });
 
   test(

@@ -16,7 +16,7 @@ class Terms {
   }
 
   static final _token = RegExp(r'\{(A_|a_)?([A-Za-z]+)\}');
-  static const _kinds = {'organisation', 'workhost', 'freelancer'};
+  static const _kinds = {'organisation', 'workhost', 'freelancer', 'homegroup'};
 
   /// Replaces the term tokens in a text:
   /// `{organisation}` gives the word in lower case, `{Organisation}` as written,

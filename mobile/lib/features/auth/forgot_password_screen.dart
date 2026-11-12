@@ -12,9 +12,10 @@ import 'auth_widgets.dart';
 /// Asks for a reset link. The answer is always the same text, whether or not an account exists.
 /// The link itself opens in the browser (version 1).
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
-  const ForgotPasswordScreen({super.key, required this.type});
+  const ForgotPasswordScreen({super.key, this.type});
 
-  final UserType type;
+  /// Null for a person of the church trust model (no account type is sent).
+  final UserType? type;
 
   @override
   ConsumerState<ForgotPasswordScreen> createState() =>
@@ -47,7 +48,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           .read(apiClientProvider)
           .post(
             '/auth/forgot-password',
-            body: {'email': _email.text.trim(), 'user_type': widget.type.wire},
+            body: {
+              'email': _email.text.trim(),
+              if (widget.type != null) 'user_type': widget.type!.wire,
+            },
             auth: false,
           );
       if (mounted) setState(() => _sent = true);

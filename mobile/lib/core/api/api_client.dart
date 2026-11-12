@@ -51,7 +51,8 @@ class ApiClient {
   Future<Object?> patch(String path, {Object? body}) =>
       _request('PATCH', path, body: body);
 
-  Future<Object?> delete(String path) => _request('DELETE', path);
+  Future<Object?> delete(String path, {Object? body}) =>
+      _request('DELETE', path, body: body);
 
   /// Trades the refresh token for new tokens. Concurrent callers share one request.
   Future<bool> refreshSession() {

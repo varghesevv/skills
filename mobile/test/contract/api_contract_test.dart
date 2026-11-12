@@ -119,6 +119,13 @@ void main() {
       'POST /freelancers/me/unavailability': '201',
       'PUT /freelancers/me/unavailability/{period_id}': '200',
       'DELETE /freelancers/me/unavailability/{period_id}': '204',
+      // The church trust model (docs/specification/04-api.md).
+      'POST /auth/signup': '201',
+      'GET /churches': '200',
+      'GET /churches/{church_id}/home-groups': '200',
+      'POST /group-invitations/lookup': '200',
+      'PUT /me/application': '200',
+      'DELETE /me': '204',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -130,6 +137,80 @@ void main() {
           reason: '$call should answer $status',
         );
       });
+    });
+  });
+
+  group('the church trust model', () {
+    test('a person answer has the fields `PersonMe` reads', () {
+      expect(
+        properties('PersonMeResponse'),
+        containsAll([
+          'user_type',
+          'id',
+          'full_name',
+          'email',
+          'mobile_number',
+          'status',
+          'requested_status',
+          'church',
+          'home_group',
+          'leader',
+          'status_set_by',
+          'flagged_for_recheck',
+          'vouch_count',
+        ]),
+      );
+      expect(
+        responseSchema('PUT', '/me/application', '200'),
+        'PersonMeResponse',
+      );
+    });
+
+    test('the sign-up body carries what the wizard sends', () {
+      expect(requestSchema('POST', '/auth/signup'), 'SignupRequest');
+      expect(
+        properties('SignupRequest'),
+        containsAll([
+          'full_name',
+          'email',
+          'mobile_number',
+          'password',
+          'requested_status',
+          'home_group_id',
+          'invitation_token',
+        ]),
+      );
+      expect(required('SignupRequest'), {
+        'full_name',
+        'email',
+        'mobile_number',
+        'password',
+        'requested_status',
+      });
+    });
+
+    test('the lists the wizard reads', () {
+      expect(responseSchema('GET', '/churches', '200'), 'ChurchList');
+      expect(properties('ChurchSummary'), {'id', 'name'});
+      expect(properties('HomeGroupSummary'), {'id', 'name', 'leader_name'});
+      expect(properties('GroupInvitationInfo'), {
+        'church_name',
+        'home_group_name',
+        'leader_name',
+      });
+    });
+
+    test('a link token travels in the body, not in an address', () {
+      expect(
+        requestSchema('POST', '/group-invitations/lookup'),
+        'GroupInvitationLookup',
+      );
+      expect(properties('GroupInvitationLookup'), {'token'});
+    });
+
+    test('closing the account sends the password', () {
+      expect(requestSchema('DELETE', '/me'), 'CloseAccountRequest');
+      expect(properties('CloseAccountRequest'), {'password'});
     });
   });
 
