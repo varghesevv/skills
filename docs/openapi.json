@@ -1381,6 +1381,12 @@
               }
             ]
           },
+          "user_type": {
+            "const": "person",
+            "default": "person",
+            "title": "User Type",
+            "type": "string"
+          },
           "vouch_count": {
             "minimum": 0.0,
             "title": "Vouch Count",

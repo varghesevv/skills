@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -37,6 +37,7 @@ class IdName(BaseModel):
 class PersonMeResponse(BaseModel):
     """The calling person, as `GET /me` shows them (the status is never in the token)."""
 
+    user_type: Literal["person"] = "person"  # tells this answer from the older MeResponse
     id: uuid.UUID
     full_name: str
     email: str

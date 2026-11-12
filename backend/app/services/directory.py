@@ -16,12 +16,17 @@ from app.schemas.church import (
 )
 from app.services.permissions import live_vouches
 
+# The number of churches and groups is small and set by the operators; this is a safety net so the
+# public lists can never grow without bound.
+MAX_LISTED = 500
+
 
 def open_churches(db: Session) -> list[ChurchSummary]:
     rows = db.execute(
         select(Church.id, Church.name)
         .where(Church.closed_at.is_(None))
         .order_by(func.lower(Church.name))
+        .limit(MAX_LISTED)
     ).all()
     return [ChurchSummary(id=row.id, name=row.name) for row in rows]
 
@@ -37,6 +42,7 @@ def open_home_groups(db: Session, church_id: uuid.UUID) -> list[HomeGroupSummary
         .join(Person, Person.id == HomeGroup.leader_id)
         .where(HomeGroup.church_id == church_id, HomeGroup.closed_at.is_(None))
         .order_by(func.lower(HomeGroup.name))
+        .limit(MAX_LISTED)
     ).all()
     return [
         HomeGroupSummary(id=row.id, name=row.name, leader_name=row.full_name or "") for row in rows

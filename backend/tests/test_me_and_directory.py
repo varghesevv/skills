@@ -177,6 +177,25 @@ def test_a_revoked_person_cannot_change_their_details(client: TestClient, world:
     assert response.json()["error"]["code"] == "account_revoked"
 
 
+def test_put_me_needs_a_token(client: TestClient) -> None:
+    assert client.put(f"{API}/me", json={"full_name": "Someone"}).status_code == 401
+
+
+@pytest.mark.parametrize("user_type", ["workhost", "freelancer", "organisation", "admin"])
+def test_put_me_refuses_the_older_accounts(
+    client: TestClient, session: Session, user_type: str
+) -> None:
+    older = signup(client, session, user_type, f"old-{user_type}@example.com")
+    response = client.put(f"{API}/me", headers=older.headers, json={"full_name": "Changed Name"})
+    assert response.status_code == 403
+    after = client.get(f"{API}/me", headers=older.headers).json()
+    assert after.get("full_name") != "Changed Name"
+
+
+def test_the_two_answers_of_me_can_be_told_apart(client: TestClient, world: World) -> None:
+    assert me(client, add_member(world, "searcher"))["user_type"] == "person"
+
+
 # ---- the public lists ---------------------------------------------------------------------------
 
 
@@ -266,3 +285,31 @@ def test_the_public_lists_are_limited_per_ip(
         assert blocked.json()["error"]["code"] == "rate_limited"
     finally:
         get_settings.cache_clear()
+
+
+def test_each_ip_address_has_its_own_limit(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.main import app
+
+    monkeypatch.setenv("PUBLIC_LIST_MAX_PER_MINUTE", "2")
+    get_settings.cache_clear()
+    try:
+        with (
+            TestClient(app, client=("198.51.100.1", 1)) as first,
+            TestClient(app, client=("198.51.100.2", 1)) as second,
+        ):
+            assert [first.get(f"{API}/churches").status_code for _ in range(3)] == [200, 200, 429]
+            assert second.get(f"{API}/churches").status_code == 200  # another address, own bucket
+    finally:
+        get_settings.cache_clear()
+
+
+def test_the_public_lists_never_grow_without_bound(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services import directory
+
+    monkeypatch.setattr(directory, "MAX_LISTED", 1)
+    world.add_church("Zed")
+    assert len(client.get(f"{API}/churches").json()["items"]) == 1

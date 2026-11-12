@@ -59,7 +59,7 @@ Auth behaviour:
 ### Me
 | Method | Path | Notes |
 |---|---|---|
-| GET | /me | `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count` |
+| GET | /me | `user_type` (`person`, which tells this answer from the older one), `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count` |
 | PUT | /me | `full_name`, `mobile_number` (the same uniqueness as sign-up; `409 account_exists` otherwise). A field left out keeps its value; an explicit null is refused. Not for a revoked person. |
 | DELETE | /me | Closes the account. Body: `password`. Keeps the row and the history, clears the personal fields. `409 leads_a_group` or `409 leads_a_church` until succession is done (see below). |
 | PUT | /me/application | PENDING only. `home_group_id` and/or `requested_status`; the newly chosen leader is notified, vouches received still count. |
@@ -74,7 +74,7 @@ Auth behaviour:
 ### Churches and home groups
 | Method | Path | Notes |
 |---|---|---|
-| GET | /churches | **Public** (the sign-up screen has no token), rate limited per IP. Open churches by name: `id`, `name`. No contact details. |
+| GET | /churches | **Public** (the sign-up screen has no token), rate limited per IP. Open churches by name: `id`, `name`; at most 500 (the number is small and set by the operators). No contact details. |
 | GET | /churches/{id}/home-groups | Public, rate limited per IP like the one above. Open groups: `id`, `name`, `leader_name` (a name is needed to choose a group; no other detail about the leader). Leader names are shown to anonymous callers on purpose (decision D-19). |
 | GET | /group-invitations/{token} | Public, rate limited. Church and group names for the sign-up screen. `404` for anything wrong, alike. |
 
