@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/errors/error_messages.dart';
+import '../../../core/format.dart';
 import '../../../core/providers.dart';
 import '../../../shared/widgets/async_view.dart';
 import '../data/unavailability.dart';
 import '../freelancer_providers.dart';
 import 'period_sheet.dart';
-
-/// "5 Nov 2026, 9:00 AM" in the phone's own time zone.
-String formatPeriodTime(DateTime time) =>
-    DateFormat.yMMMd().add_jm().format(time.toLocal());
 
 /// The freelancer's unavailable periods, as a list (a month calendar does not fit a phone).
 class AvailabilityScreen extends ConsumerWidget {
@@ -67,6 +63,7 @@ class AvailabilityScreen extends ConsumerWidget {
     Unavailability period,
   ) async {
     final text = ref.read(appTextProvider);
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -91,18 +88,22 @@ class AvailabilityScreen extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    // Everything the answer needs is read before waiting: a screen that is closed meanwhile
+    // (sign-out, back) must not touch its `ref` or `context` afterwards.
+    final repository = ref.read(freelancerRepositoryProvider);
+    final terms = ref.read(termsProvider)!;
+    String? failure;
     try {
-      await ref
-          .read(freelancerRepositoryProvider)
-          .deleteUnavailability(period.id);
-      ref.invalidate(unavailabilityProvider);
+      await repository.deleteUnavailability(period.id);
     } catch (error) {
-      if (!context.mounted) return;
-      // A period that is already gone (deleted on another device) just disappears from the list.
-      ref.invalidate(unavailabilityProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(messageFor(error, ref.read(termsProvider)!))),
-      );
+      failure = messageFor(error, terms);
+    }
+    if (!context.mounted) return;
+    // On an error too: a period that is already gone (deleted on another device) just
+    // disappears from the list.
+    ref.invalidate(unavailabilityProvider);
+    if (failure != null) {
+      messenger.showSnackBar(SnackBar(content: Text(failure)));
     }
   }
 }

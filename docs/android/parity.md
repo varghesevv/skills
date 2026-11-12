@@ -2,13 +2,13 @@
 
 Status: created 2026-10-29 from `frontend/src/App.tsx`, `frontend/src/portals/*`, `frontend/src/api/*` and `backend/app/api/v1/*.py` on branch `feat/android-dev`. **Keep this file current in every PR** that adds, changes or drops an app screen or an endpoint. It is the definition of "the app has every web feature" ([plan](plan.md) section 5).
 
-Status values: `not started`, `in progress`, `done`, `n/a` (admin: no admin screens in the app), `backend` (needs an API PR first; the PR id is given). Test file is filled in when the screen exists.
+Status values: `not started`, `in progress`, `done`, `n/a` (admin: no admin screens in the app), `backend` (needs an API PR first; the PR id is given), `blocked: ADR-0016, Q-A8` (waits for the owner's decision on the verification model, see the note below; the screen is either not built, or built in phase 1 and to be reworked, as the note says). Test file is filled in when the screen exists.
 
 Words: the app never hard-codes the role words. The web paths below use the terminology slugs (`/church`, `/searchers`, ...); the app uses its own routes and the same words from `GET /api/v1/app/config`.
 
 ## Verification model (ADR-0016): rows that wait for a decision
 
-`docs/verification.md` (ADR-0016, Proposed, merged 2026-11-12) replaces organisation vouching with a church trust hierarchy (OWNER, ADMIN per church, VERIFIER per home group, SEARCHER and PROVIDER). `CLAUDE.md` makes it binding: where the specification still describes the older model, the verification model wins, and a request that conflicts with it must stop. The backend, the web and this table still describe the older model. Rows marked `blocked: ADR-0016, Q-A8` are the organisation-vouching screens and endpoints; they are **not built** until the owner decides in Q-A8 (see `docs/open-questions.md`). The sign-up and login screens built in phase 1 mirror today's web and will change with the new sign-up.
+`docs/verification.md` replaces organisation vouching with a church trust hierarchy (OWNER, ADMIN per church, VERIFIER per home group, SEARCHER and PROVIDER). Its ADR, ADR-0016, is still **Proposed** (draft of 2026-11-12, awaiting acceptance), but `CLAUDE.md` already makes the model binding for new work: where the specification still describes the older model, the verification model wins, and a request that conflicts with it must stop. The backend, the web and this table still describe the older model. Rows marked `blocked: ADR-0016, Q-A8` are organisation-vouching screens and endpoints that are **not built**, and the sign-up screens built in phase 1 (organisation login, role choice, register forms), which mirror today's web and **are built but will be reworked** when sign-up becomes "choose church, home group and role". Q-A8 (see `docs/open-questions.md`) asks the owner whether to build the organisation-vouching screens as the web has them today, or to wait for the specification, API and web to move to the new model. Until it is answered nothing more is built on the older model.
 
 ## 1. Pages
 
@@ -18,10 +18,10 @@ Words: the app never hard-codes the role words. The web paths below use the term
 |---|---|---|---|---|
 | Landing (`/`) | `pages/Landing.tsx` | Welcome / role choice (sign in, register) | done | `test/features/auth/auth_flow_test.dart` |
 | Log in, freelancer and work host (`/login`, `/login/<slug>`), with switch link | `pages/Login.tsx`, `pages/login/LoginForm.tsx` | Login screen per role | done (a screen per role; no switch link, the welcome screen offers each) | `test/features/auth/auth_flow_test.dart` |
-| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | done in phase 1, to be reworked with the new sign-up (ADR-0016, Q-A8) | `test/features/auth/auth_flow_test.dart` |
+| Organisation log in (`/login/organisation`), approval notice, link to sign-up | `pages/login/OrganisationLogin.tsx` | Login screen for organisation | blocked: ADR-0016, Q-A8 | `test/features/auth/auth_flow_test.dart` |
 | Admin log in (`/login/admin`) | `pages/login/AdminLogin.tsx` | none: the app never sends `user_type=admin` | n/a | |
-| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | done (the welcome screen) | `test/features/auth/auth_flow_test.dart` |
-| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | done in phase 1, to be reworked with the new sign-up: church, home group and role are chosen at sign-up (ADR-0016, Q-A8) | `test/features/auth/auth_flow_test.dart` |
+| Register choice (`/register`) | `pages/Register.tsx` | Register: choose role | blocked: ADR-0016, Q-A8 | `test/features/auth/auth_flow_test.dart` |
+| Register freelancer / work host / organisation (`/register/:type`) | `pages/Register.tsx` | Register forms (same validation as `shared/validation.ts`) | blocked: ADR-0016, Q-A8 | `test/features/auth/auth_flow_test.dart` |
 | Forgot password (`/forgot-password`) | `pages/ForgotPassword.tsx` | Forgot password (always shows the generic confirmation) | done | `test/features/auth/auth_flow_test.dart` |
 | Reset password (`/reset-password?token=`) | `pages/ResetPassword.tsx` | v1: link opens in the browser; no app screen | n/a (v1) | |
 | Not found | `pages/NotFound.tsx` | Unknown-route screen | not started | |

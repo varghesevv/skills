@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/core/date_time_picker.dart';
 import 'package:skills_app/core/validation/validators.dart';
-import 'package:skills_app/features/freelancer/availability/availability_screen.dart';
+import 'package:skills_app/core/format.dart';
+import 'package:skills_app/core/providers.dart';
 import 'package:skills_app/features/freelancer/data/unavailability.dart';
 
 import '../../support/fake_api.dart';
@@ -384,8 +388,7 @@ void main() {
       expect(find.byKey(const Key('period-p1')), findsNothing);
       expect(
         find.text(
-          'You have no unavailable periods. Freelancers see you as available.'
-              .replaceAll('Freelancers', 'Work hosts'),
+          'You have no unavailable periods. Work hosts see you as available.',
         ),
         findsOneWidget,
       );
@@ -419,6 +422,66 @@ void main() {
         expect(find.byKey(const Key('period-p1')), findsNothing);
       },
     );
+  });
+
+  group('closing the screen while a request is in flight', () {
+    testWidgets(
+      'a delete answered after sign-out does not touch the closed screen',
+      (tester) async {
+        final app = await openAvailability(
+          tester,
+          periods: [period('p1', nov5, nov8)],
+        );
+        final gate = Completer<void>();
+        app.adapter.reply(
+          'DELETE',
+          '/freelancers/me/unavailability/p1',
+          FakeReply(204, null, const {}, gate.future),
+        );
+        await tester.tap(find.byKey(const Key('delete-p1')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('confirm-delete')));
+        await tester.pump();
+        // The session ends (the server rejected the refresh token): the screen is closed.
+        ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))
+            .read(sessionExpiredProvider.notifier)
+            .signal();
+        await tester.pumpAndSettle();
+        expect(
+          find.text('I need to hire'),
+          findsOneWidget,
+        ); // back on the welcome screen
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('a failed delete answered after sign-out is also harmless', (
+      tester,
+    ) async {
+      final app = await openAvailability(
+        tester,
+        periods: [period('p1', nov5, nov8)],
+      );
+      final gate = Completer<void>();
+      app.adapter.reply(
+        'DELETE',
+        '/freelancers/me/unavailability/p1',
+        FakeReply(503, apiError('service_unavailable'), const {}, gate.future),
+      );
+      await tester.tap(find.byKey(const Key('delete-p1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-delete')));
+      await tester.pump();
+      ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))
+          .read(sessionExpiredProvider.notifier)
+          .signal();
+      await tester.pumpAndSettle();
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('accessibility', () {

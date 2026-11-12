@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/date_time_picker.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/format.dart';
 import '../../../core/providers.dart';
 import '../../../core/validation/validators.dart';
 import '../../../shared/widgets/message_banner.dart';
 import '../data/unavailability.dart';
 import '../freelancer_providers.dart';
-import 'availability_screen.dart';
 
 /// Add or change one unavailable period. Pops `true` after it was saved.
 class PeriodSheet extends ConsumerStatefulWidget {
