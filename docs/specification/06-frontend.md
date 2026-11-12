@@ -6,13 +6,15 @@ Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React
 
 ## Screens by status
 
+**Transition.** The older portals and their login and register pages stay until slice S5.6 removes them (decision D-20). Until then the screens of this section that exist live at their own addresses next to them: sign in at `/sign-in`, joining at `/sign-up`, an invitation link at `/join/<token>`, and the home of a person at `/member`. S5.6 moves them to `/login`, `/signup` and `/` and removes the older pages. A person who opens an address of an older portal is sent to `/member`, and an older account that opens `/member` is sent to its own portal.
+
 One React app and one login. After login the app reads `GET /me` and shows the screens that the person's **status** allows (ADR-0017); there are no separate portals and no login page per kind of account. A higher status sees everything the lower ones see, plus its own screens. Words come from the terminology profile (below).
 
 ### Public
 Landing, log in, forgot and reset password, and the **sign-up wizard**: details (name, email, mobile number, password), choose a church, choose a home group (each with its leader's name), and choose to apply as a searcher or a provider. A group invitation link (`/join/<token>`) skips the church and group steps. A vouch link (`/vouch/<token>`) asks the visitor to log in first, then shows who is asking and lets an admitted person vouch.
 
 ### Applicant (PENDING)
-Application status (church, home group, who the leader is, what they applied for), the vouches received, the person's own vouch link to share, change of church, group or choice, and leave (close the account). Nothing else.
+Application status (church, home group, who the leader is, what they applied for), the vouches received, the person's own vouch link to share, change of church, group or choice, and leave (close the account, with the password asked again). Nothing else. Built in S2.7, except the vouch link, which arrives with vouching (S3).
 
 ### Revoked
 A single page saying the account has no access, with log out and password reset.

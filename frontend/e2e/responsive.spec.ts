@@ -49,6 +49,23 @@ const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: 'member sign in',
+    role: null,
+    path: '/sign-in',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+    },
+  },
+  {
+    name: 'member sign up',
+    role: null,
+    path: '/sign-up',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Join' })).toBeVisible()
+      await expect(page.getByLabel('New password')).toBeVisible()
+    },
+  },
+  {
     name: 'register',
     role: null,
     path: '/register/freelancer',

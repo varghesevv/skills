@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext'
-import { RequireAuth, RequireRole } from './auth/guards'
+import { RequireAuth, RequireOlderAccount, RequirePerson, RequireRole } from './auth/guards'
 import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
@@ -10,14 +10,18 @@ import AdminLogin from './pages/login/AdminLogin'
 import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
+import PersonHome from './pages/person/PersonHome'
+import PersonSignIn from './pages/person/PersonSignIn'
+import SignUp from './pages/person/SignUp'
 import ResetPassword from './pages/ResetPassword'
-import { PORTALS } from './portals/config'
+import { PERSON_HOME, PERSON_SIGN_IN, PERSON_SIGN_UP, PORTALS } from './portals/config'
 import { freelancerRoutes } from './portals/freelancer/routes'
 import { adminRoutes } from './portals/admin/routes'
 import { organisationRoutes } from './portals/organisation/routes'
 import { workhostRoutes } from './portals/workhost/routes'
 import { slugOf } from './terminology/terms'
 import AppShell from './shell/AppShell'
+import PersonLayout from './shell/PersonLayout'
 import PublicLayout from './shell/PublicLayout'
 
 export default function App() {
@@ -36,25 +40,35 @@ export default function App() {
           <Route path="login/admin" element={<AdminLogin />} />
           <Route path="register" element={<RegisterChoice />} />
           <Route path="register/:type" element={<Register />} />
+          <Route path={PERSON_SIGN_IN.slice(1)} element={<PersonSignIn />} />
+          <Route path={PERSON_SIGN_UP.slice(1)} element={<SignUp />} />
+          <Route path="join/:token" element={<SignUp />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route element={<RequireAuth />}>
-          <Route element={<AppShell />}>
-            {PORTALS.map((portal) => (
-              <Route
-                key={portal.path}
-                path={portal.path}
-                element={<RequireRole role={portal.userType} />}
-              >
-                <Route index element={<Dashboard />} />
-                {portal.userType === 'freelancer' && freelancerRoutes}
-                {portal.userType === 'workhost' && workhostRoutes}
-                {portal.userType === 'organisation' && organisationRoutes}
-                {portal.userType === 'admin' && adminRoutes}
-              </Route>
-            ))}
+          <Route element={<RequirePerson />}>
+            <Route element={<PersonLayout />}>
+              <Route path={PERSON_HOME.slice(1)} element={<PersonHome />} />
+            </Route>
+          </Route>
+          <Route element={<RequireOlderAccount />}>
+            <Route element={<AppShell />}>
+              {PORTALS.map((portal) => (
+                <Route
+                  key={portal.path}
+                  path={portal.path}
+                  element={<RequireRole role={portal.userType} />}
+                >
+                  <Route index element={<Dashboard />} />
+                  {portal.userType === 'freelancer' && freelancerRoutes}
+                  {portal.userType === 'workhost' && workhostRoutes}
+                  {portal.userType === 'organisation' && organisationRoutes}
+                  {portal.userType === 'admin' && adminRoutes}
+                </Route>
+              ))}
+            </Route>
           </Route>
         </Route>
       </Routes>

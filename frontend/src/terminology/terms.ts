@@ -39,7 +39,7 @@ export function term(key: string): string {
   return value
 }
 
-const KINDS = ['organisation', 'workhost', 'freelancer'] as const
+const KINDS = ['organisation', 'workhost', 'freelancer', 'homegroup'] as const
 
 function article(word: string): string {
   return /^[aeiou]/i.test(word) ? 'an' : 'a'

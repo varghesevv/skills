@@ -1,5 +1,12 @@
 import { request } from './http'
-import type { Me, RegisterResponse, RegisterType, TokenResponse, UserType } from './types'
+import type {
+  AnyMe,
+  AuthUserType,
+  RegisterResponse,
+  RegisterType,
+  TokenResponse,
+  UserType,
+} from './types'
 
 export function loginRequest(body: { email: string; password: string; user_type: UserType }) {
   return request<TokenResponse>('/auth/login', { method: 'POST', body, auth: false })
@@ -21,7 +28,7 @@ export function logoutRequest(refreshToken: string) {
   })
 }
 
-export function forgotPasswordRequest(body: { email: string; user_type: UserType }) {
+export function forgotPasswordRequest(body: { email: string; user_type: AuthUserType }) {
   return request<{ status: string }>('/auth/forgot-password', {
     method: 'POST',
     body,
@@ -34,5 +41,5 @@ export function resetPasswordRequest(body: { token: string; new_password: string
 }
 
 export function fetchMe() {
-  return request<Me>('/me')
+  return request<AnyMe>('/me')
 }

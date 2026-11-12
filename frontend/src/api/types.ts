@@ -2,6 +2,8 @@
 
 export type UserType = 'freelancer' | 'workhost' | 'organisation' | 'admin'
 export type RegisterType = Exclude<UserType, 'admin'>
+/** The identity of the church trust model; the four above are the older accounts. */
+export type AuthUserType = UserType | 'person'
 
 export type TokenResponse = {
   access_token: string
@@ -19,6 +21,44 @@ export type Me = {
   org_name: string | null
   approval_status: string | null
   created_at: string
+}
+
+export type PersonStatus =
+  'revoked' | 'pending' | 'searcher' | 'provider' | 'verifier' | 'admin' | 'owner'
+export type AppliedStatus = 'searcher' | 'provider'
+export type IdName = { id: string; name: string }
+
+/** GET /me for a person of the church trust model (docs/specification/04-api.md). */
+export type PersonMe = {
+  user_type: 'person'
+  id: string
+  full_name: string
+  email: string
+  mobile_number: string
+  status: PersonStatus
+  requested_status: AppliedStatus | null
+  church: IdName
+  home_group: IdName | null
+  leader: { name: string } | null
+  status_set_by: { name: string } | null
+  flagged_for_recheck: boolean
+  vouch_count: number
+}
+
+export type AnyMe = Me | PersonMe
+
+export type ChurchSummary = { id: string; name: string }
+export type HomeGroupSummary = { id: string; name: string; leader_name: string }
+export type InvitationInfo = { church_name: string; home_group_name: string; leader_name: string }
+
+export type SignupBody = {
+  full_name: string
+  email: string
+  mobile_number: string
+  password: string
+  requested_status: AppliedStatus
+  home_group_id?: string
+  invitation_token?: string
 }
 
 export type RegisterResponse = {

@@ -4,7 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import type { UserType } from '../../api/types'
 import { useAuth } from '../../auth/AuthContext'
 import { t } from '../../i18n'
-import { landingTarget } from '../../portals/config'
+import { landingTarget, PERSON_HOME } from '../../portals/config'
 import { errorMessage } from '../../shared/errors'
 import { Alert, PasswordField, TextField } from '../../shared/ui'
 import { loginSchema, validate, type FieldErrors } from '../../shared/validation'
@@ -24,7 +24,13 @@ export default function LoginForm({ userType }: { userType: UserType }) {
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (user) return <Navigate to={landingTarget(user.user_type, from)} replace />
+  if (user)
+    return (
+      <Navigate
+        to={user.user_type === 'person' ? PERSON_HOME : landingTarget(user.user_type, from)}
+        replace
+      />
+    )
 
   function set(name: keyof typeof values, value: string) {
     setValues((current) => ({ ...current, [name]: value }))
