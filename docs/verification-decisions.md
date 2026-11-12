@@ -27,6 +27,8 @@ Add a row in the same pull request that makes the decision. Columns: the number,
 | D-17 | 2026-11-12 | A verifier sees a mobile number only in `GET /verifier/people/{id}`, one person at a time, within scope; lists never carry numbers; each call is logged without the number and the log is readable by the OWNER only. | Settles the detail of D-07. | S1.4 | decided |
 | D-18 | 2026-11-12 | Notifications are rows written in the same transaction as their event; clients poll every 60 seconds while open. | Settles the delivery part of O-02; which events notify and the retention stay open. | S1.4 | decided |
 | D-19 | 2026-11-12 | The list of churches, home groups and leader names is public, names only, rate limited at 60 requests per minute per IP. Hiding leader names from anonymous callers is not done: choosing a group needs them. | Settles O-06. | S1.4 | decided |
+| D-20 | 2026-11-13 | The new identity schema is added next to the old one (migration 0007) instead of replacing it at once. Each old table is dropped when its feature moves to the new identity; the old identity tables go last. | Keeps the backend and its tests working and CI green while the work is spread over many pull requests. The demo is still wiped at the cut-over (D-03). | S2.1 | decided |
+| D-21 | 2026-11-13 | The owner confirmed the defaults of section 8 of the roadmap (D-14) in this session and asked to proceed with S2. | Settles D-14: the planning answers are no longer assumptions. | S2 | decided |
 
 ## Open details, to be settled in the named pull request
 

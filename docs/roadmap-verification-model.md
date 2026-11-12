@@ -5,10 +5,10 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 ## 0. State (update in every pull request)
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
-- Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108).
-- In progress: S1.5 (Android documents and parity table) on `model/verification`; the specification slice S1 ends with it.
-- Next: S2 (identity and sign-up), starting with S2.1 (migration).
-- Waiting on the owner: see section 7. The planning answers were not given in writing, so the defaults of section 8 are in force. The owner allowed merging with the administrator override while the review rule stays in place (2026-11-12).
+- Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
+- In progress: S2.1 (identity schema migration) on `model/verification`.
+- Next: S2.2 (models and the permission module).
+- Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
 The first draft built all of the backend, then the web, then the mobile app. That proves nothing end to end until about the 35th pull request, so a wrong design choice would show up late and cost a lot. It is replaced by **vertical slices**: each slice delivers one capability on the backend, the web and the mobile app, with tests, and ends with a flow that can be shown. Also added after review:
@@ -60,7 +60,7 @@ Counts are targets; a pull request may split.
 
 ### S2. Identity and sign-up — 9 pull requests
 Backend first, then web and mobile.
-- [ ] 2.1 Backend: migration to the new schema (destructive for the demo; old organisation, vouch and admin tables removed) with the invariants as constraints.
+- [x] 2.1 Backend: migration `0007` adds the new identity schema (churches, home groups, people, status history, vouching, requests, notifications) next to the old tables, with the invariants as constraints and one test per rule. **Changed from the first plan** (decision D-20): the old tables are not dropped here, because dropping them would break the working code and tests; each old table is dropped in the pull request that moves its feature (tokens and login history in 2.3, identity tables with 2.6, labels and unavailability in 5.1, ratings and reveals in 5.2), and the last one removes the old identity tables.
 - [ ] 2.2 Backend: models and the permission module (`inScope`, `canSetStatus`, `canAdmit`, settable statuses) mirroring the model; one test per invariant; the permission matrix test.
 - [ ] 2.3 Backend: authentication on the new identity per ADR-0017: one login (email and password), password reset, refresh tokens and login history by person, live status check on every request.
 - [ ] 2.4 Backend: operator commands: create the OWNER with the first church and group; operator change; the old admin command removed.

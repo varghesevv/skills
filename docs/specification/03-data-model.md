@@ -2,7 +2,11 @@
 
 Decision: PostgreSQL only, SQLite is not supported (confirmed 2026-10-20, [ADR-0002](../adr/0002-postgresql-as-the-only-database.md)). Migrations: Alembic, one history, in `backend/migrations/versions/`.
 
-This file describes the **target** schema of the church trust model ([verification rules](../verification.md), [ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md)). It is built by one destructive migration in slice S2.1 (the demo data is wiped, decision D-03). Until then the code still has the older schema (work hosts, freelancers, organisations, admins); the table "Fate of the old tables" shows how each maps.
+This file describes the **target** schema of the church trust model ([verification rules](../verification.md), [ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md)). The new identity tables are added by migration `0007` (slice S2.1) next to the old ones (decision D-20); each old table is dropped in the pull request that moves its feature, and the demo data is wiped at the cut-over (decision D-03). Until then the code still has the older schema (work hosts, freelancers, organisations, admins); the table "Fate of the old tables" shows how each maps and which roadmap item drops it.
+
+## Implementation status
+
+Migration `0007` creates the tables of this file that belong to the new identity (`churches`, `home_groups`, `people`, `status_changes`, `vouches`, `vouch_links`, `group_invitations`, `group_requests`, `admin_invitations`, `handover_requests`, `move_requests`, `notifications`, `contact_views`) with all constraints of "The six invariants as database constraints", CHECKs that stop a request or invitation having two outcomes (and clear an invitation's email once it is decided), a composite foreign key that ties `last_home_group_id` to the person's church, triggers that keep a move inside one church and restrict vouches, and the functions `status_rank`, `check_church_rules` and `check_group_rules`. It leaves the old tables in place (decision D-20); the tables that still point at the old accounts (`person_labels`, `person_unavailability`, `ratings`, `phone_reveals`, `login_history`, `password_reset_tokens`, `refresh_tokens`) move in the pull requests named in the roadmap. Tests: `backend/tests/test_trust_schema.py`, one per rule, using `SET CONSTRAINTS ALL IMMEDIATE` to check at once what PostgreSQL checks at commit.
 
 ## Conventions
 
@@ -16,19 +20,21 @@ This file describes the **target** schema of the church trust model ([verificati
 
 ## Fate of the old tables
 
-| Old table | Fate |
-|---|---|
-| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. |
-| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. |
-| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. |
-| `labels` | Kept unchanged. |
-| `freelancer_labels` | Renamed `person_labels`, key `person_id`. |
-| `freelancer_unavailability` | Renamed `person_unavailability`, key `person_id`. |
-| `user_ratings` | Kept as `ratings`, with `rater_id` and `provider_id` pointing at `people`. |
-| `phone_reveals` | Kept, with `revealer_id` and `provider_id`. |
-| `login_history` | Kept; `user_type` dropped, `person_id` added. |
-| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. |
-| `report_schedules`, `report_runs` | Kept; the report set changes in S5.3. |
+| Old table | Fate | Dropped or changed by |
+|---|---|---|
+| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. | S2.6 (sign-up on `people`); removed with the other identity tables in S5.2 |
+| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. | S2.6 |
+| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. | S2.4 (operator command creates the OWNER) |
+| `labels` | Kept unchanged. | |
+| `freelancer_labels` | Renamed `person_labels`, key `person_id`. | S5.1 |
+| `freelancer_unavailability` | Renamed `person_unavailability`, key `person_id`. | S5.1 |
+| `user_ratings` | Kept as `ratings`, with `rater_id` and `provider_id` pointing at `people`. | S5.2 |
+| `phone_reveals` | Kept, with `revealer_id` and `provider_id`. | S5.2 |
+| `login_history` | Kept; `user_type` dropped, `person_id` added. | S2.3 |
+| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. | S2.3 |
+| `report_schedules`, `report_runs` | Kept; the report set changes. | S5.3 |
+
+The last pull request that removes an old table also removes the old identity tables, so the old and the new identity never coexist at the cut-over.
 
 ## Tables
 

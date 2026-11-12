@@ -6,6 +6,20 @@ APPROVAL_STATUSES = ("pending", "approved", "rejected")
 VOUCH_STATUSES = ("pending", "approved", "revoked")
 REVEAL_CHANNELS = ("dial", "show")
 REVEAL_SOURCES = ("search", "detail")
+STATUSES = ("revoked", "pending", "searcher", "provider", "verifier", "admin", "owner")
+REQUESTED_STATUSES = ("searcher", "provider")
+STATUS_CHANGE_KINDS = (
+    "signup",
+    "admit",
+    "appoint",
+    "step-down",
+    "revoke",
+    "reinstate",
+    "reconfirm",
+    "handover",
+    "operator",
+)
+GROUP_REQUEST_STATES = ("open", "approved", "declined")
 REPORT_RUN_STATUSES = ("running", "succeeded", "failed")
 
 
