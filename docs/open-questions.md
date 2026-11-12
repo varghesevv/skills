@@ -30,10 +30,11 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 | Q-A5 | May a freelancer start a chat after a work host revealed their number? | No (work host starts). Revisit with real usage |
 | Q-A6 | Attachments (photos, documents) in chat? | Text only in version 1 |
 | Q-A7 | Chat on the web? | Later; the API already supports it |
-| Q-A8 | Verification model (ADR-0016, merged 2026-11-12): build the organisation-vouching screens of the app as the web has them today (freelancer accepts or rejects a vouch; organisation vouched list, search and vouch, profile, pending approval, vouching report), or wait until the specification, API and web have moved to the church trust hierarchy? | Wait: the app does not build those screens until the owner answers. Everything that does not touch people, roles, statuses, membership, vouching or permissions continues |
 
 ## Resolved
 
+- **Q-A8** Verification model and the app: the app moves to the church trust model together with the backend and the web, on the integration branch `model/verification`. Organisation-vouching screens are not built. Resolved 2026-11-12, see [roadmap](roadmap-verification-model.md) and [ADR-0016](adr/0016-church-trust-hierarchy-verification-model.md).
+- **Church trust model, planning answers** (adopted as the defaults in section 8 of the [roadmap](roadmap-verification-model.md); recorded 2026-11-12, to be corrected here if the owner answers differently): the merge policy is in [CONTRIBUTING.md](../CONTRIBUTING.md); ADR-0016 is accepted and ADR-0017 replaces ADR-0004; the demo data may be wiped; `/api/v1` is changed in place; the OWNER replaces the platform admin and manages labels; a searcher starts a chat; closing an account keeps the trust record and removes personal details.
 - **Q10** Database: PostgreSQL only, no SQLite. Confirmed 2026-10-20. See [ADR-0002](adr/0002-postgresql-as-the-only-database.md).
 - **Q-A2** Development machine: this Linux server over Remote-SSH, with a physical phone over wireless debugging. Resolved 2026-10-29, see [android/environment.md](android/environment.md).
 

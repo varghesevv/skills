@@ -1,6 +1,8 @@
 # Android application: plan
 
-Status: draft. Read [understanding](understanding.md) first, then this plan, then [chat design](chat-design.md). The technical choices (Flutter, Riverpod, go_router, dio, secure storage, generated API models, test levels, CI and release pipeline) are in [mobile-app-plan.md](../mobile-app-plan.md) sections 3 to 7; this plan does not repeat them, it adds Android-specific work, the API additions, chat and the order of work.
+Status: draft, **retargeted 2026-11-12** to the church trust model. Phases 3 and 4 below describe the older work host and organisation roles: the searcher screens of phase 3 stay (search, detail, rate, Reveal), the organisation screens of phase 4 are dropped, and the sign-up, verifier and ADMIN screens are specified in slice S1.5 and built in slices S2 to S5 of the [roadmap](../roadmap-verification-model.md), which has the current order of work. Delete account (B3) keeps the trust record and removes personal details.
+
+Read [understanding](understanding.md) first, then this plan, then [chat design](chat-design.md). The technical choices (Flutter, Riverpod, go_router, dio, secure storage, generated API models, test levels, CI and release pipeline) are in [mobile-app-plan.md](../mobile-app-plan.md) sections 3 to 7; this plan does not repeat them, it adds Android-specific work, the API additions, chat and the order of work.
 
 ## 1. Principles
 
