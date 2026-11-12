@@ -6,9 +6,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
-- Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114).
-- In progress: S2.6 (sign-up, change of choice, group invitation link) on `model/verification`.
-- Next: S2.7 (web: login, sign-up wizard, applicant home).
+- Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115).
+- In progress: S2.7 (web: login, sign-up wizard, applicant home), starting with `DELETE /me` (leave) in the backend.
+- Next: the web screens of S2.7, then S2.8 (mobile).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -86,7 +86,7 @@ Backend first, then web and mobile.
 - [ ] 4.1 Backend: revoke, reinstate, re-check flags, re-confirm.
 - [ ] 4.2 Backend: start a home group (request and approval); invite an ADMIN, which creates a church.
 - [ ] 4.3 Backend: succession (step down and replace a leader, hand a group on) with same-transaction guarantees.
-- [ ] 4.4 Backend: move between groups by agreement; leave; close a group; close a church; closing an account keeps the trust record and removes personal details.
+- [ ] 4.4 Backend: move between groups by agreement; close a group; close a church. (Leave, which is `DELETE /me` for people who do not lead, was done early for the web applicant home: pull request in S2.7.)
 - [ ] 4.5 Backend: OWNER handover; operator change.
 - [ ] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step.
 - [ ] 4.7 Web: revoke and reinstate, flags, group requests.
@@ -97,7 +97,7 @@ Backend first, then web and mobile.
 
 ### S5. Product features on the new identity — 14 pull requests
 - [ ] 5.1 Backend: provider profile, labels, unavailability owned by the person (paths unchanged).
-- [ ] 5.2 Backend: search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers.
+- [ ] 5.2 Backend: search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers. Closed accounts keep their status as history, so every query and the reveal and rating paths must exclude `closed_at IS NOT NULL`, with a test for a closed provider.
 - [ ] 5.3 Backend: reports redefined (verification reports; the Reveal report stays); schedules; demo data generator and seed; OpenAPI export and contract.
 - [ ] 5.4 Web: member shell and navigation by status; provider pages (profile, labels, availability, ratings received).
 - [ ] 5.5 Web: searcher pages (search, detail, rate, Reveal, ratings given); settings and account.

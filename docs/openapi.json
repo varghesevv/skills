@@ -103,6 +103,22 @@
         "title": "ChurchSummary",
         "type": "object"
       },
+      "CloseAccountRequest": {
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 1024,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "CloseAccountRequest",
+        "type": "object"
+      },
       "DownloadList": {
         "properties": {
           "items": {
@@ -4160,6 +4176,44 @@
       }
     },
     "/api/v1/me": {
+      "delete": {
+        "description": "Close your own account (this is the stores' \"delete account\"). The password is asked\nagain. The record stays, the personal details go. A leader steps down first; the OWNER hands\nover; a revoked person stays on their church's list.",
+        "operationId": "close_me_api_v1_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Me",
+        "tags": [
+          "me"
+        ]
+      },
       "get": {
         "description": "The caller. A person gets the view of the church trust model (a revoked person too, to see\nwhy they have no access); the older accounts keep their older answer until they are gone.",
         "operationId": "me_api_v1_me_get",

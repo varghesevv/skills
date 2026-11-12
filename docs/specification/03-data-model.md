@@ -163,7 +163,7 @@ id uuid PK, rater_id FK people, provider_id FK people, rating smallint CHECK (ra
 id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
 
 ### login_history
-id uuid PK, person_id uuid null, login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so rows survive account closing; when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions).
+id uuid PK, person_id uuid null, login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so rows survive account closing; when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions; the column is nullable since migration `0010`).
 
 ### password_reset_tokens
 id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, used_at timestamptz null.

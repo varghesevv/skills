@@ -54,7 +54,7 @@ def _ip_filter(ip: str | None) -> ColumnElement[bool]:
     return column.is_(None) if ip is None else column == ip
 
 
-def _record(
+def record_attempt(
     db: Session,
     *,
     user_type: str,
@@ -77,7 +77,7 @@ def _record(
     )
 
 
-def _check_throttle(
+def check_throttle(
     db: Session, settings: Settings, *, user_type: str, email: str, ip: str | None, now: datetime
 ) -> None:
     """Too many recent failures for this email and IP: answer 429 before checking the password."""
@@ -166,11 +166,11 @@ def login(
 ) -> TokenResponse:
     now = datetime.now(UTC)
     ip = clean_ip(ip)
-    _check_throttle(db, settings, user_type=user_type, email=email, ip=ip, now=now)
+    check_throttle(db, settings, user_type=user_type, email=email, ip=ip, now=now)
     account = get_by_email(db, user_type, email)
 
     def record(user_id: uuid.UUID | None, *, succeeded: bool) -> None:
-        _record(
+        record_attempt(
             db,
             user_type=user_type,
             user_id=user_id,

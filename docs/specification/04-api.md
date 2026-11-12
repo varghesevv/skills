@@ -61,7 +61,7 @@ Auth behaviour:
 |---|---|---|
 | GET | /me | `user_type` (`person`, which tells this answer from the older one), `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count` |
 | PUT | /me | `full_name`, `mobile_number` (the same uniqueness as sign-up; `409 account_exists` otherwise). A field left out keeps its value; an explicit null is refused. Not for a revoked person. |
-| DELETE | /me | Closes the account. Body: `password`. Keeps the row and the history, clears the personal fields. `409 leads_a_group` or `409 leads_a_church` until succession is done (see below). |
+| DELETE | /me | Closes the account (the stores' "delete account"). Body: `password` (`403 invalid_password` if wrong; wrong passwords are counted and throttled like login, `429` with `Retry-After`). Keeps the row, the history and the vouches given (they stop counting), clears the personal fields, ends every session, reset link and vouch link, and clears the address, network address and browser of the login attempts. A person who leads gets `409 leads_a_group` (VERIFIER) or `409 leads_a_church` (ADMIN, OWNER) until succession or handover is done (S4); a revoked person cannot close their account (`403 account_revoked`). |
 | PUT | /me/application | PENDING only (`409 not_pending` otherwise, also when a leader admits the person at the same moment); an invalid group is `422 invalid_choice` and changes nothing. `home_group_id` and/or `requested_status`; the newly chosen leader is notified, vouches received still count. |
 | POST | /me/apply-provider | SEARCHER only. Sets `requested_status` to `provider` and returns the vouch link. |
 | GET | /me/vouch-link | PENDING, or a SEARCHER who applies to provide. `{"token": "...", "expires_at": "..."}`; the person shares the link `FRONTEND_BASE_URL/vouch/<token>`. |
@@ -170,7 +170,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`account_exists`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
+`account_exists`, `invalid_password`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
 
 ## Authorisation rules (summary)
 

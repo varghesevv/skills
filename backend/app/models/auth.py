@@ -16,7 +16,8 @@ class LoginHistory(UUIDPrimaryKeyMixin, Base):
 
     user_type: Mapped[str] = mapped_column(String(20))
     user_id: Mapped[uuid.UUID | None]
-    login_email: Mapped[str] = mapped_column(String(320))
+    # Cleared (with the address and the browser) when the person closes their account.
+    login_email: Mapped[str | None] = mapped_column(String(320))
     login_time: Mapped[datetime] = mapped_column(server_default=func.now())
     succeeded: Mapped[bool] = mapped_column(Boolean)
     ip_address: Mapped[str | None] = mapped_column(INET)

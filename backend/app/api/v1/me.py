@@ -1,19 +1,20 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import current_person, get_principal_even_if_revoked
+from app.api.deps import client_address, current_person, get_principal_even_if_revoked
+from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
 from app.models.church import Person
 from app.models.users import Organisation
 from app.schemas.auth import MeResponse
-from app.schemas.church import PersonMeResponse, PersonUpdate
+from app.schemas.church import CloseAccountRequest, PersonMeResponse, PersonUpdate
 from app.schemas.signup import ApplicationUpdate
-from app.services import directory, signup
+from app.services import account_closing, directory, signup
 from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
@@ -76,3 +77,25 @@ def update_application(
         db, person, home_group_id=body.home_group_id, requested_status=body.requested_status
     )
     return directory.person_view(db, person)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def close_me(
+    body: CloseAccountRequest,
+    request: Request,
+    person: Member,
+    db: Annotated[Session, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Response:
+    """Close your own account (this is the stores' "delete account"). The password is asked
+    again. The record stays, the personal details go. A leader steps down first; the OWNER hands
+    over; a revoked person stays on their church's list."""
+    account_closing.close_account(
+        db,
+        settings,
+        person,
+        body.password.get_secret_value(),
+        ip=client_address(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
