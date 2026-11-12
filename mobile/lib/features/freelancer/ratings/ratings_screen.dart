@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/error_messages.dart';
 import '../../../core/format.dart';
 import '../../../core/providers.dart';
 import '../../../shared/widgets/async_view.dart';
@@ -56,44 +55,48 @@ class _RatingsList extends ConsumerWidget {
         else ...[
           Text(text('ratings.count', {'count': '${state.total}'})),
           const SizedBox(height: 8),
-          for (final item in state.items)
+          for (final (index, item) in state.items.indexed)
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const ExcludeSemantics(
-                          child: Icon(Icons.star, size: 20),
-                        ),
-                        const SizedBox(width: 8),
-                        // Expanded: at large text the score wraps instead of running off the card.
-                        Expanded(
-                          child: Text(
-                            text('ratings.score', {'rating': '${item.rating}'}),
-                            style: theme.textTheme.titleMedium,
+              key: Key('rating-$index'),
+              // One rating is read as one item: score, comment and day together.
+              child: MergeSemantics(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const ExcludeSemantics(
+                            child: Icon(Icons.star, size: 20),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(item.comment ?? text('ratings.noComment')),
-                    const SizedBox(height: 8),
-                    Text(
-                      formatDay(item.ratedOn),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
+                          const SizedBox(width: 8),
+                          // Expanded: at large text the score wraps instead of running off the card.
+                          Expanded(
+                            child: Text(
+                              text('ratings.score', {
+                                'rating': '${item.rating}',
+                              }),
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(item.comment ?? text('ratings.noComment')),
+                      const SizedBox(height: 8),
+                      Text(
+                        formatDay(item.ratedOn),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           if (state.loadMoreError != null) ...[
             const SizedBox(height: 8),
-            MessageBanner(
-              messageFor(state.loadMoreError!, ref.watch(termsProvider)!),
-            ),
+            MessageBanner(text.error(state.loadMoreError!)),
           ],
           if (state.hasMore) ...[
             const SizedBox(height: 8),

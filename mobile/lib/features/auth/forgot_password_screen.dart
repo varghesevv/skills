@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/user_type.dart';
-import '../../core/errors/error_messages.dart';
 import '../../core/providers.dart';
 import '../../core/validation/validators.dart';
 import '../../shared/widgets/app_text_field.dart';
@@ -54,9 +53,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       if (mounted) setState(() => _sent = true);
     } catch (error) {
       if (mounted) {
-        setState(
-          () => _formError = messageFor(error, ref.read(termsProvider)!),
-        );
+        setState(() => _formError = ref.read(appTextProvider).error(error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

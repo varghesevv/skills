@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/error_messages.dart';
 import '../../../core/format.dart';
 import '../../../core/providers.dart';
 import '../../../shared/widgets/async_view.dart';
@@ -91,12 +90,11 @@ class AvailabilityScreen extends ConsumerWidget {
     // Everything the answer needs is read before waiting: a screen that is closed meanwhile
     // (sign-out, back) must not touch its `ref` or `context` afterwards.
     final repository = ref.read(freelancerRepositoryProvider);
-    final terms = ref.read(termsProvider)!;
     String? failure;
     try {
       await repository.deleteUnavailability(period.id);
     } catch (error) {
-      failure = messageFor(error, terms);
+      failure = text.error(error);
     }
     if (!context.mounted) return;
     // On an error too: a period that is already gone (deleted on another device) just

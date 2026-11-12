@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:skills_app/core/api/api_exception.dart';
 import 'package:skills_app/core/strings/app_text.dart';
 import 'package:skills_app/core/terminology/terms.dart';
 
@@ -41,5 +42,35 @@ void main() {
 
   test('an unknown key is a programming error', () {
     expect(() => church('no.such.key'), throwsStateError);
+  });
+
+  test('error gives the web wording with the role words filled in', () {
+    expect(
+      church.error(
+        const ApiException(
+          status: 403,
+          code: 'organisation_pending',
+          message: 'x',
+        ),
+      ),
+      'This church is still waiting for admin approval.',
+    );
+    expect(
+      church.error(const ApiException.network()),
+      'Cannot reach the server. Check your connection and try again.',
+    );
+  });
+
+  test('error never shows an unknown code or the server text', () {
+    const unknown = ApiException(
+      status: 500,
+      code: 'surprise',
+      message: 'internal detail',
+    );
+    expect(church.error(unknown), 'Something went wrong. Please try again.');
+    expect(
+      church.error(StateError('boom')),
+      'Something went wrong. Please try again.',
+    );
   });
 }

@@ -103,15 +103,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
       }
     } catch (error) {
-      final terms = ref.read(termsProvider)!;
+      final text = ref.read(appTextProvider);
       if (mounted) {
         setState(() {
           _errors = {
             ...serverFieldErrors(error),
             if (error is ApiException && error.code == 'email_taken')
-              'email': messageFor(error, terms),
+              'email': text.error(error),
           };
-          _formError = messageFor(error, terms);
+          _formError = text.error(error);
         });
       }
     } finally {

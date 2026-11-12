@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/error_messages.dart';
 import '../../../core/providers.dart';
 import '../../../core/strings/app_text.dart';
 import '../../../shared/widgets/async_view.dart';
@@ -113,9 +112,7 @@ class _LabelsFormState extends ConsumerState<_LabelsForm> {
       if (mounted) setState(() => _saved = true);
     } catch (error) {
       if (mounted) {
-        setState(
-          () => _formError = messageFor(error, ref.read(termsProvider)!),
-        );
+        setState(() => _formError = ref.read(appTextProvider).error(error));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

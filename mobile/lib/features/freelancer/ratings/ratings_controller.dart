@@ -5,6 +5,9 @@ import '../data/received_rating.dart';
 import '../freelancer_providers.dart';
 
 /// The ratings loaded so far, and whether more are being fetched.
+///
+/// Immutable; each change builds a whole new value, so nothing (an old error, for example) is
+/// carried over by accident.
 class RatingsState {
   const RatingsState({
     required this.items,
@@ -21,34 +24,26 @@ class RatingsState {
   final Object? loadMoreError;
 
   bool get hasMore => items.length < total;
-
-  RatingsState copyWith({
-    List<ReceivedRating>? items,
-    int? total,
-    bool? loadingMore,
-    Object? loadMoreError,
-    bool clearError = false,
-  }) => RatingsState(
-    items: items ?? this.items,
-    total: total ?? this.total,
-    loadingMore: loadingMore ?? this.loadingMore,
-    loadMoreError: clearError ? null : (loadMoreError ?? this.loadMoreError),
-  );
 }
 
 /// Loads the first page, then more on request. The list is dropped when the screen closes.
 class RatingsController extends AsyncNotifier<RatingsState> {
   int _loadedPages = 0;
 
+  /// Counts rebuilds (refresh, new session). A "Show more" answer that arrives after a rebuild
+  /// belongs to the old list and is thrown away.
+  int _generation = 0;
+
   @override
   Future<RatingsState> build() async {
+    final generation = ++_generation;
     _loadedPages = 0;
     final me = ref.watch(sessionProvider).value;
     if (me == null) return const RatingsState(items: [], total: 0);
     final page = await ref
         .read(freelancerRepositoryProvider)
         .ratings(me.id, page: 1);
-    _loadedPages = 1;
+    if (generation == _generation) _loadedPages = 1;
     return RatingsState(items: page.items, total: page.total);
   }
 
@@ -61,27 +56,41 @@ class RatingsController extends AsyncNotifier<RatingsState> {
         !current.hasMore) {
       return;
     }
-    state = AsyncData(current.copyWith(loadingMore: true, clearError: true));
+    final generation = _generation;
+    final pageToLoad = _loadedPages + 1;
+    state = AsyncData(
+      RatingsState(
+        items: current.items,
+        total: current.total,
+        loadingMore: true,
+      ),
+    );
+    RatingsState Function(RatingsState latest) next;
     try {
       final page = await ref
           .read(freelancerRepositoryProvider)
-          .ratings(me.id, page: _loadedPages + 1);
-      _loadedPages += 1;
-      state = AsyncData(
-        current.copyWith(
-          items: [...current.items, ...page.items],
-          total: page.total,
-          loadingMore: false,
-          // `current` was taken before the earlier error was cleared: clear it here too.
-          clearError: true,
-        ),
+          .ratings(me.id, page: pageToLoad);
+      next = (latest) => RatingsState(
+        items: [...latest.items, ...page.items],
+        total: page.total,
       );
     } catch (error) {
       // Keep what is on screen; the person can try again.
-      state = AsyncData(
-        current.copyWith(loadingMore: false, loadMoreError: error),
+      next = (latest) => RatingsState(
+        items: latest.items,
+        total: latest.total,
+        loadMoreError: error,
       );
     }
+    // The list may have been refreshed, the session changed or the screen closed while waiting:
+    // then this answer is for a list that no longer exists. Never write it, and never touch the
+    // page counter of the new one.
+    if (!ref.mounted || generation != _generation) return;
+    final latest = state.value;
+    if (latest == null) return;
+    final result = next(latest);
+    if (result.loadMoreError == null) _loadedPages = pageToLoad;
+    state = AsyncData(result);
   }
 }
 
