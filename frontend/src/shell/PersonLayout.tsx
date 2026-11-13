@@ -5,7 +5,12 @@ import { fetchNotifications } from '../api/person'
 import { useAuth, usePerson } from '../auth/AuthContext'
 import { t } from '../i18n'
 import { NOTIFICATIONS_KEY, NOTIFICATIONS_POLL_MS } from '../pages/person/Notifications'
-import { PERSON_HOME, PERSON_NOTIFICATIONS } from '../portals/config'
+import {
+  LEADER_APPLICANTS,
+  LEADER_MEMBERS,
+  PERSON_HOME,
+  PERSON_NOTIFICATIONS,
+} from '../portals/config'
 
 /** The signed-in frame of a person of the church trust model: a top bar with sign out. */
 export default function PersonLayout() {
@@ -19,6 +24,7 @@ export default function PersonLayout() {
     enabled: person.status !== 'revoked',
   })
   const unread = notifications.data?.unread_count ?? 0
+  const leader = ['verifier', 'admin', 'owner'].includes(person.status)
   return (
     <div className="public">
       <a className="skip-link" href="#main">
@@ -28,6 +34,16 @@ export default function PersonLayout() {
         <Link className="brand" to={PERSON_HOME}>
           {t('app.name')}
         </Link>
+        {leader && (
+          <nav className="topbar-nav" aria-label={t('leader.nav.label')}>
+            <Link className="btn btn-quiet" to={LEADER_APPLICANTS}>
+              {t('leader.nav.applicants')}
+            </Link>
+            <Link className="btn btn-quiet" to={LEADER_MEMBERS}>
+              {t('leader.nav.members')}
+            </Link>
+          </nav>
+        )}
         <div className="topbar-user">
           {person.status !== 'revoked' && (
             <Link className="btn btn-quiet" to={PERSON_NOTIFICATIONS}>

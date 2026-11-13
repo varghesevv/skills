@@ -309,3 +309,53 @@ export type ReportSchedule = {
   timezone: string
   is_enabled: boolean
 }
+
+// ---- the screens of a leader (docs/specification/04-api.md, "Verifier") ----
+
+export type Voucher = { name: string; church_name: string; live: boolean }
+export type ApplicantRow = {
+  id: string
+  full_name: string
+  requested_status: AppliedStatus | null
+  home_group: IdName
+  applied_at: string
+  vouch_count: number
+  vouchers: Voucher[]
+}
+export type MemberRow = {
+  id: string
+  full_name: string
+  status: PersonStatus
+  home_group: IdName | null
+  status_set_by: { name: string } | null
+  flagged_for_recheck: boolean
+}
+export type Paged<T> = { items: T[]; total: number }
+export type HistoryEntry = {
+  kind: string
+  from_status: string | null
+  to_status: string
+  changed_by: { name: string } | null
+  at: string
+}
+export type ChainLink = { id: string; full_name: string; status: PersonStatus }
+export type PersonDetail = {
+  id: string
+  full_name: string
+  mobile_number: string
+  status: PersonStatus
+  requested_status: AppliedStatus | null
+  church: IdName
+  home_group: IdName | null
+  status_set_by: { name: string } | null
+  flagged_for_recheck: boolean
+  applied_at: string
+  history: HistoryEntry[]
+  chain_of_trust: ChainLink[]
+  vouches: Voucher[]
+}
+export type AdmitResult = {
+  id: string
+  status: PersonStatus
+  requested_status: AppliedStatus | null
+}

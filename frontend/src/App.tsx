@@ -1,7 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext'
-import { RequireAuth, RequireOlderAccount, RequirePerson, RequireRole } from './auth/guards'
+import {
+  RequireAuth,
+  RequireLeader,
+  RequireOlderAccount,
+  RequirePerson,
+  RequireRole,
+} from './auth/guards'
 import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
@@ -10,6 +16,9 @@ import AdminLogin from './pages/login/AdminLogin'
 import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
+import Applicants from './pages/person/leader/Applicants'
+import Members from './pages/person/leader/Members'
+import PersonDetail from './pages/person/leader/PersonDetail'
 import MyVouches from './pages/person/MyVouches'
 import Notifications from './pages/person/Notifications'
 import PersonHome from './pages/person/PersonHome'
@@ -18,6 +27,9 @@ import SignUp from './pages/person/SignUp'
 import VouchPage from './pages/person/VouchPage'
 import ResetPassword from './pages/ResetPassword'
 import {
+  LEADER_APPLICANTS,
+  LEADER_MEMBERS,
+  LEADER_PERSON,
   PERSON_HOME,
   PERSON_NOTIFICATIONS,
   PERSON_SIGN_IN,
@@ -64,6 +76,11 @@ export default function App() {
               <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
               <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
               <Route path="vouch/:token" element={<VouchPage />} />
+              <Route element={<RequireLeader />}>
+                <Route path={LEADER_APPLICANTS.slice(1)} element={<Applicants />} />
+                <Route path={LEADER_MEMBERS.slice(1)} element={<Members />} />
+                <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />
+              </Route>
             </Route>
           </Route>
           <Route element={<RequireOlderAccount />}>
