@@ -3,6 +3,7 @@
     python -m app.cli create-owner --name "Full Name" --email you@example.com \
         --mobile +971500000000 --church "Church name" --group "Home group name"
     python -m app.cli create-admin --email you@example.com --mobile +971500000000
+    python -m app.cli purge-notifications [--months 12]
     python -m app.cli seed-demo
     python -m app.cli generate-demo-data --csv logins.csv [--reset]
 
@@ -17,6 +18,7 @@ import getpass
 import os
 import sys
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TextIO
 
 from pydantic import TypeAdapter, ValidationError
@@ -33,6 +35,7 @@ from app.schemas.auth import (
     PersonName,
     check_mobile,
 )
+from app.services import notifications
 from app.services.accounts import create_account, get_by_email
 from app.services.operators import SetupError, create_first_owner
 
@@ -264,6 +267,15 @@ def seed_demo() -> int:
     return 0
 
 
+def purge_notifications(months: int) -> int:
+    """Delete notifications older than the retention (12 months by default; decision O-02)."""
+    cutoff = notifications.months_before(datetime.now(UTC), months)
+    with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
+        deleted = notifications.purge_older_than(db, cutoff)
+    print(f"Deleted {deleted} notifications older than {months} months.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -280,6 +292,10 @@ def main(argv: list[str] | None = None) -> int:
     admin.add_argument("--email", required=True)
     admin.add_argument("--mobile", required=True)
     admin.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
+    purge = sub.add_parser(
+        "purge-notifications", help="delete in-app notifications older than the retention"
+    )
+    purge.add_argument("--months", type=int, default=12, choices=range(1, 121), metavar="1-120")
     sub.add_parser("seed-demo", help="create fake demo users (not allowed in prod)")
     gen = sub.add_parser(
         "generate-demo-data",
@@ -295,6 +311,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "create-admin":
         return create_admin(args.email, args.mobile, args.password_stdin)
+    if args.command == "purge-notifications":
+        return purge_notifications(args.months)
     if args.command == "generate-demo-data":
         return generate_demo_data(args.csv, args.reset)
     return seed_demo()

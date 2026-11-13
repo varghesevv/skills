@@ -68,8 +68,9 @@ Auth behaviour:
 | POST | /me/vouch-link | Same callers. Makes a new link and ends the one before it. Returns `{"token", "expires_at"}` once; the person shares `FRONTEND_BASE_URL/vouch/<token>`. A link lives `VOUCH_LINK_DAYS` days (default 30). |
 | GET | /me/vouches | The newest 200 vouches received, with each voucher's name, church, whether it is live (a withdrawn vouch, or one by someone no longer admitted, does not count), and when. No contact details. |
 | GET | /me/vouches-given | At least SEARCHER. The newest 200 vouches given by the caller: the applicant's name and status, whether withdrawn, and `can_withdraw` (until the applicant is admitted). |
-| GET | /me/notifications | Paginated, newest first: `id`, `kind`, `subject` (id and name, loaded fresh), `created_at`, `read`. |
-| POST | /me/notifications/{id}/read, /me/notifications/read-all | |
+| GET | /me/notifications | Any status except REVOKED. Newest first, paged (`limit` 1 to 100, default 50; `offset`; `unread=true` for unread only): `items` (`id`, `kind`, `subject` (id and name, loaded fresh; the name is empty once that account is closed), `created_at`, `read`), `total` and `unread_count` (for a badge, whatever the page). Kinds so far: `applicant_new` (a leader: someone chose their group), `vouch_received`, `admitted`; revoked, re-check flag and the requests to agree to a move or a handover come with their slices (decision D-28). |
+| POST | /me/notifications/{id}/read | `204`, also when already read. Someone else's or an unknown id: the same `404`. |
+| POST | /me/notifications/read-all | `204`. Only the caller's own. |
 
 ### Churches and home groups
 | Method | Path | Notes |
