@@ -1882,6 +1882,10 @@
             "title": "Applied At",
             "type": "string"
           },
+          "can_admit_as_provider": {
+            "title": "Can Admit As Provider",
+            "type": "boolean"
+          },
           "chain_of_trust": {
             "items": {
               "$ref": "#/components/schemas/ChainLink"
@@ -1972,7 +1976,8 @@
           "applied_at",
           "history",
           "chain_of_trust",
-          "vouches"
+          "vouches",
+          "can_admit_as_provider"
         ],
         "title": "PersonDetail",
         "type": "object"
