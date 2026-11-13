@@ -64,10 +64,10 @@ Auth behaviour:
 | DELETE | /me | Closes the account (the stores' "delete account"). Body: `password` (`403 invalid_password` if wrong; wrong passwords are counted and throttled like login, `429` with `Retry-After`). Keeps the row, the history and the vouches given (they stop counting), clears the personal fields, ends every session, reset link and vouch link, and clears the address, network address and browser of the login attempts. A person who leads gets `409 leads_a_group` (VERIFIER) or `409 leads_a_church` (ADMIN, OWNER) until succession or handover is done (S4); a revoked person cannot close their account (`403 account_revoked`). |
 | PUT | /me/application | PENDING only (`409 not_pending` otherwise, also when a leader admits the person at the same moment); an invalid group is `422 invalid_choice` and changes nothing. `home_group_id` and/or `requested_status`; the newly chosen leader is notified, vouches received still count. |
 | POST | /me/apply-provider | SEARCHER only. Sets `requested_status` to `provider` and returns the vouch link. |
-| GET | /me/vouch-link | PENDING, or a SEARCHER who applies to provide. `{"token": "...", "expires_at": "..."}`; the person shares the link `FRONTEND_BASE_URL/vouch/<token>`. |
-| POST | /me/vouch-link/rotate | New token; the old one stops working. |
-| GET | /me/vouches | Vouches received, with each voucher's name, church, whether it is live, and when. |
-| GET | /me/vouches-given | Vouches given by the caller, with the applicant's name and status. |
+| GET | /me/vouch-link | PENDING, or a SEARCHER who applies to provide (`409 not_applying` for anyone else). `{"active": bool, "expires_at": ...}`. The token is not returned: only a hash is stored (decision D-25). |
+| POST | /me/vouch-link | Same callers. Makes a new link and ends the one before it. Returns `{"token", "expires_at"}` once; the person shares `FRONTEND_BASE_URL/vouch/<token>`. A link lives `VOUCH_LINK_DAYS` days (default 30). |
+| GET | /me/vouches | Vouches received, with each voucher's name, church, whether it is live (a withdrawn vouch, or one by someone no longer admitted, does not count), and when. No contact details. |
+| GET | /me/vouches-given | At least SEARCHER. Vouches given by the caller: the applicant's name and status, whether withdrawn, and `can_withdraw` (until the applicant is admitted). |
 | GET | /me/notifications | Paginated, newest first: `id`, `kind`, `subject` (id and name, loaded fresh), `created_at`, `read`. |
 | POST | /me/notifications/{id}/read, /me/notifications/read-all | |
 
@@ -81,9 +81,9 @@ Auth behaviour:
 ### Vouching
 | Method | Path | Notes |
 |---|---|---|
-| GET | /vouch-links/{token} | At least SEARCHER. The applicant's name, church, home group and what they apply for. `404` for anything wrong, alike. |
-| POST | /vouch-links/{token}/vouch | At least SEARCHER. Creates the vouch. `409 already_vouched`; `403 cannot_vouch_self`. |
-| DELETE | /vouches/{id} | The voucher, until the applicant is admitted. |
+| POST | /vouch-links/lookup | At least SEARCHER. The token is in the body, not the path, so it never reaches an access log of the API. The applicant's name, church, home group, what they apply for and `already_vouched`; never a number. `404` for anything wrong (unknown, expired, revoked, the person admitted or gone), alike. `403 cannot_vouch_self` for the owner of the link. Rate limited per IP (`LINK_LOOKUP_MAX_PER_HOUR`). |
+| POST | /vouch-links/vouch | At least SEARCHER, any church. Body `token`. `201` with the vouch `id`, and the applicant gets a `vouch_received` notification in the same transaction. `409 already_vouched`; `403 cannot_vouch_self`; `404` as above; `429` beyond `VOUCH_MAX_PER_DAY` (default 20) vouches in 24 hours, counted in the database. A vouch that was withdrawn can be given again. Has its own per-IP count, so opening a link and vouching are not two lookups. |
+| DELETE | /vouches/{id} | The voucher (`404` for anyone else), until the applicant is admitted (`409 not_pending`). Withdrawing twice is not an error. |
 
 ### Verifier (at least VERIFIER, within scope)
 | Method | Path | Notes |
@@ -170,7 +170,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`account_exists`, `invalid_password`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
+`account_exists`, `invalid_password`, `not_applying`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
 
 ## Authorisation rules (summary)
 
