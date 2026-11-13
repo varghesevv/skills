@@ -87,6 +87,16 @@ void main() {
       );
     });
 
+    test(
+      'a word the server does not send is shown readably, not as a token',
+      () {
+        const older = Terms(_defaultWords); // no structure words
+        expect(older.apply('Status: {Verifier}'), 'Status: Verifier');
+        expect(older.apply('{a_admin} and {owners}'), 'an admin and owners');
+        expect(older.apply('{A_verifier}'), 'A verifier');
+      },
+    );
+
     test('leaves other placeholders alone', () {
       expect(
         base.apply('{count} {freelancer}(s) on page {page}'),

@@ -38,8 +38,13 @@ class Terms {
       final base = lower.endsWith('s')
           ? lower.substring(0, lower.length - 1)
           : lower;
-      if (!_kinds.contains(base) || !_words.containsKey(lower)) {
-        return match.group(0)!;
+      if (!_kinds.contains(base)) return match.group(0)!;
+      if (!_words.containsKey(lower)) {
+        // A server that does not send this word (an older one, or a profile that lacks it): show
+        // the word of the token itself, readable, instead of the raw `{Token}`. The app carries
+        // no word profile, so this is only a last resort.
+        final plain = prefix == null ? name : '${_article(lower)} $lower';
+        return prefix == 'A_' ? _upperFirst(plain) : plain;
       }
       final written = term(lower);
       final capital = name[0] == name[0].toUpperCase();
