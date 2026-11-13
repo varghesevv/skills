@@ -172,7 +172,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`account_exists`, `invalid_password`, `not_applying`, `not_searcher`, `already_revoked`, `not_revoked`, `not_flagged`, `group_name_taken`, `request_open`, `not_open`, `requester_unavailable`, `church_closed`, `church_name_taken`, `invitation_exists`, `already_agreed`, `request_stale`, `group_not_empty`, `state_changed`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
+`account_exists`, `invalid_password`, `not_applying`, `not_searcher`, `already_revoked`, `not_revoked`, `not_flagged`, `group_name_taken`, `request_open`, `not_open`, `requester_unavailable`, `church_closed`, `church_name_taken`, `invitation_exists`, `already_agreed`, `request_stale`, `state_changed`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
 
 ## Authorisation rules (summary)
 
