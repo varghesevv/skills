@@ -2857,6 +2857,74 @@
         "title": "SignupResponse",
         "type": "object"
       },
+      "StatusRequest": {
+        "description": "Revoke (`to` is `revoked`) or reinstate (a revoked person, `to` the new status and the\nhome group they are placed in).",
+        "properties": {
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "to": {
+            "enum": [
+              "revoked",
+              "searcher",
+              "provider"
+            ],
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "StatusRequest",
+        "type": "object"
+      },
+      "StatusResult": {
+        "properties": {
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "home_group_id",
+          "flagged_for_recheck"
+        ],
+        "title": "StatusResult",
+        "type": "object"
+      },
       "Terminology": {
         "properties": {
           "profile": {
@@ -7110,6 +7178,114 @@
           }
         ],
         "summary": "Decline",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/reconfirm": {
+      "post": {
+        "description": "Clear the re-check flag of a person in scope. You become the new link in their chain of\ntrust. `409 not_flagged` if there is no flag.",
+        "operationId": "reconfirm_api_v1_verifier_people__person_id__reconfirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reconfirm",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/status": {
+      "put": {
+        "description": "Revoke a person in scope who is below you, or reinstate a revoked one into a home group\n(`home_group_id`). A leader is replaced first (`409 successor_required`). A revocation made\nby a higher leader cannot be undone by a lower one (`403 status_not_allowed`).",
+        "operationId": "set_status_api_v1_verifier_people__person_id__status_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Status",
         "tags": [
           "verifier"
         ]

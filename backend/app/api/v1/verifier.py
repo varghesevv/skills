@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
+from app.core.errors import ApiError
 from app.models.church import Person
 from app.schemas.signup import (
     GroupInvitationCreated,
@@ -23,8 +24,10 @@ from app.schemas.verifier import (
     Offset,
     PersonDetail,
     RevokedList,
+    StatusRequest,
+    StatusResult,
 )
-from app.services import admission, signup, verifier_views
+from app.services import admission, revocation, signup, verifier_views
 
 router = APIRouter(prefix="/verifier", tags=["verifier"])
 
@@ -148,3 +151,40 @@ def decline(
     """Close an application. Nobody is revoked, and the person can sign up again."""
     admission.decline(db, verifier, person_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _status_result(person: Person) -> StatusResult:
+    return StatusResult(
+        id=person.id,
+        status=person.status,
+        home_group_id=person.home_group_id,
+        flagged_for_recheck=person.flagged_for_recheck,
+    )
+
+
+@router.put("/people/{person_id}/status")
+def set_status(
+    person_id: uuid.UUID,
+    body: StatusRequest,
+    verifier: Verifier,
+    db: Annotated[Session, Depends(get_session)],
+) -> StatusResult:
+    """Revoke a person in scope who is below you, or reinstate a revoked one into a home group
+    (`home_group_id`). A leader is replaced first (`409 successor_required`). A revocation made
+    by a higher leader cannot be undone by a lower one (`403 status_not_allowed`)."""
+    if body.to == "revoked":
+        return _status_result(revocation.revoke(db, verifier, person_id))
+    if body.home_group_id is None:
+        raise ApiError(422, "validation_error", "Reinstating needs a home group")
+    return _status_result(
+        revocation.reinstate(db, verifier, person_id, body.to, body.home_group_id)
+    )
+
+
+@router.post("/people/{person_id}/reconfirm")
+def reconfirm(
+    person_id: uuid.UUID, verifier: Verifier, db: Annotated[Session, Depends(get_session)]
+) -> StatusResult:
+    """Clear the re-check flag of a person in scope. You become the new link in their chain of
+    trust. `409 not_flagged` if there is no flag."""
+    return _status_result(revocation.reconfirm(db, verifier, person_id))

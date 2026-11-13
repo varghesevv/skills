@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.church import IdName, NameRef
 
@@ -118,3 +118,24 @@ class AdmitResult(BaseModel):
 
 Limit = Annotated[int, Field(ge=1, le=100)]
 Offset = Annotated[int, Field(ge=0, le=100_000)]
+
+
+class StatusRequest(BaseModel):
+    """Revoke (`to` is `revoked`) or reinstate (a revoked person, `to` the new status and the
+    home group they are placed in)."""
+
+    to: Literal["revoked", "searcher", "provider"]
+    home_group_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _group_only_for_reinstating(self) -> Self:
+        if self.to == "revoked" and self.home_group_id is not None:
+            raise ValueError("a revocation takes no home group")
+        return self
+
+
+class StatusResult(BaseModel):
+    id: uuid.UUID
+    status: str
+    home_group_id: uuid.UUID | None
+    flagged_for_recheck: bool

@@ -17,40 +17,18 @@ from app.core.errors import ApiError
 from app.models.church import Person
 from app.models.trust import Notification, StatusChange, VouchLink
 from app.services import account_closing, provider_upgrade, vouching
-from app.services.locks import lock_people
+from app.services.locks import locked_in_scope
 from app.services.permissions import (
     can_admit,
     can_decline,
     can_decline_upgrade,
-    in_scope,
-    is_verifier,
 )
 
 ADMITTED = "admitted"  # notification kind: a leader admitted you
 
 
-def _no_such_person() -> ApiError:
-    return ApiError(404, "not_found", "There is no such person")
-
-
-def _applicant_in_scope(db: Session, actor: Person, person_id: uuid.UUID) -> Person:
-    """Lock the actor and the applicant, and return the applicant if the actor may act on them."""
-    locked = lock_people(db, [actor.id, person_id])
-    applicant = locked.get(person_id)
-    if (
-        applicant is None
-        or applicant.closed_at is not None
-        or applicant.id == actor.id
-        or not in_scope(actor, applicant)
-    ):
-        raise _no_such_person()
-    if not is_verifier(actor):  # revoked or closed while the request was on its way
-        raise ApiError(403, "forbidden", "You are not allowed to do this")
-    return applicant
-
-
 def admit(db: Session, actor: Person, person_id: uuid.UUID, to: str) -> Person:
-    applicant = _applicant_in_scope(db, actor, person_id)
+    applicant = locked_in_scope(db, actor, person_id)
     waiting_for_provider = (
         applicant.status == "searcher" and applicant.requested_status == "provider"
     )
@@ -88,7 +66,7 @@ def admit(db: Session, actor: Person, person_id: uuid.UUID, to: str) -> Person:
 def decline(db: Session, actor: Person, person_id: uuid.UUID) -> None:
     """Close an application. Nobody is revoked; the person can sign up again later. For a searcher
     who asked to become a provider, only the request ends."""
-    applicant = _applicant_in_scope(db, actor, person_id)
+    applicant = locked_in_scope(db, actor, person_id)
     if can_decline_upgrade(actor, applicant):
         # A searcher who asked to become a provider: the request ends, the account stays.
         provider_upgrade.end_request(db, applicant, actor)

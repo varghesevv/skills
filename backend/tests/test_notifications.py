@@ -170,9 +170,9 @@ def test_the_events_so_far_all_write_a_known_kind(
     )
     written = {n.kind for n in session.scalars(select(Notification))}
     # Sign-up, vouching and admission write these; the upgrade flow's kinds are checked with it
-    # (tests/test_provider_upgrade.py).
-    upgrade = {"provider_application", "provider_declined"}
-    assert written == set(notifications.KINDS) - upgrade
+    # (tests/test_provider_upgrade.py, tests/test_revocation.py).
+    others = {"provider_application", "provider_declined", "revoked", "reinstated"}
+    assert written == set(notifications.KINDS) - others
 
 
 def _headers_for(client: TestClient, session: Session, person: Person) -> dict[str, str]:
