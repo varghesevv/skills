@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import ColumnElement, Select, false, func, select, true
+from sqlalchemy import ColumnElement, Select, and_, false, func, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
@@ -37,11 +37,6 @@ MAX_HISTORY = 100
 MAX_CHAIN = 20  # the chain ends at the OWNER; the cap only guards against bad data
 
 
-def _group_of_person() -> ColumnElement[Any]:
-    # A revoked person is in the scope of the group they were removed from.
-    return func.coalesce(Person.home_group_id, Person.last_home_group_id)
-
-
 def scope_clause(actor: Person) -> ColumnElement[bool]:
     """The SQL twin of `permissions.in_scope` for a verifier actor."""
     if actor.status == "owner":
@@ -50,7 +45,12 @@ def scope_clause(actor: Person) -> ColumnElement[bool]:
         return Person.church_id == actor.church_id
     if actor.home_group_id is None:
         return false()
-    return _group_of_person() == actor.home_group_id
+    # A revoked person is in the scope of the group they were removed from. Written as an OR so
+    # the indexes on both columns can be used.
+    return or_(
+        Person.home_group_id == actor.home_group_id,
+        and_(Person.home_group_id.is_(None), Person.last_home_group_id == actor.home_group_id),
+    )
 
 
 def _in_scope_people(actor: Person) -> Select[tuple[Person]]:
