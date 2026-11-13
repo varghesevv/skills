@@ -51,3 +51,43 @@ class AsyncView<T> extends ConsumerWidget {
     );
   }
 }
+
+/// The same three states for a section inside a screen that already scrolls. [AsyncView] fills a
+/// screen with a list of its own, which cannot sit inside another list.
+class InlineAsyncView<T> extends ConsumerWidget {
+  const InlineAsyncView({
+    super.key,
+    required this.value,
+    required this.onRetry,
+    required this.builder,
+  });
+
+  final AsyncValue<T> value;
+  final VoidCallback onRetry;
+  final Widget Function(T data) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = ref.watch(appTextProvider);
+    return value.when(
+      skipLoadingOnRefresh: value.hasValue,
+      skipLoadingOnReload: value.hasValue,
+      data: builder,
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Semantics(
+          label: text('config.loading'),
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (error, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MessageBanner(text.error(error)),
+          const SizedBox(height: 8),
+          FilledButton(onPressed: onRetry, child: Text(text('common.retry'))),
+        ],
+      ),
+    );
+  }
+}

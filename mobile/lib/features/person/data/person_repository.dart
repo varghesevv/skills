@@ -1,6 +1,7 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/parse.dart';
 import '../../../core/auth/person_me.dart';
+import 'vouching_models.dart';
 
 class ChurchSummary {
   const ChurchSummary({required this.id, required this.name});
@@ -131,5 +132,59 @@ class PersonRepository {
   /// (`invalid_password`, `rate_limited`, ...).
   Future<void> closeAccount(String password) async {
     await _api.delete('/me', body: {'password': password});
+  }
+
+  Future<VouchLinkState> vouchLinkState() async =>
+      parseResponse(await _api.get('/me/vouch-link'), VouchLinkState.fromJson);
+
+  /// Makes a new link and ends the one before it. The token is shown once.
+  Future<VouchLinkCreated> makeVouchLink() async => parseResponse(
+    await _api.post('/me/vouch-link'),
+    VouchLinkCreated.fromJson,
+  );
+
+  Future<List<VouchReceived>> vouchesReceived() async => parseResponse(
+    await _api.get('/me/vouches'),
+    (json) => [
+      for (final item in json['items'] as List)
+        VouchReceived.fromJson(Map<String, Object?>.from(item as Map)),
+    ],
+  );
+
+  Future<List<VouchGiven>> vouchesGiven() async => parseResponse(
+    await _api.get('/me/vouches-given'),
+    (json) => [
+      for (final item in json['items'] as List)
+        VouchGiven.fromJson(Map<String, Object?>.from(item as Map)),
+    ],
+  );
+
+  /// The token travels in the body, never in the address. Throws `ApiException` (`not_found`,
+  /// `cannot_vouch_self`, `rate_limited`): every bad link looks alike.
+  Future<VouchLinkInfo> lookupVouchLink(String token) async => parseResponse(
+    await _api.post('/vouch-links/lookup', body: {'token': token}),
+    VouchLinkInfo.fromJson,
+  );
+
+  /// Throws `ApiException` (`already_vouched`, `cannot_vouch_self`, `not_found`, `rate_limited`).
+  Future<void> vouch(String token) async {
+    await _api.post('/vouch-links/vouch', body: {'token': token});
+  }
+
+  Future<void> withdrawVouch(String id) async {
+    await _api.delete('/vouches/$id');
+  }
+
+  Future<NotificationList> notifications() async => parseResponse(
+    await _api.get('/me/notifications', query: {'limit': 50}),
+    NotificationList.fromJson,
+  );
+
+  Future<void> markNotificationRead(String id) async {
+    await _api.post('/me/notifications/$id/read');
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    await _api.post('/me/notifications/read-all');
   }
 }
