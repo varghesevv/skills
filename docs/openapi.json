@@ -1073,10 +1073,15 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
           }
         },
         "required": [
-          "items"
+          "items",
+          "total"
         ],
         "title": "GroupRequestList",
         "type": "object"
@@ -5025,8 +5030,34 @@
     },
     "/api/v1/group-requests": {
       "get": {
-        "description": "An ADMIN sees the open requests of their church, the OWNER of every church; everyone else\ntheir own requests.",
+        "description": "An ADMIN sees the open requests of their church, the OWNER of every church; everyone else\ntheir own requests. Paged: `limit` (1 to 100, default 50) and `offset`.",
         "operationId": "list_requests_api_v1_group_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -5037,6 +5068,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

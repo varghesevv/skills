@@ -64,7 +64,15 @@ def _start(db: Session, person: Person, name: str, decided_by: Person | None) ->
     """Create the group and move the person in as its leader. The caller commits."""
     group = HomeGroup(church_id=person.church_id, name=name, leader_id=person.id)
     db.add(group)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        # The open names of a church are unique: someone took this one a moment ago, after the
+        # check above. Nothing is half done.
+        db.rollback()
+        raise ApiError(
+            409, "group_name_taken", "A home group with this name already exists"
+        ) from None
     person.home_group_id = group.id
     if STATUS_RANK[person.status] < STATUS_RANK["verifier"]:
         previous = person.status
@@ -96,10 +104,10 @@ def request_group(
     if _name_taken(db, person.church_id, group_name):
         db.rollback()
         raise ApiError(409, "group_name_taken", "A home group with this name already exists")
-    own = person.status in ("admin", "owner")
-    if own and _leads_a_group(db, person):
+    if _leads_a_group(db, person):  # the successor comes with succession (roadmap 4.3)
         db.rollback()
         raise _successor_required()
+    own = person.status in ("admin", "owner")
     open_one = db.scalar(
         select(GroupRequest.id).where(
             GroupRequest.requester_id == person.id, GroupRequest.state == "open"
@@ -133,6 +141,17 @@ def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
         c.id: c
         for c in db.scalars(select(Church).where(Church.id.in_({r.church_id for r in requests})))
     }
+    # One query for the groups the requesters belong to, to tell who leads one now.
+    led = {
+        g.id
+        for g in db.scalars(
+            select(HomeGroup).where(
+                HomeGroup.id.in_({p.home_group_id for p in people.values() if p.home_group_id}),
+                HomeGroup.closed_at.is_(None),
+            )
+        )
+        if g.leader_id in people and people[g.leader_id].home_group_id == g.id
+    }
     return [
         GroupRequestOut(
             id=r.id,
@@ -141,7 +160,7 @@ def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
             requester=IdName(id=r.requester_id, name=people[r.requester_id].full_name or ""),
             state=r.state,
             created_at=r.created_at,
-            requester_leads_a_group=_leads_a_group(db, people[r.requester_id]),
+            requester_leads_a_group=people[r.requester_id].home_group_id in led,
         )
         for r in requests
     ]
@@ -151,9 +170,11 @@ def view(db: Session, request: GroupRequest) -> GroupRequestOut:
     return _views(db, [request])[0]
 
 
-def listing(db: Session, person: Person) -> list[GroupRequestOut]:
+def listing(
+    db: Session, person: Person, *, limit: int, offset: int
+) -> tuple[list[GroupRequestOut], int]:
     """An ADMIN's church (the OWNER's every church) sees the open requests; everyone else their
-    own, newest first."""
+    own, newest first. Returns one page and the total."""
     query = select(GroupRequest)
     if person.status == "owner":
         query = query.where(GroupRequest.state == "open")
@@ -163,10 +184,15 @@ def listing(db: Session, person: Person) -> list[GroupRequestOut]:
         )
     else:
         query = query.where(GroupRequest.requester_id == person.id)
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = list(
-        db.scalars(query.order_by(GroupRequest.created_at.desc(), GroupRequest.id).limit(100))
+        db.scalars(
+            query.order_by(GroupRequest.created_at.desc(), GroupRequest.id)
+            .limit(limit)
+            .offset(offset)
+        )
     )
-    return _views(db, rows) if rows else []
+    return (_views(db, rows) if rows else []), total
 
 
 def _decidable(db: Session, actor: Person, request_id: uuid.UUID) -> tuple[GroupRequest, Person]:
@@ -176,6 +202,15 @@ def _decidable(db: Session, actor: Person, request_id: uuid.UUID) -> tuple[Group
     if found is None or not in_scope:
         raise ApiError(404, "not_found", "There is no such request")
     people = lock_people(db, [actor.id, found.requester_id])
+    locked_actor = people.get(actor.id)
+    # Read again from the locked row: an ADMIN revoked or changed at this moment decides nothing.
+    if (
+        locked_actor is None
+        or locked_actor.closed_at is not None
+        or locked_actor.status not in ("admin", "owner")
+        or (locked_actor.status == "admin" and locked_actor.church_id != found.church_id)
+    ):
+        raise ApiError(403, "forbidden", "You are not allowed to do this")
     request = db.get(GroupRequest, request_id, with_for_update=True, populate_existing=True)
     requester = people.get(found.requester_id)
     if request is None or requester is None:

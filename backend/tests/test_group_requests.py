@@ -8,9 +8,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.errors import ApiError
 from app.core.security import hash_password
 from app.models import GroupRequest, HomeGroup, Notification, StatusChange
-from app.services import notifications
+from app.services import group_requests, notifications
 from tests.api_helpers import API
 from tests.test_admission import headers_of, leader, owner_member
 from tests.test_person_auth import Member, add_member
@@ -227,17 +228,37 @@ def test_who_may_decide_and_see_the_open_requests(client: TestClient, world: Wor
     assert [r["id"] for r in seen] == [request_id]
 
 
-def test_a_requester_who_leads_needs_a_successor_before_approval(
+def test_a_leader_cannot_ask_until_succession_exists(
     client: TestClient, session: Session, world: World
 ) -> None:
     lead, group = leader(world)
-    created = ask(client, lead, "Lakeside").json()["request"]
-    assert created["requester_leads_a_group"] is True
+    refused = ask(client, lead, "Lakeside")
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
+    # Nothing was stored, and the ADMIN was told nothing.
+    assert session.scalars(select(GroupRequest)).first() is None
+    assert (
+        session.scalars(
+            select(Notification).where(Notification.person_id == world.owner.id)
+        ).first()
+        is None
+    )
+    session.refresh(lead.person)
+    assert lead.person.home_group_id == group.id
+
+
+def test_a_requester_who_became_a_leader_meanwhile_needs_a_successor(
+    client: TestClient, session: Session, world: World
+) -> None:
+    member = add_member(world, "provider")
+    created = ask(client, member, "Lakeside").json()["request"]
+    assert created["requester_leads_a_group"] is False
+    old_group = world.add_group(member.person, "Quicker")  # they lead another group now
+    listed = client.get(URL, headers=headers_of(client, owner_member(world))).json()["items"]
+    assert listed[0]["requester_leads_a_group"] is True
     refused = decide(client, owner_member(world), created["id"], "approve")
     assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
-    session.refresh(lead.person)
-    assert lead.person.home_group_id == group.id  # nothing moved
-    assert session.scalars(select(HomeGroup).where(HomeGroup.name == "Lakeside")).first() is None
+    session.refresh(member.person)
+    assert member.person.home_group_id == old_group.id  # nothing moved
 
 
 def test_a_requester_who_left_or_was_revoked_cannot_be_made_leader(
@@ -267,3 +288,50 @@ def test_the_new_kinds_are_known(session: Session) -> None:
     assert {"group_request_new", "group_request_approved", "group_request_declined"} <= set(
         notifications.KINDS
     )
+
+
+def test_the_list_is_paged(client: TestClient, world: World) -> None:
+    for n in range(3):
+        ask(client, add_member(world, "provider"), f"Group {n}")
+    owner = owner_member(world)
+    page = client.get(
+        URL, headers=headers_of(client, owner), params={"limit": 2, "offset": 1}
+    ).json()
+    assert len(page["items"]) == 2 and page["total"] == 3
+    assert (
+        client.get(URL, headers=headers_of(client, owner), params={"limit": 101}).status_code == 422
+    )
+    assert (
+        client.get(URL, headers=headers_of(client, owner), params={"offset": -1}).status_code == 422
+    )
+
+
+def test_a_name_taken_at_the_same_moment_is_refused_by_the_database(
+    client: TestClient, session: Session, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    member = add_member(world, "provider")
+    request_id = ask(client, member, "Hilltop").json()["request"]["id"]
+    world.add_group(add_member(world, "provider").person, "hilltop")
+    # The check says the name is free (as it would if the other group were made a moment later);
+    # the unique index of open names still refuses it, and nothing is half done.
+    monkeypatch.setattr("app.services.group_requests._name_taken", lambda *_: False)
+    refused = decide(client, owner_member(world), request_id, "approve")
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "group_name_taken"
+    session.refresh(member.person)
+    assert member.person.status == "provider"
+    assert session.get(GroupRequest, request_id).state == "open"  # type: ignore[union-attr]
+
+
+def test_an_admin_revoked_while_deciding_decides_nothing(session: Session, world: World) -> None:
+    member = add_member(world, "provider")
+    request = GroupRequest(
+        requester_id=member.person.id, church_id=world.church.id, group_name="Hilltop"
+    )
+    session.add(request)
+    stale = add_member(world, "provider").person  # in the database a PROVIDER, not an ADMIN
+    session.flush()
+    session.expunge(stale)
+    stale.status = "owner"  # what the request thought it was when it was authorised
+    with pytest.raises(ApiError) as caught:
+        group_requests.approve(session, stale, request.id)
+    assert caught.value.status_code == 403

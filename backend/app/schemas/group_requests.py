@@ -26,6 +26,7 @@ class GroupRequestOut(BaseModel):
 
 class GroupRequestList(BaseModel):
     items: list[GroupRequestOut]
+    total: int
 
 
 class GroupRequestCreated(BaseModel):

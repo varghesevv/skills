@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_person
@@ -40,10 +40,16 @@ def ask(
 
 
 @router.get("")
-def list_requests(member: Member, db: Annotated[Session, Depends(get_session)]) -> GroupRequestList:
+def list_requests(
+    member: Member,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+) -> GroupRequestList:
     """An ADMIN sees the open requests of their church, the OWNER of every church; everyone else
-    their own requests."""
-    return GroupRequestList(items=group_requests.listing(db, member))
+    their own requests. Paged: `limit` (1 to 100, default 50) and `offset`."""
+    items, total = group_requests.listing(db, member, limit=limit, offset=offset)
+    return GroupRequestList(items=items, total=total)
 
 
 @router.post("/{request_id}/approve")
