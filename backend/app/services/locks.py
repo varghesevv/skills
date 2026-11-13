@@ -28,14 +28,19 @@ def lock_people(db: Session, ids: Iterable[uuid.UUID]) -> dict[uuid.UUID, Person
     return {p.id: p for p in rows}
 
 
-def locked_in_scope(db: Session, actor: Person, person_id: uuid.UUID) -> Person:
+def locked_in_scope(
+    db: Session, actor: Person, person_id: uuid.UUID, also: Iterable[uuid.UUID] = ()
+) -> Person:
     """Lock the actor and the person, and return the person if the actor may act on them.
 
     A person who does not exist, is closed, is the actor or is out of the actor's scope is the
     same `404`, so nothing says whether they exist. An actor who stopped being a leader while the
     request was on its way is refused.
+
+    `also` are other people the operation will change (a successor): they are locked in the same
+    ordered call, so two operations cannot lock them in opposite orders.
     """
-    locked = lock_people(db, [actor.id, person_id])
+    locked = lock_people(db, [actor.id, person_id, *also])
     person = locked.get(person_id)
     if (
         person is None

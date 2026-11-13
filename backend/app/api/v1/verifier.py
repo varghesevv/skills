@@ -172,7 +172,7 @@ def set_status(
     (`home_group_id`). A leader is replaced first (`409 successor_required`). A revocation made
     by a higher leader cannot be undone by a lower one (`403 status_not_allowed`)."""
     if body.to == "revoked":
-        return _status_result(revocation.revoke(db, verifier, person_id))
+        return _status_result(revocation.revoke(db, verifier, person_id, body.successor_id))
     group_id = cast(uuid.UUID, body.home_group_id)  # the request model guarantees it
     return _status_result(revocation.reinstate(db, verifier, person_id, body.to, group_id))
 

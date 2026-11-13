@@ -32,9 +32,21 @@ def _invalid_choice() -> ApiError:
     return ApiError(422, "invalid_choice", "That home group is not available")
 
 
-def open_group(db: Session, group_id: uuid.UUID) -> tuple[HomeGroup, Church] | None:
-    """The home group and its church, if both are open."""
-    group = db.get(HomeGroup, group_id)
+def open_group(
+    db: Session, group_id: uuid.UUID, *, joining: bool = False
+) -> tuple[HomeGroup, Church] | None:
+    """The home group and its church, if both are open.
+
+    Someone who is about to join the group (`joining`) takes a shared lock on its row. The
+    foreign key from the person to the group does not conflict with closing the group, so without
+    this lock a group could close at the same moment its last member leaves and someone joins.
+    Closing a group takes the row for update (`succession.end_leadership`), which waits for the
+    joiner or, if it came first, is seen here as a closed group.
+    """
+    if joining:
+        group = db.get(HomeGroup, group_id, with_for_update={"read": True}, populate_existing=True)
+    else:
+        group = db.get(HomeGroup, group_id)
     if group is None or group.closed_at is not None:
         return None
     church = db.get(Church, group.church_id)
@@ -62,12 +74,12 @@ def sign_up(
     # Hash first: a taken address and a free one then cost the same time.
     password_hash = hash_password(password)
     if invitation_token is not None:
-        resolved = resolve_group_invitation(db, invitation_token)
+        resolved = resolve_group_invitation(db, invitation_token, joining=True)
         if resolved is None:
             raise _invalid_choice()
         group, church = resolved
     else:
-        found = open_group(db, home_group_id) if home_group_id is not None else None
+        found = open_group(db, home_group_id, joining=True) if home_group_id is not None else None
         if found is None:  # the request model guarantees one of the two ways in
             raise _invalid_choice()
         group, church = found
@@ -127,7 +139,7 @@ def change_application(
         raise ApiError(409, "not_pending", "Only a pending application can be changed")
     chosen: tuple[HomeGroup, Church] | None = None
     if home_group_id is not None and home_group_id != person.home_group_id:
-        chosen = open_group(db, home_group_id)
+        chosen = open_group(db, home_group_id, joining=True)
         if chosen is None:  # nothing has been changed yet
             db.rollback()
             raise _invalid_choice()
@@ -196,7 +208,9 @@ def revoke_invitation(db: Session, leader: Person, invitation_id: uuid.UUID) -> 
         db.commit()
 
 
-def resolve_group_invitation(db: Session, token: str) -> tuple[HomeGroup, Church] | None:
+def resolve_group_invitation(
+    db: Session, token: str, *, joining: bool = False
+) -> tuple[HomeGroup, Church] | None:
     """The group and church a link leads to, or None for every kind of failure alike: no such
     link, expired, revoked, or the group or church closed since."""
     invitation = db.scalar(
@@ -208,7 +222,7 @@ def resolve_group_invitation(db: Session, token: str) -> tuple[HomeGroup, Church
         or invitation.expires_at <= datetime.now(UTC)
     ):
         return None
-    return open_group(db, invitation.home_group_id)
+    return open_group(db, invitation.home_group_id, joining=joining)
 
 
 def invitation_info(db: Session, token: str) -> GroupInvitationInfo | None:

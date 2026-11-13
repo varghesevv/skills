@@ -27,6 +27,7 @@ from app.services.group_requests import (
 from app.services.provider_upgrade import PROVIDER_APPLICATION, PROVIDER_DECLINED
 from app.services.revocation import REINSTATED, REVOKED
 from app.services.signup import NEW_APPLICANT
+from app.services.succession import LEADER_APPOINTED, LEADER_STEPPED_DOWN
 from app.services.vouching import VOUCH_RECEIVED
 
 # The events the model names (FR-C-12) that exist so far. Later slices add their kinds here:
@@ -44,6 +45,8 @@ KINDS = (
     GROUP_REQUEST_APPROVED,
     GROUP_REQUEST_DECLINED,
     CHURCH_CREATED,
+    LEADER_APPOINTED,
+    LEADER_STEPPED_DOWN,
 )
 
 

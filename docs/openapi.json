@@ -1236,6 +1236,24 @@
         "title": "GroupInvitationSummary",
         "type": "object"
       },
+      "GroupRequestApprove": {
+        "properties": {
+          "successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Id"
+          }
+        },
+        "title": "GroupRequestApprove",
+        "type": "object"
+      },
       "GroupRequestCreate": {
         "properties": {
           "group_name": {
@@ -1243,6 +1261,18 @@
             "minLength": 2,
             "title": "Group Name",
             "type": "string"
+          },
+          "successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Id"
           }
         },
         "required": [
@@ -1596,6 +1626,47 @@
           "labels"
         ],
         "title": "LabelsUpdate",
+        "type": "object"
+      },
+      "LeaderChange": {
+        "description": "Replace the leader of a home group, or hand it on.\n\n`former_leader_status` is what a stepping-down VERIFIER becomes (`provider` or `searcher`), or\n`keep` for an ADMIN or the OWNER handing on their own group.",
+        "properties": {
+          "former_leader_status": {
+            "enum": [
+              "provider",
+              "searcher",
+              "keep"
+            ],
+            "title": "Former Leader Status",
+            "type": "string"
+          },
+          "successor_id": {
+            "format": "uuid",
+            "title": "Successor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "successor_id",
+          "former_leader_status"
+        ],
+        "title": "LeaderChange",
+        "type": "object"
+      },
+      "LeaderChanged": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "leader": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "group",
+          "leader"
+        ],
+        "title": "LeaderChanged",
         "type": "object"
       },
       "LoginRequest": {
@@ -3196,6 +3267,18 @@
               }
             ],
             "title": "Home Group Id"
+          },
+          "successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Id"
           },
           "to": {
             "enum": [
@@ -5385,7 +5468,7 @@
         ]
       },
       "post": {
-        "description": "Ask to start a home group. An ADMIN or the OWNER start it at once, and the answer holds\nthe group. Someone who leads a group needs a successor first (`409 successor_required`,\nroadmap 4.3).",
+        "description": "Ask to start a home group. An ADMIN or the OWNER start it at once, and the answer holds\nthe group; if they lead a group now, `successor_id` names who leads it from now on (or it\ncloses when they are its only member: `409 successor_required` otherwise).",
         "operationId": "ask_api_v1_group_requests_post",
         "requestBody": {
           "content": {
@@ -5432,7 +5515,7 @@
     },
     "/api/v1/group-requests/{request_id}/approve": {
       "post": {
-        "description": "Create the group and move the requester in as its leader (a VERIFIER unless higher).",
+        "description": "Create the group and move the requester in as its leader (a VERIFIER unless higher). If the\nrequester leads a group now, `successor_id` names who leads it from now on, or the old group\ncloses when the requester is its only member (`409 successor_required` otherwise).",
         "operationId": "approve_api_v1_group_requests__request_id__approve_post",
         "parameters": [
           {
@@ -5446,6 +5529,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GroupRequestApprove"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -5517,6 +5617,65 @@
         "summary": "Decline",
         "tags": [
           "group-requests"
+        ]
+      }
+    },
+    "/api/v1/home-groups/{group_id}/leader": {
+      "put": {
+        "description": "Replace the leader of a home group, or hand on your own, with a successor from its members\n(PENDING or above), in one transaction. The successor becomes a VERIFIER (unless higher); a\nstepping-down VERIFIER stays as a provider or a searcher, set by you, and nobody they admitted\nis flagged. An ADMIN of the group's church or the OWNER; `404` for any other. An ADMIN or the\nOWNER hand on only their own group, and keep their status (`former_leader_status: keep`).",
+        "operationId": "change_leader_api_v1_home_groups__group_id__leader_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Group Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaderChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Leader",
+        "tags": [
+          "home-groups"
         ]
       }
     },

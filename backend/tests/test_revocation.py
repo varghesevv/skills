@@ -159,12 +159,16 @@ def test_only_leaders_use_it(client: TestClient, world: World) -> None:
         assert response.status_code == 403 and response.json()["error"]["code"] == "not_admitted"
 
 
-def test_a_leader_is_replaced_first(client: TestClient, session: Session, world: World) -> None:
+def test_a_leader_with_members_is_replaced_first(
+    client: TestClient, session: Session, world: World
+) -> None:
     lead, group = leader(world)
+    add_member(world, "provider", group=group)  # the group has another member
     refused = set_status(client, owner_member(world), lead, "revoked")
     assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
     session.refresh(lead.person)
     assert lead.person.status == "verifier" and lead.person.home_group_id == group.id
+    # The succession itself is tested in tests/test_succession.py.
 
 
 def test_a_leader_cannot_revoke_a_peer_or_the_owner(client: TestClient, world: World) -> None:
