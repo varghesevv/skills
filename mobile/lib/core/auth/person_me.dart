@@ -11,6 +11,9 @@ enum PersonStatus {
   admin,
   owner;
 
+  /// A leader: VERIFIER or higher. They see the applicants and members of their scope.
+  bool get isLeader => index >= PersonStatus.verifier.index;
+
   static PersonStatus fromWire(String value) => PersonStatus.values.firstWhere(
     (status) => status.name == value,
     orElse: () => throw const FormatException('Unknown status'),

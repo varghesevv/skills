@@ -80,7 +80,7 @@ Backend first, then web and mobile.
 - [x] 3.5 Web: verifier screens: applicants and vouches, admit and decline, members, and one person's page (number, history, chain of trust). Revoked and flagged lists come with revoke and reinstate (4.7). Browser run: S6.1.
 - [x] 3.5a Backend: tell the verifier on each applicant whether admitting as a provider will work now (`can_admit_as_provider`), so the screens show the button only when it does (125).
 - [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
-- [ ] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
+- [x] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
 - [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider.
 - [ ] 3.9 Searcher-to-provider upgrade path.
 

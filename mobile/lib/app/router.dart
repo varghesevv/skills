@@ -11,6 +11,10 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/welcome_screen.dart';
+import '../features/leader/applicants_screen.dart';
+import '../features/leader/leader_paths.dart';
+import '../features/leader/members_screen.dart';
+import '../features/leader/person_detail_screen.dart';
 import '../features/person/my_vouches_screen.dart';
 import '../features/person/notifications_screen.dart';
 import '../features/person/person_home_screen.dart';
@@ -35,10 +39,17 @@ const _signedOutPrefixes = [
 @visibleForTesting
 bool personMayVisit(PersonMe person, String path) {
   if (path == personHome) return true;
+  // The leader screens: applicants, members and one person's page.
+  final isLeaderPage =
+      path == leaderApplicants ||
+      path == leaderMembers ||
+      path.startsWith('$leaderPeople/');
   return switch (person.status) {
     PersonStatus.revoked => false,
     PersonStatus.pending => path == personNotifications,
-    _ => path.startsWith('$personHome/') || path == vouchLinkPath,
+    _ =>
+      (path.startsWith('$personHome/') || path == vouchLinkPath) &&
+          (!isLeaderPage || person.status.isLeader),
   };
 }
 
@@ -117,6 +128,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'applicants',
+            builder: (context, state) => const ApplicantsScreen(),
+          ),
+          GoRoute(
+            path: 'members',
+            builder: (context, state) => const MembersScreen(),
+          ),
+          GoRoute(
+            path: 'people/:id',
+            builder: (context, state) =>
+                PersonDetailScreen(id: state.pathParameters['id']!),
           ),
         ],
       ),
