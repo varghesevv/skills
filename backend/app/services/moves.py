@@ -12,7 +12,7 @@ at the moment someone moves in (`signup.open_group`, `succession.end_leadership`
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,7 +20,7 @@ from app.core.errors import ApiError
 from app.models.church import Church, HomeGroup, Person
 from app.models.trust import MoveRequest, Notification
 from app.schemas.church import IdName
-from app.schemas.moves import MoveAgreements, MoveRequestOut
+from app.schemas.moves import MoveAgreements, Moved, MoveRequestOut
 from app.services.locks import lock_people
 
 MOVE_REQUESTED = "move_requested"  # notification kind: a member asks to move out or in (leaders)
@@ -84,14 +84,32 @@ def _notify(db: Session, person_id: uuid.UUID, kind: str, subject_id: uuid.UUID)
     db.add(Notification(person_id=person_id, kind=kind, subject_id=subject_id))
 
 
-def _commit(
-    db: Session, *, message: str = "Something changed meanwhile. Reload and try again."
-) -> None:
+def _commit(db: Session) -> None:
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as error:
         db.rollback()
-        raise ApiError(409, "state_changed", message) from None
+        # Only the one-open-request index means "you already have a move waiting"; any other
+        # constraint (a row that changed at the same moment) is a state to reload.
+        diag = getattr(error.orig, "diag", None)
+        if getattr(diag, "constraint_name", None) == "uq_move_requests_one_open":
+            raise ApiError(409, "request_open", "You already have a move waiting") from None
+        raise ApiError(
+            409, "state_changed", "Something changed meanwhile. Reload and try again."
+        ) from None
+
+
+def _has_open_request(db: Session, person: Person) -> bool:
+    return (
+        db.scalar(
+            select(MoveRequest.id).where(
+                MoveRequest.person_id == person.id,
+                MoveRequest.completed_at.is_(None),
+                MoveRequest.cancelled_at.is_(None),
+            )
+        )
+        is not None
+    )
 
 
 def request_move(db: Session, person: Person, to_group_id: uuid.UUID) -> MoveRequest:
@@ -100,14 +118,7 @@ def request_move(db: Session, person: Person, to_group_id: uuid.UUID) -> MoveReq
     _, target = _open_groups(db, source.id, to_group_id)
     if source.id == target.id:
         raise ApiError(422, "invalid_choice", "That is the group you belong to")
-    open_one = db.scalar(
-        select(MoveRequest.id).where(
-            MoveRequest.person_id == person.id,
-            MoveRequest.completed_at.is_(None),
-            MoveRequest.cancelled_at.is_(None),
-        )
-    )
-    if open_one is not None:
+    if _has_open_request(db, person):
         raise ApiError(409, "request_open", "You already have a move waiting")
     request = MoveRequest(
         person_id=person.id,
@@ -118,7 +129,7 @@ def request_move(db: Session, person: Person, to_group_id: uuid.UUID) -> MoveReq
     db.add(request)
     for leader_id in {source.leader_id, target.leader_id}:
         _notify(db, leader_id, MOVE_REQUESTED, person.id)
-    _commit(db, message="You already have a move waiting")
+    _commit(db)
     return request
 
 
@@ -211,17 +222,20 @@ def _perform(
         _notify(db, source.leader_id, MEMBER_MOVED_OUT, mover.id)
     if target.leader_id != actor.id:
         _notify(db, target.leader_id, MEMBER_MOVED_IN, mover.id)
-    db.execute(
-        update(MoveRequest)
-        .where(
+    others = db.scalars(
+        select(MoveRequest).where(
             MoveRequest.person_id == mover.id,
             MoveRequest.completed_at.is_(None),
             MoveRequest.cancelled_at.is_(None),
-            MoveRequest.id != (finished if finished is not None else uuid.UUID(int=0)),
+            *([MoveRequest.id != finished] if finished is not None else []),
         )
-        .values(cancelled_at=datetime.now(UTC))
-        .execution_options(synchronize_session=False)
-    )
+    ).all()
+    for other in others:
+        other.cancelled_at = datetime.now(UTC)
+        for group_id in (other.from_group_id, other.to_group_id):
+            leader = db.get(HomeGroup, group_id)
+            if leader is not None and leader.leader_id != actor.id:
+                _notify(db, leader.leader_id, MOVE_CANCELLED, mover.id)
 
 
 def cancel(db: Session, actor: Person, request_id: uuid.UUID) -> MoveRequest:
@@ -265,6 +279,16 @@ def move_directly(
     _perform(db, mover, source, target, locked_actor)
     _commit(db)
     return mover
+
+
+def moved_view(db: Session, person: Person) -> Moved:
+    group = db.get(HomeGroup, person.home_group_id) if person.home_group_id else None
+    if group is None:  # cannot happen: a member who just moved belongs to the new group
+        raise ApiError(409, "state_changed", "This person changed meanwhile. Reload.")
+    return Moved(
+        person=IdName(id=person.id, name=person.full_name or ""),
+        home_group=IdName(id=group.id, name=group.name),
+    )
 
 
 def _view(db: Session, requests: list[MoveRequest]) -> list[MoveRequestOut]:

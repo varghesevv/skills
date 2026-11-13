@@ -333,6 +333,9 @@ def test_the_owner_moves_a_member_without_the_agreements(
     assert "member_moved_out" in kinds(session, scene.from_leader)
     assert "member_moved_in" in kinds(session, scene.to_leader)
     assert session.get(MoveRequest, pending_request).cancelled_at is not None  # type: ignore[union-attr]
+    # The leaders who were asked to agree to the other request are told it ended.
+    assert "move_cancelled" in kinds(session, scene.from_leader)
+    assert "move_cancelled" in kinds(session, scene.to_leader)
     check_rules(session)
 
 
@@ -382,3 +385,16 @@ def test_the_new_kinds_are_known() -> None:
         "member_moved_out",
     } <= set(notifications.KINDS)
     assert Person is not None
+
+
+def test_the_unique_index_decides_a_race_and_is_reported_as_the_open_request(
+    client: TestClient, session: Session, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scene = Scene(world)
+    assert ask(client, scene.member, scene.to_group).status_code == 201
+    # The check says there is none (as it would if the other request were made a moment later);
+    # the index refuses the second, and it is named for what it is.
+    monkeypatch.setattr("app.services.moves._has_open_request", lambda *_: False)
+    again = ask(client, scene.member, scene.to_group)
+    assert again.status_code == 409 and again.json()["error"]["code"] == "request_open"
+    assert len(session.scalars(select(MoveRequest)).all()) == 1
