@@ -6,6 +6,7 @@ import '../../core/auth/person_me.dart';
 import '../../core/providers.dart';
 import '../../core/strings/app_text.dart';
 import '../../core/session/session_controller.dart';
+import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
 import 'person_router_paths.dart';
@@ -111,6 +112,22 @@ class _Member extends StatelessWidget {
       ),
       Text([person.church.name, ?person.homeGroup?.name].join(', ')),
       const SizedBox(height: 8),
+      if (person.status.isLeader) ...[
+        ListTile(
+          key: const Key('leader-applicants'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(text('leader.nav.applicants')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(leaderApplicants),
+        ),
+        ListTile(
+          key: const Key('leader-members'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(text('leader.nav.members')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(leaderMembers),
+        ),
+      ],
       ListTile(
         key: const Key('vouch-for-someone'),
         contentPadding: EdgeInsets.zero,
