@@ -36,6 +36,10 @@ function historyText(entry: HistoryEntry): string {
   })
 }
 
+/** A searcher who asked to become a provider: the leader may admit them as one or decline. */
+const isUpgrade = (data: Detail) =>
+  data.status === 'searcher' && data.requested_status === 'provider'
+
 type Load =
   { state: 'loading' } | { state: 'error'; error: unknown } | { state: 'ok'; data: Detail }
 
@@ -166,12 +170,13 @@ function PersonView({
       </dl>
       <p className="hint">{t('leader.person.numberNote')}</p>
 
-      {data.status === 'pending' && (
+      {(data.status === 'pending' || isUpgrade(data)) && (
         <AdmitControls
           id={data.id}
           name={data.full_name}
           // This answer has no `can_admit_as_provider`; until it has, a live vouch is the hint.
           canAdmitAsProvider={data.vouches.some((v) => v.live)}
+          upgrade={isUpgrade(data)}
           onDone={onDone}
         />
       )}

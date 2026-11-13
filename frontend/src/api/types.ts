@@ -316,6 +316,8 @@ export type Voucher = { name: string; church_name: string; live: boolean }
 export type ApplicantRow = {
   id: string
   full_name: string
+  /** pending, or searcher for a member who asks to become a provider */
+  status: PersonStatus
   requested_status: AppliedStatus | null
   home_group: IdName
   applied_at: string

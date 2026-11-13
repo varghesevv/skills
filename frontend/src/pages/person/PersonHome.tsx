@@ -1,10 +1,15 @@
+import { useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
-import { usePerson } from '../../auth/AuthContext'
+import { applyForProvider } from '../../api/person'
+import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
 import { PERSON_VOUCHES } from '../../portals/config'
+import { errorMessage } from '../../shared/errors'
+import { Alert } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import ApplicantHome from './ApplicantHome'
+import VouchShare from './VouchShare'
 
 /** What a person sees after signing in depends on their status, read from the server. */
 export default function PersonHome() {
@@ -44,6 +49,52 @@ function MemberHome() {
         </p>
         <p className="hint">{t('member.soon')}</p>
       </div>
+      {person.status === 'searcher' && <Upgrade />}
     </div>
+  )
+}
+
+/** A searcher can ask to offer their skills. After asking they share a vouch link and see the
+ *  vouches, like an applicant, and keep searching. */
+function Upgrade() {
+  const person = usePerson()
+  const { setPerson } = useAuth()
+  const apply = useMutation({
+    mutationFn: applyForProvider,
+    onSuccess: (updated) => setPerson(updated),
+  })
+  if (person.requested_status === 'provider') {
+    return (
+      <>
+        <section className="card" aria-labelledby="upgrade-waiting">
+          <h2 id="upgrade-waiting">{t('upgrade.waiting.title')}</h2>
+          <p>
+            {person.vouch_count === 1
+              ? t('upgrade.waiting.one')
+              : t('upgrade.waiting', { count: person.vouch_count })}
+          </p>
+        </section>
+        <VouchShare />
+      </>
+    )
+  }
+  return (
+    <section className="card" aria-labelledby="upgrade-title">
+      <h2 id="upgrade-title">{t('upgrade.title')}</h2>
+      <p>{t('upgrade.text')}</p>
+      {apply.isError && (
+        <Alert kind="error" focus>
+          {errorMessage(apply.error)}
+        </Alert>
+      )}
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={apply.isPending}
+        onClick={() => apply.mutate()}
+      >
+        {apply.isPending ? t('upgrade.working') : t('upgrade.apply')}
+      </button>
+    </section>
   )
 }
