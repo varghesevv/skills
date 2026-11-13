@@ -110,10 +110,12 @@ def _counts(vouch: Vouch, voucher: Person) -> bool:
     )
 
 
-def _vouchers(db: Session, applicant_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[Voucher]]:
+def _vouchers(
+    applicant_ids: list[uuid.UUID], rows: list[tuple[Vouch, Person, str]]
+) -> dict[uuid.UUID, list[Voucher]]:
     """The vouches each applicant received, newest first, with whether each still counts."""
     result: dict[uuid.UUID, list[Voucher]] = {i: [] for i in applicant_ids}
-    for vouch, voucher, church_name in _vouch_rows(db, applicant_ids):
+    for vouch, voucher, church_name in rows:
         result[vouch.applicant_id].append(
             Voucher(
                 name=voucher.full_name or "",
@@ -143,9 +145,10 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
     query = _in_scope_people(actor).where(Person.status == "pending")
     rows, total = _page(db, query, [live_count.desc(), Person.created_at], limit, offset)
     ids = [p.id for p in rows]
-    vouchers = _vouchers(db, ids)
+    vouch_rows = _vouch_rows(db, ids)  # read once: the list and the flag come from the same rows
+    vouchers = _vouchers(ids, vouch_rows)
     live_voucher_ids: dict[uuid.UUID, list[uuid.UUID]] = {i: [] for i in ids}
-    for vouch, giver, _ in _vouch_rows(db, ids):
+    for vouch, giver, _ in vouch_rows:
         if _counts(vouch, giver):
             live_voucher_ids[vouch.applicant_id].append(giver.id)
     groups = _groups(db, {p.home_group_id for p in rows})
@@ -303,7 +306,7 @@ def person_detail(db: Session, actor: Person, person_id: uuid.UUID) -> PersonDet
         chain_of_trust=[
             ChainLink(id=c.id, full_name=c.full_name or "", status=c.status) for c in chain
         ],
-        vouches=_vouchers(db, [person.id])[person.id],
+        vouches=_vouchers([person.id], _vouch_rows(db, [person.id]))[person.id],
     )
     db.commit()  # the log row and nothing else
     return detail

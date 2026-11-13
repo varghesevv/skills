@@ -527,3 +527,47 @@ def test_the_applicant_list_says_whether_a_provider_may_be_admitted_now(
     assert flag() is True
     # The flag and the admit endpoint agree.
     assert admit(client, lead, applicant, "provider").status_code == 200
+
+
+def test_the_flag_ignores_vouchers_who_are_not_admitted_or_are_closed(
+    client: TestClient, session: Session, world: World
+) -> None:
+    lead, group = leader(world)
+    applicant = add_member(world, "pending", group=group, requested_status="provider")
+    revoked = add_member(world, "searcher")
+    add_vouch(world, applicant, revoked)
+    session.execute(
+        Person.__table__.update()
+        .where(Person.id == revoked.person.id)
+        .values(status="revoked", home_group_id=None, last_home_group_id=world.group.id)
+    )
+    closed = add_member(world, "provider")
+    add_vouch(world, applicant, closed)
+    session.execute(
+        Person.__table__.update()
+        .where(Person.id == closed.person.id)
+        .values(
+            closed_at=datetime.now(UTC),
+            home_group_id=None,
+            full_name=None,
+            email=None,
+            mobile_number=None,
+            password_hash=None,
+        )
+    )
+    item = get(client, lead, "/applicants").json()["items"][0]
+    assert item["can_admit_as_provider"] is False and item["vouch_count"] == 0
+    assert admit(client, lead, applicant, "provider").status_code == 409
+
+
+def test_the_flag_for_the_owner_is_true_with_one_vouch_from_someone_else(
+    client: TestClient, world: World
+) -> None:
+    _, group = leader(world)
+    applicant = add_member(world, "pending", group=group, requested_status="provider")
+    boss = owner_member(world)
+    assert get(client, boss, "/applicants").json()["items"][0]["can_admit_as_provider"] is False
+    add_vouch(world, applicant, boss)  # the owner's own vouch is their sign-off
+    assert get(client, boss, "/applicants").json()["items"][0]["can_admit_as_provider"] is False
+    add_vouch(world, applicant, add_member(world, "searcher"))
+    assert get(client, boss, "/applicants").json()["items"][0]["can_admit_as_provider"] is True
