@@ -335,3 +335,54 @@ def test_an_admin_is_still_replaced_first(client: TestClient, world: World) -> N
 
 def test_the_new_kinds_are_known() -> None:
     assert {"leader_appointed", "leader_stepped_down"} <= set(notifications.KINDS)
+
+
+def test_a_refused_succession_leaves_the_invitation_links_alone(
+    client: TestClient, session: Session, world: World
+) -> None:
+    lead, group = leader(world)
+    add_member(world, "provider", group=group)
+    client.post(f"{API}/verifier/group-invitations", headers=headers_of(client, lead))
+    outsider = add_member(world, "provider")
+    for call in (
+        lambda: revoke(client, owner_member(world), lead),  # no successor, members exist
+        lambda: revoke(client, owner_member(world), lead, outsider),  # not a member
+    ):
+        assert call().status_code == 409
+    links = session.scalars(
+        select(GroupInvitation).where(GroupInvitation.home_group_id == group.id)
+    ).all()
+    assert links and all(link.revoked_at is None for link in links)
+
+
+def test_joining_a_group_takes_a_shared_lock_on_it(
+    client: TestClient, session: Session, world: World
+) -> None:
+    """Closing a group takes its row for update; a sign-up must wait for that or see the group
+    closed, so a group cannot close at the moment someone joins it."""
+    from sqlalchemy import event
+
+    lead, group = leader(world)
+    statements: list[str] = []
+
+    def record(conn: Any, cursor: Any, statement: str, *rest: Any) -> None:
+        statements.append(statement)
+
+    bind = session.get_bind()
+    event.listen(bind, "before_cursor_execute", record)
+    try:
+        response = client.post(
+            f"{API}/auth/signup",
+            json={
+                "full_name": "New Applicant",
+                "email": f"applicant-{secrets.token_hex(4)}@example.com",
+                "mobile_number": f"+9715{secrets.randbelow(10**8):08d}",
+                "password": secrets.token_urlsafe(16),
+                "requested_status": "searcher",
+                "home_group_id": str(group.id),
+            },
+        )
+    finally:
+        event.remove(bind, "before_cursor_execute", record)
+    assert response.status_code == 201
+    assert any("home_groups" in s and "FOR SHARE" in s for s in statements)

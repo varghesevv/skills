@@ -122,15 +122,16 @@ def end_leadership(
 
     The leader's own status is changed by the caller (a step-down, or a revocation).
     """
-    revoke_invitations(db, leader, group)
     if successor_id is not None:
         successor = pick_successor(db, group, leader, successor_id)
+        revoke_invitations(db, leader, group)
         appoint(db, group, successor, actor)
         return successor
     if other_members(db, group, leader.id):
         raise ApiError(
             409, "successor_required", "Choose a successor from the members of the home group"
         )
+    revoke_invitations(db, leader, group)
     group.closed_at = datetime.now(UTC)
     return None
 
