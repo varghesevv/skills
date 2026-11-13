@@ -1,11 +1,17 @@
 import { request } from './http'
 import type {
+  AdmitResult,
   AppliedStatus,
+  ApplicantRow,
   ChurchSummary,
   HomeGroupSummary,
   InvitationInfo,
+  MemberRow,
   NotificationList,
+  Paged,
+  PersonDetail,
   PersonMe,
+  PersonStatus,
   SignupBody,
   TokenResponse,
   VouchGiven,
@@ -98,4 +104,33 @@ export function markNotificationRead(id: string) {
 
 export function markAllNotificationsRead() {
   return request<void>('/me/notifications/read-all', { method: 'POST' })
+}
+
+// ---- the screens of a leader ----
+
+export const LEADER_PAGE_SIZE = 50
+
+const paging = (page: number) => `limit=${LEADER_PAGE_SIZE}&offset=${(page - 1) * LEADER_PAGE_SIZE}`
+
+export function fetchApplicants(page: number) {
+  return request<Paged<ApplicantRow>>(`/verifier/applicants?${paging(page)}`)
+}
+
+export function fetchMembers(page: number, status?: Exclude<PersonStatus, 'pending' | 'revoked'>) {
+  return request<Paged<MemberRow>>(
+    `/verifier/members?${paging(page)}${status ? `&status=${status}` : ''}`,
+  )
+}
+
+/** The only response with a mobile number besides the reveal: each call is logged. */
+export function fetchPersonDetail(id: string) {
+  return request<PersonDetail>(`/verifier/people/${id}`)
+}
+
+export function admitPerson(id: string, to: AppliedStatus) {
+  return request<AdmitResult>(`/verifier/people/${id}/admit`, { method: 'POST', body: { to } })
+}
+
+export function declinePerson(id: string) {
+  return request<void>(`/verifier/people/${id}/decline`, { method: 'POST' })
 }

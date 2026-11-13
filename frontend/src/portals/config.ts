@@ -9,6 +9,9 @@ export const PERSON_SIGN_IN = '/sign-in'
 export const PERSON_SIGN_UP = '/sign-up'
 export const PERSON_VOUCHES = '/member/vouches'
 export const PERSON_NOTIFICATIONS = '/member/notifications'
+export const LEADER_APPLICANTS = '/member/applicants'
+export const LEADER_MEMBERS = '/member/members'
+export const LEADER_PERSON = '/member/people'
 /** A vouch link opens here; the token is the last part of the address. */
 export const VOUCH_LINK_PREFIX = '/vouch/'
 
