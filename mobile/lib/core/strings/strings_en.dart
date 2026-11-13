@@ -339,6 +339,18 @@ const stringsEn = <String, String>{
   'leader.upgrade.decline': 'Decline the request of {name}',
   'leader.upgrade.warning': '{name} stays {a_workhost}. Only the request to offer skills ends, and they can ask again.',
   'leader.upgrade.declined': 'The request of {name} was declined.',
+  'upgrade.title': 'Offer your skills',
+  'upgrade.text': 'You can offer your skills as {a_freelancer}. People who know you vouch for you, and the leader of your {homegroup} decides. You keep searching meanwhile.',
+  'upgrade.apply': 'I want to offer my skills',
+  'upgrade.working': 'Sending…',
+  'upgrade.waiting.title': 'Your request',
+  'upgrade.waiting': 'Your request to offer your skills is with the leader of your {homegroup}. You have {count} vouches so far.',
+  'upgrade.waiting.one': 'Your request to offer your skills is with the leader of your {homegroup}. You have 1 vouch so far.',
+  'upgrade.error.status':
+      'Your status changed meanwhile. Pull down to reload this page.',
+  'notifications.provider_application': '{name} asks to offer their skills',
+  'notifications.provider_declined':
+      '{name} declined your request to offer your skills',
   'revoked.title': 'No access',
   'revoked.text': 'Your account has no access to Skills. If you think this is a mistake, speak to the leader of your {homegroup}.',
   'landing.member.title': 'I belong to a {homegroup}',

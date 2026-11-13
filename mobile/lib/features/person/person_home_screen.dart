@@ -9,6 +9,7 @@ import '../../core/session/session_controller.dart';
 import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
+import 'provider_upgrade.dart';
 import 'person_router_paths.dart';
 import 'vouch_paste_dialog.dart';
 
@@ -21,6 +22,17 @@ class PersonHomeScreen extends ConsumerWidget {
     final person = ref.watch(personProvider);
     final text = ref.watch(appTextProvider);
     if (person == null) return const SizedBox.shrink();
+    if (person.status != PersonStatus.revoked) {
+      // A new notification usually means somebody changed something about this person (a
+      // leader admitted or declined them): ask who they are again, so the page shows it.
+      ref.listen(notificationsProvider, (previous, next) {
+        final before = previous?.value?.unreadCount;
+        final now = next.value?.unreadCount;
+        if (before != null && now != null && now > before) {
+          ref.read(sessionProvider.notifier).refreshPerson();
+        }
+      });
+    }
     final (title, body) = switch (person.status) {
       PersonStatus.pending => (
         text('applicant.title'),
@@ -90,60 +102,65 @@ class _Revoked extends StatelessWidget {
 }
 
 /// Admitted people: the screens for each status arrive in later steps of the roadmap.
-class _Member extends StatelessWidget {
+class _Member extends ConsumerWidget {
   const _Member({required this.person, required this.text});
 
   final PersonMe person;
   final AppText text;
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      Text(
-        text('member.welcome', {'name': person.fullName}),
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
-      const SizedBox(height: 8),
-      Text(
-        text('member.yourStatus', {
-          'status': text('status.${person.status.name}'),
-        }),
-      ),
-      Text([person.church.name, ?person.homeGroup?.name].join(', ')),
-      const SizedBox(height: 8),
-      if (person.status.isLeader) ...[
+  Widget build(BuildContext context, WidgetRef ref) => RefreshIndicator(
+    onRefresh: () => ref.read(sessionProvider.notifier).refreshPerson(),
+    child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          text('member.welcome', {'name': person.fullName}),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          text('member.yourStatus', {
+            'status': text('status.${person.status.name}'),
+          }),
+        ),
+        Text([person.church.name, ?person.homeGroup?.name].join(', ')),
+        const SizedBox(height: 8),
+        if (person.status.isLeader) ...[
+          ListTile(
+            key: const Key('leader-applicants'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('leader.nav.applicants')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(leaderApplicants),
+          ),
+          ListTile(
+            key: const Key('leader-members'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('leader.nav.members')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(leaderMembers),
+          ),
+        ],
         ListTile(
-          key: const Key('leader-applicants'),
+          key: const Key('vouch-for-someone'),
           contentPadding: EdgeInsets.zero,
-          title: Text(text('leader.nav.applicants')),
+          title: Text(text('vouch.paste.open')),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(leaderApplicants),
+          onTap: () => askForVouchLink(context),
         ),
         ListTile(
-          key: const Key('leader-members'),
+          key: const Key('vouches-given'),
           contentPadding: EdgeInsets.zero,
-          title: Text(text('leader.nav.members')),
+          title: Text(text('vouch.given.link')),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(leaderMembers),
+          onTap: () => context.push(personVouches),
         ),
+        ProviderUpgrade(person: person),
+        const SizedBox(height: 8),
+        Text(text('member.soon')),
       ],
-      ListTile(
-        key: const Key('vouch-for-someone'),
-        contentPadding: EdgeInsets.zero,
-        title: Text(text('vouch.paste.open')),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => askForVouchLink(context),
-      ),
-      ListTile(
-        key: const Key('vouches-given'),
-        contentPadding: EdgeInsets.zero,
-        title: Text(text('vouch.given.link')),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(personVouches),
-      ),
-      const SizedBox(height: 8),
-      Text(text('member.soon')),
-    ],
+    ),
   );
 }

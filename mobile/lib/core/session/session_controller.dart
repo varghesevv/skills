@@ -48,6 +48,27 @@ class SessionController extends AsyncNotifier<Account?> {
   /// A change of the person's own data (the application, for example) came back from the server.
   void setPerson(PersonMe person) => state = AsyncData(person);
 
+  Future<void>? _refreshing;
+
+  /// Asks the server again who the signed-in person is, so a change made by someone else (a
+  /// leader admitted or declined them) shows. Calls that overlap share one request. A rejected
+  /// session is not handled here: the API client signals it and the session ends through
+  /// [expire]. Any other failure keeps what is shown; the next ask tries again.
+  Future<void> refreshPerson() =>
+      _refreshing ??= _refreshPerson().whenComplete(() => _refreshing = null);
+
+  Future<void> _refreshPerson() async {
+    if (state.value is! PersonMe) return;
+    try {
+      final account = await ref.read(authRepositoryProvider).me();
+      if (account is PersonMe && state.value is PersonMe) {
+        state = AsyncData(account);
+      }
+    } on Exception {
+      // The screen keeps the last answer.
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);
