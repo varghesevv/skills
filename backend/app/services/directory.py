@@ -14,6 +14,7 @@ from app.schemas.church import (
     NameRef,
     PersonMeResponse,
 )
+from app.schemas.church_invitations import ChurchSummaryOwner
 from app.services.permissions import live_vouches
 
 # The number of churches and groups is small and set by the operators; this is a safety net so the
@@ -77,3 +78,53 @@ def person_view(db: Session, person: Person) -> PersonMeResponse:
         flagged_for_recheck=person.flagged_for_recheck,
         vouch_count=len(live_vouches([(v.voucher_id, v.withdrawn_at) for v in vouches], vouchers)),
     )
+
+
+def owner_churches(db: Session, *, limit: int, offset: int) -> tuple[list[ChurchSummaryOwner], int]:
+    """Every church, open first and then by name, with counts, for the OWNER."""
+    total = db.scalar(select(func.count()).select_from(Church)) or 0
+    churches = list(
+        db.scalars(
+            select(Church)
+            .order_by(Church.closed_at.is_not(None), func.lower(Church.name), Church.id)
+            .limit(limit)
+            .offset(offset)
+        )
+    )
+    if not churches:
+        return [], total
+    ids = [c.id for c in churches]
+    groups: dict[uuid.UUID, int] = {}
+    for church_id, count in db.execute(
+        select(HomeGroup.church_id, func.count())
+        .where(HomeGroup.church_id.in_(ids), HomeGroup.closed_at.is_(None))
+        .group_by(HomeGroup.church_id)
+    ):
+        groups[church_id] = count
+    people = db.execute(
+        select(Person.church_id, Person.status, func.count())
+        .where(Person.church_id.in_(ids), Person.closed_at.is_(None))
+        .group_by(Person.church_id, Person.status)
+    ).all()
+    members: dict[uuid.UUID, int] = {}
+    revoked: dict[uuid.UUID, int] = {}
+    for church_id, status, count in people:
+        target = revoked if status == "revoked" else members
+        target[church_id] = target.get(church_id, 0) + count
+    admins = {
+        p.id: p.full_name or ""
+        for p in db.scalars(select(Person).where(Person.id.in_([c.admin_id for c in churches])))
+    }
+    return [
+        ChurchSummaryOwner(
+            id=c.id,
+            name=c.name,
+            admin_name=admins.get(c.admin_id, ""),
+            open=c.closed_at is None,
+            groups=groups.get(c.id, 0),
+            members=members.get(c.id, 0),
+            revoked=revoked.get(c.id, 0),
+            closed_at=c.closed_at,
+        )
+        for c in churches
+    ], total

@@ -5,6 +5,11 @@ into another open home group of the church, in the same transaction: they leave 
 is closed (kept, with the date) and they join the other one. A VERIFIER no longer leads a group, so
 they become a PROVIDER or a SEARCHER, recorded as set by the church's ADMIN; an ADMIN or the OWNER
 keeps their status.
+
+Only the OWNER closes a church, and not their own: the church, all its home groups and all its
+members' accounts are closed together (the rows are kept, with the date, for the history), and
+nobody is revoked or flagged. The church's revoked people stay as they are, so they still cannot
+sign up again.
 """
 
 import uuid
@@ -15,8 +20,14 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
 from app.models.church import Church, HomeGroup, Person
-from app.models.trust import GroupInvitation, MoveRequest, Notification, StatusChange
-from app.services import succession
+from app.models.trust import (
+    GroupInvitation,
+    GroupRequest,
+    MoveRequest,
+    Notification,
+    StatusChange,
+)
+from app.services import account_closing, succession
 from app.services.locks import lock_people
 from app.services.moves import MEMBER_MOVED_IN, MOVE_CANCELLED
 from app.services.succession import end_commit
@@ -117,3 +128,91 @@ def close_group(
 
 def commit(db: Session) -> None:
     end_commit(db)
+
+
+def close_church(db: Session, owner: Person, church_id: uuid.UUID) -> tuple[Church, int, int]:
+    """The OWNER closes another church. The commit is the caller's. Returns the church, how many
+    home groups and how many accounts were closed."""
+    church = db.get(Church, church_id)
+    if church is None or church.closed_at is not None:
+        raise ApiError(404, "not_found", "There is no such church")
+    admin = db.get(Person, church.admin_id)
+    if admin is None or admin.status == "owner":
+        raise ApiError(
+            409, "owner_church", "The OWNER's own church is not closed: hand over the role first"
+        )
+    # The open members (not the revoked, who stay on the church's list, nor the closed).
+    member_ids = list(
+        db.scalars(
+            select(Person.id).where(
+                Person.church_id == church.id,
+                Person.closed_at.is_(None),
+                Person.status != "revoked",
+            )
+        )
+    )
+    people = lock_people(db, [owner.id, *member_ids])
+    locked_owner = people.get(owner.id)
+    if locked_owner is None or locked_owner.closed_at is not None or locked_owner.status != "owner":
+        raise ApiError(403, "forbidden", "You are not allowed to do this")
+    # Then the groups and the church (the order of locks in services/locks.py).
+    groups = list(
+        db.scalars(
+            select(HomeGroup)
+            .where(HomeGroup.church_id == church.id, HomeGroup.closed_at.is_(None))
+            .order_by(HomeGroup.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    )
+    locked_church = db.get(Church, church.id, with_for_update=True, populate_existing=True)
+    if locked_church is None or locked_church.closed_at is not None:
+        raise ApiError(409, "state_changed", "The church changed meanwhile. Reload.")
+    # Someone who joined between the first read and the locks is a member too.
+    members = [
+        p
+        for p in people.values()
+        if p.id != owner.id and p.church_id == church.id and p.closed_at is None
+    ]
+    late = list(
+        db.scalars(
+            select(Person).where(
+                Person.church_id == church.id,
+                Person.closed_at.is_(None),
+                Person.status != "revoked",
+                Person.id.not_in([p.id for p in members]),
+            )
+        )
+    )
+    if late:
+        raise ApiError(409, "state_changed", "The church changed meanwhile. Reload.")
+    now = datetime.now(UTC)
+    group_ids = [g.id for g in groups]
+    if group_ids:
+        db.execute(
+            update(GroupInvitation)
+            .where(
+                GroupInvitation.home_group_id.in_(group_ids), GroupInvitation.revoked_at.is_(None)
+            )
+            .values(revoked_at=now)
+        )
+        db.execute(
+            update(MoveRequest)
+            .where(
+                MoveRequest.completed_at.is_(None),
+                MoveRequest.cancelled_at.is_(None),
+                (MoveRequest.from_group_id.in_(group_ids))
+                | (MoveRequest.to_group_id.in_(group_ids)),
+            )
+            .values(cancelled_at=now)
+        )
+    db.execute(
+        update(GroupRequest)
+        .where(GroupRequest.church_id == church.id, GroupRequest.state == "open")
+        .values(state="declined", decided_by_id=owner.id, decided_at=now)
+    )
+    for group in groups:
+        group.closed_at = now
+    account_closing.clear_accounts(db, members, now)
+    locked_church.closed_at = now
+    return locked_church, len(groups), len(members)

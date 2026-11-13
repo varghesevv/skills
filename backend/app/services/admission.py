@@ -74,7 +74,7 @@ def decline(db: Session, actor: Person, person_id: uuid.UUID) -> None:
         return
     if not can_decline(actor, applicant):
         raise ApiError(409, "not_pending", "This person is not waiting to be admitted")
-    account_closing.clear_account(db, applicant, datetime.now(UTC), applicant.email or "")
+    account_closing.clear_account(db, applicant, datetime.now(UTC))
     _commit(db)
 
 

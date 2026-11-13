@@ -59,3 +59,26 @@ class AdminAccepted(BaseModel):
     id: uuid.UUID
     church_id: uuid.UUID
     status: str
+
+
+class ChurchClosed(BaseModel):
+    id: uuid.UUID
+    name: str
+    closed_groups: int
+    closed_accounts: int
+
+
+class ChurchSummaryOwner(BaseModel):
+    id: uuid.UUID
+    name: str
+    admin_name: str
+    open: bool
+    groups: int  # open home groups
+    members: int  # open, not revoked
+    revoked: int
+    closed_at: datetime | None
+
+
+class ChurchListOwner(BaseModel):
+    items: list[ChurchSummaryOwner]
+    total: int

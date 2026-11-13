@@ -20,22 +20,29 @@ from app.models.trust import GroupInvitation, VouchLink
 from app.services.auth import check_throttle, clean_ip, record_attempt
 
 
-def clear_account(db: Session, person: Person, now: datetime, email: str) -> None:
-    """Mark the account closed and clear what identifies the person. The caller commits.
+def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
+    """Mark the accounts closed and clear what identifies the people. The caller commits.
 
-    Used when people leave and when a leader declines an application: the row, the history and
-    the vouches given stay, and nothing of theirs works any more."""
-    person.closed_at = now
-    person.home_group_id = None
-    person.full_name = person.email = person.mobile_number = person.password_hash = None
-    person.flagged_for_recheck = False
+    Used when people leave, when a leader declines an application and when a church closes: the
+    rows, the history and the vouches given stay, and nothing of theirs works any more. A closing
+    church has many people, so everything beyond the rows themselves is done in a few statements.
+    """
+    if not people:
+        return
+    ids = [p.id for p in people]
+    emails = [p.email.lower() for p in people if p.email]  # read before they are cleared
+    for person in people:
+        person.closed_at = now
+        person.home_group_id = None
+        person.full_name = person.email = person.mobile_number = person.password_hash = None
+        person.flagged_for_recheck = False
     # No session, reset link or invitation of theirs works any more, and the address, the
     # network address and the browser of their login attempts are forgotten.
     db.execute(
         update(RefreshToken)
         .where(
             RefreshToken.user_type == "person",
-            RefreshToken.user_id == person.id,
+            RefreshToken.user_id.in_(ids),
             RefreshToken.revoked_at.is_(None),
         )
         .values(revoked_at=now)
@@ -44,35 +51,40 @@ def clear_account(db: Session, person: Person, now: datetime, email: str) -> Non
         update(PasswordResetToken)
         .where(
             PasswordResetToken.user_type == "person",
-            PasswordResetToken.user_id == person.id,
+            PasswordResetToken.user_id.in_(ids),
             PasswordResetToken.used_at.is_(None),
         )
         .values(used_at=now)
     )
     db.execute(
         update(VouchLink)
-        .where(VouchLink.person_id == person.id, VouchLink.revoked_at.is_(None))
+        .where(VouchLink.person_id.in_(ids), VouchLink.revoked_at.is_(None))
         .values(revoked_at=now)
     )
     db.execute(
         update(GroupInvitation)
-        .where(GroupInvitation.created_by_id == person.id, GroupInvitation.revoked_at.is_(None))
+        .where(GroupInvitation.created_by_id.in_(ids), GroupInvitation.revoked_at.is_(None))
         .values(revoked_at=now)
     )
     db.execute(
         update(LoginHistory)
-        .where(LoginHistory.user_type == "person", LoginHistory.user_id == person.id)
+        .where(LoginHistory.user_type == "person", LoginHistory.user_id.in_(ids))
         .values(login_email=None, ip_address=None, user_agent=None)
     )
-    if email:  # attempts before the person was recognised carry only the address
+    if emails:  # attempts before the person was recognised carry only the address
         db.execute(
             update(LoginHistory)
             .where(
                 LoginHistory.user_type == "person",  # an older account keeps its own trail
-                func.lower(LoginHistory.login_email) == email.lower(),
+                func.lower(LoginHistory.login_email).in_(emails),
             )
             .values(login_email=None, ip_address=None, user_agent=None)
         )
+
+
+def clear_account(db: Session, person: Person, now: datetime) -> None:
+    """Close one account (see `clear_accounts`)."""
+    clear_accounts(db, [person], now)
 
 
 def close_account(
@@ -112,5 +124,5 @@ def close_account(
         raise ApiError(409, "leads_a_group", "Step down as leader of your home group first")
     if person.status in ("admin", "owner"):
         raise ApiError(409, "leads_a_church", "Hand over your role first")
-    clear_account(db, person, now, email)
+    clear_account(db, person, now)
     db.commit()
