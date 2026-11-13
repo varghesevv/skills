@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Navigate } from 'react-router-dom'
 
 import {
   fetchNotifications,
@@ -6,7 +7,9 @@ import {
   markNotificationRead,
 } from '../../api/person'
 import type { NotificationItem } from '../../api/types'
+import { usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
+import { PERSON_HOME } from '../../portals/config'
 import { formatDateTime } from '../../shared/dates'
 import { errorMessage } from '../../shared/errors'
 import { Alert, QueryBoundary } from '../../shared/ui'
@@ -34,7 +37,9 @@ export function notificationText(item: NotificationItem): string {
 export default function Notifications() {
   usePageTitle(t('notifications.title'))
   const queryClient = useQueryClient()
+  const revoked = usePerson().status === 'revoked'
   const list = useQuery({
+    enabled: !revoked,
     queryKey: NOTIFICATIONS_KEY,
     queryFn: fetchNotifications,
     refetchInterval: NOTIFICATIONS_POLL_MS,
@@ -43,6 +48,7 @@ export default function Notifications() {
   const readOne = useMutation({ mutationFn: markNotificationRead, onSettled: refresh })
   const readAll = useMutation({ mutationFn: markAllNotificationsRead, onSettled: refresh })
   const failure = readOne.error ?? readAll.error
+  if (revoked) return <Navigate to={PERSON_HOME} replace />
 
   return (
     <div className="container">
@@ -82,6 +88,9 @@ export default function Notifications() {
                           <button
                             type="button"
                             className="btn btn-quiet"
+                            aria-label={t('notifications.read.named', {
+                              text: notificationText(item),
+                            })}
                             disabled={readOne.isPending}
                             onClick={() => readOne.mutate(item.id)}
                           >

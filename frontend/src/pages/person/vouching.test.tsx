@@ -341,7 +341,9 @@ describe('notifications', () => {
     })
     renderApp('/member/notifications')
     const first = (await screen.findByText(/Vera Voucher vouched for you/)).closest('li')!
-    await user.click(within(first).getByRole('button', { name: 'Mark as read' }))
+    await user.click(
+      within(first).getByRole('button', { name: /^Mark as read: Vera Voucher vouched for you/ }),
+    )
     expect(await screen.findByRole('link', { name: 'Notifications (1 unread)' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Mark all as read' }))
     expect(await screen.findByRole('link', { name: 'Notifications' })).toBeVisible()
@@ -376,4 +378,35 @@ describe('notifications', () => {
     expect(api.count(NOTES)).toBe(0)
     expect(screen.queryByRole('link', { name: /Notifications/ })).toBeNull()
   })
+})
+
+describe('an applicant on the page of vouches given', () => {
+  it('is sent home without a request, because only admitted people vouch', async () => {
+    const api = signedInAs(makeMe(), {
+      [NOTES]: () => json(200, EMPTY_NOTES),
+      'GET /me': () => json(200, makePerson()),
+      'GET /me/vouch-link': () => json(200, { active: false, expires_at: null }),
+      'GET /me/vouches': () => json(200, { items: [] }),
+      'GET /churches': () => json(200, { items: [] }),
+    })
+    renderApp('/member/vouches')
+    expect(await screen.findByRole('heading', { name: 'Your application' })).toBeVisible()
+    expect(api.count('GET /me/vouches-given')).toBe(0)
+  })
+})
+
+describe('a revoked person on the pages for members', () => {
+  it.each(['/member/notifications', '/member/vouches'])(
+    'is sent home from %s without a request',
+    async (path) => {
+      const api = signedInAs(makeMe(), {
+        'GET /me': () =>
+          json(200, makePerson({ status: 'revoked', home_group: null, leader: null })),
+      })
+      renderApp(path)
+      expect(await screen.findByRole('heading', { name: 'No access' })).toBeVisible()
+      expect(api.count(NOTES)).toBe(0)
+      expect(api.count('GET /me/vouches-given')).toBe(0)
+    },
+  )
 })

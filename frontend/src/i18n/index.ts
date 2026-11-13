@@ -108,6 +108,7 @@ const en = {
   'vouch.page.done': 'Thank you. You vouched for {name}.',
   'vouch.page.already': 'You have already vouched for {name}.',
   'vouch.page.bad': 'This link is not valid any more. Ask the person for a new one.',
+  'vouch.page.alreadyGeneric': 'You have already vouched for this person.',
   'vouch.page.self': 'This is your own link. Send it to someone who knows you.',
   'vouch.page.notAdmitted':
     'Only people who have been admitted can vouch. You will be able to once your {homegroup} leader admits you.',
@@ -126,6 +127,7 @@ const en = {
   'notifications.none': 'Nothing new.',
   'notifications.readAll': 'Mark all as read',
   'notifications.read': 'Mark as read',
+  'notifications.read.named': 'Mark as read: {text}',
   'notifications.unread': 'new',
   'notifications.applicant_new': '{name} chose your {homegroup}',
   'notifications.vouch_received': '{name} vouched for you',

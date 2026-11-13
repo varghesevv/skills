@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Navigate } from 'react-router-dom'
 
 import { fetchVouchesGiven, withdrawVouch } from '../../api/person'
+import { usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
+import { PERSON_HOME } from '../../portals/config'
 import { formatDate } from '../../shared/dates'
 import { errorMessage } from '../../shared/errors'
 import { Alert, QueryBoundary } from '../../shared/ui'
@@ -11,11 +14,19 @@ import { usePageTitle } from '../../shared/usePageTitle'
 export default function MyVouches() {
   usePageTitle(t('vouch.given.title'))
   const queryClient = useQueryClient()
-  const given = useQuery({ queryKey: ['vouches-given'], queryFn: fetchVouchesGiven })
+  // Only admitted people vouch: an applicant or a revoked person has nothing here.
+  const status = usePerson().status
+  const mayVouch = status !== 'pending' && status !== 'revoked'
+  const given = useQuery({
+    queryKey: ['vouches-given'],
+    queryFn: fetchVouchesGiven,
+    enabled: mayVouch,
+  })
   const withdraw = useMutation({
     mutationFn: withdrawVouch,
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['vouches-given'] }),
   })
+  if (!mayVouch) return <Navigate to={PERSON_HOME} replace />
   return (
     <div className="container">
       <div className="card">

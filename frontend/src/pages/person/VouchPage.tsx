@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/http'
@@ -14,7 +15,9 @@ import { usePageTitle } from '../../shared/usePageTitle'
 function vouchProblem(error: unknown, name: string): string {
   if (error instanceof ApiError) {
     if (error.code === 'cannot_vouch_self') return t('vouch.page.self')
-    if (error.code === 'already_vouched') return t('vouch.page.already', { name })
+    if (error.code === 'already_vouched') {
+      return name ? t('vouch.page.already', { name }) : t('vouch.page.alreadyGeneric')
+    }
     if (error.code === 'not_found') return t('vouch.page.bad')
     if (error.code === 'rate_limited') return t('vouch.page.limit')
     if (error.code === 'not_admitted') return t('vouch.page.notAdmitted')
@@ -28,13 +31,18 @@ export default function VouchPage() {
   const { token = '' } = useParams()
   const person = usePerson()
   const admitted = person.status !== 'pending' && person.status !== 'revoked'
-  const info = useQuery({
-    queryKey: ['vouch-link-info', token],
-    queryFn: () => lookupVouchLink(token),
-    enabled: admitted,
-    retry: false,
+  // The lookup is a POST (the token stays out of the address) and is run once per link. It is
+  // not a query, so the token is never part of a cache key.
+  const info = useMutation({ mutationFn: lookupVouchLink })
+  const lookup = info.mutate
+  useEffect(() => {
+    if (admitted) lookup(token)
+  }, [admitted, token, lookup])
+  const queryClient = useQueryClient()
+  const vouch = useMutation({
+    mutationFn: () => vouchThroughLink(token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vouches-given'] }),
   })
-  const vouch = useMutation({ mutationFn: () => vouchThroughLink(token) })
 
   if (!admitted) {
     return (
@@ -45,7 +53,7 @@ export default function VouchPage() {
       </Card>
     )
   }
-  if (info.isPending) {
+  if (!info.isError && !info.isSuccess) {
     return (
       <Card>
         <p role="status" className="muted">
