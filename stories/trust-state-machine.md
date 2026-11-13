@@ -1,8 +1,25 @@
-# S3: Trust state machine
+# Trust state machine
 
 ## Story
 
 As a **developer**, I want every change to a person's trust state to go through one module that checks it against the verification model, so that no feature can admit, appoint, revoke or move someone in a way the model does not allow, and every change is recorded in the chain of trust. The module must be loosely coupled, so the rules, the profiles and the features can each change without touching the others.
+
+## Status
+
+Accepted as intent, not built as a separate module. The model was built on the integration branch `model/verification` (roadmap in `docs/roadmap-verification-model.md`) after this story was written, and parts of it exist already. Decision D-26 (in `docs/verification-decisions.md` on `model/verification`, added with the admission pull request) records how the story maps onto that work. The code named below is on that branch too, and reaches `main` at the cut-over:
+
+| Story item | Where it stands |
+|---|---|
+| Checks (`in_scope`, `can_set_status`, `can_admit`, `can_vouch`) | Done: `backend/app/services/permissions.py`, with a 343-case matrix test. |
+| Invariants and `check_invariants` | Enforced in PostgreSQL (deferrable constraints, commit-time triggers, composite foreign keys), which holds even if the code is wrong. No second copy in Python. The seeded random-sequence test (roadmap 4.6) checks them after every step. |
+| One operation per row of the Operations table, changing everything in one transaction | Built as services in roadmap S3.2 (admit, decline) and S4 (revoke, reinstate, succession, move, close, handover). |
+| Storage port with an in-memory adapter | Not built; the database is the single source of truth and tests run against it. |
+| Independence enforced by an import check in CI | To do before S4 starts. |
+| `allowed_actions` for clients | To do with the verifier screens (roadmap 3.5 and 3.7). |
+| Capability questions | `can_vouch` exists; routes ask for "at least X" through one dependency, which keeps status comparisons in one place. |
+| Out of scope: linking statuses to `user_type` | Done meanwhile (D-22). |
+
+The name no longer starts with "S3", which is a slice of the roadmap (trust: vouching and admission).
 
 ## Background
 
