@@ -190,6 +190,10 @@ def test_the_events_so_far_all_write_a_known_kind(
         "member_moved_in",
         "member_moved_out",
         "group_closed",
+        "handover_requested",
+        "handover_cancelled",
+        "owner_handed_over",
+        "owner_appointed",
     }
     assert written == set(notifications.KINDS) - others
 

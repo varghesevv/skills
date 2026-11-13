@@ -8,6 +8,7 @@ from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.models.church import Person
+from app.schemas.church import IdName
 from app.schemas.church_invitations import (
     ChurchClosed,
     ChurchInvitationCreated,
@@ -15,7 +16,13 @@ from app.schemas.church_invitations import (
     ChurchInvite,
     ChurchListOwner,
 )
-from app.services import church_invitations, closing, directory
+from app.schemas.handover import (
+    HandoverAccepted,
+    HandoverCurrent,
+    HandoverOut,
+    HandoverPropose,
+)
+from app.services import church_invitations, closing, directory, handover
 
 router = APIRouter(prefix="/owner", tags=["owner"])
 
@@ -83,3 +90,62 @@ def close_church(
     return ChurchClosed(
         id=church.id, name=church.name, closed_groups=groups, closed_accounts=accounts
     )
+
+
+Admin = Annotated[Person, Depends(current_person("admin"))]
+
+
+@router.post("/handover", status_code=status.HTTP_201_CREATED)
+def propose_handover(
+    body: HandoverPropose, owner: Owner, db: Annotated[Session, Depends(get_session)]
+) -> HandoverOut:
+    """Propose to hand the OWNER role to the ADMIN of another church. Name a new ADMIN for your own
+    church and a new leader for your group (each may be left out only when nobody else is in the
+    church or group, and you then keep that role). Nothing changes until the chosen ADMIN accepts;
+    one proposal is open at a time (`409 handover_open`)."""
+    request = handover.propose(
+        db,
+        owner,
+        body.new_owner_id,
+        body.successor_admin_id,
+        body.successor_leader_id,
+        body.former_owner_status,
+    )
+    return handover.view(db, request)
+
+
+@router.get("/handover")
+def current_handover(
+    person: Admin, db: Annotated[Session, Depends(get_session)]
+) -> HandoverCurrent:
+    """The open proposal that concerns you (as the outgoing OWNER or the chosen ADMIN), if any."""
+    request = handover.current(db, person)
+    return HandoverCurrent(request=handover.view(db, request) if request else None)
+
+
+@router.post("/handover/{request_id}/accept")
+def accept_handover(
+    request_id: uuid.UUID, person: Admin, db: Annotated[Session, Depends(get_session)]
+) -> HandoverAccepted:
+    """The chosen ADMIN accepts. In one transaction they become the OWNER (and stay the ADMIN of
+    their own church), the OWNER's church gets its new ADMIN and its group its new leader, and the
+    outgoing OWNER becomes a provider or a searcher (or keeps a role nobody can take over)."""
+    request = handover.accept(db, person, request_id)
+    former = db.get(Person, request.owner_id)
+    now_owner = db.get(Person, request.new_owner_id)
+    return HandoverAccepted(
+        owner=IdName(
+            id=request.new_owner_id, name=(now_owner.full_name if now_owner else "") or ""
+        ),
+        former_owner=IdName(id=request.owner_id, name=(former.full_name if former else "") or ""),
+        former_owner_status=former.status if former else "",
+    )
+
+
+@router.post("/handover/{request_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_handover(
+    request_id: uuid.UUID, person: Admin, db: Annotated[Session, Depends(get_session)]
+) -> Response:
+    """Either side withdraws an open proposal; the other side is told."""
+    handover.cancel(db, person, request_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

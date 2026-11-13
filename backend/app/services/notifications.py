@@ -25,6 +25,7 @@ from app.services.group_requests import (
     GROUP_REQUEST_DECLINED,
     GROUP_REQUEST_NEW,
 )
+from app.services.handover import HANDOVER_CANCELLED, HANDOVER_REQUESTED
 from app.services.moves import (
     MEMBER_MOVED_IN,
     MEMBER_MOVED_OUT,
@@ -32,6 +33,7 @@ from app.services.moves import (
     MOVE_COMPLETED,
     MOVE_REQUESTED,
 )
+from app.services.ownership import OWNER_APPOINTED, OWNER_HANDED_OVER
 from app.services.provider_upgrade import PROVIDER_APPLICATION, PROVIDER_DECLINED
 from app.services.revocation import REINSTATED, REVOKED
 from app.services.signup import NEW_APPLICANT
@@ -68,6 +70,10 @@ KINDS = (
     MEMBER_MOVED_IN,
     MEMBER_MOVED_OUT,
     GROUP_CLOSED,
+    HANDOVER_REQUESTED,
+    HANDOVER_CANCELLED,
+    OWNER_APPOINTED,
+    OWNER_HANDED_OVER,
 )
 
 
