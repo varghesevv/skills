@@ -321,6 +321,8 @@ export type ApplicantRow = {
   applied_at: string
   vouch_count: number
   vouchers: Voucher[]
+  /** The server's answer: may the caller admit this person as a provider now? */
+  can_admit_as_provider: boolean
 }
 export type MemberRow = {
   id: string

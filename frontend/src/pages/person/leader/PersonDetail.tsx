@@ -170,7 +170,8 @@ function PersonView({
         <AdmitControls
           id={data.id}
           name={data.full_name}
-          liveVouches={data.vouches.filter((v) => v.live).length}
+          // This answer has no `can_admit_as_provider`; until it has, a live vouch is the hint.
+          canAdmitAsProvider={data.vouches.some((v) => v.live)}
           onDone={onDone}
         />
       )}

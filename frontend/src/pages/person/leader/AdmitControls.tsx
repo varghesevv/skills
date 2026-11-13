@@ -10,16 +10,16 @@ import { leaderProblem } from './problems'
 export type Outcome = 'declined' | { status: PersonStatus; requested_status: AppliedStatus | null }
 
 /** Admit as a searcher or a provider, or decline (which asks first, because it cannot be undone).
- *  `liveVouches` only switches off what cannot work: a provider needs a vouch besides the leader's. */
+ *  `canAdmitAsProvider` only switches the provider button off; the server decides. */
 export default function AdmitControls({
   id,
   name,
-  liveVouches,
+  canAdmitAsProvider,
   onDone,
 }: {
   id: string
   name: string
-  liveVouches: number
+  canAdmitAsProvider: boolean
   onDone: (message: string, outcome: Outcome) => void
 }) {
   const queryClient = useQueryClient()
@@ -68,8 +68,8 @@ export default function AdmitControls({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={busy || liveVouches === 0}
-            aria-describedby={liveVouches === 0 ? `hint-${id}` : undefined}
+            disabled={busy || !canAdmitAsProvider}
+            aria-describedby={!canAdmitAsProvider ? `hint-${id}` : undefined}
             onClick={() => admit.mutate('provider')}
           >
             {t('leader.admit.provider', { name })}
@@ -82,7 +82,7 @@ export default function AdmitControls({
           >
             {t('leader.decline.open', { name })}
           </button>
-          {liveVouches === 0 && (
+          {!canAdmitAsProvider && (
             <p className="hint span-2" id={`hint-${id}`}>
               {t('leader.admit.providerHint')}
             </p>

@@ -18,6 +18,7 @@ const NADIA = {
   home_group: { id: 'group-1', name: 'Riverside' },
   applied_at: '2026-11-10T08:00:00Z',
   vouch_count: 2,
+  can_admit_as_provider: true,
   vouchers: [
     { name: 'Vera Voucher', church_name: 'Hope Church', live: true },
     { name: 'Pia Provider', church_name: 'Grace Church', live: true },
@@ -31,6 +32,7 @@ const QUIET = {
   home_group: { id: 'group-1', name: 'Riverside' },
   applied_at: '2026-11-11T08:00:00Z',
   vouch_count: 0,
+  can_admit_as_provider: false,
   vouchers: [],
 }
 
@@ -107,13 +109,20 @@ describe('applicants', () => {
     )
   })
 
-  it('does not offer a provider admission when only vouches that no longer count are left', async () => {
+  it('follows the server on whether a provider may be admitted', async () => {
     signedInAs(
       makeMe(),
       routes({
         [APPLICANTS]: () =>
           json(200, {
-            items: [{ ...QUIET, vouch_count: 1, vouchers: [{ ...NADIA.vouchers[2] }] }],
+            items: [
+              {
+                ...QUIET,
+                vouch_count: 1,
+                can_admit_as_provider: false,
+                vouchers: [{ ...NADIA.vouchers[0] }], // counts, but the server says it does not make a second vouch
+              },
+            ],
             total: 1,
           }),
       }),

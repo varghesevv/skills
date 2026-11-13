@@ -72,7 +72,7 @@ export default function Applicants() {
                       <AdmitControls
                         id={row.id}
                         name={row.full_name}
-                        liveVouches={row.vouchers.filter((v) => v.live).length}
+                        canAdmitAsProvider={row.can_admit_as_provider}
                         onDone={setDone}
                       />
                     </li>
