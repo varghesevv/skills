@@ -1201,6 +1201,52 @@
         "title": "GivenRating",
         "type": "object"
       },
+      "GroupClose": {
+        "description": "The leader closes their own group, being its last member, by moving into another group.",
+        "properties": {
+          "former_leader_status": {
+            "enum": [
+              "provider",
+              "searcher",
+              "keep"
+            ],
+            "title": "Former Leader Status",
+            "type": "string"
+          },
+          "move_to_group_id": {
+            "format": "uuid",
+            "title": "Move To Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "move_to_group_id",
+          "former_leader_status"
+        ],
+        "title": "GroupClose",
+        "type": "object"
+      },
+      "GroupClosed": {
+        "properties": {
+          "closed_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "joined_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "closed_group",
+          "joined_group",
+          "status"
+        ],
+        "title": "GroupClosed",
+        "type": "object"
+      },
       "GroupInvitationCreated": {
         "properties": {
           "expires_at": {
@@ -5879,6 +5925,65 @@
         "summary": "Decline",
         "tags": [
           "group-requests"
+        ]
+      }
+    },
+    "/api/v1/home-groups/{group_id}/close": {
+      "post": {
+        "description": "The leader of a home group closes it, being its last member (`409 group_not_empty`\notherwise), by moving into another open group of the church, in one transaction. A VERIFIER\nbecomes a provider or a searcher, recorded as set by the church's ADMIN; an ADMIN or the OWNER\nkeeps their status (`former_leader_status: keep`). The group is kept, with the date it closed,\nand links to it and moves into it end. `404` for anyone but its leader.",
+        "operationId": "close_group_api_v1_home_groups__group_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Group Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupClose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupClosed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Group",
+        "tags": [
+          "home-groups"
         ]
       }
     },

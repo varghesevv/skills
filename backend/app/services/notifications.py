@@ -19,6 +19,7 @@ from app.schemas.church import IdName
 from app.schemas.notifications import NotificationItem, NotificationList
 from app.services.admission import ADMITTED
 from app.services.church_invitations import CHURCH_CREATED
+from app.services.closing import GROUP_CLOSED
 from app.services.group_requests import (
     GROUP_REQUEST_APPROVED,
     GROUP_REQUEST_DECLINED,
@@ -66,6 +67,7 @@ KINDS = (
     MOVE_CANCELLED,
     MEMBER_MOVED_IN,
     MEMBER_MOVED_OUT,
+    GROUP_CLOSED,
 )
 
 
