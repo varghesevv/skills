@@ -8,9 +8,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
 - Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131), S3.8 (133 backend journey, 134 mobile contract); S3 (trust: vouching and admission) is complete.
-- Done also: S4.1 (135), S4.2a (136), S4.2b (137), S4.3a (138), S4.3b (139), S4.4a (141), S4.4b (142).
+- Done also: S4.1 (135), S4.2a (136), S4.2b (137), S4.3a (138), S4.3b (139), S4.4a (141), S4.4b (142), S4.4c (143).
 - In progress: nothing.
-- Next: S4.4c (close a church).
+- Next: S4.5 (OWNER handover; operator change).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -89,7 +89,7 @@ Backend first, then web and mobile.
 - [x] 4.1 Backend: revoke, reinstate, re-confirm, and the flagging function (revoking a VERIFIER or ADMIN, which sets the flags, comes with succession in 4.3; decision D-30).
 - [x] 4.2 Backend: start a home group (request and approval): 4.2a (D-31); invite an ADMIN, which creates a church: 4.2b (D-32).
 - [x] 4.3 Backend: succession with same-transaction guarantees: 4.3a: replace or hand on a group's leader, revoke a VERIFIER with a successor (flags set), a leader asks to start a group (D-33); 4.3b: an ADMIN's succession (`PUT /churches/{id}/admin`, revoking an ADMIN; D-34).
-- [ ] 4.4 Backend: move between groups by agreement (4.4a; D-35); close a group (4.4b; D-36); close a church (4.4c). (Leave, which is `DELETE /me` for people who do not lead, was done early for the web applicant home: pull request in S2.7.)
+- [x] 4.4 Backend: move between groups by agreement (4.4a; D-35); close a group (4.4b; D-36); close a church (4.4c; D-37), with the OWNER's list of churches. (Leave, which is `DELETE /me` for people who do not lead, was done early for the web applicant home: pull request in S2.7.)
 - [ ] 4.5 Backend: OWNER handover; operator change.
 - [ ] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step.
 - [ ] 4.7 Web: revoke and reinstate, flags, group requests.

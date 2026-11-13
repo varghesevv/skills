@@ -384,6 +384,35 @@
         "title": "ChainLink",
         "type": "object"
       },
+      "ChurchClosed": {
+        "properties": {
+          "closed_accounts": {
+            "title": "Closed Accounts",
+            "type": "integer"
+          },
+          "closed_groups": {
+            "title": "Closed Groups",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "closed_groups",
+          "closed_accounts"
+        ],
+        "title": "ChurchClosed",
+        "type": "object"
+      },
       "ChurchInvitationCreated": {
         "properties": {
           "expires_at": {
@@ -508,6 +537,27 @@
         "title": "ChurchList",
         "type": "object"
       },
+      "ChurchListOwner": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChurchSummaryOwner"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ChurchListOwner",
+        "type": "object"
+      },
       "ChurchSummary": {
         "properties": {
           "id": {
@@ -525,6 +575,63 @@
           "name"
         ],
         "title": "ChurchSummary",
+        "type": "object"
+      },
+      "ChurchSummaryOwner": {
+        "properties": {
+          "admin_name": {
+            "title": "Admin Name",
+            "type": "string"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "groups": {
+            "title": "Groups",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "revoked": {
+            "title": "Revoked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "admin_name",
+          "open",
+          "groups",
+          "members",
+          "revoked",
+          "closed_at"
+        ],
+        "title": "ChurchSummaryOwner",
         "type": "object"
       },
       "CloseAccountRequest": {
@@ -7110,6 +7217,67 @@
       }
     },
     "/api/v1/owner/churches": {
+      "get": {
+        "description": "Every church (open ones first), with its ADMIN and counts of open groups, members and\nrevoked people. Paged: `limit` (1 to 100, default 50), `offset`.",
+        "operationId": "list_churches_api_v1_owner_churches_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchListOwner"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Churches",
+        "tags": [
+          "owner"
+        ]
+      },
       "post": {
         "description": "Invite the ADMIN of a new church. The church exists once they accept. The link token is\nshown once; only a hash is kept. There is no mail service yet, so the OWNER shares the link.",
         "operationId": "invite_admin_api_v1_owner_churches_post",
@@ -7255,6 +7423,55 @@
           }
         ],
         "summary": "Cancel Invitation",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/churches/{church_id}/close": {
+      "post": {
+        "description": "Close a church other than your own: it, all its home groups and all its members' accounts\nare closed together and kept, with the date, for the history. Nobody is revoked or flagged;\nthe church's revoked people stay on its list, so they still cannot sign up again. Former\nmembers sign up again in another church. `409 owner_church` for the OWNER's own church.",
+        "operationId": "close_church_api_v1_owner_churches__church_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "church_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Church Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchClosed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Church",
         "tags": [
           "owner"
         ]
