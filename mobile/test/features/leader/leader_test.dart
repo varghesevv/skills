@@ -43,6 +43,7 @@ Map<String, Object?> _detail({
   String status = 'pending',
   String? requested = 'provider',
   List<Map<String, Object?>> vouches = const [],
+  bool canProvider = false,
 }) => {
   'id': 'a1',
   'full_name': 'Nadia Applicant',
@@ -75,6 +76,7 @@ Map<String, Object?> _detail({
     {'id': 'p8', 'full_name': '', 'status': 'owner'},
   ],
   'vouches': vouches,
+  'can_admit_as_provider': canProvider,
 };
 
 const _live = {
@@ -601,7 +603,11 @@ void main() {
           ..reply(
             'GET',
             '/verifier/people/a1',
-            reply ?? FakeReply(200, detail ?? _detail(vouches: [_live])),
+            reply ??
+                FakeReply(
+                  200,
+                  detail ?? _detail(vouches: [_live], canProvider: true),
+                ),
           ),
       ).then((app) async {
         await tester.tap(find.byKey(const Key('member-a1')));
@@ -710,10 +716,25 @@ void main() {
           status: 'searcher',
           requested: 'provider',
           vouches: [_live],
+          canProvider: true,
         ),
       );
       expect(find.byKey(const Key('admit-searcher-a1')), findsNothing);
       expect(find.byKey(const Key('admit-provider-a1')), findsOneWidget);
+    });
+
+    testWidgets('the provider button follows the server, not the vouches', (
+      tester,
+    ) async {
+      // A live vouch is listed, but the server says it does not make a second vouch.
+      await person(
+        tester,
+        detail: _detail(vouches: [_live], canProvider: false),
+      );
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('admit-provider-a1')),
+      );
+      expect(button.onPressed, isNull);
     });
 
     testWidgets('an admitted person has no admit controls', (tester) async {
