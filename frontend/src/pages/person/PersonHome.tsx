@@ -1,5 +1,8 @@
+import { Link } from 'react-router-dom'
+
 import { usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
+import { PERSON_VOUCHES } from '../../portals/config'
 import { usePageTitle } from '../../shared/usePageTitle'
 import ApplicantHome from './ApplicantHome'
 
@@ -35,6 +38,9 @@ function MemberHome() {
         <p>
           {person.church.name}
           {person.home_group ? `, ${person.home_group.name}` : ''}
+        </p>
+        <p>
+          <Link to={PERSON_VOUCHES}>{t('vouch.given.link')}</Link>
         </p>
         <p className="hint">{t('member.soon')}</p>
       </div>

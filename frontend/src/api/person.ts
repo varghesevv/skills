@@ -4,9 +4,15 @@ import type {
   ChurchSummary,
   HomeGroupSummary,
   InvitationInfo,
+  NotificationList,
   PersonMe,
   SignupBody,
   TokenResponse,
+  VouchGiven,
+  VouchLinkCreated,
+  VouchLinkInfo,
+  VouchLinkState,
+  VouchReceived,
 } from './types'
 
 /** One login for every person: no account type is sent (the server's default is the person). */
@@ -50,4 +56,46 @@ export function updateApplication(body: {
 
 export function closeAccount(password: string) {
   return request<void>('/me', { method: 'DELETE', body: { password } })
+}
+
+export function fetchVouchLinkState() {
+  return request<VouchLinkState>('/me/vouch-link')
+}
+
+/** The link is shown once: only a hash is kept, and a new link ends the one before it. */
+export function makeVouchLink() {
+  return request<VouchLinkCreated>('/me/vouch-link', { method: 'POST' })
+}
+
+export function fetchVouchesReceived() {
+  return request<{ items: VouchReceived[] }>('/me/vouches')
+}
+
+export function fetchVouchesGiven() {
+  return request<{ items: VouchGiven[] }>('/me/vouches-given')
+}
+
+/** The token travels in the body, never in the address. */
+export function lookupVouchLink(token: string) {
+  return request<VouchLinkInfo>('/vouch-links/lookup', { method: 'POST', body: { token } })
+}
+
+export function vouchThroughLink(token: string) {
+  return request<{ id: string }>('/vouch-links/vouch', { method: 'POST', body: { token } })
+}
+
+export function withdrawVouch(id: string) {
+  return request<void>(`/vouches/${id}`, { method: 'DELETE' })
+}
+
+export function fetchNotifications() {
+  return request<NotificationList>('/me/notifications?limit=50')
+}
+
+export function markNotificationRead(id: string) {
+  return request<void>(`/me/notifications/${id}/read`, { method: 'POST' })
+}
+
+export function markAllNotificationsRead() {
+  return request<void>('/me/notifications/read-all', { method: 'POST' })
 }

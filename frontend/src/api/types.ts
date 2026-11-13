@@ -47,6 +47,42 @@ export type PersonMe = {
 
 export type AnyMe = Me | PersonMe
 
+// ---- vouching and notifications (docs/specification/04-api.md) ----
+
+export type VouchLinkState = { active: boolean; expires_at: string | null }
+export type VouchLinkCreated = { token: string; expires_at: string }
+export type VouchLinkInfo = {
+  applicant_name: string
+  church_name: string
+  home_group_name: string
+  requested_status: AppliedStatus
+  already_vouched: boolean
+}
+export type VouchReceived = {
+  id: string
+  voucher_name: string
+  church_name: string
+  live: boolean
+  created_at: string
+}
+export type VouchGiven = {
+  id: string
+  applicant_name: string
+  applicant_status: string
+  requested_status: string | null
+  withdrawn: boolean
+  can_withdraw: boolean
+  created_at: string
+}
+export type NotificationItem = {
+  id: string
+  kind: string
+  subject: IdName | null
+  created_at: string
+  read: boolean
+}
+export type NotificationList = { items: NotificationItem[]; total: number; unread_count: number }
+
 export type ChurchSummary = { id: string; name: string }
 export type HomeGroupSummary = { id: string; name: string; leader_name: string }
 export type InvitationInfo = { church_name: string; home_group_name: string; leader_name: string }

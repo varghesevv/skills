@@ -41,6 +41,12 @@ async function fillDetails(user: User) {
   await user.type(screen.getByLabelText('New password'), PASSWORD)
 }
 
+/** The vouching section of the applicant home asks for these; the older tests are not about it. */
+const VOUCHING_QUIET = {
+  'GET /me/vouch-link': () => json(200, { active: false, expires_at: null }),
+  'GET /me/vouches': () => json(200, { items: [] }),
+}
+
 const next = (user: User) => user.click(screen.getByRole('button', { name: 'Next' }))
 
 describe('sign in', () => {
@@ -318,7 +324,14 @@ describe('the home of a person by status', () => {
 })
 
 describe('change of choice and leaving', () => {
+  // The vouch panels on the same page ask for these.
+  const vouching = {
+    'GET /me/vouch-link': () => json(200, { active: false, expires_at: null }),
+    'GET /me/vouches': () => json(200, { items: [] }),
+    'GET /me/notifications?limit=50': () => json(200, { items: [], total: 0, unread_count: 0 }),
+  }
   const routes = {
+    ...vouching,
     'GET /churches': () => json(200, CHURCHES),
     'GET /churches/church-1/home-groups': () => json(200, GROUPS),
     'GET /churches/church-2/home-groups': () => json(200, OTHER_GROUPS),
@@ -445,10 +458,18 @@ describe('change of choice and leaving', () => {
 })
 
 describe('change of choice: loading, empty and error states', () => {
+  // The vouch panels on the same page ask for these.
+  const vouching = {
+    'GET /me/vouch-link': () => json(200, { active: false, expires_at: null }),
+    'GET /me/vouches': () => json(200, { items: [] }),
+    'GET /me/notifications?limit=50': () => json(200, { items: [], total: 0, unread_count: 0 }),
+  }
   it('says so when the churches cannot be loaded, and offers to try again', async () => {
     const user = userEvent.setup({ delay: null })
     let attempts = 0
     signedInAs(makeMe(), {
+      ...vouching,
+      ...VOUCHING_QUIET,
       'GET /me': () => json(200, makePerson()),
       'GET /churches': () =>
         ++attempts === 1 ? apiError(503, 'service_unavailable') : json(200, CHURCHES),
@@ -465,6 +486,7 @@ describe('change of choice: loading, empty and error states', () => {
   it('says when another church has no home group to join', async () => {
     const user = userEvent.setup({ delay: null })
     signedInAs(makeMe(), {
+      ...vouching,
       'GET /me': () => json(200, makePerson()),
       'GET /churches': () => json(200, CHURCHES),
       'GET /churches/church-1/home-groups': () => json(200, GROUPS),
@@ -479,7 +501,14 @@ describe('change of choice: loading, empty and error states', () => {
 })
 
 describe('leaving: focus and cancelling', () => {
+  // The vouch panels on the same page ask for these.
+  const vouching = {
+    'GET /me/vouch-link': () => json(200, { active: false, expires_at: null }),
+    'GET /me/vouches': () => json(200, { items: [] }),
+    'GET /me/notifications?limit=50': () => json(200, { items: [], total: 0, unread_count: 0 }),
+  }
   const routes = {
+    ...vouching,
     'GET /churches': () => json(200, CHURCHES),
     'GET /churches/church-1/home-groups': () => json(200, GROUPS),
   }
