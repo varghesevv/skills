@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:skills_app/core/session/session_controller.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
@@ -159,6 +161,73 @@ void main() {
       expect(app.adapter.count('GET', '/me'), 2);
       expect(find.byKey(const Key('apply-provider')), findsOneWidget);
     });
+
+    testWidgets('a pull and a new notice together ask only once', (
+      tester,
+    ) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          signedInAsPerson(adapter, store, _searcher(requested: 'provider'));
+          _quiet(adapter);
+          adapter.reply(
+            'GET',
+            '/me',
+            FakeReply(
+              200,
+              _searcher(),
+              const {},
+              Future.delayed(const Duration(milliseconds: 300)),
+            ),
+          );
+        },
+      );
+      final before = app.adapter.count('GET', '/me');
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ListView).first),
+      );
+      final first = container.read(sessionProvider.notifier).refreshPerson();
+      final second = container.read(sessionProvider.notifier).refreshPerson();
+      await tester.pump(const Duration(milliseconds: 400));
+      await Future.wait([first, second]);
+      await tester.pumpAndSettle();
+      expect(app.adapter.count('GET', '/me') - before, 1);
+    });
+
+    testWidgets(
+      'a session the server rejects ends instead of staying on screen',
+      (tester) async {
+        final app = await pumpApp(
+          tester,
+          arrange: (adapter, store) {
+            signedInAsPerson(adapter, store, _searcher(requested: 'provider'));
+            _quiet(adapter);
+          },
+        );
+        app.adapter
+          ..setReply(
+            'GET',
+            '/me',
+            FakeReply(401, {
+              'error': {'code': 'invalid_token', 'message': 'no'},
+            }),
+          )
+          ..setReply(
+            'POST',
+            '/auth/refresh',
+            FakeReply(401, {
+              'error': {'code': 'invalid_token', 'message': 'no'},
+            }),
+          );
+        await tester.drag(find.byType(ListView).first, const Offset(0, 400));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('member-join')),
+          findsOneWidget,
+        ); // the welcome screen
+        expect(find.text('Your request'), findsNothing);
+      },
+    );
 
     testWidgets('a new notification refreshes the page without a pull', (
       tester,

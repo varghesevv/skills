@@ -79,6 +79,9 @@ class PersonMe extends Account {
 
   /// `searcher` or `provider`: what an applicant applied for.
   final String? requestedStatus;
+
+  /// A searcher who asked to become a provider (or an applicant who applied as one).
+  bool get asksToProvide => requestedStatus == 'provider';
   final NamedRef church;
   final NamedRef? homeGroup;
   final String? leaderName;

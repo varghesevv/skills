@@ -50,7 +50,7 @@ class _ProviderUpgradeState extends ConsumerState<ProviderUpgrade> {
     final person = widget.person;
     if (person.status != PersonStatus.searcher) return const SizedBox.shrink();
     final text = ref.watch(appTextProvider);
-    final asked = person.requestedStatus == 'provider';
+    final asked = person.asksToProvide;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
