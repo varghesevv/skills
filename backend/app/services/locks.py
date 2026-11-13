@@ -1,4 +1,8 @@
-"""Row locks on people, taken in one fixed order so two requests cannot deadlock."""
+"""Row locks on people, taken in one fixed order so two requests cannot deadlock.
+
+The order of locks across the app: people first (by id), then home groups, then churches. Code
+that locks a group (closing it, placing someone in it) takes the people it acts on before it.
+"""
 
 import uuid
 from collections.abc import Iterable

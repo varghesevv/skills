@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
-from app.core.errors import ApiError
 from app.models.church import Person
 from app.schemas.signup import (
     GroupInvitationCreated,
@@ -174,11 +173,8 @@ def set_status(
     by a higher leader cannot be undone by a lower one (`403 status_not_allowed`)."""
     if body.to == "revoked":
         return _status_result(revocation.revoke(db, verifier, person_id))
-    if body.home_group_id is None:
-        raise ApiError(422, "validation_error", "Reinstating needs a home group")
-    return _status_result(
-        revocation.reinstate(db, verifier, person_id, body.to, body.home_group_id)
-    )
+    group_id = cast(uuid.UUID, body.home_group_id)  # the request model guarantees it
+    return _status_result(revocation.reinstate(db, verifier, person_id, body.to, group_id))
 
 
 @router.post("/people/{person_id}/reconfirm")

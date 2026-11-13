@@ -22,7 +22,7 @@ from app.models.church import Church, HomeGroup, Person
 from app.models.enums import STATUS_RANK
 from app.models.trust import Notification, StatusChange, VouchLink
 from app.services.locks import locked_in_scope
-from app.services.permissions import LastChange, can_set_status, in_scope, rank
+from app.services.permissions import LastChange, can_reconfirm, can_set_status, in_scope, rank
 
 REVOKED = "revoked"  # notification kind: a leader revoked you
 REINSTATED = "reinstated"  # notification kind: a leader reinstated you
@@ -115,7 +115,9 @@ def reinstate(
         raise ApiError(409, "not_revoked", "This person is not revoked")
     if not can_set_status(actor, person, to, _last_change(db, person)):
         raise _not_allowed()
-    group = db.get(HomeGroup, home_group_id)
+    # Locked after the people (the order of locks in services/locks.py), so a group that closes at
+    # this moment waits for us, or we see it closed.
+    group = db.get(HomeGroup, home_group_id, with_for_update=True)
     church = db.get(Church, group.church_id) if group else None
     if (
         group is None
@@ -170,7 +172,7 @@ def reconfirm(db: Session, actor: Person, person_id: uuid.UUID) -> Person:
     person = locked_in_scope(db, actor, person_id)
     if not person.flagged_for_recheck:
         raise ApiError(409, "not_flagged", "This person is not flagged for re-checking")
-    if rank(actor.status) < _level_of_revoked_setter(db, person):
+    if not can_reconfirm(actor, person, _level_of_revoked_setter(db, person)):
         raise _not_allowed()
     person.flagged_for_recheck = False
     person.status_set_by_id = actor.id

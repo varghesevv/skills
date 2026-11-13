@@ -131,6 +131,8 @@ class StatusRequest(BaseModel):
     def _group_only_for_reinstating(self) -> Self:
         if self.to == "revoked" and self.home_group_id is not None:
             raise ValueError("a revocation takes no home group")
+        if self.to != "revoked" and self.home_group_id is None:
+            raise ValueError("reinstating needs a home group")
         return self
 
 

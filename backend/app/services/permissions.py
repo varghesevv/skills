@@ -180,6 +180,21 @@ def can_decline_upgrade(actor: PersonLike, person: PersonLike) -> bool:
     )
 
 
+def can_reconfirm(actor: PersonLike, person: PersonLike, setter_level: int) -> bool:
+    """Whether `actor` may re-confirm a flagged `person`, whose status was set by a leader who was
+    revoked at rank `setter_level`. The actor must be a leader in scope, outrank the person (a
+    leader never takes over the chain of trust of someone at their own level or above), and be at
+    the revoked leader's level or higher."""
+    return (
+        person.closed_at is None
+        and actor.id != person.id
+        and is_verifier(actor)
+        and in_scope(actor, person)
+        and rank(actor.status) > rank(person.status)
+        and rank(actor.status) >= setter_level
+    )
+
+
 def can_vouch(voucher: PersonLike, applicant: PersonLike) -> bool:
     """Whether `voucher` may vouch for `applicant`: admitted, open, not themselves.
 

@@ -11,12 +11,13 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.models.enums import STATUSES
+from app.models.enums import STATUS_RANK, STATUSES
 from app.services.permissions import (
     LastChange,
     can_admit,
     can_decline,
     can_decline_upgrade,
+    can_reconfirm,
     can_set_status,
     can_vouch,
     in_scope,
@@ -335,3 +336,27 @@ def test_a_request_to_become_a_provider_can_be_declined_only_in_scope_by_a_leade
         person("admin", church_id=CHURCH_B, home_group_id=GROUP_B1), asking
     )
     assert can_decline_upgrade(person("owner", church_id=CHURCH_B, home_group_id=GROUP_B1), asking)
+
+
+# ---- re-confirming a flagged person -------------------------------------------------------------
+
+
+def test_a_flagged_person_is_reconfirmed_only_by_a_higher_leader_at_the_right_level() -> None:
+    flagged = person("provider")
+    verifier_level, admin_level = STATUS_RANK["verifier"], STATUS_RANK["admin"]
+    assert can_reconfirm(person("verifier"), flagged, verifier_level)
+    assert not can_reconfirm(person("verifier"), flagged, admin_level)  # set by a revoked ADMIN
+    assert can_reconfirm(person("admin"), flagged, admin_level)
+    assert can_reconfirm(
+        person("owner", church_id=CHURCH_B, home_group_id=GROUP_B1), flagged, admin_level
+    )
+    # Never someone at the leader's own level or above (a group can hold an ADMIN or the OWNER who
+    # handed it on), and never oneself, someone out of scope, or a closed account.
+    for status in ("verifier", "admin", "owner"):
+        assert not can_reconfirm(person("verifier"), person(status), verifier_level)
+    assert not can_reconfirm(flagged, flagged, verifier_level)
+    assert not can_reconfirm(person("verifier", home_group_id=GROUP_A2), flagged, verifier_level)
+    assert not can_reconfirm(person("provider"), flagged, verifier_level)
+    assert not can_reconfirm(
+        person("verifier"), person("provider", closed_at=datetime.now(UTC)), verifier_level
+    )
