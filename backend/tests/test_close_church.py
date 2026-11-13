@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import event, select
+from sqlalchemy import event, select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -81,6 +81,12 @@ def test_the_owner_closes_a_church_and_everything_in_it(
     statuses = {p.id: p.status for p in hope.everyone_open()}
     admin_password = secrets.token_urlsafe(16)
     hope.admin.password_hash = hash_password(admin_password)
+    admin_email = str(hope.admin.email)
+    session.flush()
+    before = client.post(
+        f"{API}/auth/login", json={"email": admin_email, "password": admin_password}
+    )
+    assert before.status_code == 200  # the account works until the church closes
     # Things that must end: a link of the applicant, a group link, an open move, an open request.
     session.add(
         VouchLink(
@@ -150,10 +156,10 @@ def test_the_owner_closes_a_church_and_everything_in_it(
     assert session.scalars(select(StatusChange).where(StatusChange.kind == "revoke")).all() == []
     # Nobody can sign in to the closed accounts, or join the closed groups, and the church is gone
     # from the public lists; the other church is untouched.
-    login = client.post(
-        f"{API}/auth/login", json={"email": "gone@example.com", "password": admin_password}
+    after = client.post(
+        f"{API}/auth/login", json={"email": admin_email, "password": admin_password}
     )
-    assert login.status_code == 401
+    assert after.status_code == 401  # the same login that worked before
     assert str(hope.church.id) not in {
         c["id"] for c in client.get(f"{API}/churches").json()["items"]
     }
@@ -287,3 +293,57 @@ def test_the_owner_lists_the_churches_with_counts(
             client.get(f"{API}/owner/churches", headers=headers_of(client, who)).status_code == 403
         )
     assert client.get(f"{API}/owner/churches").status_code == 401
+
+
+def test_someone_revoked_between_the_read_and_the_locks_stays_revoked_and_open(
+    client: TestClient, session: Session, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services import closing
+
+    hope = Hope(world)
+    victim = hope.people[0]
+    email = victim.email
+    real_lock = closing.lock_people
+
+    def revoke_then_lock(db: Session, ids: Any) -> Any:
+        # A leader revokes the member at this very moment: after the first read, before the lock.
+        session.execute(
+            update(Person)
+            .where(Person.id == victim.id)
+            .values(status="revoked", home_group_id=None, last_home_group_id=hope.group.id)
+            .execution_options(synchronize_session=False)
+        )
+        return real_lock(db, ids)
+
+    monkeypatch.setattr(closing, "lock_people", revoke_then_lock)
+    assert close(client, world, hope.church).status_code == 200
+    session.expire_all()
+    row = session.get(Person, victim.id)
+    assert row is not None and row.status == "revoked" and row.closed_at is None
+    assert row.email == email  # still blocking the address
+
+
+def test_a_very_large_church_is_cleared_in_slices(
+    client: TestClient, session: Session, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services import account_closing
+
+    monkeypatch.setattr(account_closing, "CHUNK", 2)
+    hope = Hope(world, members=7)
+    # Every member has a link that must end, so a slice that is skipped shows.
+    links = [
+        VouchLink(
+            person_id=person.id,
+            token_hash=secrets.token_hex(16),
+            expires_at=datetime(2100, 1, 1, tzinfo=UTC),
+        )
+        for person in hope.everyone_open()
+    ]
+    session.add_all(links)
+    session.flush()
+    assert close(client, world, hope.church).status_code == 200
+    session.expire_all()
+    assert all(session.get(Person, p.id).closed_at is not None for p in hope.everyone_open())  # type: ignore[union-attr]
+    assert len(links) > 4 and all(
+        session.get(VouchLink, link.id).revoked_at is not None for link in links
+    )  # type: ignore[union-attr]

@@ -172,7 +172,10 @@ def close_church(db: Session, owner: Person, church_id: uuid.UUID) -> tuple[Chur
     members = [
         p
         for p in people.values()
-        if p.id != owner.id and p.church_id == church.id and p.closed_at is None
+        if p.id != owner.id
+        and p.church_id == church.id
+        and p.closed_at is None
+        and p.status != "revoked"  # revoked since the first read: they stay revoked and open
     ]
     late = list(
         db.scalars(
