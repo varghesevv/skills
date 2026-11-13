@@ -7,9 +7,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
-- Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131).
+- Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131), S3.8 (133 backend journey, 134 mobile contract); S3 (trust: vouching and admission) is complete.
 - In progress: nothing.
-- Next: S3.8 (slice check: the journey test through the real API and database, then the two apps against it).
+- Next: S4 (church structure and life cycle), starting with S4.1 (revoke, reinstate, re-check flags).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -81,7 +81,7 @@ Backend first, then web and mobile.
 - [x] 3.5a Backend: tell the verifier on each applicant whether admitting as a provider will work now (`can_admit_as_provider`), so the screens show the button only when it does (125).
 - [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
 - [x] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
-- [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider. Backend half done (`backend/tests/test_trust_journey.py`: four people apply, vouch links and vouching, the leader's own vouch not enough, admission as searcher and as provider, a searcher asks to become a provider, decline of an application and of a request, notifications, the number view logged, and the rules of the model hold at the end). Open: the mobile half (the two apps against the same contract); then tick this item.
+- [x] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider. The backend journey (`backend/tests/test_trust_journey.py`: four people apply, vouch links and vouching, the leader's own vouch not enough, admission as searcher and as provider, a searcher asks to become a provider, decline of an application and of a request, notifications, the number view logged, and the rules of the model hold at the end) is what the web and the mobile app call; their own tests check the screens against the same contract, and the mobile contract test (`mobile/test/contract/api_contract_test.dart`) now holds every call and field of S3 (pull request 134). A browser and a phone run against the demo are left to the cut-over rehearsal (S6.1).
 - [x] 3.9 Searcher-to-provider upgrade path, backend: `POST /me/apply-provider`, the applicants list holds the searchers who ask, declining a request ends it only (D-29). Web screens for it: 3.9b, done (pull request 130). Mobile screens for it: done (pull request 131).
 
 ### S4. Church structure and life cycle — 11 pull requests

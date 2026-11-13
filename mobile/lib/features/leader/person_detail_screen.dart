@@ -222,8 +222,7 @@ class _View extends StatelessWidget {
           AdmitControls(
             id: detail.id,
             name: detail.fullName,
-            // This answer has no `can_admit_as_provider`; a live vouch is the hint until it has.
-            canAdmitAsProvider: detail.vouches.any((v) => v.live),
+            canAdmitAsProvider: detail.canAdmitAsProvider,
             upgrade: detail.status != 'pending',
             onDone: onDone,
           ),

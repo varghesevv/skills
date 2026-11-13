@@ -126,6 +126,23 @@ void main() {
       'POST /group-invitations/lookup': '200',
       'PUT /me/application': '200',
       'DELETE /me': '204',
+      // Vouching, notifications and the screens of a leader.
+      'POST /me/apply-provider': '200',
+      'GET /me/vouch-link': '200',
+      'POST /me/vouch-link': '201',
+      'GET /me/vouches': '200',
+      'GET /me/vouches-given': '200',
+      'POST /vouch-links/lookup': '200',
+      'POST /vouch-links/vouch': '201',
+      'DELETE /vouches/{vouch_id}': '204',
+      'GET /me/notifications': '200',
+      'POST /me/notifications/{notification_id}/read': '204',
+      'POST /me/notifications/read-all': '204',
+      'GET /verifier/applicants': '200',
+      'GET /verifier/members': '200',
+      'GET /verifier/people/{person_id}': '200',
+      'POST /verifier/people/{person_id}/admit': '200',
+      'POST /verifier/people/{person_id}/decline': '204',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -211,6 +228,187 @@ void main() {
     test('closing the account sends the password', () {
       expect(requestSchema('DELETE', '/me'), 'CloseAccountRequest');
       expect(properties('CloseAccountRequest'), {'password'});
+    });
+  });
+
+  group('vouching and notifications', () {
+    test('a link is made once, and its token is not in the state answer', () {
+      expect(
+        responseSchema('POST', '/me/vouch-link', '201'),
+        'VouchLinkCreated',
+      );
+      expect(properties('VouchLinkCreated'), {'token', 'expires_at'});
+      expect(responseSchema('GET', '/me/vouch-link', '200'), 'VouchLinkState');
+      expect(properties('VouchLinkState'), {'active', 'expires_at'});
+    });
+
+    test('the token travels in the body of the lookup and of the vouch', () {
+      for (final path in ['/vouch-links/lookup', '/vouch-links/vouch']) {
+        expect(requestSchema('POST', path), 'VouchLinkToken', reason: path);
+      }
+      expect(properties('VouchLinkToken'), {'token'});
+    });
+
+    test('the page a link opens has the fields `VouchLinkInfo` reads', () {
+      expect(properties('VouchLinkInfo'), {
+        'applicant_name',
+        'church_name',
+        'home_group_name',
+        'requested_status',
+        'already_vouched',
+      });
+    });
+
+    test('the vouches received and given have the fields the app reads', () {
+      expect(
+        properties('VouchReceived'),
+        containsAll([
+          'id',
+          'voucher_name',
+          'church_name',
+          'live',
+          'created_at',
+        ]),
+      );
+      expect(
+        properties('VouchGiven'),
+        containsAll([
+          'id',
+          'applicant_name',
+          'applicant_status',
+          'withdrawn',
+          'can_withdraw',
+          'created_at',
+        ]),
+      );
+      expect(properties('VouchCreated'), {'id'});
+    });
+
+    test('a notification has the fields the list reads', () {
+      expect(
+        responseSchema('GET', '/me/notifications', '200'),
+        'NotificationList',
+      );
+      expect(properties('NotificationList'), {
+        'items',
+        'total',
+        'unread_count',
+      });
+      expect(
+        properties('NotificationItem'),
+        containsAll(['id', 'kind', 'subject', 'created_at', 'read']),
+      );
+    });
+
+    test('applying to provide answers with the person', () {
+      expect(
+        responseSchema('POST', '/me/apply-provider', '200'),
+        'PersonMeResponse',
+      );
+    });
+  });
+
+  group('the screens of a leader', () {
+    test('the applicants list has the fields `ApplicantRow` reads', () {
+      expect(
+        responseSchema('GET', '/verifier/applicants', '200'),
+        'ApplicantList',
+      );
+      expect(properties('ApplicantList'), {'items', 'total'});
+      expect(
+        properties('ApplicantRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'status',
+          'requested_status',
+          'home_group',
+          'applied_at',
+          'vouch_count',
+          'vouchers',
+          'can_admit_as_provider',
+        ]),
+      );
+      expect(properties('Voucher'), {'name', 'church_name', 'live'});
+    });
+
+    test('the members list has the fields `MemberRow` reads', () {
+      expect(responseSchema('GET', '/verifier/members', '200'), 'MemberList');
+      expect(
+        properties('MemberRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'status',
+          'home_group',
+          'status_set_by',
+          'flagged_for_recheck',
+        ]),
+      );
+    });
+
+    test('one person has the fields `PersonDetail` reads, with the flag', () {
+      expect(
+        responseSchema('GET', '/verifier/people/{person_id}', '200'),
+        'PersonDetail',
+      );
+      expect(
+        properties('PersonDetail'),
+        containsAll([
+          'id',
+          'full_name',
+          'mobile_number',
+          'status',
+          'requested_status',
+          'church',
+          'home_group',
+          'status_set_by',
+          'applied_at',
+          'history',
+          'chain_of_trust',
+          'vouches',
+          'can_admit_as_provider',
+        ]),
+      );
+      expect(
+        properties('HistoryEntry'),
+        containsAll(['kind', 'from_status', 'to_status', 'changed_by', 'at']),
+      );
+      expect(properties('ChainLink'), {'id', 'full_name', 'status'});
+    });
+
+    test('admitting sends the status and reads the new one', () {
+      expect(
+        requestSchema('POST', '/verifier/people/{person_id}/admit'),
+        'AdmitRequest',
+      );
+      expect(properties('AdmitRequest'), {'to'});
+      expect(
+        responseSchema('POST', '/verifier/people/{person_id}/admit', '200'),
+        'AdmitResult',
+      );
+      expect(
+        properties('AdmitResult'),
+        containsAll(['status', 'requested_status']),
+      );
+    });
+
+    test('only the person page has a number', () {
+      for (final schema in [
+        'ApplicantRow',
+        'MemberRow',
+        'FlaggedRow',
+        'Voucher',
+        'VouchReceived',
+        'VouchGiven',
+        'VouchLinkInfo',
+        'ChainLink',
+        'HistoryEntry',
+        'NotificationItem',
+      ]) {
+        expect(properties(schema), isNot(contains('mobile_number')));
+      }
+      expect(properties('PersonDetail'), contains('mobile_number'));
     });
   });
 

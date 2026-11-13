@@ -175,6 +175,7 @@ class PersonDetail {
     required this.history,
     required this.chain,
     required this.vouches,
+    required this.canAdmitAsProvider,
   });
 
   factory PersonDetail.fromJson(Map<String, Object?> json) => PersonDetail(
@@ -196,6 +197,8 @@ class PersonDetail {
         ChainLink.fromJson(Map<String, Object?>.from(item as Map)),
     ],
     vouches: _vouchers(json['vouches']),
+    // A server without the field (older than this app) gets the button switched off.
+    canAdmitAsProvider: json['can_admit_as_provider'] as bool? ?? false,
   );
 
   final String id;
@@ -211,6 +214,9 @@ class PersonDetail {
   final List<ChainLink> chain;
   final List<Voucher> vouches;
 
+  /// The server's answer: may the caller admit this person as a provider now?
+  final bool canAdmitAsProvider;
+
   PersonDetail withStatus(String status, String? requestedStatus) =>
       PersonDetail(
         id: id,
@@ -225,6 +231,7 @@ class PersonDetail {
         history: history,
         chain: chain,
         vouches: vouches,
+        canAdmitAsProvider: canAdmitAsProvider,
       );
 }
 
