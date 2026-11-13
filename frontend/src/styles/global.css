@@ -153,6 +153,7 @@ main:focus {
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap; /* the links of a leader do not fit on one line of a small phone */
   align-items: center;
   gap: 0.5rem;
   min-height: var(--topbar-height);
@@ -173,6 +174,11 @@ main:focus {
   color: var(--ink);
 }
 
+.topbar-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
 .topbar-user {
   margin-inline-start: auto;
   display: flex;

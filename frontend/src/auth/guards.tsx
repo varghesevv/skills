@@ -55,3 +55,11 @@ export function RequirePerson() {
   if (user.user_type !== 'person') return <Navigate to={homePath(user.user_type)} replace />
   return <Outlet />
 }
+
+/** The screens of a leader: VERIFIER, ADMIN or OWNER. Everyone else goes to their own home. */
+export function RequireLeader() {
+  const { user } = useAuth()
+  if (!user) return <LoadingScreen />
+  const leader = user.user_type === 'person' && ['verifier', 'admin', 'owner'].includes(user.status)
+  return leader ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
+}
