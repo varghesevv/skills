@@ -126,20 +126,26 @@ def _vouchers(
     return result
 
 
+def _live_voucher_ids(
+    vouch_rows: list[tuple[Vouch, Person, str]],
+) -> dict[uuid.UUID, list[uuid.UUID]]:
+    """The ids of the people whose vouches count, for each applicant (grouped once)."""
+    live: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for vouch, giver, _ in vouch_rows:
+        if _counts(vouch, giver):
+            live.setdefault(vouch.applicant_id, []).append(giver.id)
+    return live
+
+
 def _can_admit_as_provider(
-    actor: Person, person: Person, vouch_rows: list[tuple[Vouch, Person, str]]
+    actor: Person, person: Person, live: dict[uuid.UUID, list[uuid.UUID]]
 ) -> bool:
     """Whether `admit` would take this person as a provider now: an applicant, or a searcher who
     asked to become one, with a live vouch from someone besides the caller."""
     waiting = person.status == "pending" or (
         person.status == "searcher" and person.requested_status == "provider"
     )
-    live = [
-        giver.id
-        for vouch, giver, _ in vouch_rows
-        if vouch.applicant_id == person.id and _counts(vouch, giver)
-    ]
-    return waiting and can_admit(actor, person, "provider", live)
+    return waiting and can_admit(actor, person, "provider", live.get(person.id, []))
 
 
 def applicants(db: Session, actor: Person, limit: int, offset: int) -> ApplicantList:
@@ -169,6 +175,7 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
     ids = [p.id for p in rows]
     vouch_rows = _vouch_rows(db, ids)  # read once: the list and the flag come from the same rows
     vouchers = _vouchers(ids, vouch_rows)
+    live_ids = _live_voucher_ids(vouch_rows)
     groups = _groups(db, {p.home_group_id for p in rows})
     return ApplicantList(
         total=total,
@@ -182,7 +189,7 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
                 applied_at=p.created_at,
                 vouch_count=sum(v.live for v in vouchers[p.id]),
                 vouchers=vouchers[p.id],
-                can_admit_as_provider=_can_admit_as_provider(actor, p, vouch_rows),
+                can_admit_as_provider=_can_admit_as_provider(actor, p, live_ids),
             )
             for p in rows
         ],
@@ -327,7 +334,7 @@ def person_detail(db: Session, actor: Person, person_id: uuid.UUID) -> PersonDet
             ChainLink(id=c.id, full_name=c.full_name or "", status=c.status) for c in chain
         ],
         vouches=_vouchers([person.id], vouch_rows)[person.id],
-        can_admit_as_provider=_can_admit_as_provider(actor, person, vouch_rows),
+        can_admit_as_provider=_can_admit_as_provider(actor, person, _live_voucher_ids(vouch_rows)),
     )
     db.commit()  # the log row and nothing else
     return detail
