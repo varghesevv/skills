@@ -377,3 +377,48 @@ def test_only_the_owner_revokes_an_admin_and_a_successor_belongs_to_a_leader(
 
 def test_the_new_kinds_are_known() -> None:
     assert {"admin_appointed", "admin_stepped_down"} <= set(notifications.KINDS)
+
+
+@pytest.mark.parametrize("caller", ["anonymous", "verifier", "provider", "searcher", "pending"])
+def test_nobody_but_the_owner_may_replace_an_admin(
+    client: TestClient, world: World, caller: str
+) -> None:
+    second = Second(world)
+    heir = second.person("provider")
+    body = {"successor_id": str(heir.person.id), "former_admin_status": "provider"}
+    url = f"{API}/churches/{second.church.id}/admin"
+    if caller == "anonymous":
+        assert client.put(url, json=body).status_code == 401
+        return
+    who = second.second_group()[0] if caller == "verifier" else second.person(caller)
+    who.person.password_hash = hash_password("x" + secrets.token_hex(8))
+    password = secrets.token_urlsafe(16)
+    who.person.password_hash = hash_password(password)
+    world.session.flush()
+    response = client.put(url, headers=headers_of(client, Member(who.person, password)), json=body)
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "not_admitted"
+
+
+def test_one_person_never_leads_two_groups_through_a_succession(
+    client: TestClient, session: Session, world: World
+) -> None:
+    second = Second(world)
+    lead, group = second.second_group()  # a VERIFIER who leads another group
+    keeper = second.person("provider")  # in the ADMIN's own group
+    # The new ADMIN already leads a group; naming them for the old ADMIN's group too would give
+    # them two. They do not belong to that group, so they cannot be its successor.
+    refused = replace(client, owner_member(world), second.church, lead, "provider", lead)
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_not_member"
+    admin_id = session.scalar(select(Church.admin_id).where(Church.id == second.church.id))
+    assert admin_id == second.admin.person.id  # nothing changed
+    assert (
+        session.scalar(select(HomeGroup.leader_id).where(HomeGroup.id == group.id))
+        == lead.person.id
+    )
+    # Another member can take it.
+    assert (
+        replace(client, owner_member(world), second.church, lead, "provider", keeper).status_code
+        == 200
+    )
+    check_rules(session)
