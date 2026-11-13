@@ -18,6 +18,11 @@ from app.models.trust import Notification
 from app.schemas.church import IdName
 from app.schemas.notifications import NotificationItem, NotificationList
 from app.services.admission import ADMITTED
+from app.services.group_requests import (
+    GROUP_REQUEST_APPROVED,
+    GROUP_REQUEST_DECLINED,
+    GROUP_REQUEST_NEW,
+)
 from app.services.provider_upgrade import PROVIDER_APPLICATION, PROVIDER_DECLINED
 from app.services.revocation import REINSTATED, REVOKED
 from app.services.signup import NEW_APPLICANT
@@ -34,6 +39,9 @@ KINDS = (
     PROVIDER_DECLINED,
     REVOKED,
     REINSTATED,
+    GROUP_REQUEST_NEW,
+    GROUP_REQUEST_APPROVED,
+    GROUP_REQUEST_DECLINED,
 )
 
 
