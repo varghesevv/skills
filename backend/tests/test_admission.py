@@ -506,3 +506,24 @@ def test_decline_checks_scope_and_state(client: TestClient, world: World) -> Non
         ).status_code
         == 403
     )
+
+
+def test_the_applicant_list_says_whether_a_provider_may_be_admitted_now(
+    client: TestClient, world: World
+) -> None:
+    lead, group = leader(world)
+    applicant = add_member(world, "pending", group=group, requested_status="provider")
+
+    def flag() -> bool:
+        item = get(client, lead, "/applicants").json()["items"][0]
+        return bool(item["can_admit_as_provider"])
+
+    assert flag() is False  # no vouch
+    add_vouch(world, applicant, lead)
+    assert flag() is False  # the leader's own vouch is their sign-off, not a second one
+    add_vouch(world, applicant, add_member(world, "searcher"), withdrawn_at=datetime.now(UTC))
+    assert flag() is False  # withdrawn
+    add_vouch(world, applicant, add_member(world, "provider"))
+    assert flag() is True
+    # The flag and the admit endpoint agree.
+    assert admit(client, lead, applicant, "provider").status_code == 200

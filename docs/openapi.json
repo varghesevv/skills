@@ -111,6 +111,10 @@
             "title": "Applied At",
             "type": "string"
           },
+          "can_admit_as_provider": {
+            "title": "Can Admit As Provider",
+            "type": "boolean"
+          },
           "full_name": {
             "title": "Full Name",
             "type": "string"
@@ -153,7 +157,8 @@
           "home_group",
           "applied_at",
           "vouch_count",
-          "vouchers"
+          "vouchers",
+          "can_admit_as_provider"
         ],
         "title": "ApplicantRow",
         "type": "object"

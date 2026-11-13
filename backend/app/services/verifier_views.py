@@ -30,7 +30,7 @@ from app.schemas.verifier import (
     RevokedRow,
     Voucher,
 )
-from app.services.permissions import in_scope
+from app.services.permissions import can_admit, in_scope
 
 ADMITTED_STATUSES = tuple(s for s in STATUSES if STATUS_RANK[s] >= STATUS_RANK["searcher"])
 MAX_HISTORY = 100
@@ -88,10 +88,10 @@ def _name_ref(names: dict[uuid.UUID, str], person_id: uuid.UUID | None) -> NameR
     return NameRef(name=names.get(person_id, "")) if person_id is not None else None
 
 
-def _vouchers(db: Session, applicant_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[Voucher]]:
-    """The vouches each applicant received, newest first, with whether each still counts."""
+def _vouch_rows(db: Session, applicant_ids: list[uuid.UUID]) -> list[tuple[Vouch, Person, str]]:
+    """The vouches the applicants received, newest first, with each voucher and their church."""
     if not applicant_ids:
-        return {}
+        return []
     rows = db.execute(
         select(Vouch, Person, Church.name)
         .join(Person, Person.id == Vouch.voucher_id)
@@ -99,15 +99,27 @@ def _vouchers(db: Session, applicant_ids: list[uuid.UUID]) -> dict[uuid.UUID, li
         .where(Vouch.applicant_id.in_(applicant_ids))
         .order_by(Vouch.created_at.desc(), Vouch.id)
     ).all()
+    return [(vouch, voucher, church_name) for vouch, voucher, church_name in rows]
+
+
+def _counts(vouch: Vouch, voucher: Person) -> bool:
+    return (
+        vouch.withdrawn_at is None
+        and voucher.closed_at is None
+        and voucher.status in ADMITTED_STATUSES
+    )
+
+
+def _vouchers(db: Session, applicant_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[Voucher]]:
+    """The vouches each applicant received, newest first, with whether each still counts."""
     result: dict[uuid.UUID, list[Voucher]] = {i: [] for i in applicant_ids}
-    for vouch, voucher, church_name in rows:
-        live = (
-            vouch.withdrawn_at is None
-            and voucher.closed_at is None
-            and voucher.status in ADMITTED_STATUSES
-        )
+    for vouch, voucher, church_name in _vouch_rows(db, applicant_ids):
         result[vouch.applicant_id].append(
-            Voucher(name=voucher.full_name or "", church_name=church_name, live=live)
+            Voucher(
+                name=voucher.full_name or "",
+                church_name=church_name,
+                live=_counts(vouch, voucher),
+            )
         )
     return result
 
@@ -130,7 +142,12 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
     )
     query = _in_scope_people(actor).where(Person.status == "pending")
     rows, total = _page(db, query, [live_count.desc(), Person.created_at], limit, offset)
-    vouchers = _vouchers(db, [p.id for p in rows])
+    ids = [p.id for p in rows]
+    vouchers = _vouchers(db, ids)
+    live_voucher_ids: dict[uuid.UUID, list[uuid.UUID]] = {i: [] for i in ids}
+    for vouch, giver, _ in _vouch_rows(db, ids):
+        if _counts(vouch, giver):
+            live_voucher_ids[vouch.applicant_id].append(giver.id)
     groups = _groups(db, {p.home_group_id for p in rows})
     return ApplicantList(
         total=total,
@@ -143,6 +160,7 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
                 applied_at=p.created_at,
                 vouch_count=sum(v.live for v in vouchers[p.id]),
                 vouchers=vouchers[p.id],
+                can_admit_as_provider=can_admit(actor, p, "provider", live_voucher_ids[p.id]),
             )
             for p in rows
         ],
