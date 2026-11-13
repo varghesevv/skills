@@ -125,7 +125,7 @@ A VERIFIER sees the members of their home group, an ADMIN sees everyone in their
 ### Owner succession
 
 1. **Planned handover.** The OWNER chooses an ADMIN to succeed them. They also name a new ADMIN for their own church, since they will no longer be its ADMIN, and a new leader for their own group if they lead it. The handover completes, in one step, when the chosen ADMIN accepts it. The new OWNER stays in their own home group and remains their own church's ADMIN, as every OWNER is, keeping any group they led.
-2. The outgoing OWNER becomes a PROVIDER (or SEARCHER) in their home group, set by the new OWNER, as in [Succession](#succession).
+2. The outgoing OWNER becomes a PROVIDER (or SEARCHER, as they choose when they propose the handover) in their home group, set by the new OWNER, as in [Succession](#succession). If they keep a role because nobody can take it over, they are an ADMIN (they keep their church) or a VERIFIER (they keep only their group) instead.
 3. **Fallback.** If the OWNER is unavailable and cannot hand over, or has breached trust, the platform operators change the OWNER directly in the database, outside the app. They make the same appointments in one change: a new OWNER from the ADMINs, a new ADMIN for the old OWNER's church, and a new leader for any group the old OWNER led. This is recorded in the history like any other status change.
 4. An OWNER replaced for a breach of trust is REVOKED, as in [Revocation](#revocation), and the new OWNER clears the resulting flags.
 
@@ -285,6 +285,7 @@ interface HandoverRequest {      // the OWNER proposes, the chosen ADMIN accepts
   successorAdminId: Id | null;   // a member (PENDING or above) of the outgoing OWNER's church, becomes its ADMIN; null if nobody else is in the church
   successorLeaderId: Id | null;  // a member of the outgoing OWNER's group, if they lead it; null if nobody else is in the group
   // With no successor, the outgoing OWNER keeps that role: ADMIN of their church and/or leader of their group
+  formerOwnerStatus: Status.PROVIDER | Status.SEARCHER;  // what the outgoing OWNER becomes if they keep neither role; chosen when proposing
   acceptedAt: Date | null;
 }
 

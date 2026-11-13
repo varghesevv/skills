@@ -126,7 +126,7 @@ id, requester_id FK people, church_id FK, group_name varchar(200), state text CH
 id, email text, church_name varchar(200), invited_by_id FK people (the OWNER), token_hash UNIQUE, expires_at, accepted_at null, created_at. The church is created when the invitation is accepted, so it never exists without an ADMIN. On acceptance the email is cleared.
 
 ### handover_requests
-id, owner_id FK people, new_owner_id FK people (an ADMIN of another church), successor_admin_id FK people null, successor_leader_id FK people null, created_at, accepted_at null, cancelled_at null. At most one open request (partial unique index).
+id, owner_id FK people, new_owner_id FK people (an ADMIN of another church), successor_admin_id FK people null, successor_leader_id FK people null, former_owner_status (`provider` or `searcher`, default `provider`: what the outgoing OWNER becomes when they keep neither role; migration `0012`), created_at, accepted_at null, cancelled_at null. At most one open request (partial unique index).
 
 ### move_requests
 id, person_id FK people, from_group_id FK, to_group_id FK (same church, CHECK in the service), agreed_by_person_at, agreed_by_from_leader_at, agreed_by_to_leader_at (each null until given), created_at, completed_at null, cancelled_at null. The move happens, in one transaction, when all three are set. At most one open request per person (partial unique index `uq_move_requests_one_open`, migration `0011`).

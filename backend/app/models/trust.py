@@ -151,12 +151,19 @@ class HandoverRequest(UUIDPrimaryKeyMixin, Base):
     new_owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id"))
     successor_admin_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("people.id"))
     successor_leader_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("people.id"))
+    # What the outgoing OWNER becomes when they keep neither role (PROVIDER or SEARCHER).
+    former_owner_status: Mapped[str] = mapped_column(
+        String(20), default="provider", server_default="provider"
+    )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     accepted_at: Mapped[datetime | None] = mapped_column()
     cancelled_at: Mapped[datetime | None] = mapped_column()
 
     __table_args__ = (
         CheckConstraint("owner_id <> new_owner_id", name="different_people"),
+        CheckConstraint(
+            "former_owner_status IN ('provider', 'searcher')", name="former_owner_status_valid"
+        ),
         CheckConstraint(
             "NOT (accepted_at IS NOT NULL AND cancelled_at IS NOT NULL)", name="one_outcome"
         ),
