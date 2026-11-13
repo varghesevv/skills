@@ -21,6 +21,9 @@ class ApplicantRow(BaseModel):
     applied_at: datetime
     vouch_count: int  # live vouches
     vouchers: list[Voucher]
+    # Whether the caller may admit them as a provider now (a live vouch from someone besides the
+    # caller). Admitting as a searcher needs no vouch, so there is no flag for it.
+    can_admit_as_provider: bool
 
 
 class ApplicantList(BaseModel):

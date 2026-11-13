@@ -89,7 +89,7 @@ Auth behaviour:
 ### Verifier (at least VERIFIER, within scope)
 | Method | Path | Notes |
 |---|---|---|
-| GET | /verifier/applicants | PENDING applicants in scope, most-vouched first (then oldest first), each with `requested_status`, group, live vouch count and every voucher (name, church, whether it counts). No numbers. Paged: `limit` (1 to 100, default 50) and `offset`; the answer has `items` and `total`, as the next three do. A SEARCHER who applies to provide is listed with the upgrade path (S3.9). |
+| GET | /verifier/applicants | PENDING applicants in scope, most-vouched first (then oldest first), each with `requested_status`, group, live vouch count, every voucher (name, church, whether it counts) and `can_admit_as_provider` (true when the caller may admit the person as a provider now, so a screen shows the button only when it will work). No numbers. Paged: `limit` (1 to 100, default 50) and `offset`; the answer has `items` and `total`, as the next three do. A SEARCHER who applies to provide is listed with the upgrade path (S3.9). |
 | GET | /verifier/members | People in scope that are admitted, by name. Filter `status` (`searcher` to `owner`), `home_group_id`. No numbers. |
 | GET | /verifier/revoked | The revoked list for the scope: the group they were removed from, who revoked them and when. |
 | GET | /verifier/flagged | People flagged for re-checking, in scope, with who set their status. |
