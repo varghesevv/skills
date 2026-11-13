@@ -37,3 +37,17 @@ class AdminChanged(BaseModel):
     church: IdName
     admin: IdName
     former_admin_keeps_leading: bool
+
+
+class GroupClose(BaseModel):
+    """The leader closes their own group, being its last member, by moving into another group."""
+
+    move_to_group_id: uuid.UUID
+    # `provider` or `searcher` for a VERIFIER (who no longer leads), `keep` for an ADMIN or OWNER.
+    former_leader_status: Literal["provider", "searcher", "keep"]
+
+
+class GroupClosed(BaseModel):
+    closed_group: IdName
+    joined_group: IdName
+    status: str
