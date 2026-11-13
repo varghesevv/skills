@@ -354,3 +354,18 @@ def test_lookups_are_limited_per_address(
         assert vouch(client, voucher, token).status_code == 201
     finally:
         get_settings.cache_clear()
+
+
+def test_the_lists_are_bounded_and_empty_when_there_is_nothing(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, world: World
+) -> None:
+    member = applicant(world)
+    assert client.get(f"{API}/me/vouches", headers=headers_of(client, member)).json() == {
+        "items": []
+    }
+    monkeypatch.setattr("app.services.vouching.MAX_LISTED", 1)
+    token = make_link(client, member)
+    for _ in range(2):
+        assert vouch(client, add_member(world, "searcher"), token).status_code == 201
+    items = client.get(f"{API}/me/vouches", headers=headers_of(client, member)).json()["items"]
+    assert len(items) == 1

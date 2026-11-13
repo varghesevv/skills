@@ -89,13 +89,13 @@ def create_link(db: Session, settings: Settings, person: Person) -> tuple[VouchL
     return link, token
 
 
-def _resolve(db: Session, token: str, *, lock: bool = False) -> Person | None:
+def _resolve(db: Session, token: str) -> Person | None:
     """The applicant a link leads to, or None for every kind of failure alike: no such link,
     expired, revoked, or the person no longer asks for vouches."""
     link = db.scalar(select(VouchLink).where(VouchLink.token_hash == hash_token(token)))
     if link is None or link.revoked_at is not None or link.expires_at <= datetime.now(UTC):
         return None
-    applicant = db.get(Person, link.person_id, with_for_update=lock)
+    applicant = db.get(Person, link.person_id)
     if applicant is None or not seeks_vouches(applicant):
         return None
     return applicant
@@ -159,7 +159,20 @@ def _enforce_daily_limit(db: Session, settings: Settings, voucher: Person) -> No
 
 def vouch(db: Session, settings: Settings, voucher: Person, token: str) -> Vouch:
     """Vouch for the applicant the link leads to. A vouch that was withdrawn can be given again."""
-    applicant = _resolve(db, token, lock=True)  # locked: the leader may be admitting at once
+    applicant = _resolve(db, token)
+    if applicant is None:
+        raise _not_found()
+    # Lock both people, in id order so two people vouching for each other cannot deadlock. The
+    # applicant's lock serialises with a leader admitting at the same moment; the voucher's makes
+    # parallel requests count one after the other, so the daily limit holds.
+    db.scalars(
+        select(Person)
+        .where(Person.id.in_([voucher.id, applicant.id]))
+        .order_by(Person.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).all()
+    applicant = _resolve(db, token)  # again, now that the rows cannot change under us
     if applicant is None:
         raise _not_found()
     _check_may_vouch(voucher, applicant)
@@ -206,12 +219,21 @@ def withdraw(db: Session, voucher: Person, vouch_id: uuid.UUID) -> None:
     db.commit()
 
 
+# The lists show the newest vouches; the number of vouches a person gives or receives is small.
+MAX_LISTED = 200
+
+
 def received(db: Session, person: Person) -> list[VouchReceived]:
     rows = list(
         db.scalars(
-            select(Vouch).where(Vouch.applicant_id == person.id).order_by(Vouch.created_at.desc())
+            select(Vouch)
+            .where(Vouch.applicant_id == person.id)
+            .order_by(Vouch.created_at.desc(), Vouch.id)
+            .limit(MAX_LISTED)
         )
     )
+    if not rows:
+        return []
     vouchers = {
         p.id: p
         for p in db.scalars(select(Person).where(Person.id.in_([v.voucher_id for v in rows])))
@@ -240,7 +262,8 @@ def given(db: Session, person: Person) -> list[VouchGiven]:
         select(Vouch, Person)
         .join(Person, Person.id == Vouch.applicant_id)
         .where(Vouch.voucher_id == person.id)
-        .order_by(Vouch.created_at.desc())
+        .order_by(Vouch.created_at.desc(), Vouch.id)
+        .limit(MAX_LISTED)
     ).all()
     return [
         VouchGiven(

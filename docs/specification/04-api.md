@@ -63,11 +63,11 @@ Auth behaviour:
 | PUT | /me | `full_name`, `mobile_number` (the same uniqueness as sign-up; `409 account_exists` otherwise). A field left out keeps its value; an explicit null is refused. Not for a revoked person. |
 | DELETE | /me | Closes the account (the stores' "delete account"). Body: `password` (`403 invalid_password` if wrong; wrong passwords are counted and throttled like login, `429` with `Retry-After`). Keeps the row, the history and the vouches given (they stop counting), clears the personal fields, ends every session, reset link and vouch link, and clears the address, network address and browser of the login attempts. A person who leads gets `409 leads_a_group` (VERIFIER) or `409 leads_a_church` (ADMIN, OWNER) until succession or handover is done (S4); a revoked person cannot close their account (`403 account_revoked`). |
 | PUT | /me/application | PENDING only (`409 not_pending` otherwise, also when a leader admits the person at the same moment); an invalid group is `422 invalid_choice` and changes nothing. `home_group_id` and/or `requested_status`; the newly chosen leader is notified, vouches received still count. |
-| POST | /me/apply-provider | SEARCHER only. Sets `requested_status` to `provider` and returns the vouch link. |
+| POST | /me/apply-provider | SEARCHER only. Sets `requested_status` to `provider` and nothing else; the person then makes a vouch link with `POST /me/vouch-link`. |
 | GET | /me/vouch-link | PENDING, or a SEARCHER who applies to provide (`409 not_applying` for anyone else). `{"active": bool, "expires_at": ...}`. The token is not returned: only a hash is stored (decision D-25). |
 | POST | /me/vouch-link | Same callers. Makes a new link and ends the one before it. Returns `{"token", "expires_at"}` once; the person shares `FRONTEND_BASE_URL/vouch/<token>`. A link lives `VOUCH_LINK_DAYS` days (default 30). |
-| GET | /me/vouches | Vouches received, with each voucher's name, church, whether it is live (a withdrawn vouch, or one by someone no longer admitted, does not count), and when. No contact details. |
-| GET | /me/vouches-given | At least SEARCHER. Vouches given by the caller: the applicant's name and status, whether withdrawn, and `can_withdraw` (until the applicant is admitted). |
+| GET | /me/vouches | The newest 200 vouches received, with each voucher's name, church, whether it is live (a withdrawn vouch, or one by someone no longer admitted, does not count), and when. No contact details. |
+| GET | /me/vouches-given | At least SEARCHER. The newest 200 vouches given by the caller: the applicant's name and status, whether withdrawn, and `can_withdraw` (until the applicant is admitted). |
 | GET | /me/notifications | Paginated, newest first: `id`, `kind`, `subject` (id and name, loaded fresh), `created_at`, `read`. |
 | POST | /me/notifications/{id}/read, /me/notifications/read-all | |
 
