@@ -51,7 +51,7 @@ def _history(
 
 def flag_people_set_by(db: Session, revoked: Person) -> int:
     """Flag everyone whose current status `revoked` set. Their statuses do not change and they
-    keep their access. Returns how many were flagged."""
+    keep their access. Returns how many were newly flagged."""
     result = db.execute(
         update(Person)
         .where(
@@ -59,6 +59,7 @@ def flag_people_set_by(db: Session, revoked: Person) -> int:
             Person.closed_at.is_(None),
             Person.status != REVOKED,
             Person.id != revoked.id,
+            Person.flagged_for_recheck.is_(False),  # already flagged: not counted again
         )
         .values(flagged_for_recheck=True)
         .execution_options(synchronize_session=False)

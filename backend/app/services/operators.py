@@ -10,7 +10,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session
 
@@ -158,7 +158,7 @@ def change_owner(
     try:
         people = lock_people(db, [old.id, new.id, *wanted])
         locked_old, locked_new = people[old.id], people[new.id]
-        ownership.transfer(
+        flagged = ownership.transfer(
             db,
             old=locked_old,
             new=locked_new,
@@ -168,20 +168,15 @@ def change_owner(
             kind="operator",
             revoke_old=revoke_old_owner,
         )
-        # A proposal of the old OWNER (or to the new one) is for a change that no longer applies.
+        # A proposal of the old OWNER is for a change that no longer applies.
         db.execute(
             update(HandoverRequest)
             .where(
                 HandoverRequest.accepted_at.is_(None),
                 HandoverRequest.cancelled_at.is_(None),
-                (HandoverRequest.owner_id == old.id) | (HandoverRequest.new_owner_id == new.id),
+                HandoverRequest.owner_id == old.id,
             )
             .values(cancelled_at=datetime.now(UTC))
-        )
-        flagged = db.scalar(
-            select(func.count())
-            .select_from(Person)
-            .where(Person.flagged_for_recheck.is_(True), Person.status_set_by_id == old.id)
         )
         db.commit()
     except ApiError as error:
@@ -196,5 +191,5 @@ def change_owner(
         old_owner_id=old.id,
         new_owner_id=new.id,
         old_owner_status=locked_old.status,
-        flagged=flagged or 0,
+        flagged=flagged,
     )

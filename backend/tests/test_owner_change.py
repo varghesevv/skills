@@ -274,3 +274,52 @@ def test_the_successors_must_belong_and_the_status_must_fit(
 def test_the_command_needs_the_new_owner() -> None:
     with pytest.raises(SystemExit):
         main(["change-owner"])  # --new-owner is required
+
+
+def test_a_proposal_that_is_not_the_old_owners_stays_open(session: Session, world: World) -> None:
+    scene = Scene(world)
+    mine = HandoverRequest(owner_id=world.owner.id, new_owner_id=scene.admin.id)
+    # A stale row made by someone else for the same chosen ADMIN is not the old OWNER's.
+    other = HandoverRequest(owner_id=scene.elsewhere.person.id, new_owner_id=scene.admin.id)
+    session.add_all([mine, other])
+    session.flush()
+    scene.run()
+    session.refresh(mine)
+    session.refresh(other)
+    assert mine.cancelled_at is not None and other.cancelled_at is None
+
+
+def test_the_count_is_of_the_people_newly_flagged(session: Session, world: World) -> None:
+    scene = Scene(world)
+    first = add_member(world, "provider", status_set_by_id=world.owner.id)
+    second = add_member(world, "provider", status_set_by_id=world.owner.id)
+    second.person.flagged_for_recheck = True  # flagged before this change
+    session.flush()
+    result = scene.run(revoke_old_owner=True)
+    assert result.flagged == 1  # only the first is new
+    session.refresh(first.person)
+    session.refresh(second.person)
+    assert first.person.flagged_for_recheck and second.person.flagged_for_recheck
+
+
+def test_the_roles_are_checked_again_on_the_locked_rows(
+    session: Session, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The checks before the locks give the operator a clear message; the operation itself checks
+    again on the locked rows, so a change between the two is refused whole."""
+    from app.services import operators
+
+    scene = Scene(world)
+    real_lock = operators.lock_people
+
+    def change_then_lock(db: Session, ids: Any) -> Any:
+        # Between the first reads and the locks the chosen ADMIN stops being an ADMIN (a status
+        # change made by another request).
+        session.execute(
+            Person.__table__.update().where(Person.id == scene.admin.id).values(status="provider")
+        )
+        return real_lock(db, ids)
+
+    monkeypatch.setattr(operators, "lock_people", change_then_lock)
+    with pytest.raises(SetupError, match="changed meanwhile"):
+        scene.run()

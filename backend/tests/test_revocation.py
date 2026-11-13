@@ -382,6 +382,18 @@ def test_everyone_a_revoked_leader_set_is_flagged_and_keeps_access(
     assert {r["id"] for r in listed} == {str(first.person.id), str(second.person.id)}
 
 
+def test_flagging_twice_counts_only_the_people_newly_flagged(
+    session: Session, world: World
+) -> None:
+    lead, group = leader(world)
+    gone = ex_leader(world, group, "verifier")
+    add_member(world, "provider", group=group, status_set_by_id=gone.id)
+    add_member(world, "searcher", group=group, status_set_by_id=gone.id)
+    assert revocation.flag_people_set_by(session, gone) == 2
+    assert revocation.flag_people_set_by(session, gone) == 0  # already flagged: not counted again
+    assert lead is not None
+
+
 def test_a_leader_reconfirms_a_flagged_person_and_becomes_their_new_link(
     client: TestClient, session: Session, world: World
 ) -> None:

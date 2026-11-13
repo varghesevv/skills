@@ -296,8 +296,8 @@ def change_owner_command(
     )
     if result.flagged:
         print(
-            f"{result.flagged} people are flagged for re-checking: the new OWNER (and the ADMINs "
-            "below) re-confirm them."
+            f"{result.flagged} people are now flagged for re-checking: the new OWNER (and the "
+            "ADMINs below) re-confirm them."
         )
     return 0
 

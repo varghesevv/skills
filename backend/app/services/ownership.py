@@ -105,7 +105,7 @@ def transfer(
     former_status: str,
     kind: str,
     revoke_old: bool = False,
-) -> None:
+) -> int:
     """Make `new` (the ADMIN of another church) the OWNER and move the other roles. `kind` is
     `handover` (the people involved are the actors) or `operator` (no person is). The people are
     locked and checked by the caller; this reads the groups and churches under their own locks."""
@@ -194,14 +194,14 @@ def transfer(
             succession.revoke_invitations(db, old, group)
         old_group_id = old.home_group_id
         db.add(_row(old, "owner", "revoked", None, kind, now))
-        flag_people_set_by(db, old)
+        flagged = flag_people_set_by(db, old)
         old.last_home_group_id = old_group_id
         old.home_group_id = None
         old.status = "revoked"
         old.requested_status = None
         old.flagged_for_recheck = False
         old.status_set_by_id = None
-        return
+        return flagged
     if keeps_church:
         new_status = "admin"
     elif keeps_group:
@@ -214,3 +214,4 @@ def transfer(
     if handover:
         db.add(Notification(person_id=old.id, kind=OWNER_HANDED_OVER, subject_id=new.id))
         db.add(Notification(person_id=new.id, kind=OWNER_APPOINTED, subject_id=old.id))
+    return 0
