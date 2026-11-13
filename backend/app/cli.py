@@ -2,6 +2,8 @@
 
     python -m app.cli create-owner --name "Full Name" --email you@example.com \
         --mobile +971500000000 --church "Church name" --group "Home group name"
+    python -m app.cli change-owner --new-owner you@example.com [--church-admin ...] \
+        [--group-leader ...] [--revoke-old-owner]
     python -m app.cli create-admin --email you@example.com --mobile +971500000000
     python -m app.cli purge-notifications [--months 12]
     python -m app.cli seed-demo
@@ -37,7 +39,7 @@ from app.schemas.auth import (
 )
 from app.services import notifications
 from app.services.accounts import create_account, get_by_email
-from app.services.operators import SetupError, create_first_owner
+from app.services.operators import SetupError, change_owner, create_first_owner
 
 DEMO_DOMAIN = "example.com"
 
@@ -267,6 +269,39 @@ def seed_demo() -> int:
     return 0
 
 
+def change_owner_command(
+    new_owner: str,
+    former_status: str,
+    church_admin: str | None,
+    group_leader: str | None,
+    revoke_old_owner: bool,
+) -> int:
+    """Change the OWNER outside the app (docs/verification.md, "Owner succession", step 3)."""
+    with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
+        try:
+            result = change_owner(
+                db,
+                new_owner_email=new_owner,
+                former_status=former_status,
+                admin_successor_email=church_admin,
+                leader_successor_email=group_leader,
+                revoke_old_owner=revoke_old_owner,
+            )
+        except SetupError as error:
+            print(error, file=sys.stderr)
+            return 1
+    print(
+        f"OWNER changed: the new OWNER is {result.new_owner_id}; "
+        f"the old OWNER {result.old_owner_id} is now {result.old_owner_status}."
+    )
+    if result.flagged:
+        print(
+            f"{result.flagged} people are flagged for re-checking: the new OWNER (and the ADMINs "
+            "below) re-confirm them."
+        )
+    return 0
+
+
 def purge_notifications(months: int) -> int:
     """Delete notifications older than the retention (12 months by default; decision O-02)."""
     cutoff = notifications.months_before(datetime.now(UTC), months)
@@ -292,6 +327,24 @@ def main(argv: list[str] | None = None) -> int:
     admin.add_argument("--email", required=True)
     admin.add_argument("--mobile", required=True)
     admin.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
+    change = sub.add_parser(
+        "change-owner",
+        help="change the OWNER when they cannot hand over, or have breached trust",
+    )
+    change.add_argument("--new-owner", required=True, help="email of an ADMIN of another church")
+    change.add_argument(
+        "--former-status",
+        choices=["provider", "searcher"],
+        default="provider",
+        help="what the old OWNER becomes when they keep no role",
+    )
+    change.add_argument("--church-admin", help="email of the new ADMIN of the old OWNER's church")
+    change.add_argument("--group-leader", help="email of the new leader of the old OWNER's group")
+    change.add_argument(
+        "--revoke-old-owner",
+        action="store_true",
+        help="the old OWNER breached trust: revoke them and flag everyone they set",
+    )
     purge = sub.add_parser(
         "purge-notifications", help="delete in-app notifications older than the retention"
     )
@@ -311,6 +364,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "create-admin":
         return create_admin(args.email, args.mobile, args.password_stdin)
+    if args.command == "change-owner":
+        return change_owner_command(
+            args.new_owner,
+            args.former_status,
+            args.church_admin,
+            args.group_leader,
+            args.revoke_old_owner,
+        )
     if args.command == "purge-notifications":
         return purge_notifications(args.months)
     if args.command == "generate-demo-data":

@@ -1,20 +1,25 @@
 """What the platform operators do directly on the database, outside the app.
 
-Today: set up Skills by creating the first OWNER with the first church and home group. The
-operator change of the OWNER (docs/verification.md, "Owner succession") shares its logic with the
-handover and arrives with it (roadmap S4.5).
+Set up Skills by creating the first OWNER with the first church and home group, and change the
+OWNER when they cannot hand over or have breached trust (docs/verification.md, "Owner succession"),
+with the same appointments as a handover (`ownership.transfer`) and no person behind them in the
+history.
 """
 
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import DataError, IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.errors import ApiError
 from app.core.security import hash_password
 from app.models.church import Church, HomeGroup, Person
-from app.models.trust import StatusChange
+from app.models.trust import HandoverRequest, StatusChange
+from app.services import ownership
+from app.services.locks import lock_people
 
 
 class SetupError(Exception):
@@ -96,3 +101,100 @@ def create_first_owner(
             "and mobile number are not in use."
         ) from None
     return FirstOwner(owner_id, church_id, group_id)
+
+
+@dataclass(frozen=True)
+class OwnerChanged:
+    old_owner_id: uuid.UUID
+    new_owner_id: uuid.UUID
+    old_owner_status: str  # what the old OWNER is now
+    flagged: int  # people flagged for re-checking (only when the old OWNER was revoked)
+
+
+def _open_person(db: Session, email: str, what: str) -> Person:
+    person = db.scalar(
+        select(Person).where(Person.email == email.strip().lower(), Person.closed_at.is_(None))
+    )
+    if person is None:
+        raise SetupError(f"There is no open account with the address given for {what}.")
+    return person
+
+
+def change_owner(
+    db: Session,
+    *,
+    new_owner_email: str,
+    former_status: str = "provider",
+    admin_successor_email: str | None = None,
+    leader_successor_email: str | None = None,
+    revoke_old_owner: bool = False,
+) -> OwnerChanged:
+    """Make an ADMIN of another church the OWNER, outside the app. Committed here.
+
+    The same appointments as a handover: a new ADMIN for the old OWNER's church and a new leader for
+    the group they led (each may be left out only when nobody else is there, and the old OWNER then
+    keeps that role). When the old OWNER breached trust (`revoke_old_owner`) they are revoked, and
+    everyone whose status they set is flagged; the new OWNER clears the flags. A handover
+    proposal still open is cancelled. Everything is one transaction, written to the history as an
+    operator change.
+    """
+    if former_status not in ("provider", "searcher"):
+        raise SetupError("The old OWNER becomes a provider or a searcher.")
+    old = db.scalar(select(Person).where(Person.status == "owner", Person.closed_at.is_(None)))
+    if old is None:
+        raise SetupError("There is no OWNER to replace: set Skills up first.")
+    new = _open_person(db, new_owner_email, "the new OWNER")
+    admin_successor = (
+        _open_person(db, admin_successor_email, "the new ADMIN") if admin_successor_email else None
+    )
+    leader_successor = (
+        _open_person(db, leader_successor_email, "the new group leader")
+        if leader_successor_email
+        else None
+    )
+    if new.status != "admin" or new.church_id == old.church_id:
+        raise SetupError("The new OWNER must be the ADMIN of a church other than the OWNER's.")
+    wanted = [p.id for p in (admin_successor, leader_successor) if p is not None]
+    try:
+        people = lock_people(db, [old.id, new.id, *wanted])
+        locked_old, locked_new = people[old.id], people[new.id]
+        ownership.transfer(
+            db,
+            old=locked_old,
+            new=locked_new,
+            admin_successor_id=admin_successor.id if admin_successor else None,
+            leader_successor_id=leader_successor.id if leader_successor else None,
+            former_status=former_status,
+            kind="operator",
+            revoke_old=revoke_old_owner,
+        )
+        # A proposal of the old OWNER (or to the new one) is for a change that no longer applies.
+        db.execute(
+            update(HandoverRequest)
+            .where(
+                HandoverRequest.accepted_at.is_(None),
+                HandoverRequest.cancelled_at.is_(None),
+                (HandoverRequest.owner_id == old.id) | (HandoverRequest.new_owner_id == new.id),
+            )
+            .values(cancelled_at=datetime.now(UTC))
+        )
+        flagged = db.scalar(
+            select(func.count())
+            .select_from(Person)
+            .where(Person.flagged_for_recheck.is_(True), Person.status_set_by_id == old.id)
+        )
+        db.commit()
+    except ApiError as error:
+        db.rollback()
+        raise SetupError(error.message) from None
+    except (IntegrityError, DataError):
+        db.rollback()
+        raise SetupError(
+            "The OWNER could not be changed: the database refused the result (nothing was changed)."
+        ) from None
+    return OwnerChanged(
+        old_owner_id=old.id,
+        new_owner_id=new.id,
+        old_owner_status=locked_old.status,
+        flagged=flagged or 0,
+    )
