@@ -134,3 +134,8 @@ export function admitPerson(id: string, to: AppliedStatus) {
 export function declinePerson(id: string) {
   return request<void>(`/verifier/people/${id}/decline`, { method: 'POST' })
 }
+
+/** A searcher asks to become a provider; they stay a searcher while they collect vouches. */
+export function applyForProvider() {
+  return request<PersonMe>('/me/apply-provider', { method: 'POST' })
+}

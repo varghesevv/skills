@@ -27,6 +27,10 @@ export function notificationText(item: NotificationItem): string {
       return t('notifications.applicant_new', { name })
     case 'vouch_received':
       return t('notifications.vouch_received', { name })
+    case 'provider_application':
+      return t('notifications.provider_application', { name })
+    case 'provider_declined':
+      return t('notifications.provider_declined', { name })
     case 'admitted':
       return t('notifications.admitted', { name })
     default:
