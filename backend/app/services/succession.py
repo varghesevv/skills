@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
-from app.models.church import HomeGroup, Person
+from app.models.church import Church, HomeGroup, Person
 from app.models.enums import STATUS_RANK
 from app.models.trust import GroupInvitation, Notification, StatusChange
 from app.services.locks import lock_people
@@ -28,6 +28,8 @@ from app.services.status_history import last_change
 
 LEADER_APPOINTED = "leader_appointed"  # notification kind: you now lead a home group
 LEADER_STEPPED_DOWN = "leader_stepped_down"  # notification kind: you no longer lead a group
+ADMIN_APPOINTED = "admin_appointed"  # notification kind: you are now the ADMIN of a church
+ADMIN_STEPPED_DOWN = "admin_stepped_down"  # notification kind: you are no longer the ADMIN
 
 
 def _history(person: Person, previous: str, actor: Person, kind: str, to: str) -> StatusChange:
@@ -197,3 +199,132 @@ def end_commit(db: Session) -> None:
         raise ApiError(
             409, "state_changed", "The home group changed meanwhile. Reload and try again."
         ) from None
+
+
+def pick_church_successor(
+    db: Session, church: Church, admin: Person, successor_id: uuid.UUID
+) -> Person:
+    """The member of the church who becomes its ADMIN (already locked by the caller)."""
+    successor = db.get(Person, successor_id)
+    if (
+        successor is None
+        or successor.id == admin.id
+        or successor.closed_at is not None
+        or successor.status in ("revoked", "admin", "owner")
+        or successor.church_id != church.id
+    ):
+        raise ApiError(409, "successor_not_member", "The successor must be a member of the church")
+    return successor
+
+
+def hand_church_on(
+    db: Session,
+    church: Church,
+    admin: Person,
+    actor: Person,
+    successor_id: uuid.UUID,
+    group_successor_id: uuid.UUID | None,
+    *,
+    revoking: bool,
+) -> bool:
+    """The church's ADMIN stops being its ADMIN: the successor, a member of the church, becomes
+    the ADMIN directly (if they lead a group they keep leading it), in the same transaction.
+
+    If the old ADMIN leads a home group, it passes to `group_successor_id` (a member of it, who
+    may be the new ADMIN). With no one to hand it to and other members in it, the call is refused;
+    if the old ADMIN is its only member it closes when they are revoked, and when they only step
+    down they keep leading it as a VERIFIER (the rule for a leader nobody can succeed). Returns
+    whether the old ADMIN keeps leading their group. Their own status is the caller's to change.
+    """
+    successor = pick_church_successor(db, church, admin, successor_id)
+    group = (
+        db.get(HomeGroup, admin.home_group_id, with_for_update=True)
+        if admin.home_group_id
+        else None
+    )
+    leads = group is not None and group.closed_at is None and group.leader_id == admin.id
+    if group_successor_id is not None:
+        if not leads or group is None:
+            raise ApiError(422, "invalid_choice", "There is no group to hand on")
+        pick_successor(db, group, admin, group_successor_id)
+    elif leads and group is not None and other_members(db, group, admin.id):
+        raise ApiError(
+            409, "successor_required", "Choose a successor from the members of their home group"
+        )
+    # Locked after the groups (the order of locks in services/locks.py).
+    locked = db.get(Church, church.id, with_for_update=True, populate_existing=True)
+    if locked is None or locked.closed_at is not None or locked.admin_id != admin.id:
+        raise ApiError(409, "state_changed", "The church changed meanwhile. Reload.")
+    # The new ADMIN first, so a group successor who is the new ADMIN gets no second promotion.
+    previous = successor.status
+    successor.status = "admin"
+    successor.status_set_by_id = actor.id
+    db.add(_history(successor, previous, actor, "appoint", "admin"))
+    locked.admin_id = successor.id
+    db.add(Notification(person_id=successor.id, kind=ADMIN_APPOINTED, subject_id=actor.id))
+    keeps_group = False
+    if leads and group is not None:
+        if group_successor_id is not None:
+            end_leadership(db, group, admin, actor, group_successor_id)
+        elif revoking:
+            end_leadership(db, group, admin, actor, None)  # alone: the group closes
+        else:
+            keeps_group = True
+    return keeps_group
+
+
+def replace_admin(
+    db: Session,
+    owner: Person,
+    church_id: uuid.UUID,
+    successor_id: uuid.UUID,
+    former_admin_status: str,
+    group_successor_id: uuid.UUID | None,
+) -> tuple[Church, bool]:
+    """The OWNER replaces the ADMIN of another church. The commit is the caller's. Returns the
+    church and whether the old ADMIN keeps leading their group (as a VERIFIER)."""
+    church = db.get(Church, church_id)
+    if church is None or church.closed_at is not None:
+        raise ApiError(404, "not_found", "There is no such church")
+    admin_row = db.get(Person, church.admin_id)
+    if admin_row is None:
+        raise ApiError(409, "state_changed", "The church changed meanwhile. Reload.")
+    if admin_row.status == "owner":
+        # The OWNER is the ADMIN of their own church; that changes only by a handover (4.5).
+        raise ApiError(
+            409, "owner_church", "The OWNER's own church changes ADMIN by a handover of the OWNER"
+        )
+    ids = [
+        owner.id,
+        church.admin_id,
+        successor_id,
+        *([group_successor_id] if group_successor_id else []),
+    ]
+    people = lock_people(db, ids)
+    locked_owner = people.get(owner.id)
+    if locked_owner is None or locked_owner.closed_at is not None or locked_owner.status != "owner":
+        raise ApiError(403, "forbidden", "You are not allowed to do this")
+    admin = people.get(church.admin_id)
+    if admin is None or admin.status != "admin":
+        raise ApiError(409, "state_changed", "The church changed meanwhile. Reload.")
+    successor = people.get(successor_id)
+    if (
+        successor is not None
+        and STATUS_RANK[successor.status] < STATUS_RANK["admin"]
+        and successor.church_id == church.id
+        and not can_set_status(owner, successor, "admin", last_change(db, successor))
+    ):
+        raise ApiError(403, "status_not_allowed", "You may not make this change")
+    if not can_set_status(owner, admin, former_admin_status, last_change(db, admin)):
+        raise ApiError(403, "status_not_allowed", "You may not make this change")
+    keeps_group = hand_church_on(
+        db, church, admin, owner, successor_id, group_successor_id, revoking=False
+    )
+    # The old ADMIN stays where they are: a PROVIDER or a SEARCHER, set by the OWNER, or a VERIFIER
+    # when they keep leading a group nobody can take over.
+    new_status = "verifier" if keeps_group else former_admin_status
+    admin.status = new_status
+    admin.status_set_by_id = owner.id
+    db.add(_history(admin, "admin", owner, "step-down", new_status))
+    db.add(Notification(person_id=admin.id, kind=ADMIN_STEPPED_DOWN, subject_id=owner.id))
+    return church, keeps_group

@@ -26,6 +26,63 @@
         "title": "AdminAccepted",
         "type": "object"
       },
+      "AdminChange": {
+        "description": "Replace the ADMIN of a church (the OWNER's own church changes only by a handover).",
+        "properties": {
+          "former_admin_status": {
+            "enum": [
+              "provider",
+              "searcher"
+            ],
+            "title": "Former Admin Status",
+            "type": "string"
+          },
+          "group_successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Successor Id"
+          },
+          "successor_id": {
+            "format": "uuid",
+            "title": "Successor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "successor_id",
+          "former_admin_status"
+        ],
+        "title": "AdminChange",
+        "type": "object"
+      },
+      "AdminChanged": {
+        "properties": {
+          "admin": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "former_admin_keeps_leading": {
+            "title": "Former Admin Keeps Leading",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "church",
+          "admin",
+          "former_admin_keeps_leading"
+        ],
+        "title": "AdminChanged",
+        "type": "object"
+      },
       "AdminInvitationAccept": {
         "properties": {
           "full_name": {
@@ -3256,6 +3313,18 @@
       "StatusRequest": {
         "description": "Revoke (`to` is `revoked`) or reinstate (a revoked person, `to` the new status and the\nhome group they are placed in).",
         "properties": {
+          "group_successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Successor Id"
+          },
           "home_group_id": {
             "anyOf": [
               {
@@ -4718,6 +4787,65 @@
           }
         },
         "summary": "List Churches",
+        "tags": [
+          "churches"
+        ]
+      }
+    },
+    "/api/v1/churches/{church_id}/admin": {
+      "put": {
+        "description": "The OWNER replaces the ADMIN of another church with one of its members, in one\ntransaction: the successor becomes the ADMIN directly (keeping any group they lead), the old\nADMIN stays as a provider or a searcher, set by the OWNER, and nobody is flagged. If the old\nADMIN leads a home group it passes to `group_successor_id`, or they keep leading it as a\nVERIFIER when they are alone in it. The OWNER's own church changes ADMIN only by a handover\n(`409 owner_church`).",
+        "operationId": "change_admin_api_v1_churches__church_id__admin_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "church_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Church Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Admin",
         "tags": [
           "churches"
         ]

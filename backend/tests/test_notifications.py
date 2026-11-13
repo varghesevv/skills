@@ -182,6 +182,8 @@ def test_the_events_so_far_all_write_a_known_kind(
         "church_created",
         "leader_appointed",
         "leader_stepped_down",
+        "admin_appointed",
+        "admin_stepped_down",
     }
     assert written == set(notifications.KINDS) - others
 

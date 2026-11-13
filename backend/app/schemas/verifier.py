@@ -129,6 +129,10 @@ class StatusRequest(BaseModel):
     # Revoking a VERIFIER: the member who leads their group from now on. Without one the group
     # closes if the VERIFIER is its only member, and the revocation is refused otherwise.
     successor_id: uuid.UUID | None = None
+    # Revoking an ADMIN: `successor_id` is the member of the church who becomes its ADMIN, and
+    # this is who leads the home group the ADMIN led (without one it closes if they are alone in
+    # it, and the revocation is refused if it has other members).
+    group_successor_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def _group_only_for_reinstating(self) -> Self:
@@ -136,7 +140,9 @@ class StatusRequest(BaseModel):
             raise ValueError("a revocation takes no home group")
         if self.to != "revoked" and self.home_group_id is None:
             raise ValueError("reinstating needs a home group")
-        if self.to != "revoked" and self.successor_id is not None:
+        if self.to != "revoked" and (
+            self.successor_id is not None or self.group_successor_id is not None
+        ):
             raise ValueError("only a revocation has a successor")
         return self
 
