@@ -161,13 +161,9 @@ def test_the_trust_journey(client: TestClient, session: Session) -> None:
     assert olive.post(f"/verifier/people/{ben.id}/admit", to="provider").status_code == 200
     assert ben.me()["status"] == "provider" and ben.me()["vouch_count"] == 2
     assert ann.post("/vouch-links/lookup", token=link_of_ben["token"]).status_code == 404
-    assert [
-        c.kind
-        for c in session.scalars(select(StatusChange).where(StatusChange.person_id == ben.id))
-    ] == [
-        "signup",
-        "admit",
-    ]
+    ben_history = session.scalars(select(StatusChange).where(StatusChange.person_id == ben.id))
+    # Rows made in one test transaction share a timestamp, so only the set of kinds is checked.
+    assert sorted(c.kind for c in ben_history) == ["admit", "signup"]
     assert session.scalars(select(VouchLink).where(VouchLink.person_id == ben.id)).one().revoked_at
     assert ann.get("/me/vouches-given").json()["items"][0]["can_withdraw"] is False
 
