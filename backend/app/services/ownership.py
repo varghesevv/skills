@@ -111,7 +111,9 @@ def transfer(
     locked and checked by the caller; this reads the groups and churches under their own locks."""
     handover = kind == "handover"
     group = (
-        db.get(HomeGroup, old.home_group_id, with_for_update=True) if old.home_group_id else None
+        db.get(HomeGroup, old.home_group_id, with_for_update=True, populate_existing=True)
+        if old.home_group_id
+        else None
     )
     ids = sorted({old.church_id, new.church_id}, key=str)
     churches = {i: db.get(Church, i, with_for_update=True, populate_existing=True) for i in ids}

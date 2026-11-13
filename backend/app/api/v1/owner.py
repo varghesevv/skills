@@ -8,7 +8,6 @@ from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.models.church import Person
-from app.schemas.church import IdName
 from app.schemas.church_invitations import (
     ChurchClosed,
     ChurchInvitationCreated,
@@ -130,16 +129,7 @@ def accept_handover(
     """The chosen ADMIN accepts. In one transaction they become the OWNER (and stay the ADMIN of
     their own church), the OWNER's church gets its new ADMIN and its group its new leader, and the
     outgoing OWNER becomes a provider or a searcher (or keeps a role nobody can take over)."""
-    request = handover.accept(db, person, request_id)
-    former = db.get(Person, request.owner_id)
-    now_owner = db.get(Person, request.new_owner_id)
-    return HandoverAccepted(
-        owner=IdName(
-            id=request.new_owner_id, name=(now_owner.full_name if now_owner else "") or ""
-        ),
-        former_owner=IdName(id=request.owner_id, name=(former.full_name if former else "") or ""),
-        former_owner_status=former.status if former else "",
-    )
+    return handover.accepted_view(db, handover.accept(db, person, request_id))
 
 
 @router.post("/handover/{request_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)

@@ -480,6 +480,26 @@ def test_a_successor_who_left_meanwhile_stops_the_handover_whole(
     assert session.get(Church, world.church.id).admin_id == world.owner.id  # type: ignore[union-attr]
 
 
+def test_the_group_is_read_afresh_under_its_lock(
+    client: TestClient, session: Session, world: World
+) -> None:
+    scene = Scene(world)
+    request_id = propose(client, scene.owner, full_body(scene)).json()["id"]
+    # The session now holds the OWNER's group. Its leader changes in the database behind its back
+    # (a change made by another request), so the copy in memory is stale.
+    session.execute(
+        update(HomeGroup)
+        .where(HomeGroup.id == world.group.id)
+        .values(leader_id=scene.in_group.person.id)
+        .execution_options(synchronize_session=False)
+    )
+    refused = client.post(f"{URL}/{request_id}/accept", headers=headers_of(client, scene.admin))
+    # Read afresh, the OWNER leads no group, so the leader named for it makes no sense.
+    assert refused.status_code == 422 and refused.json()["error"]["code"] == "invalid_choice"
+    assert owners(session) == 1
+    assert session.get(HandoverRequest, request_id).accepted_at is None  # type: ignore[union-attr]
+
+
 def test_the_new_kinds_are_known() -> None:
     assert {
         "handover_requested",

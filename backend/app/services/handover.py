@@ -15,7 +15,7 @@ from app.core.errors import ApiError
 from app.models.church import Church, HomeGroup, Person
 from app.models.trust import HandoverRequest, Notification
 from app.schemas.church import IdName
-from app.schemas.handover import HandoverOut
+from app.schemas.handover import HandoverAccepted, HandoverOut
 from app.services import ownership
 from app.services.locks import lock_people
 
@@ -164,3 +164,13 @@ def cancel(db: Session, actor: Person, request_id: uuid.UUID) -> HandoverRequest
     db.add(Notification(person_id=other, kind=HANDOVER_CANCELLED, subject_id=actor.id))
     _commit(db)
     return request
+
+
+def accepted_view(db: Session, request: HandoverRequest) -> HandoverAccepted:
+    """What an acceptance answers: the new OWNER, and what the outgoing one is now."""
+    former = db.get(Person, request.owner_id)
+    return HandoverAccepted(
+        owner=_person(db, request.new_owner_id),
+        former_owner=_person(db, request.owner_id),
+        former_owner_status=former.status if former else "",
+    )
