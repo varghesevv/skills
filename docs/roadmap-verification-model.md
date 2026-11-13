@@ -8,9 +8,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
 - Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131), S3.8 (133 backend journey, 134 mobile contract); S3 (trust: vouching and admission) is complete.
-- Done also: S4.1 (135).
+- Done also: S4.1 (135), S4.2a (136).
 - In progress: nothing.
-- Next: S4.2 (start a home group; invite an ADMIN).
+- Next: S4.2b (invite an ADMIN, which creates a church).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -87,7 +87,7 @@ Backend first, then web and mobile.
 
 ### S4. Church structure and life cycle — 11 pull requests
 - [x] 4.1 Backend: revoke, reinstate, re-confirm, and the flagging function (revoking a VERIFIER or ADMIN, which sets the flags, comes with succession in 4.3; decision D-30).
-- [ ] 4.2 Backend: start a home group (request and approval); invite an ADMIN, which creates a church.
+- [ ] 4.2 Backend: start a home group (request and approval): 4.2a, done (D-31); invite an ADMIN, which creates a church: 4.2b.
 - [ ] 4.3 Backend: succession (step down and replace a leader, hand a group on) with same-transaction guarantees.
 - [ ] 4.4 Backend: move between groups by agreement; close a group; close a church. (Leave, which is `DELETE /me` for people who do not lead, was done early for the web applicant home: pull request in S2.7.)
 - [ ] 4.5 Backend: OWNER handover; operator change.

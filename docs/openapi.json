@@ -1026,6 +1026,116 @@
         "title": "GroupInvitationSummary",
         "type": "object"
       },
+      "GroupRequestCreate": {
+        "properties": {
+          "group_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Group Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_name"
+        ],
+        "title": "GroupRequestCreate",
+        "type": "object"
+      },
+      "GroupRequestCreated": {
+        "description": "The request, or for an ADMIN or the OWNER the group, started at once.",
+        "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request": {
+            "$ref": "#/components/schemas/GroupRequestOut"
+          }
+        },
+        "required": [
+          "request",
+          "group"
+        ],
+        "title": "GroupRequestCreated",
+        "type": "object"
+      },
+      "GroupRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupRequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GroupRequestList",
+        "type": "object"
+      },
+      "GroupRequestOut": {
+        "properties": {
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "group_name": {
+            "title": "Group Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requester": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "requester_leads_a_group": {
+            "title": "Requester Leads A Group",
+            "type": "boolean"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_name",
+          "church",
+          "requester",
+          "state",
+          "created_at",
+          "requester_leads_a_group"
+        ],
+        "title": "GroupRequestOut",
+        "type": "object"
+      },
+      "GroupStarted": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "group"
+        ],
+        "title": "GroupStarted",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4910,6 +5020,168 @@
         "summary": "Lookup Group Invitation",
         "tags": [
           "group-invitations"
+        ]
+      }
+    },
+    "/api/v1/group-requests": {
+      "get": {
+        "description": "An ADMIN sees the open requests of their church, the OWNER of every church; everyone else\ntheir own requests.",
+        "operationId": "list_requests_api_v1_group_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Requests",
+        "tags": [
+          "group-requests"
+        ]
+      },
+      "post": {
+        "description": "Ask to start a home group. An ADMIN or the OWNER start it at once, and the answer holds\nthe group. Someone who leads a group needs a successor first (`409 successor_required`,\nroadmap 4.3).",
+        "operationId": "ask_api_v1_group_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupRequestCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask",
+        "tags": [
+          "group-requests"
+        ]
+      }
+    },
+    "/api/v1/group-requests/{request_id}/approve": {
+      "post": {
+        "description": "Create the group and move the requester in as its leader (a VERIFIER unless higher).",
+        "operationId": "approve_api_v1_group_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve",
+        "tags": [
+          "group-requests"
+        ]
+      }
+    },
+    "/api/v1/group-requests/{request_id}/decline": {
+      "post": {
+        "operationId": "decline_api_v1_group_requests__request_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decline",
+        "tags": [
+          "group-requests"
         ]
       }
     },

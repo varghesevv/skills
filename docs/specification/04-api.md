@@ -68,7 +68,7 @@ Auth behaviour:
 | POST | /me/vouch-link | Same callers. Makes a new link and ends the one before it. Returns `{"token", "expires_at"}` once; the person shares `FRONTEND_BASE_URL/vouch/<token>`. A link lives `VOUCH_LINK_DAYS` days (default 30). |
 | GET | /me/vouches | The newest 200 vouches received, with each voucher's name, church, whether it is live (a withdrawn vouch, or one by someone no longer admitted, does not count), and when. No contact details. |
 | GET | /me/vouches-given | At least SEARCHER. The newest 200 vouches given by the caller: the applicant's name and status, whether withdrawn, and `can_withdraw` (until the applicant is admitted). |
-| GET | /me/notifications | Any status except REVOKED. Newest first, paged (`limit` 1 to 100, default 50; `offset`; `unread=true` for unread only): `items` (`id`, `kind`, `subject` (id and name, loaded fresh; the name is empty once that account is closed), `created_at`, `read`), `total` and `unread_count` (for a badge, whatever the page). Kinds so far: `applicant_new` (a leader: someone chose their group), `provider_application` (a leader: a searcher of theirs asks to become a provider), `vouch_received`, `admitted`, `provider_declined`, `revoked`, `reinstated`; the re-check flag and the requests to agree to a move or a handover come with their slices (decision D-28). |
+| GET | /me/notifications | Any status except REVOKED. Newest first, paged (`limit` 1 to 100, default 50; `offset`; `unread=true` for unread only): `items` (`id`, `kind`, `subject` (id and name, loaded fresh; the name is empty once that account is closed), `created_at`, `read`), `total` and `unread_count` (for a badge, whatever the page). Kinds so far: `applicant_new` (a leader: someone chose their group), `provider_application` (a leader: a searcher of theirs asks to become a provider), `vouch_received`, `admitted`, `provider_declined`, `revoked`, `reinstated`, `group_request_new`, `group_request_approved`, `group_request_declined`; the re-check flag and the requests to agree to a move or a handover come with their slices (decision D-28). |
 | POST | /me/notifications/{id}/read | `204`, also when already read. Someone else's or an unknown id: the same `404`. |
 | POST | /me/notifications/read-all | `204`. Only the caller's own. |
 
@@ -104,9 +104,10 @@ Auth behaviour:
 ### Church structure and life cycle
 | Method | Path | Notes |
 |---|---|---|
-| POST | /group-requests | At least SEARCHER. `group_name`. ADMIN or OWNER start a group at once (response `201` with the group). |
-| GET | /group-requests | ADMIN or OWNER: open requests in scope. The requester: their own. |
-| POST | /group-requests/{id}/approve, /decline | ADMIN or OWNER. Approval creates the group, moves the requester in as leader, and needs `successor_id` when the requester led a group. |
+| POST | /group-requests | At least SEARCHER (`403 not_admitted` for a PENDING or revoked person). Body `group_name` (2 to 200 characters). Creates an open request and tells the church's ADMIN (`group_request_new`); the answer holds the request and `group: null`. An ADMIN or the OWNER start the group at once (the request is stored as approved by themselves, the answer holds the group, their status does not change). `409 group_name_taken` (the open names of a church are unique, ignoring case), `409 request_open` (one open request each), `409 successor_required` for someone who leads a home group now (the successor comes with succession, roadmap 4.3; until then they cannot ask), `409 church_closed`. |
+| GET | /group-requests | An ADMIN: the open requests of their church; the OWNER: the open requests of every church; anyone else: their own, newest first. Each has `requester_leads_a_group` (approving then needs a successor). At most 100. |
+| POST | /group-requests/{id}/approve | ADMIN or OWNER of the request's church (`404` for any other, and for an unknown id). In one transaction: the group is created, the requester moves in as its leader and becomes a VERIFIER unless higher (an `appoint` history row, set by the approving leader) and is told (`group_request_approved`). `409 not_open` once decided, `409 requester_unavailable` (revoked, closed or left the church meanwhile), `409 group_name_taken`, `409 successor_required` (the requester leads a group now; roadmap 4.3). |
+| POST | /group-requests/{id}/decline | Same callers. Closes the request and tells the requester (`group_request_declined`); they may ask again. `204`. |
 | POST | /move-requests | An admitted member who does not lead a group: `home_group_id`. |
 | GET | /move-requests | Those that concern the caller (as mover or as leader). |
 | POST | /move-requests/{id}/agree, /cancel | The mover or either leader. The move happens in the same transaction as the last agreement. |
@@ -171,7 +172,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`account_exists`, `invalid_password`, `not_applying`, `not_searcher`, `already_revoked`, `not_revoked`, `not_flagged`, `state_changed`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
+`account_exists`, `invalid_password`, `not_applying`, `not_searcher`, `already_revoked`, `not_revoked`, `not_flagged`, `group_name_taken`, `request_open`, `not_open`, `requester_unavailable`, `church_closed`, `state_changed`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
 
 ## Authorisation rules (summary)
 
