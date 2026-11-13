@@ -174,8 +174,7 @@ function PersonView({
         <AdmitControls
           id={data.id}
           name={data.full_name}
-          // This answer has no `can_admit_as_provider`; until it has, a live vouch is the hint.
-          canAdmitAsProvider={data.vouches.some((v) => v.live)}
+          canAdmitAsProvider={data.can_admit_as_provider}
           upgrade={isUpgrade(data)}
           onDone={onDone}
         />

@@ -571,3 +571,46 @@ def test_the_flag_for_the_owner_is_true_with_one_vouch_from_someone_else(
     assert get(client, boss, "/applicants").json()["items"][0]["can_admit_as_provider"] is False
     add_vouch(world, applicant, add_member(world, "searcher"))
     assert get(client, boss, "/applicants").json()["items"][0]["can_admit_as_provider"] is True
+
+
+# --- the flag on one person's page ---------------------------------------------------------------
+
+
+def test_one_person_says_whether_they_can_be_admitted_as_a_provider(
+    client: TestClient, world: World
+) -> None:
+    lead, group = leader(world)
+    voucher = add_member(world, "provider")
+    pending_alone = add_member(world, "pending", group=group)
+    pending_vouched = add_member(world, "pending", group=group)
+    add_vouch(world, pending_vouched, voucher)
+    only_leader = add_member(world, "pending", group=group)
+    add_vouch(world, only_leader, lead)
+    asking = add_member(world, "searcher", group=group, requested_status="provider")
+    add_vouch(world, asking, voucher)
+    plain = add_member(world, "searcher", group=group, requested_status="provider")
+    add_vouch(world, plain, voucher)
+    plain.person.requested_status = None  # the request was declined; the vouch stays on record
+    world.session.flush()
+    member = add_member(world, "provider", group=group)
+
+    def flag(target: Member) -> bool:
+        body = get(client, lead, f"/people/{target.person.id}").json()
+        assert isinstance(body["can_admit_as_provider"], bool)
+        return bool(body["can_admit_as_provider"])
+
+    assert flag(pending_alone) is False
+    assert flag(pending_vouched) is True
+    assert flag(only_leader) is False
+    assert flag(asking) is True
+    assert flag(plain) is False
+    assert flag(member) is False
+    # The list and the page agree, and admitting follows the flag.
+    listed = {
+        r["id"]: r["can_admit_as_provider"]
+        for r in get(client, lead, "/applicants").json()["items"]
+    }
+    for target in (pending_alone, pending_vouched, only_leader, asking):
+        assert listed[str(target.person.id)] == flag(target)
+    assert admit(client, lead, pending_vouched, "provider").status_code == 200
+    assert admit(client, lead, only_leader, "provider").status_code == 409
