@@ -23,6 +23,7 @@ from app.schemas.vouching import (
     VouchLinkInfo,
     VouchReceived,
 )
+from app.services.locks import lock_people
 from app.services.permissions import can_vouch, live_vouches
 
 VOUCH_RECEIVED = "vouch_received"  # notification kind: someone vouched for you
@@ -165,13 +166,7 @@ def vouch(db: Session, settings: Settings, voucher: Person, token: str) -> Vouch
     # Lock both people, in id order so two people vouching for each other cannot deadlock. The
     # applicant's lock serialises with a leader admitting at the same moment; the voucher's makes
     # parallel requests count one after the other, so the daily limit holds.
-    db.scalars(
-        select(Person)
-        .where(Person.id.in_([voucher.id, applicant.id]))
-        .order_by(Person.id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    ).all()
+    lock_people(db, [voucher.id, applicant.id])
     applicant = _resolve(db, token)  # again, now that the rows cannot change under us
     if applicant is None:
         raise _not_found()
@@ -277,3 +272,15 @@ def given(db: Session, person: Person) -> list[VouchGiven]:
         )
         for v, a in rows
     ]
+
+
+def live_voucher_ids(db: Session, applicant: Person) -> list[uuid.UUID]:
+    """The voucher ids of the vouches that count for the applicant (see `live_vouches`)."""
+    rows = db.execute(
+        select(Vouch.voucher_id, Vouch.withdrawn_at).where(Vouch.applicant_id == applicant.id)
+    ).all()
+    vouchers = {
+        p.id: p
+        for p in db.scalars(select(Person).where(Person.id.in_([r.voucher_id for r in rows])))
+    }
+    return live_vouches([(r.voucher_id, r.withdrawn_at) for r in rows], vouchers)
