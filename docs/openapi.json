@@ -360,10 +360,15 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
           }
         },
         "required": [
-          "items"
+          "items",
+          "total"
         ],
         "title": "ChurchInvitationList",
         "type": "object"
@@ -6421,7 +6426,34 @@
     },
     "/api/v1/owner/churches/invitations": {
       "get": {
+        "description": "The undecided invitations, newest first. Paged: `limit` (1 to 100, default 50), `offset`.",
         "operationId": "list_invitations_api_v1_owner_churches_invitations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -6432,6 +6464,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

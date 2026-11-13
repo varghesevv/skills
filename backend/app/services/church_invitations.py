@@ -93,17 +93,27 @@ def invite(
         expires_at=datetime.now(UTC) + timedelta(days=settings.admin_invitation_days),
     )
     db.add(invitation)
-    db.commit()
+    try:
+        db.commit()
+    except (IntegrityError, DataError):
+        db.rollback()
+        raise ApiError(
+            409, "state_changed", "The invitation could not be made. Reload and try again."
+        ) from None
     return invitation, token
 
 
-def pending(db: Session) -> list[ChurchInvitationSummary]:
-    """The invitations that are not decided (an expired one shows as such until cancelled)."""
+def pending(db: Session, *, limit: int, offset: int) -> tuple[list[ChurchInvitationSummary], int]:
+    """The invitations that are not decided (an expired one shows as such until cancelled), one
+    page, newest first, and the total."""
+    undecided = select(AdminInvitation).where(
+        AdminInvitation.accepted_at.is_(None), AdminInvitation.cancelled_at.is_(None)
+    )
+    total = db.scalar(select(func.count()).select_from(undecided.subquery())) or 0
     rows = db.scalars(
-        select(AdminInvitation)
-        .where(AdminInvitation.accepted_at.is_(None), AdminInvitation.cancelled_at.is_(None))
-        .order_by(AdminInvitation.created_at.desc(), AdminInvitation.id)
-        .limit(200)
+        undecided.order_by(AdminInvitation.created_at.desc(), AdminInvitation.id)
+        .limit(limit)
+        .offset(offset)
     )
     return [
         ChurchInvitationSummary(
@@ -115,7 +125,7 @@ def pending(db: Session) -> list[ChurchInvitationSummary]:
             expired=not _live(i),
         )
         for i in rows
-    ]
+    ], total
 
 
 def cancel(db: Session, invitation_id: uuid.UUID) -> None:

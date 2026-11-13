@@ -32,6 +32,7 @@ class ChurchInvitationSummary(BaseModel):
 
 class ChurchInvitationList(BaseModel):
     items: list[ChurchInvitationSummary]
+    total: int
 
 
 class AdminInvitationLookup(BaseModel):

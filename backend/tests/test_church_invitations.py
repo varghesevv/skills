@@ -317,12 +317,27 @@ def test_an_accepted_invitation_cannot_be_cancelled(client: TestClient, world: W
 def test_an_expired_invitation_is_listed_as_such(
     client: TestClient, session: Session, world: World
 ) -> None:
-    created = invite(client, world).json()
+    created = invite(client, world, email="old@example.com").json()
     row = session.get(AdminInvitation, created["id"])
     assert row is not None
     row.expires_at = datetime.now(UTC) - timedelta(days=1)
     session.flush()
     listed = client.get(LIST, headers=headers_of(client, owner_member(world))).json()["items"]
     assert [i["expired"] for i in listed] == [True]
-    # An expired invitation does not block the name or the address.
-    assert invite(client, world, name="Hope Church", email="again@example.com").status_code == 201
+    # An expired invitation blocks neither the name nor the address.
+    again = invite(client, world, name="Hope Church", email=row.email or "")
+    assert again.status_code == 201
+
+
+def test_the_list_is_paged(client: TestClient, world: World) -> None:
+    for n in range(3):
+        assert invite(client, world, name=f"Church {n}").status_code == 201
+    owner = owner_member(world)
+    page = client.get(
+        LIST, headers=headers_of(client, owner), params={"limit": 2, "offset": 1}
+    ).json()
+    assert len(page["items"]) == 2 and page["total"] == 3
+    assert (
+        client.get(LIST, headers=headers_of(client, owner), params={"limit": 101}).status_code
+        == 422
+    )

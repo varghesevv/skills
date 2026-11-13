@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_person
@@ -37,9 +37,14 @@ def invite_admin(
 
 @router.get("/churches/invitations")
 def list_invitations(
-    owner: Owner, db: Annotated[Session, Depends(get_session)]
+    owner: Owner,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
 ) -> ChurchInvitationList:
-    return ChurchInvitationList(items=church_invitations.pending(db))
+    """The undecided invitations, newest first. Paged: `limit` (1 to 100, default 50), `offset`."""
+    items, total = church_invitations.pending(db, limit=limit, offset=offset)
+    return ChurchInvitationList(items=items, total=total)
 
 
 @router.delete("/churches/invitations/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
