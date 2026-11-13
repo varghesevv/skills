@@ -1,6 +1,7 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,7 @@ from app.models.church import Person
 from app.models.users import Organisation
 from app.schemas.auth import MeResponse
 from app.schemas.church import CloseAccountRequest, PersonMeResponse, PersonUpdate
+from app.schemas.notifications import NotificationList
 from app.schemas.signup import ApplicationUpdate
 from app.schemas.vouching import (
     VouchGivenList,
@@ -20,7 +22,7 @@ from app.schemas.vouching import (
     VouchLinkState,
     VouchReceivedList,
 )
-from app.services import account_closing, directory, signup, vouching
+from app.services import account_closing, directory, notifications, signup, vouching
 from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
@@ -120,6 +122,35 @@ def vouches_given(
     db: Annotated[Session, Depends(get_session)],
 ) -> VouchGivenList:
     return VouchGivenList(items=vouching.given(db, person))
+
+
+@router.get("/me/notifications")
+def list_notifications(
+    person: Member,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    unread: bool = False,
+) -> NotificationList:
+    """Newest first. Clients poll this (every 60 seconds while open); `unread_count` is for a
+    badge. A notification holds a kind and the person it is about, never a number."""
+    return notifications.listing(db, person, limit=limit, offset=offset, unread_only=unread)
+
+
+@router.post("/me/notifications/read-all", status_code=status.HTTP_204_NO_CONTENT)
+def read_all_notifications(
+    person: Member, db: Annotated[Session, Depends(get_session)]
+) -> Response:
+    notifications.mark_all_read(db, person)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/me/notifications/{notification_id}/read", status_code=status.HTTP_204_NO_CONTENT)
+def read_notification(
+    notification_id: uuid.UUID, person: Member, db: Annotated[Session, Depends(get_session)]
+) -> Response:
+    notifications.mark_read(db, person, notification_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)

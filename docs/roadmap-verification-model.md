@@ -7,9 +7,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
-- Done also: S3.1 (120), S3.2 (122).
+- Done also: S3.1 (120), S3.2 (122), S3.3 (123).
 - In progress: nothing.
-- Next: S3.3 (notifications).
+- Next: S3.4 (web: vouch page, share my vouch link, notifications).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -75,7 +75,7 @@ Backend first, then web and mobile.
 ### S3. Trust: vouching and admission — 9 pull requests
 - [x] 3.1 Backend: vouch link per applicant; vouch and withdraw; who may vouch; abuse limits and token entropy.
 - [x] 3.2 Backend: admit and decline (`canAdmit`), status history, verifier lists (applicants with vouches, members, revoked, flagged); access to phone numbers in scope is logged.
-- [ ] 3.3 Backend: in-app notifications (outbox, list, mark read) for the events the model names.
+- [x] 3.3 Backend: in-app notifications (outbox, list, mark read) for the events the model names.
 - [ ] 3.4 Web: vouch page opened from a link; share my vouch link; notifications.
 - [ ] 3.5 Web: verifier screens: applicants and vouches, admit and decline, members.
 - [ ] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
