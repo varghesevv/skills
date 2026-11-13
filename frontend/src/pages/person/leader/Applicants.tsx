@@ -6,7 +6,7 @@ import { fetchApplicants, LEADER_PAGE_SIZE } from '../../../api/person'
 import { t } from '../../../i18n'
 import { LEADER_PERSON } from '../../../portals/config'
 import { formatDate } from '../../../shared/dates'
-import { Alert, Pager, QueryBoundary } from '../../../shared/ui'
+import { Alert, Badge, Pager, QueryBoundary } from '../../../shared/ui'
 import { usePageTitle } from '../../../shared/usePageTitle'
 import AdmitControls from './AdmitControls'
 
@@ -36,6 +36,11 @@ export default function Applicants() {
                   {data.items.map((row) => (
                     <li key={row.id}>
                       <h2>{row.full_name}</h2>
+                      {row.status === 'searcher' && (
+                        <p>
+                          <Badge tone="neutral">{t('leader.upgrade.badge')}</Badge>
+                        </p>
+                      )}
                       <p>
                         {t('leader.applicant.goal', {
                           goal: t(`vouch.page.goal.${row.requested_status ?? 'searcher'}`),
@@ -73,6 +78,7 @@ export default function Applicants() {
                         id={row.id}
                         name={row.full_name}
                         canAdmitAsProvider={row.can_admit_as_provider}
+                        upgrade={row.status === 'searcher'}
                         onDone={setDone}
                       />
                     </li>

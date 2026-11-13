@@ -13,6 +13,7 @@ const base = { [NOTES]: () => json(200, { items: [], total: 0, unread_count: 0 }
 
 const NADIA = {
   id: 'p1',
+  status: 'pending',
   full_name: 'Nadia Applicant',
   requested_status: 'provider',
   home_group: { id: 'group-1', name: 'Riverside' },
@@ -27,6 +28,7 @@ const NADIA = {
 }
 const QUIET = {
   id: 'p2',
+  status: 'pending',
   full_name: 'Quinn Quiet',
   requested_status: 'searcher',
   home_group: { id: 'group-1', name: 'Riverside' },
@@ -204,6 +206,38 @@ describe('applicants', () => {
     expect(await screen.findByRole('alert')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Nobody is waiting to be admitted.')).toBeVisible()
+  })
+
+  it('lists a member who asks to offer their skills with only what fits, and declining ends the request', async () => {
+    const user = userEvent.setup({ delay: null })
+    const asking = {
+      ...NADIA,
+      id: 'p3',
+      full_name: 'Sam Searcher',
+      status: 'searcher',
+      can_admit_as_provider: true,
+    }
+    const api = signedInAs(
+      makeMe(),
+      routes({
+        [APPLICANTS]: () => json(200, { items: [asking], total: 1 }),
+        'POST /verifier/people/p3/decline': () => json(204),
+      }),
+    )
+    renderApp('/member/applicants')
+    const row = (await screen.findByRole('heading', { name: 'Sam Searcher' })).closest('li')!
+    expect(within(row).getByText('Member asking to offer their skills')).toBeVisible()
+    expect(within(row).queryByRole('button', { name: /as a work host/ })).toBeNull()
+    expect(
+      within(row).getByRole('button', { name: 'Admit Sam Searcher as a freelancer' }),
+    ).toBeEnabled()
+    await user.click(
+      within(row).getByRole('button', { name: 'Decline the request of Sam Searcher' }),
+    )
+    expect(within(row).getByText(/They stay a work host and can ask again later/)).toBeVisible()
+    await user.click(within(row).getByRole('button', { name: 'Yes, decline' }))
+    expect(await screen.findByText('The request of Sam Searcher was declined.')).toBeVisible()
+    expect(api.count('POST /verifier/people/p3/decline')).toBe(1)
   })
 
   it('asks for the next page by offset', async () => {
@@ -420,6 +454,25 @@ describe('one person', () => {
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: 'Nadia Applicant' })).toBeVisible()
     expect(api.count('GET /verifier/people/p1')).toBe(2)
+  })
+
+  it('keeps the page of a member whose request is declined, as a searcher without a request', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      routes(
+        { ...DETAIL, status: 'searcher', requested_status: 'provider' },
+        { 'POST /verifier/people/p1/decline': () => json(204) },
+      ),
+    )
+    renderApp('/member/people/p1')
+    await user.click(
+      await screen.findByRole('button', { name: 'Decline the request of Nadia Applicant' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Yes, decline' }))
+    expect(await screen.findByText('The request of Nadia Applicant was declined.')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Nadia Applicant' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: /^Admit|^Decline/ })).toBeNull()
   })
 
   it('shows a member without the buttons', async () => {
