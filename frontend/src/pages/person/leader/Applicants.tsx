@@ -72,7 +72,7 @@ export default function Applicants() {
                       <AdmitControls
                         id={row.id}
                         name={row.full_name}
-                        liveVouches={row.vouch_count}
+                        liveVouches={row.vouchers.filter((v) => v.live).length}
                         onDone={setDone}
                       />
                     </li>
@@ -82,7 +82,10 @@ export default function Applicants() {
                   page={page}
                   pageSize={LEADER_PAGE_SIZE}
                   total={data.total}
-                  onChange={setPage}
+                  onChange={(next) => {
+                    setDone(null)
+                    setPage(next)
+                  }}
                 />
               </>
             )

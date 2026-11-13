@@ -2,9 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { admitPerson, declinePerson } from '../../../api/person'
+import type { AppliedStatus, PersonStatus } from '../../../api/types'
 import { t } from '../../../i18n'
 import { Alert } from '../../../shared/ui'
 import { leaderProblem } from './problems'
+
+export type Outcome = 'declined' | { status: PersonStatus; requested_status: AppliedStatus | null }
 
 /** Admit as a searcher or a provider, or decline (which asks first, because it cannot be undone).
  *  `liveVouches` only switches off what cannot work: a provider needs a vouch besides the leader's. */
@@ -17,7 +20,7 @@ export default function AdmitControls({
   id: string
   name: string
   liveVouches: number
-  onDone: (message: string) => void
+  onDone: (message: string, outcome: Outcome) => void
 }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
@@ -27,16 +30,19 @@ export default function AdmitControls({
   }
   const admit = useMutation({
     mutationFn: (to: 'searcher' | 'provider') => admitPerson(id, to),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await refresh()
-      onDone(t('leader.admit.done', { name }))
+      onDone(t('leader.admit.done', { name }), {
+        status: result.status,
+        requested_status: result.requested_status,
+      })
     },
   })
   const decline = useMutation({
     mutationFn: () => declinePerson(id),
     onSuccess: async () => {
       await refresh()
-      onDone(t('leader.decline.done', { name }))
+      onDone(t('leader.decline.done', { name }), 'declined')
     },
   })
   const busy = admit.isPending || decline.isPending

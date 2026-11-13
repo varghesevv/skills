@@ -107,6 +107,23 @@ describe('applicants', () => {
     )
   })
 
+  it('does not offer a provider admission when only vouches that no longer count are left', async () => {
+    signedInAs(
+      makeMe(),
+      routes({
+        [APPLICANTS]: () =>
+          json(200, {
+            items: [{ ...QUIET, vouch_count: 1, vouchers: [{ ...NADIA.vouchers[2] }] }],
+            total: 1,
+          }),
+      }),
+    )
+    renderApp('/member/applicants')
+    expect(
+      await screen.findByRole('button', { name: 'Admit Quinn Quiet as a freelancer' }),
+    ).toBeDisabled()
+  })
+
   it('admits as a provider when there is a vouch, and not without one', async () => {
     const user = userEvent.setup({ delay: null })
     const api = signedInAs(
@@ -341,6 +358,59 @@ describe('one person', () => {
       await screen.findByRole('button', { name: 'Admit Nadia Applicant as a freelancer' }),
     ).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Decline Nadia Applicant' })).toBeVisible()
+  })
+
+  it('updates itself after an admission without asking the server again', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(
+      makeMe(),
+      routes(DETAIL, {
+        'POST /verifier/people/p1/admit': () =>
+          json(200, { id: 'p1', status: 'provider', requested_status: null }),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(
+      await screen.findByRole('button', { name: 'Admit Nadia Applicant as a freelancer' }),
+    )
+    expect(await screen.findByText('Nadia Applicant was admitted.')).toBeVisible()
+    expect(screen.queryByRole('button', { name: /^Admit/ })).toBeNull()
+    expect(screen.getByText('Freelancer')).toBeVisible()
+    expect(api.count('GET /verifier/people/p1')).toBe(1)
+  })
+
+  it('shows only the outcome after a decline, and not the number', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), routes(DETAIL, { 'POST /verifier/people/p1/decline': () => json(204) }))
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Decline Nadia Applicant' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, decline' }))
+    expect(
+      await screen.findByText('The application of Nadia Applicant was declined.'),
+    ).toBeVisible()
+    expect(screen.queryByText('+971500000002')).toBeNull()
+  })
+
+  it('puts only digits, plus and spaces into the telephone link', async () => {
+    signedInAs(makeMe(), routes({ ...DETAIL, mobile_number: '+971 50 000 0002;javascript:x' }))
+    renderApp('/member/people/p1')
+    const link = await screen.findByRole('link', { name: /\+971 50 000 0002/ })
+    expect(link.getAttribute('href')).toBe('tel:+971 50 000 0002')
+  })
+
+  it('offers a retry when the page cannot be loaded', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    const api = signedInAs(makeMe(), {
+      ...base,
+      'GET /me': () => json(200, leader()),
+      'GET /verifier/people/p1': () =>
+        ++attempts === 1 ? apiError(503, 'service_unavailable') : json(200, DETAIL),
+    })
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('heading', { name: 'Nadia Applicant' })).toBeVisible()
+    expect(api.count('GET /verifier/people/p1')).toBe(2)
   })
 
   it('shows a member without the buttons', async () => {
