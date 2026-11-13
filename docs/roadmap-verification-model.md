@@ -81,7 +81,7 @@ Backend first, then web and mobile.
 - [x] 3.5a Backend: tell the verifier on each applicant whether admitting as a provider will work now (`can_admit_as_provider`), so the screens show the button only when it does (125).
 - [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
 - [x] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
-- [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider.
+- [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider. Backend half done (`backend/tests/test_trust_journey.py`: four people apply, vouch links and vouching, the leader's own vouch not enough, admission as searcher and as provider, a searcher asks to become a provider, decline of an application and of a request, notifications, the number view logged, and the rules of the model hold at the end). Open: the mobile half (the two apps against the same contract); then tick this item.
 - [x] 3.9 Searcher-to-provider upgrade path, backend: `POST /me/apply-provider`, the applicants list holds the searchers who ask, declining a request ends it only (D-29). Web screens for it: 3.9b, done (pull request 130). Mobile screens for it: done (pull request 131).
 
 ### S4. Church structure and life cycle — 11 pull requests

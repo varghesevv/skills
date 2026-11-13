@@ -357,6 +357,7 @@ export type PersonDetail = {
   history: HistoryEntry[]
   chain_of_trust: ChainLink[]
   vouches: Voucher[]
+  can_admit_as_provider: boolean
 }
 export type AdmitResult = {
   id: string

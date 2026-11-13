@@ -371,6 +371,7 @@ describe('one person', () => {
     ],
     chain_of_trust: [{ id: 'c1', full_name: 'Olga Owner', status: 'owner' }],
     vouches: [{ name: 'Vera Voucher', church_name: 'Hope Church', live: true }],
+    can_admit_as_provider: true,
   }
   const routes = (detail = DETAIL, extra = {}) => ({
     ...base,
@@ -473,6 +474,16 @@ describe('one person', () => {
     expect(await screen.findByText('The request of Nadia Applicant was declined.')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Nadia Applicant' })).toBeVisible()
     expect(screen.queryByRole('button', { name: /^Admit|^Decline/ })).toBeNull()
+  })
+
+  it('follows the server on the provider button, not the vouches it can see', async () => {
+    signedInAs(makeMe(), routes({ ...DETAIL, can_admit_as_provider: false }))
+    renderApp('/member/people/p1')
+    // A live vouch is listed, but the server says it does not make a second vouch.
+    expect(await screen.findByText(/Vera Voucher, Hope Church/)).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Admit Nadia Applicant as a freelancer' }),
+    ).toBeDisabled()
   })
 
   it('shows a member without the buttons', async () => {

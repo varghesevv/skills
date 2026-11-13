@@ -102,6 +102,8 @@ class PersonDetail(BaseModel):
     history: list[HistoryEntry]  # newest first
     chain_of_trust: list[ChainLink]  # who set their status, then who set theirs, up to the OWNER
     vouches: list[Voucher]
+    # As in the applicants list: whether the caller may admit them as a provider now.
+    can_admit_as_provider: bool
 
 
 class AdmitRequest(BaseModel):
