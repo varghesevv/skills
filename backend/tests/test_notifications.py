@@ -184,6 +184,11 @@ def test_the_events_so_far_all_write_a_known_kind(
         "leader_stepped_down",
         "admin_appointed",
         "admin_stepped_down",
+        "move_requested",
+        "move_completed",
+        "move_cancelled",
+        "member_moved_in",
+        "member_moved_out",
     }
     assert written == set(notifications.KINDS) - others
 

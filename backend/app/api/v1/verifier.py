@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
-from app.models.church import Person
+from app.models.church import HomeGroup, Person
+from app.schemas.church import IdName
+from app.schemas.moves import DirectMove, Moved
 from app.schemas.signup import (
     GroupInvitationCreated,
     GroupInvitationList,
@@ -26,7 +28,7 @@ from app.schemas.verifier import (
     StatusRequest,
     StatusResult,
 )
-from app.services import admission, revocation, signup, verifier_views
+from app.services import admission, moves, revocation, signup, verifier_views
 
 router = APIRouter(prefix="/verifier", tags=["verifier"])
 
@@ -186,3 +188,21 @@ def reconfirm(
     """Clear the re-check flag of a person in scope. You become the new link in their chain of
     trust. `409 not_flagged` if there is no flag."""
     return _status_result(revocation.reconfirm(db, verifier, person_id))
+
+
+@router.post("/people/{person_id}/move")
+def move(
+    person_id: uuid.UUID,
+    body: DirectMove,
+    admin: Annotated[Person, Depends(current_person("admin"))],
+    db: Annotated[Session, Depends(get_session)],
+) -> Moved:
+    """An ADMIN (of the person's church) or the OWNER moves an admitted member to another open home
+    group of the church, without the agreements a move by request needs. A leader steps down first
+    (`409 leads_a_group`); the member is told, and so are both leaders."""
+    person = moves.move_directly(db, admin, person_id, body.home_group_id)
+    group = db.get(HomeGroup, person.home_group_id)
+    return Moved(
+        person=IdName(id=person.id, name=person.full_name or ""),
+        home_group=IdName(id=person.home_group_id, name=group.name if group else ""),
+    )

@@ -543,6 +543,20 @@
         "title": "CloseAccountRequest",
         "type": "object"
       },
+      "DirectMove": {
+        "properties": {
+          "home_group_id": {
+            "format": "uuid",
+            "title": "Home Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "home_group_id"
+        ],
+        "title": "DirectMove",
+        "type": "object"
+      },
       "DownloadList": {
         "properties": {
           "items": {
@@ -1904,6 +1918,126 @@
           "flagged_for_recheck"
         ],
         "title": "MemberRow",
+        "type": "object"
+      },
+      "MoveAgreements": {
+        "properties": {
+          "from_leader": {
+            "title": "From Leader",
+            "type": "boolean"
+          },
+          "person": {
+            "title": "Person",
+            "type": "boolean"
+          },
+          "to_leader": {
+            "title": "To Leader",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "person",
+          "from_leader",
+          "to_leader"
+        ],
+        "title": "MoveAgreements",
+        "type": "object"
+      },
+      "MoveRequestCreate": {
+        "properties": {
+          "home_group_id": {
+            "format": "uuid",
+            "title": "Home Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "home_group_id"
+        ],
+        "title": "MoveRequestCreate",
+        "type": "object"
+      },
+      "MoveRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MoveRequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "MoveRequestList",
+        "type": "object"
+      },
+      "MoveRequestOut": {
+        "properties": {
+          "agreed": {
+            "$ref": "#/components/schemas/MoveAgreements"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "from_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "person": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "completed",
+              "cancelled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "to_group": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "id",
+          "person",
+          "from_group",
+          "to_group",
+          "agreed",
+          "state",
+          "created_at"
+        ],
+        "title": "MoveRequestOut",
+        "type": "object"
+      },
+      "Moved": {
+        "properties": {
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "person": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "person",
+          "home_group"
+        ],
+        "title": "Moved",
         "type": "object"
       },
       "NameRef": {
@@ -6414,6 +6548,212 @@
         ]
       }
     },
+    "/api/v1/move-requests": {
+      "get": {
+        "description": "The moves that concern you, as the member or as the leader of either group, newest first.",
+        "operationId": "list_moves_api_v1_move_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Moves",
+        "tags": [
+          "move-requests"
+        ]
+      },
+      "post": {
+        "description": "Ask to move to another home group of your church. Asking is your agreement; the leader of\nthe group you leave and the leader of the group you join are told and must agree too. A leader\nsteps down through succession before moving (`409 leads_a_group`).",
+        "operationId": "ask_api_v1_move_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask",
+        "tags": [
+          "move-requests"
+        ]
+      }
+    },
+    "/api/v1/move-requests/{request_id}/agree": {
+      "post": {
+        "description": "The leader of either group agrees (the member agreed by asking). The member moves in the\nsame transaction as the last agreement. `404` for anyone it does not concern.",
+        "operationId": "agree_api_v1_move_requests__request_id__agree_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Agree",
+        "tags": [
+          "move-requests"
+        ]
+      }
+    },
+    "/api/v1/move-requests/{request_id}/cancel": {
+      "post": {
+        "description": "The member or the leader of either group ends an open move; the other side is told.",
+        "operationId": "cancel_api_v1_move_requests__request_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel",
+        "tags": [
+          "move-requests"
+        ]
+      }
+    },
     "/api/v1/organisations": {
       "get": {
         "description": "Approved organisations by name, so work hosts can filter a search by who vouches.",
@@ -8223,6 +8563,65 @@
           }
         ],
         "summary": "Decline",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/move": {
+      "post": {
+        "description": "An ADMIN (of the person's church) or the OWNER moves an admitted member to another open home\ngroup of the church, without the agreements a move by request needs. A leader steps down first\n(`409 leads_a_group`); the member is told, and so are both leaders.",
+        "operationId": "move_api_v1_verifier_people__person_id__move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectMove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Move",
         "tags": [
           "verifier"
         ]

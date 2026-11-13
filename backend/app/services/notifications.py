@@ -24,6 +24,13 @@ from app.services.group_requests import (
     GROUP_REQUEST_DECLINED,
     GROUP_REQUEST_NEW,
 )
+from app.services.moves import (
+    MEMBER_MOVED_IN,
+    MEMBER_MOVED_OUT,
+    MOVE_CANCELLED,
+    MOVE_COMPLETED,
+    MOVE_REQUESTED,
+)
 from app.services.provider_upgrade import PROVIDER_APPLICATION, PROVIDER_DECLINED
 from app.services.revocation import REINSTATED, REVOKED
 from app.services.signup import NEW_APPLICANT
@@ -54,6 +61,11 @@ KINDS = (
     LEADER_STEPPED_DOWN,
     ADMIN_APPOINTED,
     ADMIN_STEPPED_DOWN,
+    MOVE_REQUESTED,
+    MOVE_COMPLETED,
+    MOVE_CANCELLED,
+    MEMBER_MOVED_IN,
+    MEMBER_MOVED_OUT,
 )
 
 
