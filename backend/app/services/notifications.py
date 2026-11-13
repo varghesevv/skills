@@ -18,12 +18,13 @@ from app.models.trust import Notification
 from app.schemas.church import IdName
 from app.schemas.notifications import NotificationItem, NotificationList
 from app.services.admission import ADMITTED
+from app.services.provider_upgrade import PROVIDER_APPLICATION, PROVIDER_DECLINED
 from app.services.signup import NEW_APPLICANT
 from app.services.vouching import VOUCH_RECEIVED
 
 # The events the model names (FR-C-12) that exist so far. Later slices add their kinds here:
 # revoked and re-check flag (4.1), requests to agree to a move or a handover (4.4, 4.5).
-KINDS = (NEW_APPLICANT, VOUCH_RECEIVED, ADMITTED)
+KINDS = (NEW_APPLICANT, VOUCH_RECEIVED, ADMITTED, PROVIDER_APPLICATION, PROVIDER_DECLINED)
 
 
 def listing(

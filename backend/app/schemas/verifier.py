@@ -16,6 +16,7 @@ class Voucher(BaseModel):
 class ApplicantRow(BaseModel):
     id: uuid.UUID
     full_name: str
+    status: str  # pending, or searcher for someone who asks to become a provider
     requested_status: str | None
     home_group: IdName
     applied_at: datetime
