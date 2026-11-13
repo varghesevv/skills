@@ -21,8 +21,10 @@ from app.core.errors import ApiError
 from app.models.church import Church, HomeGroup, Person
 from app.models.enums import STATUS_RANK
 from app.models.trust import Notification, StatusChange, VouchLink
+from app.services import succession
 from app.services.locks import locked_in_scope
-from app.services.permissions import LastChange, can_reconfirm, can_set_status, in_scope, rank
+from app.services.permissions import can_reconfirm, can_set_status, in_scope, rank
+from app.services.status_history import last_change
 
 REVOKED = "revoked"  # notification kind: a leader revoked you
 REINSTATED = "reinstated"  # notification kind: a leader reinstated you
@@ -30,21 +32,6 @@ REINSTATED = "reinstated"  # notification kind: a leader reinstated you
 
 def _not_allowed() -> ApiError:
     return ApiError(403, "status_not_allowed", "You may not make this change")
-
-
-def _last_change(db: Session, person: Person) -> LastChange | None:
-    """The person's latest status change and the current status of whoever made it."""
-    row = db.execute(
-        select(StatusChange, Person.status)
-        .outerjoin(Person, Person.id == StatusChange.changed_by_id)
-        .where(StatusChange.person_id == person.id)
-        .order_by(StatusChange.at.desc(), StatusChange.id)
-        .limit(1)
-    ).first()
-    if row is None:
-        return None
-    change, changer_status = row
-    return LastChange(kind=change.kind, changed_by_status=changer_status)
 
 
 def _history(
@@ -79,16 +66,28 @@ def flag_people_set_by(db: Session, revoked: Person) -> int:
     return int(getattr(result, "rowcount", 0) or 0)
 
 
-def revoke(db: Session, actor: Person, person_id: uuid.UUID) -> Person:
-    person = locked_in_scope(db, actor, person_id)
+def revoke(
+    db: Session, actor: Person, person_id: uuid.UUID, successor_id: uuid.UUID | None = None
+) -> Person:
+    """Revoke a person in scope. A VERIFIER's group gets a successor in the same step (or closes
+    when the VERIFIER is its only member), and everyone whose status they set is flagged."""
+    person = locked_in_scope(db, actor, person_id, also=[successor_id] if successor_id else [])
     if person.status == REVOKED:
         raise ApiError(409, "already_revoked", "This person is already revoked")
-    if not can_set_status(actor, person, REVOKED, _last_change(db, person)):
+    if not can_set_status(actor, person, REVOKED, last_change(db, person)):
         raise _not_allowed()
-    if person.status in ("verifier", "admin"):
-        # A leader is replaced in the same step (succession, roadmap 4.3).
-        raise ApiError(409, "successor_required", "A leader is replaced first: appoint a successor")
+    if person.status == "admin":
+        # A church's ADMIN is replaced in the same step (succession of an ADMIN, roadmap 4.3).
+        raise ApiError(409, "successor_required", "An ADMIN is replaced first: appoint a successor")
+    if successor_id is not None and person.status != "verifier":
+        raise ApiError(422, "invalid_choice", "Only a leader has a successor")
     previous = person.status
+    if previous == "verifier":
+        group = db.get(HomeGroup, person.home_group_id, with_for_update=True)
+        if group is None:  # cannot happen: a VERIFIER always leads their own group
+            raise ApiError(409, "state_changed", "This person changed meanwhile. Reload.")
+        succession.end_leadership(db, group, person, actor, successor_id)
+        flag_people_set_by(db, person)
     person.last_home_group_id = person.home_group_id
     person.home_group_id = None
     person.status = REVOKED
@@ -113,7 +112,7 @@ def reinstate(
     person = locked_in_scope(db, actor, person_id)
     if person.status != REVOKED:
         raise ApiError(409, "not_revoked", "This person is not revoked")
-    if not can_set_status(actor, person, to, _last_change(db, person)):
+    if not can_set_status(actor, person, to, last_change(db, person)):
         raise _not_allowed()
     # Locked after the people (the order of locks in services/locks.py), so a group that closes at
     # this moment waits for us, or we see it closed.

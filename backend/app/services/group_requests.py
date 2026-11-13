@@ -3,8 +3,8 @@
 Any admitted member can ask to start a home group. The church's ADMIN (or the OWNER) approves, and
 in one step the group is created and the member moves into it as its leader (a VERIFIER, unless
 they already hold a higher status). An ADMIN or the OWNER starts a group for themselves without
-approval. Someone who leads a group now needs a successor for it, which waits for succession
-(roadmap 4.3): until then they get `409 successor_required`.
+approval. Someone who leads a group now needs a successor for it from its members, named when the
+group is started (or the old group closes, if they were its only member).
 """
 
 import uuid
@@ -20,6 +20,7 @@ from app.models.enums import STATUS_RANK
 from app.models.trust import GroupRequest, Notification, StatusChange
 from app.schemas.church import IdName
 from app.schemas.group_requests import GroupRequestOut
+from app.services import succession
 from app.services.locks import lock_people
 
 GROUP_REQUEST_NEW = "group_request_new"  # notification kind: a member of your church asks
@@ -93,9 +94,14 @@ def _start(db: Session, person: Person, name: str, decided_by: Person | None) ->
 
 
 def request_group(
-    db: Session, person: Person, group_name: str
+    db: Session, person: Person, group_name: str, successor_id: uuid.UUID | None = None
 ) -> tuple[GroupRequest, HomeGroup | None]:
-    """Ask to start a home group. An ADMIN or the OWNER start it at once."""
+    """Ask to start a home group. An ADMIN or the OWNER start it at once, and if they lead a group
+    now it passes to `successor_id` (or closes, if they are its only member)."""
+    own = person.status in ("admin", "owner")
+    also = [successor_id] if own and successor_id else []
+    if also:
+        lock_people(db, [person.id, *also])
     db.refresh(person, with_for_update=True)
     if person.closed_at is not None or person.status in ("revoked", "pending"):
         db.rollback()
@@ -104,10 +110,9 @@ def request_group(
     if _name_taken(db, person.church_id, group_name):
         db.rollback()
         raise ApiError(409, "group_name_taken", "A home group with this name already exists")
-    if _leads_a_group(db, person):  # the successor comes with succession (roadmap 4.3)
+    if successor_id is not None and not (own and _leads_a_group(db, person)):
         db.rollback()
-        raise _successor_required()
-    own = person.status in ("admin", "owner")
+        raise ApiError(422, "invalid_choice", "There is no group to hand on")
     open_one = db.scalar(
         select(GroupRequest.id).where(
             GroupRequest.requester_id == person.id, GroupRequest.state == "open"
@@ -119,6 +124,7 @@ def request_group(
     request = GroupRequest(requester_id=person.id, church_id=church.id, group_name=group_name)
     group: HomeGroup | None = None
     if own:
+        _leave_old_group(db, person, person, successor_id)
         group = _start(db, person, group_name, None)
         request.state = "approved"
         request.decided_by_id = person.id
@@ -130,6 +136,23 @@ def request_group(
     db.add(request)
     _commit(db)
     return request, group
+
+
+def _leave_old_group(
+    db: Session, person: Person, actor: Person, successor_id: uuid.UUID | None
+) -> None:
+    """If the person leads a group now, it passes to the successor or closes (the person being
+    its only member), in the same transaction as the move to the new one."""
+    old = (
+        db.get(HomeGroup, person.home_group_id, with_for_update=True)
+        if person.home_group_id
+        else None
+    )
+    if old is None or old.closed_at is not None or old.leader_id != person.id:
+        if successor_id is not None:
+            raise ApiError(422, "invalid_choice", "There is no group to hand on")
+        return
+    succession.end_leadership(db, old, person, actor, successor_id)
 
 
 def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
@@ -195,13 +218,15 @@ def listing(
     return (_views(db, rows) if rows else []), total
 
 
-def _decidable(db: Session, actor: Person, request_id: uuid.UUID) -> tuple[GroupRequest, Person]:
+def _decidable(
+    db: Session, actor: Person, request_id: uuid.UUID, also: list[uuid.UUID] | None = None
+) -> tuple[GroupRequest, Person]:
     """Lock the actor and the requester, and return the open request the actor may decide."""
     found = db.get(GroupRequest, request_id)
     in_scope = found is not None and (actor.status == "owner" or found.church_id == actor.church_id)
     if found is None or not in_scope:
         raise ApiError(404, "not_found", "There is no such request")
-    people = lock_people(db, [actor.id, found.requester_id])
+    people = lock_people(db, [actor.id, found.requester_id, *(also or [])])
     locked_actor = people.get(actor.id)
     # Read again from the locked row: an ADMIN revoked or changed at this moment decides nothing.
     if (
@@ -220,8 +245,12 @@ def _decidable(db: Session, actor: Person, request_id: uuid.UUID) -> tuple[Group
     return request, requester
 
 
-def approve(db: Session, actor: Person, request_id: uuid.UUID) -> HomeGroup:
-    request, requester = _decidable(db, actor, request_id)
+def approve(
+    db: Session, actor: Person, request_id: uuid.UUID, successor_id: uuid.UUID | None = None
+) -> HomeGroup:
+    request, requester = _decidable(
+        db, actor, request_id, also=[successor_id] if successor_id else []
+    )
     _open_church(db, request.church_id)
     if requester.closed_at is not None or requester.status in ("revoked", "pending"):
         raise ApiError(409, "requester_unavailable", "The member is no longer in the church")
@@ -229,8 +258,7 @@ def approve(db: Session, actor: Person, request_id: uuid.UUID) -> HomeGroup:
         raise ApiError(409, "requester_unavailable", "The member is no longer in the church")
     if _name_taken(db, request.church_id, request.group_name):
         raise ApiError(409, "group_name_taken", "A home group with this name already exists")
-    if _leads_a_group(db, requester):
-        raise _successor_required()
+    _leave_old_group(db, requester, actor, successor_id)
     group = _start(db, requester, request.group_name, actor)
     request.state = "approved"
     request.decided_by_id = actor.id

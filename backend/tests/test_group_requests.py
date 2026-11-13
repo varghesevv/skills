@@ -132,12 +132,37 @@ def test_an_admin_without_a_group_of_their_own_starts_one_at_once(
     check_rules(session)
 
 
-def test_a_leader_needs_a_successor_first(
+def test_an_owner_who_leads_a_lone_group_starts_another_and_the_old_one_closes(
     client: TestClient, session: Session, world: World
 ) -> None:
-    refused = ask(client, owner_member(world))  # the OWNER leads their group
+    old = world.group
+    response = ask(client, owner_member(world), "Lakeside")
+    assert response.status_code == 201 and response.json()["group"]["name"] == "Lakeside"
+    session.refresh(old)
+    assert old.closed_at is not None  # the OWNER was its only member
+    session.refresh(world.owner)
+    assert world.owner.home_group_id != old.id
+    check_rules(session)
+
+
+def test_an_owner_who_leads_a_group_with_members_names_a_successor(
+    client: TestClient, session: Session, world: World
+) -> None:
+    member = add_member(world, "provider")  # a member of the OWNER's group
+    owner = owner_member(world)
+    refused = ask(client, owner, "Lakeside")
     assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
     assert session.scalars(select(GroupRequest)).first() is None
+    done = client.post(
+        URL,
+        headers=headers_of(client, owner),
+        json={"group_name": "Lakeside", "successor_id": str(member.person.id)},
+    )
+    assert done.status_code == 201
+    session.refresh(world.group)
+    session.refresh(member.person)
+    assert world.group.leader_id == member.person.id and member.person.status == "verifier"
+    check_rules(session)
 
 
 # --- deciding -----------------------------------------------------------------------------------
@@ -228,22 +253,79 @@ def test_who_may_decide_and_see_the_open_requests(client: TestClient, world: Wor
     assert [r["id"] for r in seen] == [request_id]
 
 
-def test_a_leader_cannot_ask_until_succession_exists(
+def test_a_leader_may_ask_and_the_request_says_they_lead(
     client: TestClient, session: Session, world: World
 ) -> None:
     lead, group = leader(world)
-    refused = ask(client, lead, "Lakeside")
-    assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
-    # Nothing was stored, and the ADMIN was told nothing.
-    assert session.scalars(select(GroupRequest)).first() is None
-    assert (
-        session.scalars(
-            select(Notification).where(Notification.person_id == world.owner.id)
-        ).first()
-        is None
-    )
+    created = ask(client, lead, "Lakeside")
+    assert created.status_code == 201
+    assert created.json()["request"]["requester_leads_a_group"] is True
+    assert session.scalars(select(GroupRequest)).one().state == "open"
+    # Nothing moves until the ADMIN decides.
     session.refresh(lead.person)
     assert lead.person.home_group_id == group.id
+
+
+def test_approving_a_leaders_request_hands_their_old_group_on(
+    client: TestClient, session: Session, world: World
+) -> None:
+    lead, old = leader(world)
+    heir = add_member(world, "searcher", group=old)
+    request_id = ask(client, lead, "Lakeside").json()["request"]["id"]
+    owner = owner_member(world)
+    refused = decide(client, owner, request_id, "approve")
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
+    session.refresh(old)
+    assert old.leader_id == lead.person.id  # nothing changed
+    approved = client.post(
+        f"{URL}/{request_id}/approve",
+        headers=headers_of(client, owner),
+        json={"successor_id": str(heir.person.id)},
+    )
+    assert approved.status_code == 200, approved.text
+    session.refresh(old)
+    session.refresh(heir.person)
+    session.refresh(lead.person)
+    new_group = session.scalars(select(HomeGroup).where(HomeGroup.name == "Lakeside")).one()
+    assert (old.leader_id, heir.person.status) == (heir.person.id, "verifier")
+    assert (new_group.leader_id, lead.person.home_group_id) == (lead.person.id, new_group.id)
+    assert lead.person.status == "verifier"
+    check_rules(session)
+
+
+def test_a_lone_leaders_old_group_closes_when_the_request_is_approved(
+    client: TestClient, session: Session, world: World
+) -> None:
+    lead, old = leader(world)
+    request_id = ask(client, lead, "Lakeside").json()["request"]["id"]
+    assert decide(client, owner_member(world), request_id, "approve").status_code == 200
+    session.refresh(old)
+    assert old.closed_at is not None
+    check_rules(session)
+
+
+def test_a_successor_must_belong_to_the_old_group(
+    client: TestClient, session: Session, world: World
+) -> None:
+    lead, old = leader(world)
+    add_member(world, "searcher", group=old)
+    outsider = add_member(world, "provider")  # another group
+    request_id = ask(client, lead, "Lakeside").json()["request"]["id"]
+    refused = client.post(
+        f"{URL}/{request_id}/approve",
+        headers=headers_of(client, owner_member(world)),
+        json={"successor_id": str(outsider.person.id)},
+    )
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_not_member"
+    # A successor named for someone who leads nothing is a mistake, not ignored.
+    plain = add_member(world, "provider")
+    other_id = ask(client, plain, "Harbour").json()["request"]["id"]
+    wrong = client.post(
+        f"{URL}/{other_id}/approve",
+        headers=headers_of(client, owner_member(world)),
+        json={"successor_id": str(outsider.person.id)},
+    )
+    assert wrong.status_code == 422
 
 
 def test_a_requester_who_became_a_leader_meanwhile_needs_a_successor(
@@ -253,6 +335,7 @@ def test_a_requester_who_became_a_leader_meanwhile_needs_a_successor(
     created = ask(client, member, "Lakeside").json()["request"]
     assert created["requester_leads_a_group"] is False
     old_group = world.add_group(member.person, "Quicker")  # they lead another group now
+    add_member(world, "searcher", group=old_group)  # which has another member
     listed = client.get(URL, headers=headers_of(client, owner_member(world))).json()["items"]
     assert listed[0]["requester_leads_a_group"] is True
     refused = decide(client, owner_member(world), created["id"], "approve")

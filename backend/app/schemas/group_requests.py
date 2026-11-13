@@ -11,6 +11,14 @@ GroupName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2
 
 class GroupRequestCreate(BaseModel):
     group_name: GroupName
+    # An ADMIN or the OWNER who lead a group now and start another at once: who leads the old one.
+    successor_id: uuid.UUID | None = None
+
+
+class GroupRequestApprove(BaseModel):
+    # The requester leads a group now: the member who leads it from now on (without one the old
+    # group closes if the requester is its only member, and approving is refused otherwise).
+    successor_id: uuid.UUID | None = None
 
 
 class GroupRequestOut(BaseModel):

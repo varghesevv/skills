@@ -9,6 +9,7 @@ from app.core.db import get_session
 from app.models.church import HomeGroup, Person
 from app.schemas.church import IdName
 from app.schemas.group_requests import (
+    GroupRequestApprove,
     GroupRequestCreate,
     GroupRequestCreated,
     GroupRequestList,
@@ -31,9 +32,9 @@ def ask(
     body: GroupRequestCreate, member: Member, db: Annotated[Session, Depends(get_session)]
 ) -> GroupRequestCreated:
     """Ask to start a home group. An ADMIN or the OWNER start it at once, and the answer holds
-    the group. Someone who leads a group needs a successor first (`409 successor_required`,
-    roadmap 4.3)."""
-    request, group = group_requests.request_group(db, member, body.group_name)
+    the group; if they lead a group now, `successor_id` names who leads it from now on (or it
+    closes when they are its only member: `409 successor_required` otherwise)."""
+    request, group = group_requests.request_group(db, member, body.group_name, body.successor_id)
     return GroupRequestCreated(
         request=group_requests.view(db, request), group=_group(group) if group else None
     )
@@ -54,10 +55,16 @@ def list_requests(
 
 @router.post("/{request_id}/approve")
 def approve(
-    request_id: uuid.UUID, admin: Admin, db: Annotated[Session, Depends(get_session)]
+    request_id: uuid.UUID,
+    admin: Admin,
+    db: Annotated[Session, Depends(get_session)],
+    body: GroupRequestApprove | None = None,
 ) -> GroupStarted:
-    """Create the group and move the requester in as its leader (a VERIFIER unless higher)."""
-    return GroupStarted(group=_group(group_requests.approve(db, admin, request_id)))
+    """Create the group and move the requester in as its leader (a VERIFIER unless higher). If the
+    requester leads a group now, `successor_id` names who leads it from now on, or the old group
+    closes when the requester is its only member (`409 successor_required` otherwise)."""
+    successor_id = body.successor_id if body else None
+    return GroupStarted(group=_group(group_requests.approve(db, admin, request_id, successor_id)))
 
 
 @router.post("/{request_id}/decline", status_code=status.HTTP_204_NO_CONTENT)
