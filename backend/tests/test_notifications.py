@@ -169,8 +169,8 @@ def test_the_events_so_far_all_write_a_known_kind(
         json={"to": "searcher"},
     )
     written = {n.kind for n in session.scalars(select(Notification))}
-    # Sign-up, vouching and admission write these; the upgrade flow's kinds are checked with it
-    # (tests/test_provider_upgrade.py, tests/test_revocation.py, tests/test_group_requests.py).
+    # Sign-up, vouching and admission write these. The kinds of the other flows (provider
+    # requests, revocation, group requests, church invitations) are checked in their own tests.
     others = {
         "provider_application",
         "provider_declined",
@@ -179,6 +179,7 @@ def test_the_events_so_far_all_write_a_known_kind(
         "group_request_new",
         "group_request_approved",
         "group_request_declined",
+        "church_created",
     }
     assert written == set(notifications.KINDS) - others
 

@@ -45,8 +45,8 @@ While the older accounts still exist (decision D-20), `POST /auth/login` and `PO
 | POST | /auth/logout | revokes refresh token |
 | POST | /auth/forgot-password | always 202, never reveals whether email exists |
 | POST | /auth/reset-password | token + new password |
-| GET | /admin-invitations/{token} | Public. Shows the church name and invited email domain only. Rate limited. |
-| POST | /admin-invitations/{token}/accept | Public. `full_name`, `mobile_number`, `password`, `home_group_name`. Creates the church, the home group and the person as its ADMIN and leader, in one transaction. |
+| POST | /admin-invitations/lookup | Public. The token is in the body, not the address, so it never reaches an access log of the API. The church name and the domain of the invited address only. Rate limited per IP (`LINK_LOOKUP_MAX_PER_HOUR`). `404` for anything wrong (unknown, expired, cancelled, already accepted), alike. |
+| POST | /admin-invitations/accept | Public. Body `token`, `full_name`, `mobile_number`, `password`, `home_group_name` (the email address is the one invited). In one transaction: the church (with the name invited), its first home group, and the person as its ADMIN and the group's leader, with no PENDING stage; their status is recorded as set by the current OWNER (an `appoint` history row from nothing to `admin`); the invitation is closed and its address cleared; the OWNER is told (`church_created`). `201` with the person, the church and `status: admin`. `404` alike as above; `409 church_name_taken`, `409 account_exists` (the number, or the address, is in use by an open account), `409 state_changed`; rate limited per IP like sign-up (`SIGNUP_MAX_PER_HOUR`). Sign in afterwards. |
 
 Auth behaviour:
 
@@ -68,7 +68,7 @@ Auth behaviour:
 | POST | /me/vouch-link | Same callers. Makes a new link and ends the one before it. Returns `{"token", "expires_at"}` once; the person shares `FRONTEND_BASE_URL/vouch/<token>`. A link lives `VOUCH_LINK_DAYS` days (default 30). |
 | GET | /me/vouches | The newest 200 vouches received, with each voucher's name, church, whether it is live (a withdrawn vouch, or one by someone no longer admitted, does not count), and when. No contact details. |
 | GET | /me/vouches-given | At least SEARCHER. The newest 200 vouches given by the caller: the applicant's name and status, whether withdrawn, and `can_withdraw` (until the applicant is admitted). |
-| GET | /me/notifications | Any status except REVOKED. Newest first, paged (`limit` 1 to 100, default 50; `offset`; `unread=true` for unread only): `items` (`id`, `kind`, `subject` (id and name, loaded fresh; the name is empty once that account is closed), `created_at`, `read`), `total` and `unread_count` (for a badge, whatever the page). Kinds so far: `applicant_new` (a leader: someone chose their group), `provider_application` (a leader: a searcher of theirs asks to become a provider), `vouch_received`, `admitted`, `provider_declined`, `revoked`, `reinstated`, `group_request_new`, `group_request_approved`, `group_request_declined`; the re-check flag and the requests to agree to a move or a handover come with their slices (decision D-28). |
+| GET | /me/notifications | Any status except REVOKED. Newest first, paged (`limit` 1 to 100, default 50; `offset`; `unread=true` for unread only): `items` (`id`, `kind`, `subject` (id and name, loaded fresh; the name is empty once that account is closed), `created_at`, `read`), `total` and `unread_count` (for a badge, whatever the page). Kinds so far: `applicant_new` (a leader: someone chose their group), `provider_application` (a leader: a searcher of theirs asks to become a provider), `vouch_received`, `admitted`, `provider_declined`, `revoked`, `reinstated`, `group_request_new`, `group_request_approved`, `group_request_declined`, `church_created`; the re-check flag and the requests to agree to a move or a handover come with their slices (decision D-28). |
 | POST | /me/notifications/{id}/read | `204`, also when already read. Someone else's or an unknown id: the same `404`. |
 | POST | /me/notifications/read-all | `204`. Only the caller's own. |
 
@@ -114,8 +114,8 @@ Auth behaviour:
 | PUT | /home-groups/{id}/leader | ADMIN or OWNER. `successor_id` (a member of the group), `former_leader_status` (`provider` or `searcher`; or `keep` for ADMIN and OWNER handing on). |
 | POST | /home-groups/{id}/close | The leader, who is the last member: `move_to_group_id`. Closes the group and moves the leader in one transaction. |
 | PUT | /churches/{id}/admin | OWNER. `successor_id` (a member of the church), `former_admin_status`. |
-| POST | /owner/churches | OWNER. `church_name`, `email`: creates an admin invitation. |
-| GET, DELETE | /owner/churches/invitations | OWNER. List, cancel. |
+| POST | /owner/churches | OWNER. `church_name`, `email`: creates an admin invitation (`201`; the link token, 256 bits, is returned once and stored only as a hash; it lives `ADMIN_INVITATION_DAYS` days, default 14). There is no mail service yet, so the OWNER shares the link `FRONTEND_BASE_URL/invite/<token>`. `409 church_name_taken` (an open church or an open invitation has the name, ignoring case), `409 account_exists` (the address belongs to an open account), `409 invitation_exists` (the address has an open invitation). |
+| GET, DELETE | /owner/churches/invitations | OWNER. List the undecided invitations (church name, address, dates, `expired`; the tokens are not shown again), and `DELETE /owner/churches/invitations/{id}` to cancel one (`204`; the address is cleared; `404` for one that is decided or unknown). An expired invitation does not block its name or address. |
 | GET | /owner/churches | OWNER. All churches with counts. |
 | POST | /owner/churches/{id}/close | OWNER; not their own church. |
 | POST | /owner/handover | OWNER. `new_owner_id`, `successor_admin_id`, `successor_leader_id`. Creates the request. |
@@ -172,7 +172,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Error codes added by the model
 
-`account_exists`, `invalid_password`, `not_applying`, `not_searcher`, `already_revoked`, `not_revoked`, `not_flagged`, `group_name_taken`, `request_open`, `not_open`, `requester_unavailable`, `church_closed`, `state_changed`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
+`account_exists`, `invalid_password`, `not_applying`, `not_searcher`, `already_revoked`, `not_revoked`, `not_flagged`, `group_name_taken`, `request_open`, `not_open`, `requester_unavailable`, `church_closed`, `church_name_taken`, `invitation_exists`, `state_changed`, `invalid_choice`, `not_pending`, `no_home_group`, `account_revoked`, `not_admitted`, `already_vouched`, `cannot_vouch_self`, `not_enough_vouches`, `not_in_scope` (reported as `not_found`), `status_not_allowed`, `leads_a_group`, `leads_a_church`, `successor_required`, `successor_not_member`, `group_not_empty`, `move_not_agreed`, `handover_open`.
 
 ## Authorisation rules (summary)
 

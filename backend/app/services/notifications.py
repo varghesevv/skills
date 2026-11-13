@@ -18,6 +18,7 @@ from app.models.trust import Notification
 from app.schemas.church import IdName
 from app.schemas.notifications import NotificationItem, NotificationList
 from app.services.admission import ADMITTED
+from app.services.church_invitations import CHURCH_CREATED
 from app.services.group_requests import (
     GROUP_REQUEST_APPROVED,
     GROUP_REQUEST_DECLINED,
@@ -42,6 +43,7 @@ KINDS = (
     GROUP_REQUEST_NEW,
     GROUP_REQUEST_APPROVED,
     GROUP_REQUEST_DECLINED,
+    CHURCH_CREATED,
 )
 
 
