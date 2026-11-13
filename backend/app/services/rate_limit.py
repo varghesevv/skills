@@ -72,3 +72,7 @@ signup_limiter = SlidingWindowLimiter(
 link_lookup_limiter = SlidingWindowLimiter(
     3600, code="rate_limited", message="Too many requests. Try again later."
 )
+# Vouching has its own count, so opening a link and then vouching is not two lookups.
+vouch_attempt_limiter = SlidingWindowLimiter(
+    3600, code="rate_limited", message="Too many requests. Try again later."
+)

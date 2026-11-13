@@ -14,6 +14,7 @@ from app.api.v1 import (
     reports,
     search,
     verifier,
+    vouching,
     workhosts,
 )
 
@@ -33,6 +34,7 @@ ROUTERS = (
     search,
     reports,
     verifier,
+    vouching,
 )
 for module in ROUTERS:
     api_v1_router.include_router(module.router)

@@ -31,7 +31,7 @@ Decision D-07; this section settles the detail the functional requirements point
 ## Abuse limits for links and open endpoints
 
 - Vouch links, group invitation links and admin invitations use at least 128 bits of randomness, are stored hashed, expire (vouch and invitation links 30 days by default, admin invitations 14 days; changeable by environment) and can be revoked. Answers for a wrong, expired or revoked link are identical (`404`), so nothing shows whether a link exists.
-- Rate limits per IP and per person: link lookups 30 per hour, vouching 20 per day per person, sign-up 10 per hour per IP, the public church and group lists 60 per minute per IP. Beyond a limit: `429` with `Retry-After`. All limits are environment settings with these defaults.
+- Rate limits per IP and per person: link lookups 30 per hour, vouching 20 per day per person (counted in the database, `VOUCH_MAX_PER_DAY`), sign-up 10 per hour per IP, the public church and group lists 60 per minute per IP. Beyond a limit: `429` with `Retry-After`. All limits are environment settings with these defaults.
 - A person cannot vouch for themselves and cannot vouch twice for the same applicant.
 
 ## Notification delivery

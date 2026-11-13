@@ -14,7 +14,13 @@ from app.models.users import Organisation
 from app.schemas.auth import MeResponse
 from app.schemas.church import CloseAccountRequest, PersonMeResponse, PersonUpdate
 from app.schemas.signup import ApplicationUpdate
-from app.services import account_closing, directory, signup
+from app.schemas.vouching import (
+    VouchGivenList,
+    VouchLinkCreated,
+    VouchLinkState,
+    VouchReceivedList,
+)
+from app.services import account_closing, directory, signup, vouching
 from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
@@ -77,6 +83,43 @@ def update_application(
         db, person, home_group_id=body.home_group_id, requested_status=body.requested_status
     )
     return directory.person_view(db, person)
+
+
+@router.get("/me/vouch-link")
+def vouch_link_state(
+    person: Member, db: Annotated[Session, Depends(get_session)]
+) -> VouchLinkState:
+    """Whether you have a vouch link that still works. The link itself is shown only when it is
+    made, because only a hash is kept; make a new one to share it again."""
+    link = vouching.active_link(db, person)
+    return VouchLinkState(active=link is not None, expires_at=link.expires_at if link else None)
+
+
+@router.post("/me/vouch-link", status_code=status.HTTP_201_CREATED)
+def make_vouch_link(
+    person: Member,
+    db: Annotated[Session, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> VouchLinkCreated:
+    """A new vouch link; the one before it stops working. The token is shown once. For a PENDING
+    applicant, or a SEARCHER who applies to provide (`409 not_applying` otherwise)."""
+    link, token = vouching.create_link(db, settings, person)
+    return VouchLinkCreated(token=token, expires_at=link.expires_at)
+
+
+@router.get("/me/vouches")
+def vouches_received(
+    person: Member, db: Annotated[Session, Depends(get_session)]
+) -> VouchReceivedList:
+    return VouchReceivedList(items=vouching.received(db, person))
+
+
+@router.get("/me/vouches-given")
+def vouches_given(
+    person: Annotated[Person, Depends(current_person("searcher"))],
+    db: Annotated[Session, Depends(get_session)],
+) -> VouchGivenList:
+    return VouchGivenList(items=vouching.given(db, person))
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)

@@ -2400,6 +2400,187 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VouchCreated": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "VouchCreated",
+        "type": "object"
+      },
+      "VouchGiven": {
+        "properties": {
+          "applicant_name": {
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "applicant_status": {
+            "title": "Applicant Status",
+            "type": "string"
+          },
+          "can_withdraw": {
+            "title": "Can Withdraw",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "withdrawn": {
+            "title": "Withdrawn",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "applicant_name",
+          "applicant_status",
+          "requested_status",
+          "withdrawn",
+          "can_withdraw",
+          "created_at"
+        ],
+        "title": "VouchGiven",
+        "type": "object"
+      },
+      "VouchGivenList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VouchGiven"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "VouchGivenList",
+        "type": "object"
+      },
+      "VouchLinkCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "VouchLinkCreated",
+        "type": "object"
+      },
+      "VouchLinkInfo": {
+        "description": "What the person opening a vouch link sees: who asks and what for, never a number.",
+        "properties": {
+          "already_vouched": {
+            "title": "Already Vouched",
+            "type": "boolean"
+          },
+          "applicant_name": {
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "home_group_name": {
+            "title": "Home Group Name",
+            "type": "string"
+          },
+          "requested_status": {
+            "enum": [
+              "searcher",
+              "provider"
+            ],
+            "title": "Requested Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "applicant_name",
+          "church_name",
+          "home_group_name",
+          "requested_status",
+          "already_vouched"
+        ],
+        "title": "VouchLinkInfo",
+        "type": "object"
+      },
+      "VouchLinkState": {
+        "description": "Whether the caller has a vouch link that still works. The token is never shown again.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "required": [
+          "active",
+          "expires_at"
+        ],
+        "title": "VouchLinkState",
+        "type": "object"
+      },
+      "VouchLinkToken": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "VouchLinkToken",
+        "type": "object"
+      },
       "VouchOut": {
         "properties": {
           "created_at": {
@@ -2433,6 +2614,57 @@
           "created_at"
         ],
         "title": "VouchOut",
+        "type": "object"
+      },
+      "VouchReceived": {
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "voucher_name": {
+            "title": "Voucher Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "voucher_name",
+          "church_name",
+          "live",
+          "created_at"
+        ],
+        "title": "VouchReceived",
+        "type": "object"
+      },
+      "VouchReceivedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VouchReceived"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "VouchReceivedList",
         "type": "object"
       },
       "VouchedFreelancer": {
@@ -4340,6 +4572,110 @@
         ]
       }
     },
+    "/api/v1/me/vouch-link": {
+      "get": {
+        "description": "Whether you have a vouch link that still works. The link itself is shown only when it is\nmade, because only a hash is kept; make a new one to share it again.",
+        "operationId": "vouch_link_state_api_v1_me_vouch_link_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchLinkState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouch Link State",
+        "tags": [
+          "me"
+        ]
+      },
+      "post": {
+        "description": "A new vouch link; the one before it stops working. The token is shown once. For a PENDING\napplicant, or a SEARCHER who applies to provide (`409 not_applying` otherwise).",
+        "operationId": "make_vouch_link_api_v1_me_vouch_link_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchLinkCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Make Vouch Link",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/vouches": {
+      "get": {
+        "operationId": "vouches_received_api_v1_me_vouches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchReceivedList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouches Received",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/vouches-given": {
+      "get": {
+        "operationId": "vouches_given_api_v1_me_vouches_given_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchGivenList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouches Given",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/organisations": {
       "get": {
         "description": "Approved organisations by name, so work hosts can filter a search by who vouches.",
@@ -5622,6 +5958,142 @@
         "summary": "Revoke Group Invitation",
         "tags": [
           "verifier"
+        ]
+      }
+    },
+    "/api/v1/vouch-links/lookup": {
+      "post": {
+        "description": "Who a vouch link is for. The token is in the body, not the path, so it never reaches an\naccess log of the API. Rate limited per IP; every failure is the same `404`.",
+        "operationId": "lookup_vouch_link_api_v1_vouch_links_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VouchLinkToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchLinkInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lookup Vouch Link",
+        "tags": [
+          "vouching"
+        ]
+      }
+    },
+    "/api/v1/vouch-links/vouch": {
+      "post": {
+        "description": "Vouch for the person the link is for: once each, never for yourself, and at most\n`VOUCH_MAX_PER_DAY` a day.",
+        "operationId": "vouch_through_link_api_v1_vouch_links_vouch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VouchLinkToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouch Through Link",
+        "tags": [
+          "vouching"
+        ]
+      }
+    },
+    "/api/v1/vouches/{vouch_id}": {
+      "delete": {
+        "description": "Take back your vouch, until the applicant is admitted.",
+        "operationId": "withdraw_vouch_api_v1_vouches__vouch_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vouch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Vouch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Withdraw Vouch",
+        "tags": [
+          "vouching"
         ]
       }
     },
