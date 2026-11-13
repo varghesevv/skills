@@ -21,6 +21,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   List<MemberRow> _items = const [];
   int _total = 0;
   bool _loading = true;
+  int _request =
+      0; // the latest load; an older answer that arrives later is dropped
   Object? _error;
   String _status = '';
 
@@ -31,6 +33,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   }
 
   Future<void> _load({bool more = false}) async {
+    final request = ++_request;
     setState(() {
       _loading = true;
       _error = null;
@@ -42,15 +45,15 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
             offset: more ? _items.length : 0,
             status: _status.isEmpty ? null : _status,
           );
-      if (!mounted) return;
+      if (!mounted || request != _request) return;
       setState(() {
         _items = more ? [..._items, ...page.items] : page.items;
         _total = page.total;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (mounted && request == _request) setState(() => _error = error);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && request == _request) setState(() => _loading = false);
     }
   }
 
@@ -63,6 +66,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         child: RefreshIndicator(
           onRefresh: () => _load(),
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
               DropdownButtonFormField<String>(

@@ -22,6 +22,8 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
   List<ApplicantRow> _items = const [];
   int _total = 0;
   bool _loading = true;
+  int _request =
+      0; // the latest load; an older answer that arrives later is dropped
   Object? _error;
   String? _done;
 
@@ -32,6 +34,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
   }
 
   Future<void> _load({bool more = false}) async {
+    final request = ++_request;
     setState(() {
       _loading = true;
       _error = null;
@@ -40,15 +43,15 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
       final page = await ref
           .read(leaderRepositoryProvider)
           .applicants(offset: more ? _items.length : 0);
-      if (!mounted) return;
+      if (!mounted || request != _request) return;
       setState(() {
         _items = more ? [..._items, ...page.items] : page.items;
         _total = page.total;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (mounted && request == _request) setState(() => _error = error);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && request == _request) setState(() => _loading = false);
     }
   }
 
@@ -72,6 +75,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
         child: RefreshIndicator(
           onRefresh: () => _load(),
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
               Text(text('leader.applicants.lead')),

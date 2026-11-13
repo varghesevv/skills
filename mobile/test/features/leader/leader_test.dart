@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/router.dart';
@@ -372,6 +374,27 @@ void main() {
       expect(find.text('Nadia Applicant'), findsOneWidget);
     });
 
+    testWidgets('can be pulled to refresh even when it is empty', (
+      tester,
+    ) async {
+      final app = await _open(
+        tester,
+        'leader-applicants',
+        arrange: (a) =>
+            a.reply('GET', '/verifier/applicants', FakeReply(200, _page([]))),
+      );
+      expect(find.text('Nobody is waiting to be admitted.'), findsOneWidget);
+      app.adapter.setReply(
+        'GET',
+        '/verifier/applicants',
+        FakeReply(200, _page([_applicant()])),
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      await tester.pumpAndSettle();
+      expect(app.adapter.count('GET', '/verifier/applicants'), 2);
+      expect(find.text('Nadia Applicant'), findsOneWidget);
+    });
+
     testWidgets('shows more when there are more than one page', (tester) async {
       final app = await _open(
         tester,
@@ -459,6 +482,60 @@ void main() {
       expect(app.adapter.seen.last.query['status'], 'provider');
       expect(find.text('Bea Member'), findsNothing);
     });
+
+    testWidgets(
+      'a slow answer for an earlier filter does not replace a later one',
+      (tester) async {
+        Map<String, Object?> only(String id, String name, String status) =>
+            _page([
+              {
+                'id': id,
+                'full_name': name,
+                'status': status,
+                'home_group': null,
+                'status_set_by': null,
+                'flagged_for_recheck': false,
+              },
+            ]);
+        final slow = Completer<void>();
+        await _open(
+          tester,
+          'leader-members',
+          arrange: (a) => a
+            ..reply('GET', '/verifier/members', FakeReply(200, _page([])))
+            ..reply(
+              'GET',
+              '/verifier/members',
+              FakeReply(
+                200,
+                only('s1', 'Slow Searcher', 'searcher'),
+                const {},
+                slow.future,
+              ),
+            )
+            ..reply(
+              'GET',
+              '/verifier/members',
+              FakeReply(200, only('p1', 'Quick Provider', 'provider')),
+            ),
+        );
+        await tester.tap(find.byKey(const Key('members-filter')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Work host').last);
+        // The first answer is held back, so a spinner keeps animating: pump by hand.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.byKey(const Key('members-filter')));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.text('Freelancer').last);
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+        expect(find.text('Quick Provider'), findsOneWidget);
+        slow.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('Quick Provider'), findsOneWidget);
+        expect(find.text('Slow Searcher'), findsNothing);
+      },
+    );
 
     testWidgets('says when nobody is admitted yet', (tester) async {
       await _open(
