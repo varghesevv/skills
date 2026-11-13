@@ -197,7 +197,8 @@ class PersonDetail {
         ChainLink.fromJson(Map<String, Object?>.from(item as Map)),
     ],
     vouches: _vouchers(json['vouches']),
-    canAdmitAsProvider: json['can_admit_as_provider'] as bool,
+    // A server without the field (older than this app) gets the button switched off.
+    canAdmitAsProvider: json['can_admit_as_provider'] as bool? ?? false,
   );
 
   final String id;

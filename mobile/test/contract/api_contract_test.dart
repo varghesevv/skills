@@ -394,7 +394,18 @@ void main() {
     });
 
     test('only the person page has a number', () {
-      for (final schema in ['ApplicantRow', 'MemberRow', 'FlaggedRow']) {
+      for (final schema in [
+        'ApplicantRow',
+        'MemberRow',
+        'FlaggedRow',
+        'Voucher',
+        'VouchReceived',
+        'VouchGiven',
+        'VouchLinkInfo',
+        'ChainLink',
+        'HistoryEntry',
+        'NotificationItem',
+      ]) {
         expect(properties(schema), isNot(contains('mobile_number')));
       }
       expect(properties('PersonDetail'), contains('mobile_number'));

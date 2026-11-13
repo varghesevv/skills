@@ -723,6 +723,20 @@ void main() {
       expect(find.byKey(const Key('admit-provider-a1')), findsOneWidget);
     });
 
+    testWidgets('an answer without the flag switches the provider button off', (
+      tester,
+    ) async {
+      // A server older than this app: the field is missing, so the button fails closed.
+      final detail = Map<String, Object?>.of(
+        _detail(vouches: [_live], canProvider: true),
+      )..remove('can_admit_as_provider');
+      await person(tester, detail: detail);
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('admit-provider-a1')),
+      );
+      expect(button.onPressed, isNull);
+    });
+
     testWidgets('the provider button follows the server, not the vouches', (
       tester,
     ) async {
