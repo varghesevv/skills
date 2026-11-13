@@ -82,7 +82,7 @@ Backend first, then web and mobile.
 - [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
 - [ ] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
 - [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider.
-- [ ] 3.9 Searcher-to-provider upgrade path.
+- [x] 3.9 Searcher-to-provider upgrade path, backend: `POST /me/apply-provider`, the applicants list holds the searchers who ask, declining a request ends it only (D-29). Web and mobile screens for it: S3.9b (web), and with S3.7 (mobile).
 
 ### S4. Church structure and life cycle — 11 pull requests
 - [ ] 4.1 Backend: revoke, reinstate, re-check flags, re-confirm.

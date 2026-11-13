@@ -16,6 +16,7 @@ from app.services.permissions import (
     LastChange,
     can_admit,
     can_decline,
+    can_decline_upgrade,
     can_set_status,
     can_vouch,
     in_scope,
@@ -309,3 +310,28 @@ def test_a_change_made_by_the_operators_is_not_overridden_through_the_app(kind: 
     target = person("revoked") if kind == "revoke" else person("provider")
     assert not can_set_status(person("admin"), target, "searcher", change)
     assert not can_set_status(person("owner"), target, "searcher", change)
+
+
+# ---- declining a searcher's request to become a provider ----------------------------------------
+
+
+def test_a_request_to_become_a_provider_can_be_declined_only_in_scope_by_a_leader() -> None:
+    asking = person("searcher", requested_status="provider")
+    leader = person("verifier")
+    assert can_decline_upgrade(leader, asking)
+    assert not can_decline_upgrade(leader, person("searcher"))  # no request
+    assert not can_decline_upgrade(leader, person("pending", requested_status="provider"))
+    assert not can_decline_upgrade(leader, person("provider", requested_status="provider"))
+    assert not can_decline_upgrade(
+        leader, person("searcher", requested_status="provider", closed_at=datetime.now(UTC))
+    )
+    assert not can_decline_upgrade(asking, asking)  # nobody declines themselves
+    assert not can_decline_upgrade(
+        person("verifier", home_group_id=GROUP_A2), asking
+    )  # out of scope
+    assert not can_decline_upgrade(person("provider"), asking)  # not a leader
+    assert can_decline_upgrade(person("admin"), asking)  # the church's ADMIN
+    assert not can_decline_upgrade(
+        person("admin", church_id=CHURCH_B, home_group_id=GROUP_B1), asking
+    )
+    assert can_decline_upgrade(person("owner", church_id=CHURCH_B, home_group_id=GROUP_B1), asking)

@@ -167,6 +167,19 @@ def can_decline(actor: PersonLike, applicant: PersonLike) -> bool:
     )
 
 
+def can_decline_upgrade(actor: PersonLike, person: PersonLike) -> bool:
+    """Whether `actor` may decline a searcher's request to become a provider. This ends the
+    request only: the person stays a searcher."""
+    return (
+        person.closed_at is None
+        and person.status == "searcher"
+        and person.requested_status == "provider"
+        and actor.id != person.id
+        and is_verifier(actor)
+        and in_scope(actor, person)
+    )
+
+
 def can_vouch(voucher: PersonLike, applicant: PersonLike) -> bool:
     """Whether `voucher` may vouch for `applicant`: admitted, open, not themselves.
 
