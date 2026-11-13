@@ -18,7 +18,7 @@ import getpass
 import os
 import sys
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import TextIO
 
 from pydantic import TypeAdapter, ValidationError
@@ -269,7 +269,7 @@ def seed_demo() -> int:
 
 def purge_notifications(months: int) -> int:
     """Delete notifications older than the retention (12 months by default; decision O-02)."""
-    cutoff = datetime.now(UTC) - timedelta(days=30 * months)
+    cutoff = notifications.months_before(datetime.now(UTC), months)
     with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
         deleted = notifications.purge_older_than(db, cutoff)
     print(f"Deleted {deleted} notifications older than {months} months.")

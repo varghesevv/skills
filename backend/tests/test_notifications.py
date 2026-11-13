@@ -191,3 +191,19 @@ def test_retention_deletes_only_what_is_old(session: Session, world: World) -> N
     assert deleted == 1
     assert session.get(Notification, old.id) is None
     assert session.get(Notification, recent.id) is not None
+
+
+@pytest.mark.parametrize(
+    ("moment", "months", "expected"),
+    [
+        (datetime(2026, 11, 13, tzinfo=UTC), 12, datetime(2025, 11, 13, tzinfo=UTC)),
+        (datetime(2026, 3, 31, tzinfo=UTC), 1, datetime(2026, 2, 28, tzinfo=UTC)),
+        (datetime(2024, 3, 31, tzinfo=UTC), 1, datetime(2024, 2, 29, tzinfo=UTC)),
+        (datetime(2026, 1, 15, tzinfo=UTC), 2, datetime(2025, 11, 15, tzinfo=UTC)),
+        (datetime(2026, 2, 28, 9, 30, tzinfo=UTC), 120, datetime(2016, 2, 28, 9, 30, tzinfo=UTC)),
+    ],
+)
+def test_the_retention_counts_calendar_months(
+    moment: datetime, months: int, expected: datetime
+) -> None:
+    assert notifications.months_before(moment, months) == expected

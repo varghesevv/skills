@@ -5,6 +5,7 @@ that handles the event. It holds only the kind and the id of the person it is ab
 loaded when the list is read, so a closed account shows no name. Clients poll the list.
 """
 
+import calendar
 import uuid
 from datetime import datetime
 
@@ -44,12 +45,12 @@ def listing(
             .offset(offset)
         )
     )
-    subjects = {
-        p.id: p
-        for p in db.scalars(
-            select(Person).where(Person.id.in_({n.subject_id for n in rows if n.subject_id}))
-        )
-    }
+    subject_ids = {n.subject_id for n in rows if n.subject_id}
+    subjects = (
+        {p.id: p for p in db.scalars(select(Person).where(Person.id.in_(subject_ids)))}
+        if subject_ids
+        else {}
+    )
     return NotificationList(
         total=total,
         unread_count=unread_count,
@@ -88,6 +89,16 @@ def mark_all_read(db: Session, person: Person) -> None:
         .values(read_at=func.now())
     )
     db.commit()
+
+
+def months_before(moment: datetime, months: int) -> datetime:
+    """The same day `months` calendar months earlier (the last day of the month if it has no
+    such day, so 31 March minus one month is 28 or 29 February)."""
+    index = moment.year * 12 + (moment.month - 1) - months
+    year, month = divmod(index, 12)
+    month += 1
+    last_day = calendar.monthrange(year, month)[1]
+    return moment.replace(year=year, month=month, day=min(moment.day, last_day))
 
 
 def purge_older_than(db: Session, cutoff: datetime) -> int:
