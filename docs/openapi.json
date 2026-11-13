@@ -138,6 +138,10 @@
             ],
             "title": "Requested Status"
           },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
           "vouch_count": {
             "title": "Vouch Count",
             "type": "integer"
@@ -153,6 +157,7 @@
         "required": [
           "id",
           "full_name",
+          "status",
           "requested_status",
           "home_group",
           "applied_at",
@@ -5173,6 +5178,33 @@
           }
         ],
         "summary": "Update Application",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/apply-provider": {
+      "post": {
+        "description": "A searcher asks to become a provider. They keep searching, make a vouch link in the usual\nway, and their leader is notified. `409 not_searcher` for everyone else; asking again changes\nnothing.",
+        "operationId": "apply_provider_api_v1_me_apply_provider_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonMeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Provider",
         "tags": [
           "me"
         ]

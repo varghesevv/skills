@@ -142,7 +142,13 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
         .correlate(Person)
         .scalar_subquery()
     )
-    query = _in_scope_people(actor).where(Person.status == "pending")
+    # Pending applicants, and searchers who asked to become providers.
+    query = _in_scope_people(actor).where(
+        or_(
+            Person.status == "pending",
+            and_(Person.status == "searcher", Person.requested_status == "provider"),
+        )
+    )
     rows, total = _page(db, query, [live_count.desc(), Person.created_at], limit, offset)
     ids = [p.id for p in rows]
     vouch_rows = _vouch_rows(db, ids)  # read once: the list and the flag come from the same rows
@@ -158,8 +164,9 @@ def applicants(db: Session, actor: Person, limit: int, offset: int) -> Applicant
             ApplicantRow(
                 id=p.id,
                 full_name=p.full_name or "",
+                status=p.status,
                 requested_status=p.requested_status,
-                home_group=groups[p.home_group_id],  # type: ignore[index]  # pending: has a group
+                home_group=groups[p.home_group_id],  # type: ignore[index]  # has a group
                 applied_at=p.created_at,
                 vouch_count=sum(v.live for v in vouchers[p.id]),
                 vouchers=vouchers[p.id],

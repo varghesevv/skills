@@ -7,9 +7,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
-- Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.7 (129).
+- Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129).
 - In progress: nothing.
-- Next: S3.7 (mobile: verifier screens), then S3.8 (slice check) and S3.9 (searcher to provider).
+- Next: S3.9b (web: applying to provide; mobile: applying to provide is in the parity table), then S3.8 (slice check).
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -82,7 +82,7 @@ Backend first, then web and mobile.
 - [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
 - [x] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
 - [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider.
-- [ ] 3.9 Searcher-to-provider upgrade path.
+- [x] 3.9 Searcher-to-provider upgrade path, backend: `POST /me/apply-provider`, the applicants list holds the searchers who ask, declining a request ends it only (D-29). Web and mobile screens for it: S3.9b (web), and with S3.7 (mobile).
 
 ### S4. Church structure and life cycle — 11 pull requests
 - [ ] 4.1 Backend: revoke, reinstate, re-check flags, re-confirm.

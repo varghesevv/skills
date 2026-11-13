@@ -22,7 +22,14 @@ from app.schemas.vouching import (
     VouchLinkState,
     VouchReceivedList,
 )
-from app.services import account_closing, directory, notifications, signup, vouching
+from app.services import (
+    account_closing,
+    directory,
+    notifications,
+    provider_upgrade,
+    signup,
+    vouching,
+)
 from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
@@ -84,6 +91,18 @@ def update_application(
     signup.change_application(
         db, person, home_group_id=body.home_group_id, requested_status=body.requested_status
     )
+    return directory.person_view(db, person)
+
+
+@router.post("/me/apply-provider")
+def apply_provider(
+    person: Annotated[Person, Depends(current_person("searcher"))],
+    db: Annotated[Session, Depends(get_session)],
+) -> PersonMeResponse:
+    """A searcher asks to become a provider. They keep searching, make a vouch link in the usual
+    way, and their leader is notified. `409 not_searcher` for everyone else; asking again changes
+    nothing."""
+    provider_upgrade.apply_for_provider(db, person)
     return directory.person_view(db, person)
 
 

@@ -16,9 +16,15 @@ from sqlalchemy.orm import Session
 from app.core.errors import ApiError
 from app.models.church import Person
 from app.models.trust import Notification, StatusChange, VouchLink
-from app.services import account_closing, vouching
+from app.services import account_closing, provider_upgrade, vouching
 from app.services.locks import lock_people
-from app.services.permissions import can_admit, can_decline, in_scope, is_verifier
+from app.services.permissions import (
+    can_admit,
+    can_decline,
+    can_decline_upgrade,
+    in_scope,
+    is_verifier,
+)
 
 ADMITTED = "admitted"  # notification kind: a leader admitted you
 
@@ -80,8 +86,14 @@ def admit(db: Session, actor: Person, person_id: uuid.UUID, to: str) -> Person:
 
 
 def decline(db: Session, actor: Person, person_id: uuid.UUID) -> None:
-    """Close an application. Nobody is revoked; the person can sign up again later."""
+    """Close an application. Nobody is revoked; the person can sign up again later. For a searcher
+    who asked to become a provider, only the request ends."""
     applicant = _applicant_in_scope(db, actor, person_id)
+    if can_decline_upgrade(actor, applicant):
+        # A searcher who asked to become a provider: the request ends, the account stays.
+        provider_upgrade.end_request(db, applicant, actor)
+        _commit(db)
+        return
     if not can_decline(actor, applicant):
         raise ApiError(409, "not_pending", "This person is not waiting to be admitted")
     account_closing.clear_account(db, applicant, datetime.now(UTC), applicant.email or "")
