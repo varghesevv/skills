@@ -1,6 +1,108 @@
 {
   "components": {
     "schemas": {
+      "AdminAccepted": {
+        "properties": {
+          "church_id": {
+            "format": "uuid",
+            "title": "Church Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "church_id",
+          "status"
+        ],
+        "title": "AdminAccepted",
+        "type": "object"
+      },
+      "AdminInvitationAccept": {
+        "properties": {
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Home Group Name",
+            "type": "string"
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "full_name",
+          "mobile_number",
+          "password",
+          "home_group_name"
+        ],
+        "title": "AdminInvitationAccept",
+        "type": "object"
+      },
+      "AdminInvitationInfo": {
+        "description": "What the person invited sees before accepting: the church, and where the invitation was\nsent (the domain only).",
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "email_domain": {
+            "title": "Email Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "church_name",
+          "email_domain"
+        ],
+        "title": "AdminInvitationInfo",
+        "type": "object"
+      },
+      "AdminInvitationLookup": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "AdminInvitationLookup",
+        "type": "object"
+      },
       "AdmitRequest": {
         "properties": {
           "to": {
@@ -223,6 +325,114 @@
           "status"
         ],
         "title": "ChainLink",
+        "type": "object"
+      },
+      "ChurchInvitationCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
+        "title": "ChurchInvitationCreated",
+        "type": "object"
+      },
+      "ChurchInvitationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChurchInvitationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ChurchInvitationList",
+        "type": "object"
+      },
+      "ChurchInvitationSummary": {
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "church_name",
+          "email",
+          "created_at",
+          "expires_at",
+          "expired"
+        ],
+        "title": "ChurchInvitationSummary",
+        "type": "object"
+      },
+      "ChurchInvite": {
+        "properties": {
+          "church_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Church Name",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "church_name",
+          "email"
+        ],
+        "title": "ChurchInvite",
         "type": "object"
       },
       "ChurchList": {
@@ -3702,6 +3912,90 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin-invitations/accept": {
+      "post": {
+        "description": "Public: create the church, its first home group and its ADMIN, who leads it. The email\naddress is the one invited. Rate limited per IP like sign-up.",
+        "operationId": "accept_api_v1_admin_invitations_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInvitationAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept",
+        "tags": [
+          "admin-invitations"
+        ]
+      }
+    },
+    "/api/v1/admin-invitations/lookup": {
+      "post": {
+        "description": "Public: the church and the domain the invitation went to. The token is in the body, so it\nnever reaches an access log of the API. Rate limited per IP; every failure is the same `404`.",
+        "operationId": "lookup_api_v1_admin_invitations_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInvitationLookup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInvitationInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lookup",
+        "tags": [
+          "admin-invitations"
+        ]
+      }
+    },
     "/api/v1/admin/organisations": {
       "get": {
         "operationId": "list_organisations_api_v1_admin_organisations_get",
@@ -6080,6 +6374,157 @@
         "summary": "Vouch",
         "tags": [
           "organisations"
+        ]
+      }
+    },
+    "/api/v1/owner/churches": {
+      "post": {
+        "description": "Invite the ADMIN of a new church. The church exists once they accept. The link token is\nshown once; only a hash is kept. There is no mail service yet, so the OWNER shares the link.",
+        "operationId": "invite_admin_api_v1_owner_churches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChurchInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchInvitationCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Invite Admin",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/churches/invitations": {
+      "get": {
+        "description": "The undecided invitations, newest first. Paged: `limit` (1 to 100, default 50), `offset`.",
+        "operationId": "list_invitations_api_v1_owner_churches_invitations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchInvitationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Invitations",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/churches/invitations/{invitation_id}": {
+      "delete": {
+        "operationId": "cancel_invitation_api_v1_owner_churches_invitations__invitation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Invitation",
+        "tags": [
+          "owner"
         ]
       }
     },

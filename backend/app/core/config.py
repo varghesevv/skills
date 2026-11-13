@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     link_lookup_max_per_hour: int = Field(default=30, ge=1)  # link lookups per IP per hour
     invitation_link_days: int = Field(default=30, ge=1)  # life of a home group invitation link
     vouch_link_days: int = Field(default=30, ge=1)  # life of a vouch link
+    admin_invitation_days: int = Field(default=14, ge=1)  # life of an invitation to be an ADMIN
     vouch_max_per_day: int = Field(default=20, ge=1)  # vouches per person per day
     # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
     # default word profile, and no minimum version (every app version is accepted).

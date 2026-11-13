@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin,
+    admin_invitations,
     app_info,
     auth,
     churches,
@@ -11,6 +12,7 @@ from app.api.v1 import (
     labels,
     me,
     organisations,
+    owner,
     ratings,
     reports,
     search,
@@ -22,11 +24,13 @@ from app.api.v1 import (
 api_v1_router = APIRouter(prefix="/api/v1")
 ROUTERS = (
     app_info,
+    admin_invitations,
     auth,
     churches,
     group_invitations,
     group_requests,
     me,
+    owner,
     admin,
     freelancers,
     workhosts,
