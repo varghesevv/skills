@@ -48,6 +48,21 @@ class SessionController extends AsyncNotifier<Account?> {
   /// A change of the person's own data (the application, for example) came back from the server.
   void setPerson(PersonMe person) => state = AsyncData(person);
 
+  /// Asks the server again who the signed-in person is, so a change made by someone else (a
+  /// leader admitted or declined them) shows. A failure keeps what is shown; the next ask tries
+  /// again.
+  Future<void> refreshPerson() async {
+    if (state.value is! PersonMe) return;
+    try {
+      final account = await ref.read(authRepositoryProvider).me();
+      if (account is PersonMe && state.value is PersonMe) {
+        state = AsyncData(account);
+      }
+    } on Exception {
+      // Nothing to show for it: the screen keeps the last answer.
+    }
+  }
+
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);

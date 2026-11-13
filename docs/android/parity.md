@@ -56,7 +56,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Ratings given (edit) | `GivenRatingsPage.tsx` | S5.10 | not started | |
 | Profile (name, mobile) | `/me` | S5.10 | not started | |
 | Vouch from a received link (shows who asks) | new | S3.6 | done: paste the link, see who asks, vouch; tapping a link in another app needs app links (release setup) | `test/features/person/vouching_test.dart` |
-| Share my vouch link (S3.6); apply to become a provider (S3.9) | new | S3.6, S3.9 | share done; apply to provide not started | `test/features/person/vouching_test.dart` |
+| Share my vouch link (S3.6); apply to become a provider (S3.9) | new | S3.6, S3.9 | done: a searcher asks to offer their skills, stays a searcher, and then has the same link and vouches as a new applicant | `test/features/person/vouching_test.dart`, `test/features/person/provider_upgrade_test.dart` |
 | Start a home group (request); move requests that concern me | new | S4.10 | not started | |
 | (new) Message a provider | none on web | S8 | backend B6 | |
 
@@ -118,7 +118,7 @@ Status column: "at least X" means that status or higher.
 | GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | done |
 | GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` (both shapes) and `PUT /me/application` done; `PUT /me` (name, mobile) comes with the profile screen (S5.10) |
 | DELETE `/me` | any | Close account | S2.8 (applicant), S4.10 (others) | done for the applicant home; the settings screen of admitted people later |
-| POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | not started |
+| POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | done; a notice for the leader (`provider_application`) and for the person when the leader declines (`provider_declined`) are in the notification list |
 | GET `/me/vouch-link`, POST `/me/vouch-link` (makes a new link and ends the one before; there is no `rotate` any more, decision D-25); GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link (shown once), who vouched | S3.6 | done |
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any except REVOKED | Notifications | S3.6 | done |
 | POST `/vouch-links/lookup`, `/vouch-links/vouch` (token in the body); DELETE `/vouches/{id}` | at least SEARCHER | Vouch from a link, withdraw | S3.6 | done |

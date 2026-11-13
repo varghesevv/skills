@@ -18,6 +18,12 @@ String notificationText(AppText text, NotificationItem item) {
     'applicant_new' => text('notifications.applicant_new', {'name': name}),
     'vouch_received' => text('notifications.vouch_received', {'name': name}),
     'admitted' => text('notifications.admitted', {'name': name}),
+    'provider_application' => text('notifications.provider_application', {
+      'name': name,
+    }),
+    'provider_declined' => text('notifications.provider_declined', {
+      'name': name,
+    }),
     _ => text('notifications.unknown'),
   };
 }

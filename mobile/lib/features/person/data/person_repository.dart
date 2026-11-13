@@ -134,6 +134,11 @@ class PersonRepository {
     await _api.delete('/me', body: {'password': password});
   }
 
+  /// A searcher asks to become a provider. They stay a searcher; the answer is the person as
+  /// `GET /me` shows them. Throws `ApiException` (`not_searcher` for anyone else).
+  Future<PersonMe> applyProvider() async =>
+      parseResponse(await _api.post('/me/apply-provider'), PersonMe.fromJson);
+
   Future<VouchLinkState> vouchLinkState() async =>
       parseResponse(await _api.get('/me/vouch-link'), VouchLinkState.fromJson);
 
