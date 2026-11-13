@@ -195,6 +195,13 @@ class MoveRequest(UUIDPrimaryKeyMixin, Base):
         Index(None, "person_id"),
         Index(None, "from_group_id"),
         Index(None, "to_group_id"),
+        # A person has at most one open request.
+        Index(
+            "uq_move_requests_one_open",
+            "person_id",
+            unique=True,
+            postgresql_where=text("completed_at IS NULL AND cancelled_at IS NULL"),
+        ),
     )
 
 

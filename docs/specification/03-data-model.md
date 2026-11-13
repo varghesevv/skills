@@ -129,7 +129,7 @@ id, email text, church_name varchar(200), invited_by_id FK people (the OWNER), t
 id, owner_id FK people, new_owner_id FK people (an ADMIN of another church), successor_admin_id FK people null, successor_leader_id FK people null, created_at, accepted_at null, cancelled_at null. At most one open request (partial unique index).
 
 ### move_requests
-id, person_id FK people, from_group_id FK, to_group_id FK (same church, CHECK in the service), agreed_by_person_at, agreed_by_from_leader_at, agreed_by_to_leader_at (each null until given), created_at, completed_at null, cancelled_at null. The move happens, in one transaction, when all three are set.
+id, person_id FK people, from_group_id FK, to_group_id FK (same church, CHECK in the service), agreed_by_person_at, agreed_by_from_leader_at, agreed_by_to_leader_at (each null until given), created_at, completed_at null, cancelled_at null. The move happens, in one transaction, when all three are set. At most one open request per person (partial unique index `uq_move_requests_one_open`, migration `0011`).
 
 ### notifications
 id, person_id FK people, kind text, subject_id uuid null (the person or group the event is about), created_at, read_at null. No names or numbers are stored; clients load details through the normal endpoints. Index `(person_id, read_at, created_at)`. Retention is open detail O-02.
