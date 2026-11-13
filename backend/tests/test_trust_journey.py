@@ -133,7 +133,8 @@ def test_the_trust_journey(client: TestClient, session: Session) -> None:
 
     # 4b. The leader's own vouch is their sign-off, not a second one: it does not admit a provider.
     assert olive.post("/vouch-links/vouch", token=link_of_ben["token"]).status_code == 201
-    assert olive.get("/verifier/applicants").json()["items"][0]["can_admit_as_provider"] is False
+    row = next(r for r in olive.get("/verifier/applicants").json()["items"] if r["id"] == ben.id)
+    assert row["vouch_count"] == 1 and row["can_admit_as_provider"] is False
     refused = olive.post(f"/verifier/people/{ben.id}/admit", to="provider")
     assert refused.status_code == 409 and refused.json()["error"]["code"] == "not_enough_vouches"
 
@@ -191,18 +192,26 @@ def test_the_trust_journey(client: TestClient, session: Session) -> None:
     assert olive.post(f"/verifier/people/{cal.id}/decline").status_code == 204
     closed = client.post(f"{API}/auth/login", json={"email": cal.email, "password": cal.password})
     assert closed.status_code == 401  # the account is closed
+    old_row = session.get(Person, cal.id)
+    assert old_row is not None and old_row.closed_at is not None  # closed, never deleted
+    # Declining is not a change of status (decision D-27): the history holds only the sign-up.
+    cal_history = session.scalars(select(StatusChange).where(StatusChange.person_id == cal.id))
+    assert [c.kind for c in cal_history] == ["signup"]
+    new_password = secrets.token_urlsafe(16)
     again = client.post(
         f"{API}/auth/signup",
         json={
             "full_name": "Cal Again",
             "email": cal.email,
             "mobile_number": f"+9715{secrets.randbelow(10**8):08d}",
-            "password": secrets.token_urlsafe(16),
+            "password": new_password,
             "requested_status": "searcher",
             "home_group_id": group,
         },
     )
     assert again.status_code == 201
+    new_cal = Who(client, "Cal Again", cal.email, new_password)
+    assert new_cal.me()["status"] == "pending" and new_cal.id != cal.id  # a new person
     assert olive.post(f"/verifier/people/{eve.id}/admit", to="searcher").status_code == 200
     eve.post("/me/apply-provider")
     assert olive.post(f"/verifier/people/{eve.id}/decline").status_code == 204
@@ -218,6 +227,10 @@ def test_the_trust_journey(client: TestClient, session: Session) -> None:
     assert page["mobile_number"].startswith("+9715") and page["can_admit_as_provider"] is False
     assert [link["full_name"] for link in page["chain_of_trust"]] == ["Olive Owner"]
     assert session.scalar(select(func.count()).select_from(ContactView)) == before + 1
+    view = session.scalars(select(ContactView).where(ContactView.person_id == ann.id)).one()
+    assert (str(view.viewer_id), view.screen) == (olive.id, "person")
+    # The lists added none: they are the only other thing the leader opened.
+    assert session.scalar(select(func.count()).select_from(ContactView)) == 1
 
     # 12. Everybody was told what concerns them, and can mark it read.
     assert kinds(session, ann) == ["admitted", "admitted", "vouch_received"]
