@@ -67,22 +67,43 @@ def flag_people_set_by(db: Session, revoked: Person) -> int:
 
 
 def revoke(
-    db: Session, actor: Person, person_id: uuid.UUID, successor_id: uuid.UUID | None = None
+    db: Session,
+    actor: Person,
+    person_id: uuid.UUID,
+    successor_id: uuid.UUID | None = None,
+    group_successor_id: uuid.UUID | None = None,
 ) -> Person:
-    """Revoke a person in scope. A VERIFIER's group gets a successor in the same step (or closes
-    when the VERIFIER is its only member), and everyone whose status they set is flagged."""
-    person = locked_in_scope(db, actor, person_id, also=[successor_id] if successor_id else [])
+    """Revoke a person in scope.
+
+    A VERIFIER's group gets a successor (`successor_id`) in the same step, or closes when the
+    VERIFIER is its only member. A church's ADMIN is replaced by `successor_id` (a member of the
+    church) and the group they lead passes to `group_successor_id` or closes when they are alone
+    in it. Everyone whose status a revoked leader set is flagged.
+    """
+    also = [i for i in (successor_id, group_successor_id) if i is not None]
+    person = locked_in_scope(db, actor, person_id, also=also)
     if person.status == REVOKED:
         raise ApiError(409, "already_revoked", "This person is already revoked")
     if not can_set_status(actor, person, REVOKED, last_change(db, person)):
         raise _not_allowed()
-    if person.status == "admin":
-        # A church's ADMIN is replaced in the same step (succession of an ADMIN, roadmap 4.3).
-        raise ApiError(409, "successor_required", "An ADMIN is replaced first: appoint a successor")
-    if successor_id is not None and person.status != "verifier":
+    if (successor_id is not None and person.status not in ("verifier", "admin")) or (
+        group_successor_id is not None and person.status != "admin"
+    ):
         raise ApiError(422, "invalid_choice", "Only a leader has a successor")
     previous = person.status
-    if previous == "verifier":
+    if previous == "admin":
+        church = db.get(Church, person.church_id)
+        if church is None or successor_id is None:
+            raise ApiError(
+                409,
+                "successor_required",
+                "An ADMIN is replaced first: choose a member of the church",
+            )
+        succession.hand_church_on(
+            db, church, person, actor, successor_id, group_successor_id, revoking=True
+        )
+        flag_people_set_by(db, person)
+    elif previous == "verifier":
         group = db.get(HomeGroup, person.home_group_id, with_for_update=True)
         if group is None:  # cannot happen: a VERIFIER always leads their own group
             raise ApiError(409, "state_changed", "This person changed meanwhile. Reload.")

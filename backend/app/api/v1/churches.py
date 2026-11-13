@@ -4,12 +4,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from app.api.deps import client_address
+from app.api.deps import client_address, current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
-from app.schemas.church import ChurchList, HomeGroupList
-from app.services import directory
+from app.models.church import Person
+from app.schemas.church import ChurchList, HomeGroupList, IdName
+from app.schemas.home_groups import AdminChange, AdminChanged
+from app.services import directory, succession
 from app.services.rate_limit import SlidingWindowLimiter
 
 router = APIRouter(prefix="/churches", tags=["churches"])
@@ -48,3 +50,28 @@ def list_home_groups(
     if groups is None:
         raise ApiError(404, "not_found", "There is no such church")
     return HomeGroupList(items=groups)
+
+
+@router.put("/{church_id}/admin")
+def change_admin(
+    church_id: uuid.UUID,
+    body: AdminChange,
+    owner: Annotated[Person, Depends(current_person("owner"))],
+    db: Annotated[Session, Depends(get_session)],
+) -> AdminChanged:
+    """The OWNER replaces the ADMIN of another church with one of its members, in one
+    transaction: the successor becomes the ADMIN directly (keeping any group they lead), the old
+    ADMIN stays as a provider or a searcher, set by the OWNER, and nobody is flagged. If the old
+    ADMIN leads a home group it passes to `group_successor_id`, or they keep leading it as a
+    VERIFIER when they are alone in it. The OWNER's own church changes ADMIN only by a handover
+    (`409 owner_church`)."""
+    church, keeps_group = succession.replace_admin(
+        db, owner, church_id, body.successor_id, body.former_admin_status, body.group_successor_id
+    )
+    succession.end_commit(db)
+    admin = db.get(Person, church.admin_id)
+    return AdminChanged(
+        church=IdName(id=church.id, name=church.name),
+        admin=IdName(id=church.admin_id, name=(admin.full_name if admin else "") or ""),
+        former_admin_keeps_leading=keeps_group,
+    )

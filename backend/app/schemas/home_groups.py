@@ -20,3 +20,20 @@ class LeaderChange(BaseModel):
 class LeaderChanged(BaseModel):
     group: IdName
     leader: IdName
+
+
+class AdminChange(BaseModel):
+    """Replace the ADMIN of a church (the OWNER's own church changes only by a handover)."""
+
+    successor_id: uuid.UUID  # a member of the church; becomes its ADMIN directly
+    former_admin_status: Literal["provider", "searcher"]
+    # If the old ADMIN leads a home group: the member who leads it from now on (it may be the new
+    # ADMIN). Without one, the call is refused when the group has other members; an ADMIN who is
+    # alone in it keeps leading it, as a VERIFIER.
+    group_successor_id: uuid.UUID | None = None
+
+
+class AdminChanged(BaseModel):
+    church: IdName
+    admin: IdName
+    former_admin_keeps_leading: bool
