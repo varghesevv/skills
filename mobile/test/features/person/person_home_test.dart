@@ -30,6 +30,20 @@ void _lists(FakeAdapter adapter) => adapter
     }),
   );
 
+/// The page is a lazy list: scroll until the part under test has been built.
+Future<void> _reveal(WidgetTester tester, String key) async {
+  final finder = find.byKey(Key(key));
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('the home of a person by status', () {
     testWidgets('shows an applicant where they applied and the vouches', (
@@ -122,7 +136,7 @@ void main() {
           );
         },
       );
-      await tester.ensureVisible(find.byKey(const Key('change-church')));
+      await _reveal(tester, 'change-church');
       await tester.tap(find.byKey(const Key('change-group-church-1')));
       await tester.pumpAndSettle();
       await tester.tap(find.textContaining('Hilltop').last);
@@ -152,8 +166,8 @@ void main() {
           );
         },
       );
+      await _reveal(tester, 'change-save');
       final save = find.byKey(const Key('change-save'));
-      await tester.ensureVisible(save);
       expect(tester.widget<FilledButton>(save).onPressed, isNull);
       await tapKey(tester, 'change-apply-provider');
       await tapKey(tester, 'change-save');
@@ -203,7 +217,7 @@ void main() {
           signedInAsPerson(adapter, store);
         },
       );
-      await tester.ensureVisible(find.byKey(const Key('change-church')));
+      await _reveal(tester, 'change-church');
       expect(find.textContaining('temporarily unavailable'), findsOneWidget);
       final save = find.byKey(const Key('change-save'));
       expect(tester.widget<FilledButton>(save).onPressed, isNull);

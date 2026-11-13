@@ -11,9 +11,13 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/welcome_screen.dart';
+import '../features/person/my_vouches_screen.dart';
+import '../features/person/notifications_screen.dart';
 import '../features/person/person_home_screen.dart';
+import '../features/person/person_router_paths.dart';
 import '../features/person/person_sign_in_screen.dart';
 import '../features/person/sign_up_screen.dart';
+import '../features/person/vouch_screen.dart';
 import 'destinations.dart';
 import 'shell.dart';
 
@@ -27,9 +31,16 @@ const _signedOutPrefixes = [
   '/join',
 ];
 
-/// The home of a person of the church trust model. Until the older accounts go (roadmap S5) the
-/// person screens have their own addresses next to the older ones.
-const personHome = '/member';
+/// Where a person may be: the router sends them home from any other address.
+@visibleForTesting
+bool personMayVisit(PersonMe person, String path) {
+  if (path == personHome) return true;
+  return switch (person.status) {
+    PersonStatus.revoked => false,
+    PersonStatus.pending => path == personNotifications,
+    _ => path.startsWith('$personHome/') || path == vouchLinkPath,
+  };
+}
 
 /// Tells the router to re-run its redirect when the session changes.
 class _SessionListenable extends ChangeNotifier {
@@ -54,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (account == null) return onSignedOut ? null : '/welcome';
       if (account is PersonMe) {
         // A person lives below /member; the older accounts' pages are never shown to them.
-        return path == personHome ? null : personHome;
+        return personMayVisit(account, path) ? null : personHome;
       }
       final me = account as Me;
       if (path == personHome) return '/${me.userType.wire}/home';
@@ -98,6 +109,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: personHome,
         builder: (context, state) => const PersonHomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'vouches',
+            builder: (context, state) => const MyVouchesScreen(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationsScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: vouchLinkPath,
+        // Without the token (the app was restarted on this page) there is nothing to show.
+        redirect: (context, state) => state.extra is String ? null : personHome,
+        builder: (context, state) => VouchScreen(token: state.extra! as String),
       ),
       GoRoute(
         path: '/login/:type',

@@ -8,6 +8,7 @@ import '../../shared/widgets/message_banner.dart';
 import '../../shared/widgets/password_field.dart';
 import 'data/person_repository.dart';
 import 'person_providers.dart';
+import 'vouch_share.dart';
 
 const _keep = '';
 
@@ -61,6 +62,8 @@ class _ApplicantHomeState extends ConsumerState<ApplicantHome> {
               : text('applicant.vouchCount', {'count': '${person.vouchCount}'}),
         ),
         Text(text('applicant.vouchesHelp')),
+        const Divider(height: 32),
+        const VouchShare(),
         const Divider(height: 32),
         _ChangeChoice(
           key: ValueKey('${person.homeGroup?.id}-${person.requestedStatus}'),
