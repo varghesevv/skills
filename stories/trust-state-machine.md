@@ -6,7 +6,7 @@ As a **developer**, I want every change to a person's trust state to go through 
 
 ## Status
 
-Accepted as intent, not built as a separate module. The model was built on the integration branch `model/verification` (roadmap in `docs/roadmap-verification-model.md`) after this story was written, and parts of it exist already. Decision D-26 records how the story maps onto that work:
+Accepted as intent, not built as a separate module. The model was built on the integration branch `model/verification` (roadmap in `docs/roadmap-verification-model.md`) after this story was written, and parts of it exist already. Decision D-26 (in `docs/verification-decisions.md` on `model/verification`, added with the admission pull request) records how the story maps onto that work. The code named below is on that branch too, and reaches `main` at the cut-over:
 
 | Story item | Where it stands |
 |---|---|
