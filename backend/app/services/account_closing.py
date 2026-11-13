@@ -20,43 +20,11 @@ from app.models.trust import GroupInvitation, VouchLink
 from app.services.auth import check_throttle, clean_ip, record_attempt
 
 
-def close_account(
-    db: Session,
-    settings: Settings,
-    person: Person,
-    password: str,
-    *,
-    ip: str | None,
-    user_agent: str | None,
-) -> None:
-    # Hold the row: a leader acting on this person at the same moment waits for us.
-    db.refresh(person, with_for_update=True)
-    if person.closed_at is not None or person.status == "revoked":
-        raise ApiError(403, "account_revoked", "This account cannot be closed")
-    email = person.email or ""
-    ip = clean_ip(ip)
-    now = datetime.now(UTC)
-    # The password is asked again, so a stolen access token must not let anyone guess it: the
-    # same throttle as login counts the failures (per address and network address).
-    check_throttle(db, settings, user_type="person", email=email, ip=ip, now=now)
-    if person.password_hash is None:
-        verify_dummy(password)  # not reachable for an open account, but costs the same
-    if person.password_hash is None or not verify_password(person.password_hash, password):
-        record_attempt(
-            db,
-            user_type="person",
-            user_id=person.id,
-            email=email,
-            succeeded=False,
-            ip=ip,
-            user_agent=user_agent,
-        )
-        db.commit()  # the failure must be counted although the request fails
-        raise ApiError(403, "invalid_password", "The password is not correct")
-    if person.status == "verifier":
-        raise ApiError(409, "leads_a_group", "Step down as leader of your home group first")
-    if person.status in ("admin", "owner"):
-        raise ApiError(409, "leads_a_church", "Hand over your role first")
+def clear_account(db: Session, person: Person, now: datetime, email: str) -> None:
+    """Mark the account closed and clear what identifies the person. The caller commits.
+
+    Used when people leave and when a leader declines an application: the row, the history and
+    the vouches given stay, and nothing of theirs works any more."""
     person.closed_at = now
     person.home_group_id = None
     person.full_name = person.email = person.mobile_number = person.password_hash = None
@@ -105,4 +73,44 @@ def close_account(
             )
             .values(login_email=None, ip_address=None, user_agent=None)
         )
+
+
+def close_account(
+    db: Session,
+    settings: Settings,
+    person: Person,
+    password: str,
+    *,
+    ip: str | None,
+    user_agent: str | None,
+) -> None:
+    # Hold the row: a leader acting on this person at the same moment waits for us.
+    db.refresh(person, with_for_update=True)
+    if person.closed_at is not None or person.status == "revoked":
+        raise ApiError(403, "account_revoked", "This account cannot be closed")
+    email = person.email or ""
+    ip = clean_ip(ip)
+    now = datetime.now(UTC)
+    # The password is asked again, so a stolen access token must not let anyone guess it: the
+    # same throttle as login counts the failures (per address and network address).
+    check_throttle(db, settings, user_type="person", email=email, ip=ip, now=now)
+    if person.password_hash is None:
+        verify_dummy(password)  # not reachable for an open account, but costs the same
+    if person.password_hash is None or not verify_password(person.password_hash, password):
+        record_attempt(
+            db,
+            user_type="person",
+            user_id=person.id,
+            email=email,
+            succeeded=False,
+            ip=ip,
+            user_agent=user_agent,
+        )
+        db.commit()  # the failure must be counted although the request fails
+        raise ApiError(403, "invalid_password", "The password is not correct")
+    if person.status == "verifier":
+        raise ApiError(409, "leads_a_group", "Step down as leader of your home group first")
+    if person.status in ("admin", "owner"):
+        raise ApiError(409, "leads_a_church", "Hand over your role first")
+    clear_account(db, person, now, email)
     db.commit()

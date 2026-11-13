@@ -1,6 +1,54 @@
 {
   "components": {
     "schemas": {
+      "AdmitRequest": {
+        "properties": {
+          "to": {
+            "enum": [
+              "searcher",
+              "provider"
+            ],
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "AdmitRequest",
+        "type": "object"
+      },
+      "AdmitResult": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "requested_status"
+        ],
+        "title": "AdmitResult",
+        "type": "object"
+      },
       "AppConfig": {
         "properties": {
           "app": {
@@ -35,6 +83,81 @@
         "title": "AppVersions",
         "type": "object"
       },
+      "ApplicantList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicantRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ApplicantList",
+        "type": "object"
+      },
+      "ApplicantRow": {
+        "properties": {
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "vouch_count": {
+            "title": "Vouch Count",
+            "type": "integer"
+          },
+          "vouchers": {
+            "items": {
+              "$ref": "#/components/schemas/Voucher"
+            },
+            "title": "Vouchers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "requested_status",
+          "home_group",
+          "applied_at",
+          "vouch_count",
+          "vouchers"
+        ],
+        "title": "ApplicantRow",
+        "type": "object"
+      },
       "ApplicationUpdate": {
         "properties": {
           "home_group_id": {
@@ -66,6 +189,30 @@
           }
         },
         "title": "ApplicationUpdate",
+        "type": "object"
+      },
+      "ChainLink": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "status"
+        ],
+        "title": "ChainLink",
         "type": "object"
       },
       "ChurchList": {
@@ -182,6 +329,73 @@
           "filename"
         ],
         "title": "DownloadOut",
+        "type": "object"
+      },
+      "FlaggedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlaggedRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "FlaggedList",
+        "type": "object"
+      },
+      "FlaggedRow": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "status",
+          "home_group",
+          "status_set_by"
+        ],
+        "title": "FlaggedRow",
         "type": "object"
       },
       "ForgotPasswordRequest": {
@@ -815,6 +1029,53 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HistoryEntry": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "changed_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "from_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Status"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "to_status": {
+            "title": "To Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "from_status",
+          "to_status",
+          "changed_by",
+          "at"
+        ],
+        "title": "HistoryEntry",
+        "type": "object"
+      },
       "HomeGroupList": {
         "properties": {
           "items": {
@@ -1108,6 +1369,78 @@
           "created_at"
         ],
         "title": "MeResponse",
+        "type": "object"
+      },
+      "MemberList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MemberRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "MemberList",
+        "type": "object"
+      },
+      "MemberRow": {
+        "properties": {
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "status",
+          "home_group",
+          "status_set_by",
+          "flagged_for_recheck"
+        ],
+        "title": "MemberRow",
         "type": "object"
       },
       "NameRef": {
@@ -1462,6 +1795,109 @@
           "page_size"
         ],
         "title": "Page[VouchedFreelancer]",
+        "type": "object"
+      },
+      "PersonDetail": {
+        "description": "One person in scope. This is the only response outside the reveal endpoint with a number.",
+        "properties": {
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          },
+          "chain_of_trust": {
+            "items": {
+              "$ref": "#/components/schemas/ChainLink"
+            },
+            "title": "Chain Of Trust",
+            "type": "array"
+          },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vouches": {
+            "items": {
+              "$ref": "#/components/schemas/Voucher"
+            },
+            "title": "Vouches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "mobile_number",
+          "status",
+          "requested_status",
+          "church",
+          "home_group",
+          "status_set_by",
+          "flagged_for_recheck",
+          "applied_at",
+          "history",
+          "chain_of_trust",
+          "vouches"
+        ],
+        "title": "PersonDetail",
         "type": "object"
       },
       "PersonMeResponse": {
@@ -1934,6 +2370,81 @@
           "mobile_number"
         ],
         "title": "RevealedMobile",
+        "type": "object"
+      },
+      "RevokedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RevokedRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RevokedList",
+        "type": "object"
+      },
+      "RevokedRow": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "removed_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "removed_from",
+          "revoked_by",
+          "revoked_at"
+        ],
+        "title": "RevokedRow",
         "type": "object"
       },
       "RunRequest": {
@@ -2731,6 +3242,29 @@
           "created_at"
         ],
         "title": "VouchedFreelancer",
+        "type": "object"
+      },
+      "Voucher": {
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "church_name",
+          "live"
+        ],
+        "title": "Voucher",
         "type": "object"
       },
       "VouchingOrg": {
@@ -5868,6 +6402,131 @@
         ]
       }
     },
+    "/api/v1/verifier/applicants": {
+      "get": {
+        "description": "PENDING applicants in scope, the most vouched first. No phone numbers.",
+        "operationId": "applicants_api_v1_verifier_applicants_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicantList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Applicants",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/flagged": {
+      "get": {
+        "operationId": "flagged_api_v1_verifier_flagged_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlaggedList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Flagged",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
     "/api/v1/verifier/group-invitations": {
       "get": {
         "description": "The links into your home group that still work (the tokens are not shown again).",
@@ -5956,6 +6615,321 @@
           }
         ],
         "summary": "Revoke Group Invitation",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/members": {
+      "get": {
+        "description": "Admitted people in scope, by name. Filter by `status` or `home_group_id`.",
+        "operationId": "members_api_v1_verifier_members_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "searcher",
+                    "provider",
+                    "verifier",
+                    "admin",
+                    "owner"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "home_group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Home Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Members",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}": {
+      "get": {
+        "description": "One person in scope, with their history, chain of trust and mobile number. Each call is\nlogged (who looked at whom, never the number); `404` for anyone out of scope.",
+        "operationId": "person_api_v1_verifier_people__person_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Person",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/admit": {
+      "post": {
+        "description": "Admit an applicant as a searcher or a provider. A provider needs a live vouch from\nsomeone besides you (`409 not_enough_vouches`).",
+        "operationId": "admit_api_v1_verifier_people__person_id__admit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdmitResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Admit",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/decline": {
+      "post": {
+        "description": "Close an application. Nobody is revoked, and the person can sign up again.",
+        "operationId": "decline_api_v1_verifier_people__person_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decline",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/revoked": {
+      "get": {
+        "operationId": "revoked_api_v1_verifier_revoked_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokedList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoked",
         "tags": [
           "verifier"
         ]

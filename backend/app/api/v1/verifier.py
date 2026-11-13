@@ -1,7 +1,7 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_person
@@ -13,7 +13,18 @@ from app.schemas.signup import (
     GroupInvitationList,
     GroupInvitationSummary,
 )
-from app.services import signup
+from app.schemas.verifier import (
+    AdmitRequest,
+    AdmitResult,
+    ApplicantList,
+    FlaggedList,
+    Limit,
+    MemberList,
+    Offset,
+    PersonDetail,
+    RevokedList,
+)
+from app.services import admission, signup, verifier_views
 
 router = APIRouter(prefix="/verifier", tags=["verifier"])
 
@@ -50,4 +61,90 @@ def revoke_group_invitation(
     invitation_id: uuid.UUID, leader: Verifier, db: Annotated[Session, Depends(get_session)]
 ) -> Response:
     signup.revoke_invitation(db, leader, invitation_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+Page = Annotated[Limit, Query()]
+From = Annotated[Offset, Query()]
+
+
+@router.get("/applicants")
+def applicants(
+    verifier: Verifier,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Page = 50,
+    offset: From = 0,
+) -> ApplicantList:
+    """PENDING applicants in scope, the most vouched first. No phone numbers."""
+    return verifier_views.applicants(db, verifier, limit, offset)
+
+
+@router.get("/members")
+def members(
+    verifier: Verifier,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Page = 50,
+    offset: From = 0,
+    status_filter: Annotated[
+        Literal["searcher", "provider", "verifier", "admin", "owner"] | None,
+        Query(alias="status"),
+    ] = None,
+    home_group_id: uuid.UUID | None = None,
+) -> MemberList:
+    """Admitted people in scope, by name. Filter by `status` or `home_group_id`."""
+    return verifier_views.members(
+        db, verifier, limit, offset, status=status_filter, home_group_id=home_group_id
+    )
+
+
+@router.get("/revoked")
+def revoked(
+    verifier: Verifier,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Page = 50,
+    offset: From = 0,
+) -> RevokedList:
+    return verifier_views.revoked(db, verifier, limit, offset)
+
+
+@router.get("/flagged")
+def flagged(
+    verifier: Verifier,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Page = 50,
+    offset: From = 0,
+) -> FlaggedList:
+    return verifier_views.flagged(db, verifier, limit, offset)
+
+
+@router.get("/people/{person_id}")
+def person(
+    person_id: uuid.UUID, verifier: Verifier, db: Annotated[Session, Depends(get_session)]
+) -> PersonDetail:
+    """One person in scope, with their history, chain of trust and mobile number. Each call is
+    logged (who looked at whom, never the number); `404` for anyone out of scope."""
+    return verifier_views.person_detail(db, verifier, person_id)
+
+
+@router.post("/people/{person_id}/admit")
+def admit(
+    person_id: uuid.UUID,
+    body: AdmitRequest,
+    verifier: Verifier,
+    db: Annotated[Session, Depends(get_session)],
+) -> AdmitResult:
+    """Admit an applicant as a searcher or a provider. A provider needs a live vouch from
+    someone besides you (`409 not_enough_vouches`)."""
+    admitted = admission.admit(db, verifier, person_id, body.to)
+    return AdmitResult(
+        id=admitted.id, status=admitted.status, requested_status=admitted.requested_status
+    )
+
+
+@router.post("/people/{person_id}/decline", status_code=status.HTTP_204_NO_CONTENT)
+def decline(
+    person_id: uuid.UUID, verifier: Verifier, db: Annotated[Session, Depends(get_session)]
+) -> Response:
+    """Close an application. Nobody is revoked, and the person can sign up again."""
+    admission.decline(db, verifier, person_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
