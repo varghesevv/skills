@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/AuthContext'
 import { t } from '../../i18n'
-import { homePath, PERSON_HOME, PERSON_SIGN_UP } from '../../portals/config'
+import { homePath, PERSON_HOME, PERSON_SIGN_UP, VOUCH_LINK_PREFIX } from '../../portals/config'
 import { errorMessage } from '../../shared/errors'
 import { Alert, PasswordField, TextField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
@@ -14,15 +14,17 @@ export default function PersonSignIn() {
   usePageTitle(t('member.signIn.title'))
   const { user, signInPerson } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Someone sent to sign in by a vouch link goes back to it afterwards, and nowhere else.
+  const from = (location.state as { from?: unknown } | null)?.from
+  const back = typeof from === 'string' && from.startsWith(VOUCH_LINK_PREFIX) ? from : PERSON_HOME
   const [values, setValues] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   if (user) {
-    return (
-      <Navigate to={user.user_type === 'person' ? PERSON_HOME : homePath(user.user_type)} replace />
-    )
+    return <Navigate to={user.user_type === 'person' ? back : homePath(user.user_type)} replace />
   }
 
   async function onSubmit(event: FormEvent) {
@@ -37,7 +39,7 @@ export default function PersonSignIn() {
     setBusy(true)
     try {
       await signInPerson(result.data)
-      navigate(PERSON_HOME, { replace: true })
+      navigate(back, { replace: true })
     } catch (error) {
       setFormError(errorMessage(error))
     } finally {

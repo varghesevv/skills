@@ -1,7 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import type { UserType } from '../api/types'
-import { homePath, loginPathFor, PERSON_HOME, PERSON_SIGN_IN } from '../portals/config'
+import {
+  homePath,
+  loginPathFor,
+  PERSON_HOME,
+  PERSON_SIGN_IN,
+  VOUCH_LINK_PREFIX,
+} from '../portals/config'
 import { LoadingScreen } from '../shared/ui'
 import { useAuth } from './AuthContext'
 
@@ -13,7 +19,8 @@ export function RequireAuth() {
     return (
       <Navigate
         to={
-          location.pathname.startsWith(PERSON_HOME)
+          location.pathname.startsWith(PERSON_HOME) ||
+          location.pathname.startsWith(VOUCH_LINK_PREFIX)
             ? PERSON_SIGN_IN
             : loginPathFor(location.pathname)
         }

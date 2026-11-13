@@ -8,6 +8,7 @@ import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
 import { errorMessage } from '../../shared/errors'
 import { Alert, LoadingScreen, PasswordField, SelectField } from '../../shared/ui'
+import VouchShare from './VouchShare'
 import { usePageTitle } from '../../shared/usePageTitle'
 
 const APPLIED: readonly AppliedStatus[] = ['searcher', 'provider']
@@ -44,6 +45,7 @@ export default function ApplicantHome() {
         </dl>
         <p className="hint">{t('applicant.vouchesHelp')}</p>
       </div>
+      <VouchShare />
       <ChangeChoice
         key={`${person.home_group?.id}-${person.requested_status}`}
         saved={saved}

@@ -10,11 +10,21 @@ import AdminLogin from './pages/login/AdminLogin'
 import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
+import MyVouches from './pages/person/MyVouches'
+import Notifications from './pages/person/Notifications'
 import PersonHome from './pages/person/PersonHome'
 import PersonSignIn from './pages/person/PersonSignIn'
 import SignUp from './pages/person/SignUp'
+import VouchPage from './pages/person/VouchPage'
 import ResetPassword from './pages/ResetPassword'
-import { PERSON_HOME, PERSON_SIGN_IN, PERSON_SIGN_UP, PORTALS } from './portals/config'
+import {
+  PERSON_HOME,
+  PERSON_NOTIFICATIONS,
+  PERSON_SIGN_IN,
+  PERSON_SIGN_UP,
+  PERSON_VOUCHES,
+  PORTALS,
+} from './portals/config'
 import { freelancerRoutes } from './portals/freelancer/routes'
 import { adminRoutes } from './portals/admin/routes'
 import { organisationRoutes } from './portals/organisation/routes'
@@ -51,6 +61,9 @@ export default function App() {
           <Route element={<RequirePerson />}>
             <Route element={<PersonLayout />}>
               <Route path={PERSON_HOME.slice(1)} element={<PersonHome />} />
+              <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
+              <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
+              <Route path="vouch/:token" element={<VouchPage />} />
             </Route>
           </Route>
           <Route element={<RequireOlderAccount />}>

@@ -7,6 +7,10 @@ import { slugOf, term } from '../terminology/terms'
 export const PERSON_HOME = '/member'
 export const PERSON_SIGN_IN = '/sign-in'
 export const PERSON_SIGN_UP = '/sign-up'
+export const PERSON_VOUCHES = '/member/vouches'
+export const PERSON_NOTIFICATIONS = '/member/notifications'
+/** A vouch link opens here; the token is the last part of the address. */
+export const VOUCH_LINK_PREFIX = '/vouch/'
 
 export type NavItem = { to: string; labelKey: StringKey; end?: boolean }
 
