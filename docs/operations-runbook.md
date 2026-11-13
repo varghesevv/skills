@@ -182,9 +182,25 @@ dc run --rm tools python -m app.cli create-owner --name "Full Name" --email you@
     --mobile +971500000000 --church "Church name" --group "Home group name"
 ```
 
-It creates the OWNER, the church (the OWNER is its ADMIN) and the home group (the OWNER leads it) in one transaction, and records an operator change in the status history. It refuses when an OWNER already exists; replacing the OWNER is a handover, or an operator change (roadmap S4.5). In `demo` and `prod` the password must be strong and long enough. The older `create-admin` command stays until the older accounts go (decision D-20).
+It creates the OWNER, the church (the OWNER is its ADMIN) and the home group (the OWNER leads it) in one transaction, and records an operator change in the status history. It refuses when an OWNER already exists; replacing the OWNER is a handover, or an operator change (next section). In `demo` and `prod` the password must be strong and long enough. The older `create-admin` command stays until the older accounts go (decision D-20).
 
 Copy `demo-logins.csv` to your computer with `scp` and delete it from the server. It contains the shared demo password.
+
+### Change the OWNER when they cannot hand over (church trust model)
+
+Normally the OWNER hands the role over in the app (a proposal the chosen ADMIN accepts). When the OWNER is unavailable and cannot, or has breached trust, the operators change the OWNER on the server. Back up the database first (the usual dump, see above): the command changes several people in one transaction, and a refusal changes nothing.
+
+```bash
+dc run --rm tools python -m app.cli change-owner --new-owner minister@example.org \
+    --church-admin new-admin@example.com --group-leader new-leader@example.com
+```
+
+- `--new-owner`: the email of an ADMIN of **another** church. They become the OWNER and stay the ADMIN of their own church.
+- `--church-admin` and `--group-leader`: members of the old OWNER's church and of the group they led, who take those roles over. Each may be left out only when nobody else is in the church (or the group); the old OWNER then keeps that role.
+- `--former-status provider|searcher` (default `provider`): what the old OWNER becomes when they keep neither role.
+- `--revoke-old-owner`: for a breach of trust. The old OWNER is revoked (they cannot keep a role: both successors are needed, or the group closes if they were alone in it), and everyone whose status they set is flagged for re-checking; they keep their access, and the new OWNER (or an ADMIN at that level) re-confirms them in the app (`POST /verifier/people/{id}/reconfirm`).
+
+The command prints the new and the old OWNER's ids and what the old OWNER is now, and how many people are flagged; it prints no password or address. The change is recorded in the status history as an operator change (no person behind it), a handover the old OWNER proposed and the new OWNER has not accepted is cancelled, and the sessions of everyone stay valid (they carry only the person; the new statuses show at once). Not for planned changes: those are a handover in the app.
 
 ### Look at or edit the database with pgAdmin
 
