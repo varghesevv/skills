@@ -21,7 +21,7 @@ Future<void> askForVouchLink(BuildContext context) async {
   );
   final token = vouchTokenFrom(link ?? '');
   if (token != null && context.mounted) {
-    context.push('$vouchLinkPrefix$token');
+    context.push(vouchLinkPath, extra: token);
   }
 }
 
@@ -36,6 +36,15 @@ class _PasteDialog extends ConsumerStatefulWidget {
 
 class _PasteDialogState extends ConsumerState<_PasteDialog> {
   final _link = TextEditingController();
+  bool _invalid = false;
+
+  void _open() {
+    if (vouchTokenFrom(_link.text) == null) {
+      setState(() => _invalid = true);
+      return;
+    }
+    Navigator.of(context).pop(_link.text);
+  }
 
   @override
   void dispose() {
@@ -53,7 +62,13 @@ class _PasteDialogState extends ConsumerState<_PasteDialog> {
         controller: _link,
         autofocus: true,
         autocorrect: false,
-        decoration: InputDecoration(labelText: text('vouch.paste.hint')),
+        decoration: InputDecoration(
+          labelText: text('vouch.paste.hint'),
+          errorText: _invalid ? text('vouch.page.bad') : null,
+        ),
+        onChanged: (_) {
+          if (_invalid) setState(() => _invalid = false);
+        },
       ),
       actions: [
         TextButton(
@@ -62,7 +77,7 @@ class _PasteDialogState extends ConsumerState<_PasteDialog> {
         ),
         FilledButton(
           key: const Key('vouch-link-open'),
-          onPressed: () => Navigator.of(context).pop(_link.text),
+          onPressed: _open,
           child: Text(text('vouch.paste.go')),
         ),
       ],

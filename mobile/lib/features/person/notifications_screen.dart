@@ -42,7 +42,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         setState(() => _error = ref.read(appTextProvider).error(error));
       }
     } finally {
-      ref.invalidate(notificationsProvider);
+      if (mounted) ref.invalidate(notificationsProvider);
     }
   }
 

@@ -4,5 +4,6 @@ const personHome = '/member';
 const personVouches = '/member/vouches';
 const personNotifications = '/member/notifications';
 
-/// A vouch link opens here; the token is the last part of the address.
-const vouchLinkPrefix = '/vouch/';
+/// A vouch link opens here. The token is handed over in the route's in-memory `extra`, so it is
+/// never part of an address that a router log or observer could record.
+const vouchLinkPath = '/vouch';

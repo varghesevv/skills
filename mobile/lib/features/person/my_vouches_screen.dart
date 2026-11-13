@@ -33,8 +33,11 @@ class _MyVouchesScreenState extends ConsumerState<MyVouchesScreen> {
         setState(() => _error = ref.read(appTextProvider).error(error));
       }
     } finally {
-      ref.invalidate(vouchesGivenProvider);
-      if (mounted) setState(() => _busy = false);
+      // The screen may have been left while the request ran; the provider disposes itself then.
+      if (mounted) {
+        ref.invalidate(vouchesGivenProvider);
+        setState(() => _busy = false);
+      }
     }
   }
 

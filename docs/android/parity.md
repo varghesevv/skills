@@ -26,7 +26,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Reset password | `pages/ResetPassword.tsx` | | n/a (v1: the link opens in the browser) | |
 | Applicant home: status, leader, change choice, leave; vouches received and my vouch link | `pages/person/ApplicantHome.tsx` | S2.8, S3.6 | done; the link is made and copied (shown once); the phone's share sheet needs a plugin and comes with the release setup; change of group or status, and leaving with the password asked again | `test/features/person/person_home_test.dart`, `test/features/person/vouching_test.dart` |
 | Revoked notice with log out | `pages/person/PersonHome.tsx` | S2.8 | done | `test/features/person/person_home_test.dart` |
-| Navigation by status (bottom bar and routes) | `App.tsx` | S2.8 | in progress: the router sends a person to `/member` (applicant, revoked, or a welcome for admitted people) and keeps the older accounts on their own tabs; tabs for admitted people come with S3 and S5 | `test/features/person/person_home_test.dart` |
+| Navigation by status (bottom bar and routes) | `App.tsx` | S2.8, S3.6 | in progress: a person lives at `/member` and below it, and the router lets each status reach only its own pages (applicant: home and notifications; admitted: the member pages and the vouch page; revoked: home only); the older accounts keep their own tabs; tabs for admitted people come with S3 and S5 | `test/features/person/person_home_test.dart`, `test/features/person/vouching_test.dart` (the table of who may go where) |
 | Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
 | Log out | `auth/AuthContext.tsx` | | done | `test/features/home/session_test.dart` |
 | Notifications list (mark read) | new | S3.6 | done: a bell with the unread count in the top bar, polled every minute, a list with mark one or all as read | `test/features/person/vouching_test.dart` |
@@ -119,7 +119,7 @@ Status column: "at least X" means that status or higher.
 | GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` (both shapes) and `PUT /me/application` done; `PUT /me` (name, mobile) comes with the profile screen (S5.10) |
 | DELETE `/me` | any | Close account | S2.8 (applicant), S4.10 (others) | done for the applicant home; the settings screen of admitted people later |
 | POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | not started |
-| GET `/me/vouch-link`, POST `/me/vouch-link`; GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link (shown once), who vouched | S3.6 | done |
+| GET `/me/vouch-link`, POST `/me/vouch-link` (makes a new link and ends the one before; there is no `rotate` any more, decision D-25); GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link (shown once), who vouched | S3.6 | done |
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any except REVOKED | Notifications | S3.6 | done |
 | POST `/vouch-links/lookup`, `/vouch-links/vouch` (token in the body); DELETE `/vouches/{id}` | at least SEARCHER | Vouch from a link, withdraw | S3.6 | done |
 | GET `/verifier/applicants`, `/members`, `/revoked`, `/flagged`, `/people/{id}` | at least VERIFIER | Verifier screens | S3.7, S4.10 | not started |

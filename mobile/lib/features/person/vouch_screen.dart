@@ -63,6 +63,11 @@ class _VouchScreenState extends ConsumerState<VouchScreen> {
       person.status != PersonStatus.pending &&
       person.status != PersonStatus.revoked;
 
+  /// Trying again helps when the request never got an answer or the server failed; a link the
+  /// server calls bad, or one's own link, stays so.
+  static bool _canRetry(Object error) =>
+      error is ApiException && (error.status == 0 || error.status >= 500);
+
   Future<void> _lookup() async {
     try {
       final info = await ref
@@ -113,7 +118,23 @@ class _VouchScreenState extends ConsumerState<VouchScreen> {
         kind: BannerKind.info,
       );
     } else if (_lookupError != null) {
-      body = MessageBanner(vouchProblem(text, _lookupError!));
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MessageBanner(vouchProblem(text, _lookupError!)),
+          if (_canRetry(_lookupError!)) ...[
+            const SizedBox(height: 8),
+            FilledButton(
+              key: const Key('vouch-retry'),
+              onPressed: () {
+                setState(() => _lookupError = null);
+                _lookup();
+              },
+              child: Text(text('common.retry')),
+            ),
+          ],
+        ],
+      );
     } else if (info == null) {
       body = Center(
         child: Semantics(

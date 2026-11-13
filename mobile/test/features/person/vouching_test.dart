@@ -346,7 +346,9 @@ void main() {
       });
     }
 
-    testWidgets('a text with no token opens nothing', (tester) async {
+    testWidgets('a text with no token keeps the dialog open and says why', (
+      tester,
+    ) async {
       final app = await pumpApp(
         tester,
         arrange: (adapter, store) {
@@ -361,8 +363,46 @@ void main() {
       await tapKey(tester, 'vouch-for-someone');
       await tester.enterText(find.byKey(const Key('vouch-link-field')), 'hi');
       await tapKey(tester, 'vouch-link-open');
+      expect(find.textContaining('not valid any more'), findsOneWidget);
+      expect(find.byKey(const Key('vouch-link-field')), findsOneWidget);
       expect(app.adapter.count('POST', '/vouch-links/lookup'), 0);
-      expect(find.byKey(const Key('vouch-for-someone')), findsOneWidget);
+    });
+
+    testWidgets('offers to try again when the lookup could not be made', (
+      tester,
+    ) async {
+      final app = await _openLink(
+        tester,
+        fresh('tok'),
+        lookup: FakeReply(503, {
+          'error': {'code': 'service_unavailable', 'message': 'down'},
+        }),
+      );
+      expect(find.byKey(const Key('vouch-retry')), findsOneWidget);
+      app.adapter.setReply(
+        'POST',
+        '/vouch-links/lookup',
+        FakeReply(200, _info()),
+      );
+      await tapKey(tester, 'vouch-retry');
+      expect(
+        find.textContaining('Nadia Applicant from Grace Church'),
+        findsOneWidget,
+      );
+      expect(app.adapter.count('POST', '/vouch-links/lookup'), 2);
+    });
+
+    testWidgets('does not offer to try again for a link that is bad', (
+      tester,
+    ) async {
+      await _openLink(
+        tester,
+        fresh('tok'),
+        lookup: FakeReply(404, {
+          'error': {'code': 'not_found', 'message': 'no'},
+        }),
+      );
+      expect(find.byKey(const Key('vouch-retry')), findsNothing);
     });
 
     test('takes the token from a pasted link, with or without the rest', () {
@@ -396,7 +436,7 @@ void main() {
       final p = of('revoked');
       expect(personMayVisit(p, '/member'), isTrue);
       expect(personMayVisit(p, '/member/notifications'), isFalse);
-      expect(personMayVisit(p, '/vouch/abcdefghij12'), isFalse);
+      expect(personMayVisit(p, '/vouch'), isFalse);
     });
 
     test(
@@ -406,7 +446,7 @@ void main() {
         expect(personMayVisit(p, '/member'), isTrue);
         expect(personMayVisit(p, '/member/notifications'), isTrue);
         expect(personMayVisit(p, '/member/vouches'), isFalse);
-        expect(personMayVisit(p, '/vouch/abcdefghij12'), isFalse);
+        expect(personMayVisit(p, '/vouch'), isFalse);
         expect(personMayVisit(p, '/freelancer/home'), isFalse);
       },
     );
@@ -418,7 +458,7 @@ void main() {
           final p = of(status);
           expect(personMayVisit(p, '/member/vouches'), isTrue);
           expect(personMayVisit(p, '/member/notifications'), isTrue);
-          expect(personMayVisit(p, '/vouch/abcdefghij12'), isTrue);
+          expect(personMayVisit(p, '/vouch'), isTrue);
           expect(personMayVisit(p, '/freelancer/home'), isFalse);
         }
       },

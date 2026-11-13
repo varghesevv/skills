@@ -78,6 +78,7 @@ Backend first, then web and mobile.
 - [x] 3.3 Backend: in-app notifications (outbox, list, mark read) for the events the model names.
 - [x] 3.4 Web: vouch page opened from a link; share my vouch link; vouches received and given (withdraw); notifications (top bar count, list, mark read). Browser run: S6.1.
 - [ ] 3.5 Web: verifier screens: applicants and vouches, admit and decline, members.
+- [x] 3.5a Backend: tell the verifier on each applicant whether admitting as a provider will work now (`can_admit_as_provider`), so the screens show the button only when it does (125).
 - [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
 - [ ] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
 - [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider.

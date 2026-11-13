@@ -38,7 +38,7 @@ bool personMayVisit(PersonMe person, String path) {
   return switch (person.status) {
     PersonStatus.revoked => false,
     PersonStatus.pending => path == personNotifications,
-    _ => path.startsWith('$personHome/') || path.startsWith(vouchLinkPrefix),
+    _ => path.startsWith('$personHome/') || path == vouchLinkPath,
   };
 }
 
@@ -121,9 +121,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
-        path: '$vouchLinkPrefix:token',
-        builder: (context, state) =>
-            VouchScreen(token: state.pathParameters['token']!),
+        path: vouchLinkPath,
+        // Without the token (the app was restarted on this page) there is nothing to show.
+        redirect: (context, state) => state.extra is String ? null : personHome,
+        builder: (context, state) => VouchScreen(token: state.extra! as String),
       ),
       GoRoute(
         path: '/login/:type',
