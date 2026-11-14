@@ -216,7 +216,7 @@ The site starts empty. Open a **second terminal**, `cd skills`, and create peopl
 
 The demo data commands need the demo password from `.env`. The one-liner below reads it for that single command without printing it.
 
-### 5.1 A few ready-made accounts (quickest)
+### 5.1 A few ready-made people (quickest)
 
 ```bash
 docker compose exec \
@@ -224,14 +224,17 @@ docker compose exec \
   api python -m app.cli seed-demo
 ```
 
-(Type it as one line if your terminal does not accept the line breaks.) It prints `Demo users created: 8`. The accounts are:
+(Type it as one line if your terminal does not accept the line breaks.) It creates two churches with two home groups each and 24 people of every status, and prints the named cast:
 
-| Account type | Email |
+| Role | Person |
 |---|---|
-| admin | `admin@example.com` |
-| freelancer | `anita.plumber@example.com`, `joseph.electrician@example.com`, `maria.carer@example.com` |
-| work host | `host.one@example.com`, `host.two@example.com` |
-| organisation | `org.approved@example.com` (can log in), `org.pending@example.com` (waits for admin approval) |
+| OWNER | `olive.owner@demo.example.com` |
+| ADMIN of the second church | `ada.admin@demo.example.com` |
+| leader (VERIFIER) | `lena.leader@demo.example.com` |
+| provider | `priya.provider@demo.example.com` |
+| searcher | `sam.searcher@demo.example.com` |
+| applicant (waiting) | `ann.applicant@demo.example.com` |
+| revoked | `rex.revoked@demo.example.com` |
 
 Password for all of them: the value of `DEMO_USER_PASSWORD` in your `.env`. To read it on your own computer only:
 
@@ -239,19 +242,23 @@ Password for all of them: the value of `DEMO_USER_PASSWORD` in your `.env`. To r
 sed -n 's/^DEMO_USER_PASSWORD=//p' .env
 ```
 
-### 5.2 A large realistic data set (about 260 people)
+If an OWNER exists already (you set up Skills first, section 5.3), that OWNER keeps their church and the demo adds to it; no second OWNER is made. The demo is made once: the history of people is append-only, so it cannot be removed row by row. To start over, wipe the database (`make reset-db`).
 
-This creates 10 organisations (8 approved, 1 pending, 1 rejected), 50 work hosts and 200 freelancers with varied skills, skill levels, timings, languages and nativity, plus vouches, ratings and planned time off. It writes a login list as a CSV file:
+### 5.2 A large realistic data set (about 200 people)
+
+5.1 and 5.2 are alternatives: run one of them on a fresh database. To switch from one to the other, wipe the database first (`make reset-db`).
+
+This creates 3 churches with 3 home groups each and 200 people (providers with varied skills, skill levels, timings, languages and nativity; searchers; applicants with vouches; a few revoked people), plus ratings, number reveals and planned time off, and the named cast of 5.1. It writes a login list as a CSV file:
 
 ```bash
 docker compose exec -T \
   -e DEMO_USER_PASSWORD="$(sed -n 's/^DEMO_USER_PASSWORD=//p' .env)" \
-  api python -m app.cli generate-demo-data --csv - --reset > demo-logins.csv
+  api python -m app.cli generate-demo-data --csv - > demo-logins.csv
 ```
 
-Check it: `wc -l demo-logins.csv` should say `261` (260 accounts plus a header).
+Check it: `wc -l demo-logins.csv` should say `210` (209 people, that is the 200, the OWNER, 2 ADMINs and 6 group leaders, plus a header).
 
-`demo-logins.csv` has the columns `user_type, email, password, name, status`. **It contains the demo password.** Git ignores files with this name, but never share it. `--reset` removes earlier generated people first, so you can run the command again any time for a fresh set. Open the CSV in a spreadsheet and pick any row to log in as that person.
+`demo-logins.csv` has the columns `status, email, password, name, church, home_group`. **It contains the demo password.** Git ignores files with this name, but never share it. The command refuses when demo people already exist (see 5.1 for starting over). Open the CSV in a spreadsheet and pick any row to log in as that person.
 
 ### 5.3 Create your own admin account
 
