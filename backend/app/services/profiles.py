@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, aliased
 
 from app.core.errors import ApiError
 from app.core.security import Principal
-from app.models.labels import FreelancerLabel, Label
+from app.models.labels import FreelancerLabel, Label, PersonLabel
 from app.models.ratings import UserRating
 from app.schemas.common import LabelOut
 from app.schemas.profiles import FreelancerLabelOut
@@ -44,6 +44,25 @@ def freelancer_labels(db: Session, freelancer_id: uuid.UUID) -> list[FreelancerL
         .join(Label, Label.id == FreelancerLabel.label_id)
         .outerjoin(level, level.id == FreelancerLabel.level_label_id)
         .where(FreelancerLabel.freelancer_id == freelancer_id)
+        .order_by(Label.label_type, Label.label_name)
+    ).all()
+    return [
+        FreelancerLabelOut(
+            label=label_out(label), level=label_out(lvl) if lvl is not None else None
+        )
+        for label, lvl in rows
+    ]
+
+
+def person_labels(db: Session, person_id: uuid.UUID) -> list[FreelancerLabelOut]:
+    """The labels a person has chosen for their provider profile, with skill levels."""
+    level = aliased(Label)
+    rows = db.execute(
+        select(Label, level)
+        .select_from(PersonLabel)
+        .join(Label, Label.id == PersonLabel.label_id)
+        .outerjoin(level, level.id == PersonLabel.level_label_id)
+        .where(PersonLabel.person_id == person_id)
         .order_by(Label.label_type, Label.label_name)
     ).all()
     return [

@@ -27,3 +27,22 @@ class FreelancerUnavailability(UUIDPrimaryKeyMixin, Base):
             name="ex_freelancer_unavailability_no_overlap",
         ),
     )
+
+
+class PersonUnavailability(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "person_unavailability"
+
+    person_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    unavailable_from: Mapped[datetime]
+    unavailable_to: Mapped[datetime]
+
+    __table_args__ = (
+        CheckConstraint("unavailable_from < unavailable_to", name="range_valid"),
+        # One person cannot have two overlapping unavailability periods (needs btree_gist).
+        ExcludeConstraint(
+            ("person_id", "="),
+            (text("tstzrange(unavailable_from, unavailable_to)"), "&&"),
+            using="gist",
+            name="ex_person_unavailability_no_overlap",
+        ),
+    )

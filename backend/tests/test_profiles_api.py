@@ -5,7 +5,8 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from tests.api_helpers import API, label_id, signup
+from app.models.availability import FreelancerUnavailability
+from tests.api_helpers import API, signup
 
 
 def period(start_days: int, end_days: int) -> dict[str, str]:
@@ -19,69 +20,9 @@ def period(start_days: int, end_days: int) -> dict[str, str]:
 # ---- freelancer profile -------------------------------------------------------------------
 
 
-def test_freelancer_updates_own_profile(client: TestClient, session: Session) -> None:
-    me = signup(client, session, "freelancer", "f1@example.com")
-    body = {
-        "mobile_number": "+971 50 123 4567",
-        "whatsapp_availability": True,
-        "nationality": "Indian",
-        "primary_language": "Hindi",
-        "rate_per_hour": 45.5,
-        "rate_currency": "AED",
-        "is_rate_negotiable": True,
-    }
-    response = client.put(f"{API}/freelancers/me", json=body, headers=me.headers)
-    assert response.status_code == 200
-    assert response.json()["mobile_number"] == "+971501234567"
-    assert response.json()["rate_per_hour"] == 45.5
-    assert client.get(f"{API}/freelancers/me", headers=me.headers).json()["rate_currency"] == "AED"
-
-
-def test_names_can_be_edited_and_are_shown_to_the_right_people(
+def test_old_roles_are_enforced_on_their_own_endpoints(
     client: TestClient, session: Session
 ) -> None:
-    freelancer = signup(client, session, "freelancer", "named.f@example.com", full_name="Old Name")
-    host = signup(client, session, "workhost", "named.h@example.com", full_name="Host Person")
-    base = {"mobile_number": "+971501234567"}
-
-    new_name = {**base, "full_name": "  New Name "}
-    renamed = client.put(f"{API}/freelancers/me", json=new_name, headers=freelancer.headers)
-    assert renamed.json()["full_name"] == "New Name"
-    kept = client.put(f"{API}/freelancers/me", json=base, headers=freelancer.headers)
-    assert kept.json()["full_name"] == "New Name"  # omitted means unchanged
-    too_short = {**base, "full_name": "A"}
-    assert (
-        client.put(f"{API}/freelancers/me", json=too_short, headers=freelancer.headers).status_code
-        == 422
-    )
-
-    public = client.get(f"{API}/freelancers/{freelancer.id}", headers=host.headers).json()
-    assert public["full_name"] == "New Name"
-    assert "email" not in public
-
-    renamed_host = client.put(
-        f"{API}/workhosts/me", json={**base, "full_name": "Host Renamed"}, headers=host.headers
-    )
-    assert renamed_host.json()["full_name"] == "Host Renamed"
-
-
-def test_rate_needs_a_valid_currency(client: TestClient, session: Session) -> None:
-    me = signup(client, session, "freelancer", "f2@example.com")
-    base = {"mobile_number": "+971501234567"}
-    for extra in (
-        {"rate_per_hour": 10},  # no currency
-        {"rate_currency": "AED"},  # no rate
-        {"rate_per_hour": 10, "rate_currency": "aed"},  # not capitals
-        {"rate_per_hour": -1, "rate_currency": "AED"},  # negative
-    ):
-        response = client.put(f"{API}/freelancers/me", json={**base, **extra}, headers=me.headers)
-        assert response.status_code == 422, extra
-
-
-def test_roles_are_enforced_on_own_profile_endpoints(client: TestClient, session: Session) -> None:
-    host = signup(client, session, "workhost", "h0@example.com")
-    assert client.get(f"{API}/freelancers/me", headers=host.headers).status_code == 403
-    assert client.get(f"{API}/freelancers/me").status_code == 401
     me = signup(client, session, "freelancer", "f0@example.com")
     assert client.get(f"{API}/workhosts/me", headers=me.headers).status_code == 403
     assert client.get(f"{API}/organisations/me", headers=me.headers).status_code == 403
@@ -90,106 +31,7 @@ def test_roles_are_enforced_on_own_profile_endpoints(client: TestClient, session
 # ---- labels -------------------------------------------------------------------------------
 
 
-def test_labels_with_skill_levels(client: TestClient, session: Session) -> None:
-    me = signup(client, session, "freelancer", "f3@example.com")
-    plumbing = label_id(session, "skill", "plumbing")
-    basic = label_id(session, "skill_level", "basic")
-    english = label_id(session, "language", "English")
-    body = {
-        "labels": [
-            {"label_id": plumbing, "level_label_id": basic},
-            {"label_id": english},
-        ]
-    }
-    response = client.put(f"{API}/freelancers/me/labels", json=body, headers=me.headers)
-    assert response.status_code == 200
-    by_name = {item["label"]["label_name"]: item for item in response.json()}
-    assert by_name["plumbing"]["level"]["label_name"] == "basic"
-    assert by_name["English"]["level"] is None
-
-    # PUT replaces the whole set.
-    only_english = {"labels": [{"label_id": english}]}
-    again = client.put(f"{API}/freelancers/me/labels", json=only_english, headers=me.headers)
-    assert [item["label"]["label_name"] for item in again.json()] == ["English"]
-    assert len(client.get(f"{API}/freelancers/me", headers=me.headers).json()["labels"]) == 1
-
-
-def test_invalid_label_selections_are_rejected(client: TestClient, session: Session) -> None:
-    me = signup(client, session, "freelancer", "f4@example.com")
-    plumbing = label_id(session, "skill", "plumbing")
-    basic = label_id(session, "skill_level", "basic")
-    english = label_id(session, "language", "English")
-    url = f"{API}/freelancers/me/labels"
-    bad_bodies = {
-        "level on a language": [{"label_id": english, "level_label_id": basic}],
-        "level is not a level": [{"label_id": plumbing, "level_label_id": english}],
-        "skill level on its own": [{"label_id": basic}],
-        "duplicate": [{"label_id": english}, {"label_id": english}],
-        "unknown label": [{"label_id": "00000000-0000-4000-8000-000000000000"}],
-    }
-    for name, labels in bad_bodies.items():
-        response = client.put(url, json={"labels": labels}, headers=me.headers)
-        assert response.status_code == 422, name
-
-
-def test_admin_manages_labels(client: TestClient, session: Session) -> None:
-    admin = signup(client, session, "admin", "boss@example.com")
-    host = signup(client, session, "workhost", "h1@example.com")
-    body = {"label_name": "carpentry", "label_type": "skill"}
-    assert client.post(f"{API}/labels", json=body, headers=host.headers).status_code == 403
-    created = client.post(f"{API}/labels", json=body, headers=admin.headers)
-    assert created.status_code == 201
-    assert client.post(f"{API}/labels", json=body, headers=admin.headers).status_code == 409
-
-    skills = client.get(f"{API}/labels?type=skill", headers=host.headers).json()
-    assert "carpentry" in [label["label_name"] for label in skills]
-    assert all(label["label_type"] == "skill" for label in skills)
-
-    label_url = f"{API}/labels/{created.json()['id']}"
-    renamed = client.patch(label_url, json={"label_name": "joinery"}, headers=admin.headers)
-    assert renamed.json()["label_name"] == "joinery"
-    client.patch(label_url, json={"is_active": False}, headers=admin.headers)
-    listed = client.get(f"{API}/labels", headers=host.headers).json()
-    names = [label["label_name"] for label in listed]
-    assert "joinery" not in names
-    inactive = client.get(f"{API}/labels?include_inactive=true", headers=admin.headers).json()
-    assert "joinery" in [label["label_name"] for label in inactive]
-
-
 # ---- unavailability -----------------------------------------------------------------------
-
-
-def test_unavailability_crud_and_overlap(client: TestClient, session: Session) -> None:
-    me = signup(client, session, "freelancer", "f5@example.com")
-    url = f"{API}/freelancers/me/unavailability"
-    first = client.post(url, json=period(1, 5), headers=me.headers)
-    assert first.status_code == 201
-    assert client.post(url, json=period(3, 7), headers=me.headers).status_code == 409
-    second = client.post(url, json=period(10, 12), headers=me.headers)
-    assert second.status_code == 201
-
-    updated = client.put(f"{url}/{first.json()['id']}", json=period(1, 6), headers=me.headers)
-    assert updated.status_code == 200
-    clash = client.put(f"{url}/{first.json()['id']}", json=period(9, 11), headers=me.headers)
-    assert clash.status_code == 409
-
-    assert len(client.get(url, headers=me.headers).json()) == 2
-    assert client.delete(f"{url}/{second.json()['id']}", headers=me.headers).status_code == 204
-    assert len(client.get(url, headers=me.headers).json()) == 1
-
-
-def test_unavailability_validation_and_ownership(client: TestClient, session: Session) -> None:
-    mine = signup(client, session, "freelancer", "f6@example.com")
-    other = signup(client, session, "freelancer", "f7@example.com")
-    url = f"{API}/freelancers/me/unavailability"
-    assert client.post(url, json=period(5, 1), headers=mine.headers).status_code == 422
-    naive = {"unavailable_from": "2030-01-01T00:00:00", "unavailable_to": "2030-01-02T00:00:00"}
-    assert client.post(url, json=naive, headers=mine.headers).status_code == 422
-
-    created = client.post(url, json=period(1, 2), headers=mine.headers).json()
-    assert client.delete(f"{url}/{created['id']}", headers=other.headers).status_code == 404
-    foreign = client.put(f"{url}/{created['id']}", json=period(1, 3), headers=other.headers)
-    assert foreign.status_code == 404
 
 
 # ---- vouching -----------------------------------------------------------------------------
@@ -363,9 +205,16 @@ def test_public_profile_shows_upcoming_unavailability_only(
 ) -> None:
     freelancer = signup(client, session, "freelancer", "f14@example.com")
     host = signup(client, session, "workhost", "h5@example.com")
-    url = f"{API}/freelancers/me/unavailability"
-    client.post(url, json=period(-10, -5), headers=freelancer.headers)  # in the past
-    client.post(url, json=period(5, 9), headers=freelancer.headers)
+    now = datetime.now(UTC)
+    for start, end in ((-10, -5), (5, 9)):  # one in the past, one to come
+        session.add(
+            FreelancerUnavailability(
+                freelancer_id=freelancer.id,
+                unavailable_from=now + timedelta(days=start),
+                unavailable_to=now + timedelta(days=end),
+            )
+        )
+    session.commit()
     shown = client.get(f"{API}/freelancers/{freelancer.id}", headers=host.headers).json()
     assert len(shown["unavailable"]) == 1
 

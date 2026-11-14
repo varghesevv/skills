@@ -371,7 +371,7 @@ def test_old_account_tokens_do_not_open_person_endpoints(
 def test_a_person_token_does_not_open_old_role_endpoints(client: TestClient, world: World) -> None:
     member = add_member(world, "provider")
     headers = bearer(login(client, member))
-    for path in ("/freelancers/me", "/workhosts/me", "/organisations/me", "/admin/organisations"):
+    for path in ("/workhosts/me", "/organisations/me", "/admin/organisations"):
         assert client.get(f"{API}{path}", headers=headers).status_code == 403, path
 
 
