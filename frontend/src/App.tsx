@@ -10,6 +10,7 @@ import {
   RequirePerson,
   RequireProvider,
   RequireRole,
+  RequireSearcher,
 } from './auth/guards'
 import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
@@ -26,6 +27,9 @@ import AvailabilityPage from './portals/freelancer/AvailabilityPage'
 import LabelsPage from './portals/freelancer/LabelsPage'
 import ProfilePage from './portals/freelancer/ProfilePage'
 import Frame from './pages/person/provider/Frame'
+import ProviderPage from './pages/person/search/ProviderPage'
+import RatingsGiven from './pages/person/search/RatingsGiven'
+import SearchPage from './pages/person/search/SearchPage'
 import MyRatings from './pages/person/provider/MyRatings'
 import GroupInvitations from './pages/person/leader/GroupInvitations'
 import HandoverPage from './pages/person/owner/Handover'
@@ -57,7 +61,10 @@ import {
   OWNER_LABELS,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
+  PERSON_PROVIDERS,
   PERSON_RATINGS,
+  PERSON_RATINGS_GIVEN,
+  PERSON_SEARCH,
   PERSON_SKILLS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
@@ -114,6 +121,11 @@ export default function App() {
               <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
               <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
               <Route path="vouch/:token" element={<VouchPage />} />
+              <Route element={<RequireSearcher />}>
+                <Route path={PERSON_SEARCH.slice(1)} element={<SearchPage />} />
+                <Route path={`${PERSON_PROVIDERS.slice(1)}/:id`} element={<ProviderPage />} />
+                <Route path={PERSON_RATINGS_GIVEN.slice(1)} element={<RatingsGiven />} />
+              </Route>
               <Route element={<RequireProvider />}>
                 <Route element={<Frame />}>
                   <Route path={PERSON_PROFILE.slice(1)} element={<ProfilePage />} />

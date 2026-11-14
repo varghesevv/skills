@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 
 import { apiError, json, makeMe, renderApp, signedInAs } from '../../testUtils'
 import { ALL_LABELS } from '../freelancer/testData'
-import { PERSON_ID, makePerson, makeResult, page } from '../workhost/testData'
+import { page } from '../../pages/person/search/testData'
+
+const PERSON_ID = '22222222-2222-2222-2222-222222222222'
 
 const ui = () => userEvent.setup({ delay: null })
 const ORG_ID = '33333333-3333-3333-3333-333333333333'
@@ -45,7 +47,7 @@ describe('navigation', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Dashboard', 'Vouched freelancers', 'Find freelancers', 'Reports', 'Profile'])
+    ).toEqual(['Dashboard', 'Vouched freelancers', 'Reports', 'Profile'])
   })
 })
 
@@ -145,75 +147,6 @@ describe('vouched freelancers', () => {
     renderApp('/organisation/freelancers')
     await user.click(await screen.findByRole('button', { name: 'Vouch again: Anita Sharma' }))
     await waitFor(() => expect(api.count(`POST ${PERSON_LINK}`)).toBe(1))
-  })
-})
-
-describe('finding someone to vouch for', () => {
-  const SEARCH = 'GET /search/freelancers?page=1&page_size=12'
-  const DETAIL = `GET /freelancers/${PERSON_ID}`
-  const RATINGS = `GET /freelancers/${PERSON_ID}/ratings?page=1&page_size=10`
-
-  it('links search results to the organisation detail page', async () => {
-    asOrg({ [SEARCH]: () => json(200, page([makeResult()])) })
-    renderApp('/organisation/search')
-    const link = await screen.findByRole('link', { name: 'Anita Sharma' })
-    expect(link).toHaveAttribute('href', `/organisation/freelancers/${PERSON_ID}`)
-  })
-
-  it('vouches from the detail page and hides rating and contact details', async () => {
-    const user = ui()
-    const api = asOrg({
-      [DETAIL]: () => json(200, makePerson()),
-      [RATINGS]: () => json(200, page([], 0)),
-      [`POST ${PERSON_LINK}`]: () => json(201, vouched({ status: 'pending' })),
-    })
-    renderApp(`/organisation/freelancers/${PERSON_ID}`)
-    expect(await screen.findByRole('heading', { name: 'Anita Sharma' })).toBeVisible()
-    expect(screen.queryByText('Contact')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Score (1 to 10)')).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Vouch for this freelancer' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('Vouch sent.')
-    expect(api.count(`POST ${PERSON_LINK}`)).toBe(1)
-  })
-
-  it('shows a clear message when the vouch already exists', async () => {
-    const user = ui()
-    asOrg({
-      [DETAIL]: () => json(200, makePerson()),
-      [RATINGS]: () => json(200, page([], 0)),
-      [`POST ${PERSON_LINK}`]: () => apiError(409, 'already_vouched'),
-    })
-    renderApp(`/organisation/freelancers/${PERSON_ID}`)
-    await user.click(await screen.findByRole('button', { name: 'Vouch for this freelancer' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'You already vouch for this freelancer.',
-    )
-  })
-
-  it('does not offer to vouch until the organisation is approved', async () => {
-    asOrg(
-      {
-        [DETAIL]: () => json(200, makePerson()),
-        [RATINGS]: () => json(200, page([], 0)),
-      },
-      { ...org, approval_status: 'pending' },
-    )
-    renderApp(`/organisation/freelancers/${PERSON_ID}`)
-    expect(await screen.findByText(/must be approved by an admin/)).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Vouch for this freelancer' })).toBeDisabled()
-  })
-
-  it('says so when the organisation already vouches', async () => {
-    asOrg({
-      [DETAIL]: () => json(200, makePerson({ vouched_by: [{ org_id: ORG_ID, org_name: 'Acme' }] })),
-      [RATINGS]: () => json(200, page([], 0)),
-    })
-    renderApp(`/organisation/freelancers/${PERSON_ID}`)
-    expect(await screen.findByText('You vouch for this freelancer.')).toBeVisible()
-    expect(
-      screen.queryByRole('button', { name: 'Vouch for this freelancer' }),
-    ).not.toBeInTheDocument()
   })
 })
 

@@ -192,7 +192,8 @@ export type SearchResult = {
   is_rate_negotiable: boolean
   average_rating: number | null
   rating_count: number
-  vouch_count: number
+  church: IdName
+  home_group: IdName
   skills: { name: string; level: string | null }[]
   languages: string[]
   timings: string[]
@@ -201,8 +202,8 @@ export type SearchResult = {
 
 export type GivenRating = {
   id: string
-  freelancer_id: string
-  freelancer_name: string | null
+  provider_id: string
+  provider_name: string | null
   rating: number
   comment: string | null
   rated_on: string
@@ -221,7 +222,8 @@ export type FreelancerPublic = {
   labels: FreelancerLabel[]
   average_rating: number | null
   rating_count: number
-  vouched_by: { org_id: string; org_name: string }[]
+  church: IdName
+  home_group: IdName
   unavailable: Unavailability[]
   my_rating: GivenRating | null
 }

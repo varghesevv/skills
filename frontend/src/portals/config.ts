@@ -19,6 +19,9 @@ export const OWNER_HANDOVER = '/member/handover'
 export const OWNER_VIEWS = '/member/views'
 export const OWNER_CHURCHES = '/member/churches'
 export const ADMIN_GROUPS = '/member/groups'
+export const PERSON_SEARCH = '/member/search'
+export const PERSON_PROVIDERS = '/member/providers'
+export const PERSON_RATINGS_GIVEN = '/member/ratings-given'
 export const PERSON_PROFILE = '/member/profile'
 export const PERSON_SKILLS = '/member/skills'
 export const PERSON_AVAILABILITY = '/member/availability'
@@ -66,8 +69,6 @@ export const PORTALS: readonly Portal[] = [
     leadKey: 'dashboard.lead.workhost',
     nav: [
       { to: `/${slugOf('workhost')}`, labelKey: 'nav.dashboard', end: true },
-      { to: `/${slugOf('workhost')}/search`, labelKey: 'nav.search' },
-      { to: `/${slugOf('workhost')}/ratings`, labelKey: 'nav.given' },
       { to: `/${slugOf('workhost')}/profile`, labelKey: 'nav.profile' },
     ],
   },
@@ -79,7 +80,6 @@ export const PORTALS: readonly Portal[] = [
     nav: [
       { to: `/${slugOf('organisation')}`, labelKey: 'nav.dashboard', end: true },
       { to: `/${slugOf('organisation')}/${term('freelancers_path')}`, labelKey: 'nav.vouched' },
-      { to: `/${slugOf('organisation')}/search`, labelKey: 'nav.search' },
       { to: `/${slugOf('organisation')}/reports`, labelKey: 'nav.reports' },
       { to: `/${slugOf('organisation')}/profile`, labelKey: 'nav.profile' },
     ],
