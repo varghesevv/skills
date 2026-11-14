@@ -7,7 +7,9 @@ import { t } from '../i18n'
 import { NOTIFICATIONS_KEY, NOTIFICATIONS_POLL_MS } from '../pages/person/Notifications'
 import {
   LEADER_APPLICANTS,
+  LEADER_FLAGGED,
   LEADER_MEMBERS,
+  LEADER_REVOKED,
   PERSON_HOME,
   PERSON_NOTIFICATIONS,
 } from '../portals/config'
@@ -41,6 +43,12 @@ export default function PersonLayout() {
             </Link>
             <Link className="btn btn-quiet" to={LEADER_MEMBERS}>
               {t('leader.nav.members')}
+            </Link>
+            <Link className="btn btn-quiet" to={LEADER_FLAGGED}>
+              {t('leader.nav.flagged')}
+            </Link>
+            <Link className="btn btn-quiet" to={LEADER_REVOKED}>
+              {t('leader.nav.revoked')}
             </Link>
           </nav>
         )}

@@ -334,6 +334,26 @@ export type MemberRow = {
   status_set_by: { name: string } | null
   flagged_for_recheck: boolean
 }
+export type RevokedRow = {
+  id: string
+  full_name: string
+  removed_from: IdName | null
+  revoked_by: { name: string } | null
+  revoked_at: string | null
+}
+export type FlaggedRow = {
+  id: string
+  full_name: string
+  status: PersonStatus
+  home_group: IdName | null
+  status_set_by: { name: string } | null
+}
+export type StatusResult = {
+  id: string
+  status: PersonStatus
+  home_group_id: string | null
+  flagged_for_recheck: boolean
+}
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string

@@ -3,10 +3,13 @@ import type {
   AdmitResult,
   AppliedStatus,
   ApplicantRow,
+  FlaggedRow,
   ChurchSummary,
   HomeGroupSummary,
   InvitationInfo,
   MemberRow,
+  RevokedRow,
+  StatusResult,
   NotificationList,
   Paged,
   PersonDetail,
@@ -133,6 +136,35 @@ export function admitPerson(id: string, to: AppliedStatus) {
 
 export function declinePerson(id: string) {
   return request<void>(`/verifier/people/${id}/decline`, { method: 'POST' })
+}
+
+export function fetchRevoked(page: number) {
+  return request<Paged<RevokedRow>>(`/verifier/revoked?${paging(page)}`)
+}
+
+export function fetchFlagged(page: number) {
+  return request<Paged<FlaggedRow>>(`/verifier/flagged?${paging(page)}`)
+}
+
+/** Revoke someone below you. A leader needs a successor first, which is for the ADMIN screens. */
+export function revokePerson(id: string) {
+  return request<StatusResult>(`/verifier/people/${id}/status`, {
+    method: 'PUT',
+    body: { to: 'revoked' },
+  })
+}
+
+/** Bring a revoked person back into a home group of their church. */
+export function reinstatePerson(id: string, to: 'searcher' | 'provider', homeGroupId: string) {
+  return request<StatusResult>(`/verifier/people/${id}/status`, {
+    method: 'PUT',
+    body: { to, home_group_id: homeGroupId },
+  })
+}
+
+/** Clear a re-check flag: the caller becomes the new link in the person's chain of trust. */
+export function reconfirmPerson(id: string) {
+  return request<StatusResult>(`/verifier/people/${id}/reconfirm`, { method: 'POST' })
 }
 
 /** A searcher asks to become a provider; they stay a searcher while they collect vouches. */
