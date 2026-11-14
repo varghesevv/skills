@@ -20,7 +20,7 @@ Application status (church, home group, who the leader is, what they applied for
 A single page saying the account has no access, with log out and password reset.
 
 ### Searcher (SEARCHER and above)
-Dashboard; profile; provider search with filters and sorting; provider detail; rate a provider; my ratings given; vouch for applicants through links; the vouches I gave, with withdraw until the person is admitted (`/member/vouches`); offer my skills (a button on the home of a searcher; after it the home shows the request, the vouches so far and the person's own vouch link, and they go on searching); request to start a home group; move requests that concern me; notifications (list and mark as read, `/member/notifications`; an applicant has them too, a revoked person does not).
+Dashboard; profile; provider search with filters and sorting; provider detail; rate a provider; my ratings given; vouch for applicants through links; ask to start a home group (`/member/group-requests`, for every admitted member; the approval is in the ADMIN section and the whole screen is described under the Verifier section, S4.7b); the vouches I gave, with withdraw until the person is admitted (`/member/vouches`); offer my skills (a button on the home of a searcher; after it the home shows the request, the vouches so far and the person's own vouch link, and they go on searching); request to start a home group; move requests that concern me; notifications (list and mark as read, `/member/notifications`; an applicant has them too, a revoked person does not).
 
 ### Provider (PROVIDER and above)
 Everything a searcher has, plus rate and currency; labels (skills with levels, languages, timings, nativity); unavailability calendar; my ratings received; who vouched for me.

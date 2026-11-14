@@ -8,6 +8,7 @@ import type {
   GroupRequestCreated,
   ChurchSummary,
   HomeGroupSummary,
+  IdName,
   InvitationInfo,
   MemberRow,
   RevokedRow,
@@ -186,7 +187,7 @@ export function askForGroup(groupName: string, successorId?: string) {
 }
 
 export function approveGroupRequest(id: string, successorId?: string) {
-  return request<{ group: { id: string; name: string } }>(`/group-requests/${id}/approve`, {
+  return request<{ group: IdName }>(`/group-requests/${id}/approve`, {
     method: 'POST',
     body: successorId ? { successor_id: successorId } : {},
   })

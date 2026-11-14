@@ -84,7 +84,8 @@ function AskForm({ decides }: { decides: boolean }) {
   const [name, setName] = useState('')
   const [successor, setSuccessor] = useState('')
   const [done, setDone] = useState<string | null>(null)
-  const leads = decides && person.home_group !== null
+  // The group they lead: an ADMIN or the OWNER may belong to a group someone else leads.
+  const leads = decides && person.home_group !== null && person.leader?.name === person.full_name
   const candidates = useCandidates(leads, person.home_group?.id)
   const ask = useMutation({
     mutationFn: () => askForGroup(name.trim(), leads && successor ? successor : undefined),
@@ -109,7 +110,7 @@ function AskForm({ decides }: { decides: boolean }) {
   })
   const own = (candidates.data ?? []).filter((m) => m.id !== person.id)
   // Someone must lead the group they leave, unless they are alone in it.
-  const needsChoice = leads && (candidates.isPending || own.length > 0)
+  const needsChoice = leads && (candidates.isPending || candidates.isError || own.length > 0)
   return (
     <form
       className="form-grid"
@@ -136,6 +137,14 @@ function AskForm({ decides }: { decides: boolean }) {
         onChange={setName}
         maxLength={200}
       />
+      {leads && candidates.isError && (
+        <Alert kind="error">
+          <p>{errorMessage(candidates.error)}</p>
+          <button type="button" className="btn btn-quiet" onClick={() => void candidates.refetch()}>
+            {t('common.retry')}
+          </button>
+        </Alert>
+      )}
       {leads && own.length > 0 && (
         <SelectField
           label={t('groupRequests.successor')}
@@ -211,7 +220,9 @@ function Row({
   )
   // Someone must take over the group the requester leaves, unless they are its only member.
   const others = (candidates.data ?? []).filter((m) => m.id !== request.requester.id)
-  const needsChoice = request.requester_leads_a_group && (candidates.isPending || others.length > 0)
+  const needsChoice =
+    request.requester_leads_a_group &&
+    (candidates.isPending || candidates.isError || others.length > 0)
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['group-requests'] })
     await queryClient.invalidateQueries({ queryKey: ['members'] })
@@ -261,12 +272,24 @@ function Row({
               <p className="hint span-2">
                 {t('groupRequests.leads', { name: request.requester.name })}
               </p>
+              {candidates.isError && (
+                <Alert kind="error">
+                  <p>{errorMessage(candidates.error)}</p>
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    onClick={() => void candidates.refetch()}
+                  >
+                    {t('common.retry')}
+                  </button>
+                </Alert>
+              )}
               <SelectField
                 label={t('groupRequests.successorOf', { name: request.requester.name })}
                 name={`successor-${request.id}`}
                 value={successor}
                 onChange={setSuccessor}
-                options={candidateOptions(others, others.length === 0 && !candidates.isPending)}
+                options={candidateOptions(others, candidates.isSuccess && others.length === 0)}
               />
             </>
           )}

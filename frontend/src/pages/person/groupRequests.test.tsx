@@ -260,7 +260,8 @@ describe('more refusals and failures', () => {
     const user = userEvent.setup({ delay: null })
     const api = signedInAs(makeMe(), {
       ...quiet,
-      'GET /me': () => json(200, makePerson({ status: 'admin' })),
+      'GET /me': () =>
+        json(200, makePerson({ status: 'admin', leader: { name: 'Nadia Applicant' } })),
       [LIST]: () => json(200, { items: [], total: 0 }),
       [OWN_MEMBERS]: () =>
         json(200, {
@@ -304,6 +305,60 @@ describe('more refusals and failures', () => {
       group_name: 'Harbour',
       successor_id: 'p7',
     })
+  })
+
+  it('asks no successor of an ADMIN who does not lead the group they belong to', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(makeMe(), {
+      ...quiet,
+      'GET /me': () => json(200, makePerson({ status: 'admin', leader: { name: 'Lena Leader' } })),
+      [LIST]: () => json(200, { items: [], total: 0 }),
+      'POST /group-requests': () =>
+        json(201, {
+          request: { ...REQUEST, state: 'approved' },
+          group: { id: 'g2', name: 'Harbour' },
+        }),
+    })
+    renderApp('/member/group-requests')
+    await user.type(await screen.findByLabelText(/^Name of the/), 'Harbour')
+    expect(screen.queryByLabelText(/Leads your current/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Start it' }))
+    await screen.findByText(/Harbour was started/)
+    expect(api.count('GET /verifier/members?limit=50&offset=0&home_group_id=group-1')).toBe(0)
+    expect(api.calls.find((c) => c.key === 'POST /group-requests')?.body).toEqual({
+      group_name: 'Harbour',
+    })
+  })
+
+  it('keeps Approve off and offers a retry when the group’s members cannot be loaded', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    signedInAs(makeMe(), {
+      ...as('admin'),
+      [LIST]: () => json(200, { items: [{ ...REQUEST, requester_leads_a_group: true }], total: 1 }),
+      [GROUP_MEMBERS]: () =>
+        ++attempts === 1
+          ? apiError(503, 'service_unavailable')
+          : json(200, {
+              items: [
+                {
+                  id: 'p7',
+                  full_name: 'Sam Searcher',
+                  status: 'searcher',
+                  home_group: { id: 'g1', name: 'Riverside' },
+                  status_set_by: null,
+                  flagged_for_recheck: false,
+                },
+              ],
+              total: 1,
+            }),
+    })
+    renderApp('/member/group-requests')
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    expect(screen.getByRole('button', { name: 'Approve Harbour' })).toBeDisabled()
+    expect(screen.queryByRole('option', { name: /Nobody/ })).toBeNull()
+    await user.click(retry)
+    expect(await screen.findByRole('option', { name: 'Sam Searcher · Riverside' })).toBeVisible()
   })
 
   it('still says the group was started when refreshing who they are fails', async () => {
