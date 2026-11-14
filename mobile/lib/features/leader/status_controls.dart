@@ -201,7 +201,12 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
               onPressed: _busy
                   ? null
                   : () {
-                      setState(() => _confirming = true);
+                      setState(() {
+                        _confirming = true;
+                        // A list and a choice from an earlier opening must not be offered again.
+                        _members = null;
+                        _successor = '';
+                      });
                       if (_isVerifier) _loadMembers();
                     },
               child: Text(text('leader.revoke.open', name)),

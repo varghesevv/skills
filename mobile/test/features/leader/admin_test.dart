@@ -235,6 +235,43 @@ void main() {
       expect(find.text('No change: they keep their status'), findsOneWidget);
     });
 
+    testWidgets(
+      'sends what the form shows: keep, for an ADMIN who hands on their group',
+      (tester) async {
+        final app = await _groupsScreen(
+          tester,
+          arrange: (a) => a
+            ..reply(
+              'GET',
+              '/verifier/members',
+              FakeReply(
+                200,
+                _page([
+                  _member('p1', 'Lena Leader', 'admin'),
+                  _member('p2', 'Sam Searcher', 'searcher'),
+                ]),
+              ),
+            )
+            ..reply(
+              'PUT',
+              '/home-groups/group-1/leader',
+              FakeReply(200, {
+                'group': {'id': 'group-1', 'name': 'Riverside'},
+                'leader': {'id': 'p2', 'name': 'Sam Searcher'},
+              }),
+            ),
+        );
+        await _openReplace(tester);
+        await _choose(tester, 'successor-group-1', 'Sam Searcher · Work host');
+        await tapKey(tester, 'change-group-1');
+        final put = app.adapter.seen.firstWhere((r) => r.method == 'PUT');
+        expect(put.body, {
+          'successor_id': 'p2',
+          'former_leader_status': 'keep',
+        });
+      },
+    );
+
     testWidgets('offers a namesake who is not the leader', (tester) async {
       await _groupsScreen(
         tester,
@@ -620,6 +657,34 @@ void main() {
         );
         await tapKey(tester, 'retry-members');
         expect(find.byKey(const Key('revoke-successor')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'offers no earlier successor when the question is opened again',
+      (tester) async {
+        await person(
+          tester,
+          status: 'verifier',
+          arrange: (a) => a.setReply(
+            'GET',
+            '/verifier/members',
+            FakeReply(
+              200,
+              _page([
+                _member('p2', 'Sam Searcher', 'verifier'),
+                _member('p3', 'Pia Provider', 'provider'),
+              ]),
+            ),
+          ),
+        );
+        await tapKey(tester, 'revoke-open');
+        await _choose(tester, 'revoke-successor', 'Pia Provider · Freelancer');
+        await tapKey(tester, 'revoke-cancel');
+        await tapKey(tester, 'revoke-open');
+        final confirm = find.byKey(const Key('revoke-confirm'));
+        await tester.ensureVisible(confirm);
+        expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
       },
     );
 

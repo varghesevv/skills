@@ -151,6 +151,27 @@ class _GroupTileState extends ConsumerState<_GroupTile> {
     _error = null;
   });
 
+  /// The members' answer decides what the old leader can become: an ADMIN or the OWNER keep their
+  /// status, a VERIFIER becomes a provider or a searcher; without their row, all three stay.
+  List<String> get _formerOptions {
+    final members = _members;
+    final leader = members?.where(_isLeaderRow).firstOrNull;
+    if (leader == null) return const ['provider', 'searcher', 'keep'];
+    return const {'admin', 'owner'}.contains(leader.status)
+        ? const ['keep']
+        : const ['provider', 'searcher'];
+  }
+
+  /// What is shown and what is sent: the choice, or the first option when it no longer fits.
+  String get _effectiveFormer =>
+      _formerOptions.contains(_former) ? _former : _formerOptions.first;
+
+  /// The leader is not a choice. The public list gives only their name, so a leader is told
+  /// apart from a namesake by their status; the server refuses anything else.
+  bool _isLeaderRow(MemberRow m) =>
+      m.fullName == widget.group.leaderName &&
+      const {'verifier', 'admin', 'owner'}.contains(m.status);
+
   Future<void> _change() async {
     setState(() {
       _busy = true;
@@ -160,7 +181,7 @@ class _GroupTileState extends ConsumerState<_GroupTile> {
     try {
       final (group, leader) = await ref
           .read(groupRepositoryProvider)
-          .replaceLeader(widget.group.id, _successor, _former);
+          .replaceLeader(widget.group.id, _successor, _effectiveFormer);
       if (!mounted) return;
       _close();
       widget.onDone(
@@ -178,26 +199,12 @@ class _GroupTileState extends ConsumerState<_GroupTile> {
     final text = ref.watch(appTextProvider);
     final group = widget.group;
     final members = _members;
-    // The leader is not a choice. The public list gives only their name, so a leader is told
-    // apart from a namesake by their status; the server refuses anything else.
-    bool isLeaderRow(MemberRow m) =>
-        m.fullName == group.leaderName &&
-        const {'verifier', 'admin', 'owner'}.contains(m.status);
     final candidates = [
       for (final m in members ?? const <MemberRow>[])
-        if (!isLeaderRow(m)) m,
+        if (!_isLeaderRow(m)) m,
     ];
-    final leader = members?.where(isLeaderRow).firstOrNull;
-    final keeps =
-        leader != null && const {'admin', 'owner'}.contains(leader.status);
-    final formerOptions = leader == null
-        ? const ['provider', 'searcher', 'keep']
-        : keeps
-        ? const ['keep']
-        : const ['provider', 'searcher'];
-    final former = formerOptions.contains(_former)
-        ? _former
-        : formerOptions.first;
+    final formerOptions = _formerOptions;
+    final former = _effectiveFormer;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
