@@ -10,6 +10,11 @@ import {
   ADMIN_GROUPS,
   LEADER_GROUP,
   LEADER_INVITATIONS,
+  OWNER_LABELS,
+  PERSON_AVAILABILITY,
+  PERSON_PROFILE,
+  PERSON_RATINGS,
+  PERSON_SKILLS,
   OWNER_CHURCHES,
   OWNER_HANDOVER,
   OWNER_VIEWS,
@@ -36,6 +41,7 @@ export default function PersonLayout() {
   const unread = notifications.data?.unread_count ?? 0
   const leader = ['verifier', 'admin', 'owner'].includes(person.status)
   const admin = person.status === 'admin' || person.status === 'owner'
+  const provider = ['provider', 'verifier', 'admin', 'owner'].includes(person.status)
   return (
     <div className="public">
       <a className="skip-link" href="#main">
@@ -45,6 +51,22 @@ export default function PersonLayout() {
         <Link className="brand" to={PERSON_HOME}>
           {t('app.name')}
         </Link>
+        {provider && (
+          <nav className="topbar-nav" aria-label={t('provider.nav.label')}>
+            <Link className="btn btn-quiet" to={PERSON_PROFILE}>
+              {t('nav.profile')}
+            </Link>
+            <Link className="btn btn-quiet" to={PERSON_SKILLS}>
+              {t('nav.labels')}
+            </Link>
+            <Link className="btn btn-quiet" to={PERSON_AVAILABILITY}>
+              {t('nav.availability')}
+            </Link>
+            <Link className="btn btn-quiet" to={PERSON_RATINGS}>
+              {t('nav.ratings')}
+            </Link>
+          </nav>
+        )}
         {leader && (
           <nav className="topbar-nav" aria-label={t('leader.nav.label')}>
             <Link className="btn btn-quiet" to={LEADER_APPLICANTS}>
@@ -67,6 +89,11 @@ export default function PersonLayout() {
             {person.status === 'owner' && (
               <Link className="btn btn-quiet" to={OWNER_VIEWS}>
                 {t('owner.nav.views')}
+              </Link>
+            )}
+            {person.status === 'owner' && (
+              <Link className="btn btn-quiet" to={OWNER_LABELS}>
+                {t('nav.adminLabels')}
               </Link>
             )}
             {person.status === 'owner' && (

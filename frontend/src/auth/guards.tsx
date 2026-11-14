@@ -56,6 +56,15 @@ export function RequirePerson() {
   return <Outlet />
 }
 
+/** The screens of a provider, and of everyone above: a SEARCHER or an applicant goes home. */
+export function RequireProvider() {
+  const { user } = useAuth()
+  if (!user) return <LoadingScreen />
+  const provider =
+    user.user_type === 'person' && ['provider', 'verifier', 'admin', 'owner'].includes(user.status)
+  return provider ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
+}
+
 /** The screens of a leader: VERIFIER, ADMIN or OWNER. Everyone else goes to their own home. */
 export function RequireLeader() {
   const { user } = useAuth()

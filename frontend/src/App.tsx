@@ -8,6 +8,7 @@ import {
   RequireOwner,
   RequireOlderAccount,
   RequirePerson,
+  RequireProvider,
   RequireRole,
 } from './auth/guards'
 import ForgotPassword from './pages/ForgotPassword'
@@ -20,6 +21,12 @@ import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
 import MyGroup from './pages/person/leader/MyGroup'
+import AdminLabelsPage from './portals/admin/AdminLabelsPage'
+import AvailabilityPage from './portals/freelancer/AvailabilityPage'
+import LabelsPage from './portals/freelancer/LabelsPage'
+import ProfilePage from './portals/freelancer/ProfilePage'
+import Frame from './pages/person/provider/Frame'
+import MyRatings from './pages/person/provider/MyRatings'
 import GroupInvitations from './pages/person/leader/GroupInvitations'
 import HandoverPage from './pages/person/owner/Handover'
 import Views from './pages/person/owner/Views'
@@ -47,6 +54,11 @@ import {
   OWNER_VIEWS,
   LEADER_GROUP,
   LEADER_INVITATIONS,
+  OWNER_LABELS,
+  PERSON_AVAILABILITY,
+  PERSON_PROFILE,
+  PERSON_RATINGS,
+  PERSON_SKILLS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
   LEADER_REVOKED,
@@ -102,7 +114,25 @@ export default function App() {
               <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
               <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
               <Route path="vouch/:token" element={<VouchPage />} />
+              <Route element={<RequireProvider />}>
+                <Route element={<Frame />}>
+                  <Route path={PERSON_PROFILE.slice(1)} element={<ProfilePage />} />
+                  <Route path={PERSON_SKILLS.slice(1)} element={<LabelsPage />} />
+                  <Route path={PERSON_AVAILABILITY.slice(1)} element={<AvailabilityPage />} />
+                </Route>
+                <Route path={PERSON_RATINGS.slice(1)} element={<MyRatings />} />
+              </Route>
               <Route element={<RequireLeader />}>
+                <Route path={OWNER_LABELS.slice(1)} element={<RequireOwner />}>
+                  <Route
+                    index
+                    element={
+                      <Frame>
+                        <AdminLabelsPage />
+                      </Frame>
+                    }
+                  />
+                </Route>
                 <Route path={LEADER_APPLICANTS.slice(1)} element={<Applicants />} />
                 <Route path={LEADER_MEMBERS.slice(1)} element={<Members />} />
                 <Route path={ADMIN_GROUPS.slice(1)} element={<RequireAdmin />}>
