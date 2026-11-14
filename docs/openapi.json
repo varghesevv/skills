@@ -3572,7 +3572,7 @@
         "type": "object"
       },
       "SearchResult": {
-        "description": "A freelancer in search results. Never contains email or mobile number.",
+        "description": "A provider in search results. Never contains email or mobile number.",
         "properties": {
           "average_rating": {
             "anyOf": [
@@ -3585,6 +3585,9 @@
             ],
             "title": "Average Rating"
           },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
           "full_name": {
             "anyOf": [
               {
@@ -3595,6 +3598,9 @@
               }
             ],
             "title": "Full Name"
+          },
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
           },
           "id": {
             "format": "uuid",
@@ -3681,10 +3687,6 @@
             "title": "Timings",
             "type": "array"
           },
-          "vouch_count": {
-            "title": "Vouch Count",
-            "type": "integer"
-          },
           "whatsapp_availability": {
             "title": "Whatsapp Availability",
             "type": "boolean"
@@ -3693,6 +3695,8 @@
         "required": [
           "id",
           "full_name",
+          "church",
+          "home_group",
           "nationality",
           "primary_language",
           "whatsapp_availability",
@@ -3701,7 +3705,6 @@
           "is_rate_negotiable",
           "average_rating",
           "rating_count",
-          "vouch_count",
           "skills",
           "languages",
           "timings",
@@ -8585,7 +8588,7 @@
     },
     "/api/v1/search/freelancers": {
       "get": {
-        "description": "Find freelancers. Freelancers with at least one skill are listed; a rate is not needed.",
+        "description": "Find providers: open accounts of PROVIDER or above with at least one skill.",
         "operationId": "search_api_v1_search_freelancers_get",
         "parameters": [
           {
@@ -8783,7 +8786,7 @@
           },
           {
             "in": "query",
-            "name": "org_id",
+            "name": "church_id",
             "required": false,
             "schema": {
               "anyOf": [
@@ -8795,7 +8798,24 @@
                   "type": "null"
                 }
               ],
-              "title": "Org Id"
+              "title": "Church Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "home_group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Home Group Id"
             }
           },
           {

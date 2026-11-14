@@ -7,17 +7,17 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import AwareDatetime
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import current_person
 from app.core.db import get_session
 from app.core.errors import ApiError
-from app.core.security import Principal
+from app.models.church import Person
 from app.schemas.common import Page, Pagination, pagination
 from app.schemas.search import SearchResult
 from app.services.search import SearchFilters, SortKey, search_freelancers
 
 router = APIRouter(prefix="/search", tags=["search"])
 
-Searcher = Annotated[Principal, Depends(require_roles("workhost", "organisation", "admin"))]
+Searcher = Annotated[Person, Depends(current_person("searcher"))]
 Names = Annotated[list[str] | None, Query(max_length=20)]
 
 
@@ -37,12 +37,13 @@ def search(
     negotiable: bool = False,
     available_from: AwareDatetime | None = None,
     available_to: AwareDatetime | None = None,
-    org_id: uuid.UUID | None = None,
+    church_id: uuid.UUID | None = None,
+    home_group_id: uuid.UUID | None = None,
     min_rating: Annotated[float | None, Query(ge=1, le=10)] = None,
     name: Annotated[str | None, Query(max_length=100)] = None,
     sort: SortKey = "newest",
 ) -> Page[SearchResult]:
-    """Find freelancers. Freelancers with at least one skill are listed; a rate is not needed."""
+    """Find providers: open accounts of PROVIDER or above with at least one skill."""
     if max_rate is not None and currency is None:
         raise ApiError(422, "currency_required", "max_rate needs a currency, for example AED")
     if (available_from is None) != (available_to is None):
@@ -65,7 +66,8 @@ def search(
         negotiable=negotiable,
         available_from=start,
         available_to=end,
-        org_id=org_id,
+        church_id=church_id,
+        home_group_id=home_group_id,
         min_rating=min_rating,
         name=name,
         sort=sort,
