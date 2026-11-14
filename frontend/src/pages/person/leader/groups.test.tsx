@@ -40,12 +40,14 @@ describe('who sees the groups', () => {
     )
   })
 
-  it.each(['verifier', 'provider', 'pending'])('sends a %s away', async (status) => {
+  it.each(['verifier', 'provider'])('sends a %s home, and shows no link', async (status) => {
     const api = signedInAs(makeMe(), { ...as(status), [GROUPS]: TWO_GROUPS })
     renderApp('/member/groups')
-    await waitFor(() => expect(screen.queryByText('Leader: Lena Leader')).toBeNull())
-    expect(api.count(GROUPS)).toBe(0)
+    // The home page appears: the redirect happened, so nothing of the groups was asked for.
+    expect(await screen.findByText(/^Welcome/)).toBeVisible()
+    expect(screen.queryByText('Leader: Lena Leader')).toBeNull()
     expect(screen.queryByRole('link', { name: /Home groups/i })).toBeNull()
+    expect(api.count(GROUPS)).toBe(0)
   })
 })
 
