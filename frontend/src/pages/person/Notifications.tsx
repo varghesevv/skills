@@ -39,6 +39,12 @@ export function notificationText(item: NotificationItem): string {
       return t('notifications.group_request_declined', { name })
     case 'reinstated':
       return t('notifications.reinstated', { name })
+    case 'move_requested':
+    case 'move_completed':
+    case 'move_cancelled':
+    case 'member_moved_in':
+    case 'member_moved_out':
+      return t(`notifications.${item.kind}`, { name })
     case 'admitted':
       return t('notifications.admitted', { name })
     default:

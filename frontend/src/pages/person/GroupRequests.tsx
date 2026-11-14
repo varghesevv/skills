@@ -20,6 +20,7 @@ import { formatDate } from '../../shared/dates'
 import { errorMessage } from '../../shared/errors'
 import { Alert, Pager, QueryBoundary, SelectField, TextField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
+import { leadsOwnGroup } from './leads'
 
 /** What a refused request means. The server's code decides the words. */
 function problem(error: unknown): string {
@@ -85,7 +86,7 @@ function AskForm({ decides }: { decides: boolean }) {
   const [successor, setSuccessor] = useState('')
   const [done, setDone] = useState<string | null>(null)
   // The group they lead: an ADMIN or the OWNER may belong to a group someone else leads.
-  const leads = decides && person.home_group !== null && person.leader?.name === person.full_name
+  const leads = decides && leadsOwnGroup(person)
   const candidates = useCandidates(leads, person.home_group?.id)
   const ask = useMutation({
     mutationFn: () => askForGroup(name.trim(), leads && successor ? successor : undefined),
