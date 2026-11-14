@@ -17,8 +17,10 @@ import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
+import Flagged from './pages/person/leader/Flagged'
 import Members from './pages/person/leader/Members'
 import PersonDetail from './pages/person/leader/PersonDetail'
+import Revoked from './pages/person/leader/Revoked'
 import MyVouches from './pages/person/MyVouches'
 import Notifications from './pages/person/Notifications'
 import PersonHome from './pages/person/PersonHome'
@@ -28,7 +30,9 @@ import VouchPage from './pages/person/VouchPage'
 import ResetPassword from './pages/ResetPassword'
 import {
   LEADER_APPLICANTS,
+  LEADER_FLAGGED,
   LEADER_MEMBERS,
+  LEADER_REVOKED,
   LEADER_PERSON,
   PERSON_HOME,
   PERSON_NOTIFICATIONS,
@@ -79,6 +83,8 @@ export default function App() {
               <Route element={<RequireLeader />}>
                 <Route path={LEADER_APPLICANTS.slice(1)} element={<Applicants />} />
                 <Route path={LEADER_MEMBERS.slice(1)} element={<Members />} />
+                <Route path={LEADER_FLAGGED.slice(1)} element={<Flagged />} />
+                <Route path={LEADER_REVOKED.slice(1)} element={<Revoked />} />
                 <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />
               </Route>
             </Route>

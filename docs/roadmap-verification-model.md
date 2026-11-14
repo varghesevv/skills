@@ -9,8 +9,8 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
 - Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131), S3.8 (133 backend journey, 134 mobile contract); S3 (trust: vouching and admission) is complete.
 - Done also: S4.1 (135), S4.2a (136), S4.2b (137), S4.3a (138), S4.3b (139), S4.4a (141), S4.4b (142), S4.4c (143), S4.5a (144), S4.5b (146), S4.6 (the random-sequence test).
-- In progress: nothing.
-- Next: S4.7 (web: revoke, reinstate and re-check flags; group requests).
+- In progress: S4.7a (web: revoke, reinstate, re-check flags and the two lists).
+- Next: S4.7b (web: group requests), then S4.8.
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -92,7 +92,7 @@ Backend first, then web and mobile.
 - [x] 4.4 Backend: move between groups by agreement (4.4a; D-35); close a group (4.4b; D-36); close a church (4.4c; D-37), with the OWNER's list of churches. (Leave, which is `DELETE /me` for people who do not lead, was done early for the web applicant home: pull request in S2.7.)
 - [x] 4.5 Backend: OWNER handover (4.5a; D-38); operator change (4.5b; D-39).
 - [x] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step (`backend/tests/test_random_sequence.py`; it found no hole in S4).
-- [ ] 4.7 Web: revoke and reinstate, flags, group requests.
+- [ ] 4.7 Web: revoke and reinstate, flags (4.7a, done), group requests (4.7b).
 - [ ] 4.8 Web: ADMIN screens: succession, the church's people and revoked list.
 - [ ] 4.9 Web: OWNER screens: churches, invitations, labels management, handover, and the log of phone number views (backend endpoint first; O-03 retention).
 - [ ] 4.10 Mobile: revoke and reinstate, flags; ADMIN screens (group requests, succession); close account.

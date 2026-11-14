@@ -11,6 +11,7 @@ import { errorMessage } from '../../../shared/errors'
 import { Alert } from '../../../shared/ui'
 import { usePageTitle } from '../../../shared/usePageTitle'
 import AdmitControls, { type Outcome } from './AdmitControls'
+import StatusControls, { type Change } from './StatusControls'
 
 const KINDS = [
   'signup',
@@ -91,6 +92,13 @@ export default function PersonDetail() {
     }
   }, [])
 
+  const onChanged = useCallback((message: string, change: Change) => {
+    setDone(message)
+    setLoad((previous) =>
+      previous.state === 'ok' ? { state: 'ok', data: { ...previous.data, ...change } } : previous,
+    )
+  }, [])
+
   return (
     <div className="container">
       <div className="card">
@@ -123,7 +131,7 @@ export default function PersonDetail() {
           </>
         )}
         {load.state === 'ok' && !declined && (
-          <PersonView data={load.data} done={done} onDone={onDone} />
+          <PersonView data={load.data} done={done} onDone={onDone} onChanged={onChanged} />
         )}
         <p>
           <Link to={LEADER_MEMBERS}>{t('leader.person.back')}</Link>
@@ -137,10 +145,12 @@ function PersonView({
   data,
   done,
   onDone,
+  onChanged,
 }: {
   data: Detail
   done: string | null
   onDone: (message: string, outcome: Outcome) => void
+  onChanged: (message: string, change: Change) => void
 }) {
   return (
     <>
@@ -179,6 +189,8 @@ function PersonView({
           onDone={onDone}
         />
       )}
+
+      <StatusControls person={data} onDone={onChanged} />
 
       <h2>{t('leader.person.vouches')}</h2>
       {data.vouches.length === 0 ? (
