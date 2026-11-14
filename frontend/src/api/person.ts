@@ -7,6 +7,8 @@ import type {
   FlaggedRow,
   GroupRequest,
   GroupRequestCreated,
+  Handover,
+  HandoverAccepted,
   ChurchInvitation,
   ChurchInvitationCreated,
   ChurchSummary,
@@ -154,9 +156,10 @@ export function fetchMembers(
   page: number,
   status?: Exclude<PersonStatus, 'pending' | 'revoked'>,
   homeGroupId?: string,
+  churchId?: string,
 ) {
   return request<Paged<MemberRow>>(
-    `/verifier/members?${paging(page)}${status ? `&status=${status}` : ''}${homeGroupId ? `&home_group_id=${homeGroupId}` : ''}`,
+    `/verifier/members?${paging(page)}${status ? `&status=${status}` : ''}${homeGroupId ? `&home_group_id=${homeGroupId}` : ''}${churchId ? `&church_id=${churchId}` : ''}`,
   )
 }
 
@@ -274,6 +277,31 @@ export function closeChurch(id: string) {
     `/owner/churches/${id}/close`,
     { method: 'POST' },
   )
+}
+
+// ---- the handover of the OWNER role ----
+
+export function fetchHandover() {
+  return request<{ request: Handover | null }>('/owner/handover')
+}
+
+export type HandoverBody = {
+  new_owner_id: string
+  successor_admin_id?: string
+  successor_leader_id?: string
+  former_owner_status: 'provider' | 'searcher'
+}
+
+export function proposeHandover(body: HandoverBody) {
+  return request<Handover>('/owner/handover', { method: 'POST', body })
+}
+
+export function acceptHandover(id: string) {
+  return request<HandoverAccepted>(`/owner/handover/${id}/accept`, { method: 'POST' })
+}
+
+export function cancelHandover(id: string) {
+  return request<void>(`/owner/handover/${id}/cancel`, { method: 'POST' })
 }
 
 export type FormerLeaderStatus = 'provider' | 'searcher' | 'keep'

@@ -380,6 +380,7 @@ export type OwnerChurch = {
   id: string
   name: string
   admin_name: string
+  admin_id: string | null
   open: boolean
   groups: number
   members: number
@@ -396,6 +397,16 @@ export type ChurchInvitation = {
 }
 export type ChurchInvitationCreated = { id: string; token: string; expires_at: string }
 export type AdminInvitationInfo = { church_name: string; email_domain: string }
+export type Handover = {
+  id: string
+  owner: IdName
+  new_owner: IdName
+  successor_admin: IdName | null
+  successor_leader: IdName | null
+  former_owner_status: string
+  created_at: string
+}
+export type HandoverAccepted = { owner: IdName; former_owner: IdName; former_owner_status: string }
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string
