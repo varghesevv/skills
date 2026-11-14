@@ -93,10 +93,17 @@ def members(
         Query(alias="status"),
     ] = None,
     home_group_id: uuid.UUID | None = None,
+    church_id: uuid.UUID | None = None,
 ) -> MemberList:
-    """Admitted people in scope, by name. Filter by `status` or `home_group_id`."""
+    """Admitted people in scope, by name. Filter by `status`, `home_group_id` or `church_id`."""
     return verifier_views.members(
-        db, verifier, limit, offset, status=status_filter, home_group_id=home_group_id
+        db,
+        verifier,
+        limit,
+        offset,
+        status=status_filter,
+        home_group_id=home_group_id,
+        church_id=church_id,
     )
 
 

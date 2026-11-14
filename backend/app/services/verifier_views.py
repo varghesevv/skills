@@ -204,12 +204,15 @@ def members(
     *,
     status: str | None,
     home_group_id: uuid.UUID | None,
+    church_id: uuid.UUID | None = None,
 ) -> MemberList:
     query = _in_scope_people(actor).where(Person.status.in_(ADMITTED_STATUSES))
     if status is not None:
         query = query.where(Person.status == status)
     if home_group_id is not None:
         query = query.where(Person.home_group_id == home_group_id)
+    if church_id is not None:
+        query = query.where(Person.church_id == church_id)
     rows, total = _page(db, query, [func.lower(Person.full_name)], limit, offset)
     names = _names(db, {p.status_set_by_id for p in rows})
     groups = _groups(db, {p.home_group_id for p in rows})

@@ -269,6 +269,9 @@ def test_the_owner_lists_the_churches_with_counts(
     assert by_name["Hope Church"]["open"] is True
     assert by_name["Hope Church"]["admin_name"] == hope.admin.full_name
     assert by_name["First church"]["admin_name"] == world.owner.full_name
+    # The ADMIN's id is there for the handover's choice, for open churches only.
+    assert by_name["Hope Church"]["admin_id"] == str(hope.admin.id)
+    assert by_name["First church"]["admin_id"] == str(world.owner.id)
     closed_now = client.post(
         f"{API}/owner/churches/{hope.church.id}/close", headers=headers_of(client, owner)
     )
@@ -277,6 +280,7 @@ def test_the_owner_lists_the_churches_with_counts(
     assert [c["name"] for c in after["items"]] == ["First church", "Hope Church"]  # open first
     closed = after["items"][1]
     assert closed["open"] is False and closed["closed_at"] is not None
+    assert closed["admin_id"] is None
     assert (closed["groups"], closed["members"], closed["revoked"]) == (0, 0, 1)
     page = client.get(
         f"{API}/owner/churches", headers=headers_of(client, owner), params={"limit": 1}

@@ -21,7 +21,7 @@ from app.models import (
 )
 from tests.api_helpers import API
 from tests.test_person_auth import Member, add_member, bearer, login
-from tests.trust_helpers import World, check_rules
+from tests.trust_helpers import World, check_rules, make_person
 
 pytestmark = pytest.mark.db
 
@@ -190,6 +190,31 @@ def test_members_filter_and_scope(client: TestClient, world: World) -> None:
     assert get(client, lead, "/members", status="pending").status_code == 422
     text = get(client, lead, "/members").text
     assert s.person.mobile_number not in text and p.person.mobile_number not in text
+
+
+def test_members_can_be_filtered_by_church_within_the_scope(
+    client: TestClient, world: World
+) -> None:
+    lead, group = leader(world)
+    add_member(world, "searcher", group=group, full_name="Bea")
+    add_member(world, "provider", full_name="Other group")
+    church, other_group, admin = world.add_church("Hope Church")
+    elsewhere = make_person(church, other_group, "searcher", full_name="In Hope")
+    world.session.add(elsewhere)
+    world.session.flush()
+
+    def names(who: Member, **query: Any) -> list[str]:
+        return [r["full_name"] for r in get(client, who, "/members", **query).json()["items"]]
+
+    owner = owner_member(world)
+    hope = names(owner, church_id=str(church.id))
+    assert "In Hope" in hope and "Bea" not in hope and "Other group" not in hope
+    assert "Bea" in names(owner, church_id=str(world.church.id))
+    assert "In Hope" not in names(owner, church_id=str(world.church.id))
+    # A leader sees only their group, so another church's filter finds nobody for them.
+    assert names(lead, church_id=str(church.id)) == []
+    assert "Bea" in names(lead, church_id=str(world.church.id))
+    assert get(client, lead, "/members", church_id="not-an-id").status_code == 422
 
 
 def test_lists_are_paged(client: TestClient, world: World) -> None:

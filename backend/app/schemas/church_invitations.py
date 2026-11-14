@@ -72,6 +72,8 @@ class ChurchSummaryOwner(BaseModel):
     id: uuid.UUID
     name: str
     admin_name: str
+    # The ADMIN of an open church (the choice of a handover); empty for a closed one.
+    admin_id: uuid.UUID | None = None
     open: bool
     groups: int  # open home groups
     members: int  # open, not revoked
