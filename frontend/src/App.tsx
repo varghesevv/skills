@@ -18,6 +18,7 @@ import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
+import MyGroup from './pages/person/leader/MyGroup'
 import Groups from './pages/person/leader/Groups'
 import Flagged from './pages/person/leader/Flagged'
 import Moves from './pages/person/Moves'
@@ -35,6 +36,7 @@ import ResetPassword from './pages/ResetPassword'
 import {
   LEADER_APPLICANTS,
   ADMIN_GROUPS,
+  LEADER_GROUP,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
   LEADER_REVOKED,
@@ -95,6 +97,7 @@ export default function App() {
                 <Route path={ADMIN_GROUPS.slice(1)} element={<RequireAdmin />}>
                   <Route index element={<Groups />} />
                 </Route>
+                <Route path={LEADER_GROUP.slice(1)} element={<MyGroup />} />
                 <Route path={LEADER_FLAGGED.slice(1)} element={<Flagged />} />
                 <Route path={LEADER_REVOKED.slice(1)} element={<Revoked />} />
                 <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />

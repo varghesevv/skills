@@ -154,11 +154,12 @@ export function fetchFlagged(page: number) {
   return request<Paged<FlaggedRow>>(`/verifier/flagged?${paging(page)}`)
 }
 
-/** Revoke someone below you. A leader needs a successor first, which is for the ADMIN screens. */
-export function revokePerson(id: string) {
+/** Revoke someone below you. A VERIFIER's group gets `successorId` as its leader in the same step
+ *  (without one it closes, if they are alone in it). */
+export function revokePerson(id: string, successorId?: string) {
   return request<StatusResult>(`/verifier/people/${id}/status`, {
     method: 'PUT',
-    body: { to: 'revoked' },
+    body: { to: 'revoked', ...(successorId ? { successor_id: successorId } : {}) },
   })
 }
 
@@ -233,6 +234,22 @@ export function replaceLeader(
       body: { successor_id: successorId, former_leader_status: formerLeaderStatus },
     },
   )
+}
+
+/** The leader closes their own group, being its last member, by joining another one. */
+export function closeGroup(
+  groupId: string,
+  moveToGroupId: string,
+  formerLeaderStatus: FormerLeaderStatus,
+) {
+  return request<{
+    closed_group: { id: string; name: string }
+    joined_group: { id: string; name: string }
+    status: PersonStatus
+  }>(`/home-groups/${groupId}/close`, {
+    method: 'POST',
+    body: { move_to_group_id: moveToGroupId, former_leader_status: formerLeaderStatus },
+  })
 }
 
 /** An ADMIN or the OWNER move an admitted member to another open group of the church. */

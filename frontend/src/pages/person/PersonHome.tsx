@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { applyForProvider } from '../../api/person'
@@ -6,6 +7,7 @@ import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
 import { PERSON_GROUP_REQUESTS, PERSON_MOVES, PERSON_VOUCHES } from '../../portals/config'
 import { errorMessage } from '../../shared/errors'
+import { takeFlash } from '../../shared/flash'
 import { Alert } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import ApplicantHome from './ApplicantHome'
@@ -34,10 +36,17 @@ function RevokedHome() {
 /** Admitted people: the screens for each status arrive in later steps of the roadmap. */
 function MemberHome() {
   const person = usePerson()
+  // A page that changed who the person is leaves its outcome here (see MyGroup).
+  const [notice] = useState(takeFlash)
   usePageTitle(t('nav.home'))
   return (
     <div className="container">
       <div className="card">
+        {notice && (
+          <Alert kind="success" focus>
+            {notice}
+          </Alert>
+        )}
         <h1>{t('member.welcome', { name: person.full_name })}</h1>
         <p>{t('member.yourStatus', { status: t(`status.${person.status}`) })}</p>
         <p>

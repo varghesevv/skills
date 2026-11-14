@@ -140,6 +140,7 @@ const en = {
   'leader.nav.members': 'Members',
   'leader.nav.revoked': 'Revoked',
   'leader.nav.moves': 'Moves',
+  'leader.nav.group': 'My {homegroup}',
   'leader.nav.flagged': 'To re-check',
   'leader.applicants.title': 'Applicants',
   'leader.applicants.none': 'Nobody is waiting to be admitted.',
@@ -206,6 +207,23 @@ const en = {
   'notifications.group_request_approved': '{name} approved your request to start a {homegroup}',
   'notifications.group_request_declined': '{name} declined your request to start a {homegroup}',
   'notifications.reinstated': '{name} brought you back',
+  'myGroup.title': 'My {homegroup}',
+  'myGroup.lead':
+    'You lead {group}. A {homegroup} closes when its leader is its last member, who then joins another {homegroup}. If others are in it, an {admin} or the {owner} choose a new leader first.',
+  'myGroup.close.title': 'Close {group}',
+  'myGroup.close.to': 'Join',
+  'myGroup.close.choose': 'Choose…',
+  'myGroup.close.former': 'Afterwards I am',
+  'myGroup.close.submit': 'Close {group}',
+  'myGroup.close.warning':
+    'This closes {group}. Its invitation links stop working and moves into it end. It cannot be undone.',
+  'myGroup.close.confirm': 'Yes, close it',
+  'myGroup.close.done': '{closed} is closed. You joined {joined}.',
+  'myGroup.close.none': 'There is no other open {homegroup} to join.',
+  'myGroup.error.notEmpty':
+    'Others are still in this {homegroup}. An {admin} or the {owner} must choose a new leader first.',
+  'myGroup.error.choice':
+    'That choice does not fit you. A {verifier} becomes {a_freelancer} or {a_workhost}; an {admin} or the {owner} keep their status.',
   'moves.link': 'Move to another {homegroup}',
   'moves.title': 'Moves between {homegroups}',
   'moves.lead':
@@ -281,6 +299,14 @@ const en = {
   'leader.revoke.warning':
     'This takes away the access of {name} and removes them from their {homegroup}. Everyone whose status they set will be flagged to be re-checked. You can bring them back later.',
   'leader.revoke.confirm': 'Yes, revoke',
+  'leader.revoke.warningLeader':
+    '{name} leads a {homegroup}. Choose who leads it from now on. {name} loses access and is removed from it, and everyone whose status they set will be flagged to be re-checked.',
+  'leader.revoke.successor': 'Leads the {homegroup} from now on',
+  'leader.revoke.choose': 'Choose a member…',
+  'leader.revoke.needSuccessor': 'Choose who leads the {homegroup} from now on, then revoke.',
+  'leader.revoke.alone': 'Nobody else is in this {homegroup}, so it closes with the revocation.',
+  'leader.revoke.adminOnly':
+    '{name} leads a {homegroup}. Only an {admin} or the {owner} can revoke a {verifier}.',
   'leader.revoke.done': '{name} was revoked.',
   'leader.revoke.leads':
     '{name} leads a {homegroup} or a church. Hand that on first; then they can be revoked.',
