@@ -3,11 +3,13 @@ import { Link, Outlet } from 'react-router-dom'
 
 import { fetchNotifications } from '../api/person'
 import { useAuth, usePerson } from '../auth/AuthContext'
+import { leadsOwnGroup } from '../pages/person/leads'
 import { t } from '../i18n'
 import { NOTIFICATIONS_KEY, NOTIFICATIONS_POLL_MS } from '../pages/person/Notifications'
 import {
   ADMIN_GROUPS,
   LEADER_GROUP,
+  LEADER_INVITATIONS,
   OWNER_CHURCHES,
   OWNER_HANDOVER,
   OWNER_VIEWS,
@@ -54,6 +56,11 @@ export default function PersonLayout() {
             <Link className="btn btn-quiet" to={LEADER_GROUP}>
               {t('leader.nav.group')}
             </Link>
+            {leadsOwnGroup(person) && (
+              <Link className="btn btn-quiet" to={LEADER_INVITATIONS}>
+                {t('invitations.nav')}
+              </Link>
+            )}
             <Link className="btn btn-quiet" to={PERSON_MOVES}>
               {t('leader.nav.moves')}
             </Link>

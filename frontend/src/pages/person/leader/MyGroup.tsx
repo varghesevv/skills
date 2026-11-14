@@ -12,6 +12,7 @@ import { errorMessage } from '../../../shared/errors'
 import { setFlash } from '../../../shared/flash'
 import { Alert, SelectField } from '../../../shared/ui'
 import { PERSON_HOME } from '../../../portals/config'
+import { leadsOwnGroup } from '../leads'
 import { usePageTitle } from '../../../shared/usePageTitle'
 
 function problem(error: unknown): string {
@@ -71,7 +72,10 @@ export default function MyGroup() {
     <div className="container">
       <div className="card">
         <h1>{t('myGroup.title')}</h1>
-        {group && (
+        {group && !leadsOwnGroup(person) && (
+          <p className="lead">{t('myGroup.notLeader', { group: group.name })}</p>
+        )}
+        {group && leadsOwnGroup(person) && (
           <>
             <p className="lead">{t('myGroup.lead', { group: name })}</p>
             {close.error && (
