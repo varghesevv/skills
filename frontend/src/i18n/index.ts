@@ -274,6 +274,8 @@ const en = {
   'invite.done.text':
     'You are the {admin} of the {organisation}. Sign in with the address you were invited at.',
   'invite.error.taken': 'A {homegroup} with this name exists already. Choose another name.',
+  'invite.error.churchTaken':
+    'A {organisation} with this name exists already. Ask the {owner} for a new invitation.',
   'invite.error.account': 'This address belongs to an account already.',
   'owner.nav.churches': '{Organisations}',
   'owner.churches.title': '{Organisations}',

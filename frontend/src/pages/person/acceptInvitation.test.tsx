@@ -79,8 +79,8 @@ describe('the invitation of an ADMIN', () => {
   })
 
   it.each([
-    ['church_name_taken', 409, /with this name exists already/],
-    ['group_name_taken', 409, /with this name exists already/],
+    ['church_name_taken', 409, /Ask the .* for a new invitation/],
+    ['group_name_taken', 409, /Choose another name/],
     ['account_exists', 409, /belongs to an account already/],
   ])('puts %s in words', async (code, status, words) => {
     const user = userEvent.setup({ delay: null })
@@ -115,5 +115,25 @@ describe('the invitation of an ADMIN', () => {
     await fill(user)
     await user.click(screen.getByRole('button', { name: 'Accept the invitation' }))
     expect(await screen.findAllByText('This number is already in use.')).not.toHaveLength(0)
+  })
+
+  it('says it is checking while the invitation is looked up', async () => {
+    mockApi({ [LOOKUP]: () => new Promise(() => {}) as never })
+    renderApp(`/invite/${TOKEN}`)
+    expect(await screen.findByRole('status')).toBeVisible()
+    expect(screen.queryByLabelText('Full name')).toBeNull()
+  })
+
+  it('does not call the invitation dead when the lookup fails for another reason, and retries', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    mockApi({
+      [LOOKUP]: () => (++attempts === 1 ? apiError(503, 'service_unavailable') : json(200, INFO)),
+    })
+    renderApp(`/invite/${TOKEN}`)
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    expect(screen.queryByText(/does not work/)).toBeNull()
+    await user.click(retry)
+    expect(await screen.findByText(/Hope Church/)).toBeVisible()
   })
 })

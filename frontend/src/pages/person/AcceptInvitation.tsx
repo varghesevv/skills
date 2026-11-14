@@ -11,14 +11,17 @@ import { Alert, LoadingScreen, PasswordField, TextField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import { acceptInvitationSchema, validate, type FieldErrors } from '../../shared/validation'
 
-type Lookup = { state: 'checking' } | { state: 'ok'; info: AdminInvitationInfo } | { state: 'bad' }
+type Lookup =
+  | { state: 'checking' }
+  | { state: 'ok'; info: AdminInvitationInfo }
+  | { state: 'bad' }
+  | { state: 'failed'; error: unknown }
 
 /** What a refused acceptance means. The server's code decides the words. */
 function problem(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.code === 'church_name_taken' || error.code === 'group_name_taken') {
-      return t('invite.error.taken')
-    }
+    if (error.code === 'church_name_taken') return t('invite.error.churchTaken')
+    if (error.code === 'group_name_taken') return t('invite.error.taken')
     if (error.code === 'account_exists') return t('invite.error.account')
     if (error.code === 'not_found') return t('invite.bad')
   }
@@ -41,17 +44,26 @@ export default function AcceptInvitation() {
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
+    setLookup({ state: 'checking' })
     lookupAdminInvitation(token).then(
       (info) => !cancelled && setLookup({ state: 'ok', info }),
-      () => !cancelled && setLookup({ state: 'bad' }),
+      // Only the server's own "no such invitation" says the link is dead; an outage must not.
+      (error: unknown) =>
+        !cancelled &&
+        setLookup(
+          error instanceof ApiError && error.code === 'not_found'
+            ? { state: 'bad' }
+            : { state: 'failed', error },
+        ),
     )
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, attempt])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -85,6 +97,18 @@ export default function AcceptInvitation() {
         <h1>{done ? t('invite.done.title') : t('invite.title')}</h1>
         {lookup.state === 'checking' && <LoadingScreen />}
         {lookup.state === 'bad' && !done && <Alert kind="error">{t('invite.bad')}</Alert>}
+        {lookup.state === 'failed' && !done && (
+          <Alert kind="error">
+            <p>{errorMessage(lookup.error)}</p>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => setAttempt((n) => n + 1)}
+            >
+              {t('common.retry')}
+            </button>
+          </Alert>
+        )}
         {done && (
           <>
             <Alert kind="success">{t('invite.done.text')}</Alert>
