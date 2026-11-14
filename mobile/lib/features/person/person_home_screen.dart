@@ -142,6 +142,20 @@ class _Member extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(leaderMembers),
           ),
+          ListTile(
+            key: const Key('leader-flagged'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('leader.nav.flagged')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(leaderFlagged),
+          ),
+          ListTile(
+            key: const Key('leader-revoked'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('leader.nav.revoked')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(leaderRevoked),
+          ),
         ],
         ListTile(
           key: const Key('vouch-for-someone'),

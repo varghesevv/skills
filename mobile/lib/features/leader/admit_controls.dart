@@ -16,6 +16,19 @@ class Declined extends Outcome {
   const Declined();
 }
 
+/// A revocation, a reinstatement or a re-confirmation: what the server's answer changed.
+class StatusChanged extends Outcome {
+  const StatusChanged({
+    required this.status,
+    required this.homeGroup,
+    required this.flagged,
+  });
+
+  final String status;
+  final IdName? homeGroup;
+  final bool flagged;
+}
+
 class Admitted extends Outcome {
   const Admitted(this.result);
 
