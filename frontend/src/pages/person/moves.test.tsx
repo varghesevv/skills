@@ -127,6 +127,32 @@ describe('asking to move', () => {
   })
 })
 
+describe('the groups of the church', () => {
+  it('shows a loading line, then an error with a retry when they cannot be loaded', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    signedInAs(makeMe(), {
+      ...as('provider'),
+      [GROUPS]: () => (++attempts === 1 ? apiError(503, 'service_unavailable') : TWO()),
+      [LIST]: () => json(200, { items: [], total: 0 }),
+    })
+    renderApp('/member/moves')
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('option', { name: 'Harbour' })).toBeVisible()
+  })
+
+  it('says it is loading while the groups are on their way', async () => {
+    signedInAs(makeMe(), {
+      ...as('provider'),
+      [GROUPS]: () => new Promise(() => {}) as never,
+      [LIST]: () => json(200, { items: [], total: 0 }),
+    })
+    renderApp('/member/moves')
+    expect(await screen.findAllByRole('status')).not.toHaveLength(0)
+    expect(screen.queryByRole('button', { name: 'Ask to move' })).toBeNull()
+  })
+})
+
 describe('the moves that concern me', () => {
   const withMoves = (routes: Record<string, unknown>, items = [MOVE]) => ({
     ...routes,
@@ -196,6 +222,42 @@ describe('the moves that concern me', () => {
     renderApp('/member/moves')
     await screen.findByText(/Sam Searcher: North to South/)
     expect(screen.queryByRole('button', { name: /^Agree|^Cancel the move/ })).toBeNull()
+  })
+
+  it.each([
+    ['already_agreed', /You agreed already/],
+    ['request_stale', /no longer in that/],
+  ])('puts %s of an agreement in words', async (code, words) => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      withMoves({ ...lead(), 'POST /move-requests/m1/agree': () => apiError(409, code) }) as never,
+    )
+    renderApp('/member/moves')
+    await user.click(
+      await screen.findByRole('button', { name: 'Agree to the move of Sam Searcher' }),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(words)
+  })
+
+  it('shows only the latest error: a failed agree is cleared by a cancel', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      withMoves({
+        ...lead(),
+        'POST /move-requests/m1/agree': () => apiError(409, 'request_stale'),
+        'POST /move-requests/m1/cancel': () => json(200, { ...MOVE, state: 'cancelled' }),
+      }) as never,
+    )
+    renderApp('/member/moves')
+    await user.click(
+      await screen.findByRole('button', { name: 'Agree to the move of Sam Searcher' }),
+    )
+    await screen.findByText(/no longer in that/)
+    await user.click(screen.getByRole('button', { name: 'Cancel the move of Sam Searcher' }))
+    expect(await screen.findByText('The move was cancelled.')).toBeVisible()
+    expect(screen.queryByText(/no longer in that/)).toBeNull()
   })
 
   it('cancels a move', async () => {

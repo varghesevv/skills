@@ -86,6 +86,13 @@ function AskForm() {
       </Alert>
     )
   }
+  if (groups.isPending) {
+    return (
+      <p role="status" className="muted">
+        {t('loading')}
+      </p>
+    )
+  }
   if (groups.data && others.length === 0) return <p className="muted">{t('moves.ask.none')}</p>
   return (
     <form
@@ -177,7 +184,10 @@ function Row({ move, onDone }: { move: MoveRequest; onDone: (message: string) =>
     await queryClient.invalidateQueries({ queryKey: ['members'] })
   }
   const agree = useMutation({
-    mutationFn: () => agreeToMove(move.id),
+    mutationFn: () => {
+      cancel.reset()
+      return agreeToMove(move.id)
+    },
     onSuccess: async (result) => {
       await refresh()
       onDone(
@@ -188,14 +198,18 @@ function Row({ move, onDone }: { move: MoveRequest; onDone: (message: string) =>
     },
   })
   const cancel = useMutation({
-    mutationFn: () => cancelMove(move.id),
+    mutationFn: () => {
+      agree.reset()
+      return cancelMove(move.id)
+    },
     onSuccess: async () => {
       await refresh()
       onDone(t('moves.cancelled'))
     },
   })
   const busy = agree.isPending || cancel.isPending
-  const failure = agree.error ?? cancel.error
+  // Only the latest attempt's error is shown.
+  const failure = cancel.isError ? cancel.error : agree.error
   return (
     <div>
       <p>
