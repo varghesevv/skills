@@ -5,7 +5,7 @@ from app.models.church import Church, HomeGroup, Person
 from app.models.labels import FreelancerLabel, Label, PersonLabel
 from app.models.ratings import Rating, UserRating
 from app.models.reports import ReportRun, ReportSchedule
-from app.models.reveals import PhoneReveal
+from app.models.reveals import PersonPhoneReveal, PhoneReveal
 from app.models.trust import (
     AdminInvitation,
     ContactView,
@@ -47,6 +47,7 @@ __all__ = [
     "OrgFreelancer",
     "Organisation",
     "PasswordResetToken",
+    "PersonPhoneReveal",
     "PhoneReveal",
     "RefreshToken",
     "ReportRun",

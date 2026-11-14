@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, aliased
 from app.core.errors import ApiError
 from app.core.security import Principal
 from app.models.labels import FreelancerLabel, Label, PersonLabel
-from app.models.ratings import UserRating
+from app.models.ratings import Rating, UserRating
 from app.schemas.common import LabelOut
 from app.schemas.profiles import FreelancerLabelOut
 
@@ -77,6 +77,15 @@ def rating_summary(db: Session, freelancer_id: uuid.UUID) -> tuple[float | None,
     average, count = db.execute(
         select(func.avg(UserRating.rating), func.count(UserRating.id)).where(
             UserRating.freelancer_id == freelancer_id
+        )
+    ).one()
+    return (round(float(average), 2) if average is not None else None), int(count)
+
+
+def person_rating_summary(db: Session, provider_id: uuid.UUID) -> tuple[float | None, int]:
+    average, count = db.execute(
+        select(func.avg(Rating.rating), func.count(Rating.id)).where(
+            Rating.provider_id == provider_id
         )
     ).one()
     return (round(float(average), 2) if average is not None else None), int(count)

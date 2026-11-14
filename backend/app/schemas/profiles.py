@@ -7,6 +7,7 @@ from typing import Annotated, Literal, Self
 from pydantic import AwareDatetime, BaseModel, Field, StringConstraints, model_validator
 
 from app.schemas.auth import Mobile, PersonName
+from app.schemas.church import IdName
 from app.schemas.common import LabelOut
 
 Day = Literal["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
@@ -93,24 +94,19 @@ class VouchOut(BaseModel):
 
 
 class PublicRating(BaseModel):
-    """A rating as others see it. The work host's identity is not shown."""
+    """A rating as others see it. The rater is not shown."""
 
     rating: int
     comment: str | None
     rated_on: datetime
 
 
-class VouchingOrg(BaseModel):
-    org_id: uuid.UUID
-    org_name: str
-
-
 class GivenRating(BaseModel):
-    """A rating a work host gave, with the freelancer's name so the host can recognise it."""
+    """A rating a person gave, with the provider's name so they can recognise it."""
 
     id: uuid.UUID
-    freelancer_id: uuid.UUID
-    freelancer_name: str | None
+    provider_id: uuid.UUID
+    provider_name: str | None
     rating: int
     comment: str | None
     rated_on: datetime
@@ -118,7 +114,7 @@ class GivenRating(BaseModel):
 
 
 class FreelancerPublic(BaseModel):
-    """What work hosts, organisations and admins see. Never the email."""
+    """What a SEARCHER or above sees of a provider. Never the email or the mobile number."""
 
     id: uuid.UUID
     full_name: str | None
@@ -131,9 +127,10 @@ class FreelancerPublic(BaseModel):
     labels: list[FreelancerLabelOut]
     average_rating: float | None
     rating_count: int
-    vouched_by: list[VouchingOrg]
+    church: IdName
+    home_group: IdName
     unavailable: list[UnavailabilityOut]  # upcoming periods
-    my_rating: GivenRating | None = None  # only for the work host who rated this person
+    my_rating: GivenRating | None = None  # only for the person who rated this provider
 
 
 # ---- work host --------------------------------------------------------------------------
@@ -155,7 +152,7 @@ class WorkHostMe(BaseModel):
 
 
 class RatingCreate(BaseModel):
-    freelancer_id: uuid.UUID
+    provider_id: uuid.UUID
     rating: Annotated[int, Field(ge=1, le=10)]
     comment: Annotated[str, Field(max_length=2000)] | None = None
 
