@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { fetchMe } from '../../../api/auth'
@@ -85,6 +85,15 @@ function Waiting({
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
+  const warning = useRef<HTMLParagraphElement>(null)
+  const acceptButton = useRef<HTMLButtonElement>(null)
+  const opened = useRef(false)
+  // Focus follows the question: into it when it opens, back to the button when it is dropped.
+  useEffect(() => {
+    if (confirming) warning.current?.focus()
+    else if (opened.current) acceptButton.current?.focus()
+    opened.current = confirming || opened.current
+  }, [confirming])
   const mine = request.owner.id === person.id
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['handover'] })
   const cancel = useMutation({
@@ -156,6 +165,7 @@ function Waiting({
         <div className="form-actions">
           {!mine && (
             <button
+              ref={acceptButton}
               type="button"
               className="btn btn-primary"
               disabled={busy}
@@ -175,7 +185,9 @@ function Waiting({
         </div>
       ) : (
         <div role="group" aria-label={t('handover.accept')}>
-          <p>{t('handover.acceptWarning')}</p>
+          <p ref={warning} tabIndex={-1}>
+            {t('handover.acceptWarning')}
+          </p>
           <div className="form-actions">
             <button
               type="button"
@@ -276,13 +288,20 @@ function Propose({ onNotice }: { onNotice: (message: string) => void }) {
       </Alert>
     )
   }
-  if (candidates.length === 0) return <p className="muted">{t('handover.new.none')}</p>
   const cut = (data: { total: number; items: unknown[] } | undefined) =>
     data && data.total > data.items.length ? (
       <p className="hint span-2">
         {t('handover.more', { count: data.items.length, total: data.total })}
       </p>
     ) : null
+  if (candidates.length === 0) {
+    return (
+      <>
+        <p className="muted">{t('handover.new.none')}</p>
+        {cut(churches.data)}
+      </>
+    )
+  }
   return (
     <form
       className="form-grid"

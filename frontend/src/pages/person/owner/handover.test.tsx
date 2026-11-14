@@ -210,6 +210,24 @@ describe('the OWNER proposes', () => {
     expect(await screen.findByText('Only the first 1 of 120 are shown.')).toBeVisible()
   })
 
+  it('does not say there is no church when only the first page was looked at', async () => {
+    signedInAs(
+      makeMe(),
+      owner({
+        [CHURCHES]: () =>
+          json(200, {
+            items: [church('church-1', 'Grace Church', 'olive', 'Olive Owner')],
+            total: 120,
+          }),
+      }),
+    )
+    renderApp('/member/handover')
+    expect(
+      await screen.findByText(/There is no other open .* with an .* to hand over to/),
+    ).toBeVisible()
+    expect(screen.getByText('Only the first 1 of 120 are shown.')).toBeVisible()
+  })
+
   it('says when there is no other church to hand over to', async () => {
     signedInAs(
       makeMe(),
@@ -360,6 +378,16 @@ describe('a handover that is waiting', () => {
     await user.click(await screen.findByRole('button', { name: /^Accept the/ }))
     await user.click(screen.getByRole('button', { name: 'Yes, accept' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(words)
+  })
+
+  it('moves focus into the question, and back to the button when it is dropped', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), admin({ [CURRENT]: () => json(200, { request: WAITING }) }))
+    renderApp('/member/handover')
+    await user.click(await screen.findByRole('button', { name: /^Accept the/ }))
+    expect(screen.getByText(/This cannot be undone by you/)).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: /^Accept the/ })).toHaveFocus()
   })
 
   it('can be backed out of at the question', async () => {
