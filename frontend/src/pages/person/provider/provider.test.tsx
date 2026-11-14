@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { json, makeMe, makePerson, renderApp, signedInAs } from '../../../testUtils'
+import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../../../testUtils'
 import { ALL_LABELS, ME_ID, makeProfile } from '../../../portals/freelancer/testData'
 
 const quiet = {
@@ -124,6 +124,32 @@ describe('the provider pages', () => {
   })
 })
 
+describe('the ratings page when there is nothing to show', () => {
+  const URL = `GET /freelancers/${ME_ID}/ratings?page=1&page_size=10`
+
+  it('says so when nobody has rated the provider yet', async () => {
+    as('provider', { [URL]: () => json(200, { items: [], total: 0, page: 1, page_size: 10 }) })
+    renderApp('/member/ratings')
+    expect(await screen.findByText('You have not been rated yet.')).toBeVisible()
+  })
+
+  it('offers a retry when the ratings cannot be loaded', async () => {
+    const ui = userEvent.setup({ delay: null })
+    let failing = true
+    as('provider', {
+      [URL]: () =>
+        failing
+          ? apiError(500, 'server_error')
+          : json(200, { items: [], total: 0, page: 1, page_size: 10 }),
+    })
+    renderApp('/member/ratings')
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    failing = false
+    await ui.click(retry)
+    expect(await screen.findByText('You have not been rated yet.')).toBeVisible()
+  })
+})
+
 describe('the labels of the OWNER', () => {
   it('lists every label, including the inactive, for the OWNER', async () => {
     const api = as('owner', {
@@ -133,5 +159,17 @@ describe('the labels of the OWNER', () => {
     expect(await screen.findByText('plumbing')).toBeVisible()
     expect(api.count('GET /labels?include_inactive=true')).toBe(1)
     expect(screen.getByRole('link', { name: 'Labels' })).toBeVisible()
+  })
+
+  it('lets the OWNER deactivate a label, and nobody else reach the page', async () => {
+    const ui = userEvent.setup({ delay: null })
+    const api = as('owner', {
+      'GET /labels?include_inactive=true': () => json(200, ALL_LABELS),
+      [`PATCH /labels/${ALL_LABELS[0].id}`]: () =>
+        json(200, { ...ALL_LABELS[0], is_active: false }),
+    })
+    renderApp('/member/labels')
+    await ui.click(await screen.findByRole('button', { name: 'Deactivate: plumbing' }))
+    expect(api.last(`PATCH /labels/${ALL_LABELS[0].id}`)?.body).toEqual({ is_active: false })
   })
 })
