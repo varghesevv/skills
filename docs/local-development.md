@@ -246,6 +246,8 @@ If an OWNER exists already (you set up Skills first, section 5.3), that OWNER ke
 
 ### 5.2 A large realistic data set (about 200 people)
 
+5.1 and 5.2 are alternatives: run one of them on a fresh database. To switch from one to the other, wipe the database first (`make reset-db`).
+
 This creates 3 churches with 3 home groups each and 200 people (providers with varied skills, skill levels, timings, languages and nativity; searchers; applicants with vouches; a few revoked people), plus ratings, number reveals and planned time off, and the named cast of 5.1. It writes a login list as a CSV file:
 
 ```bash

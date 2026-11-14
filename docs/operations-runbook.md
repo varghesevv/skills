@@ -168,10 +168,12 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 Run these on the server in `/opt/skills` (see the [local guide](local-development.md) for what they create). The `tools` service gives the commands the demo password without exposing it to the running API:
 
 ```bash
-dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # umask 077 first; refuses when demo people exist
+dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # umask 077 first; refuses when demo people exist (the demo is made once, see below)
 dc run --rm tools python -m app.cli create-admin --email you@example.com --mobile +971500000000
 dc run --rm tools python -m app.cli seed-demo
 ```
+
+Starting the demo over means wiping the demo database, because the history of people is append-only and cannot be removed row by row (D-45). That is an action on the live server that the owner takes; its step-by-step procedure (the reset of the demo) is written in slice S5.14 of the roadmap. Until then, `generate-demo-data` on a server that has demo people refuses, and `seed-demo` says that they exist and does nothing.
 
 ### Set up Skills: the first OWNER (church trust model)
 

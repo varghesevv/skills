@@ -9,8 +9,11 @@ log in as whatever the seed.
 
 The same seed always gives the same people. Every account uses the one DEMO_USER_PASSWORD given
 by the caller; passwords are hashed once here and never logged or printed. All emails end with
-DEMO_DATA_DOMAIN. Status history is append-only (decision D-04 of the model), so the data cannot be
-removed row by row: starting over is wiping the demo database (see the operations runbook).
+DEMO_DATA_DOMAIN. Status history is append-only, so the data cannot be removed row by row:
+starting over is wiping the demo database (see the operations runbook).
+
+The history is backdated: it has the rows of the changes (sign-up, admission, appointment,
+revocation) but no notifications, so a demo person's notification list starts empty.
 """
 
 import itertools
@@ -325,6 +328,8 @@ def generate(
             )
             head.id = head_id
             db.add(head)
+            if index:
+                head.status_set_by_id = owner.id if owner is not None else None
             record(
                 head,
                 None,
@@ -346,7 +351,7 @@ def generate(
                 church_id=church.id,
                 name=GROUP_NAMES[g % len(GROUP_NAMES)] + ("" if g < len(GROUP_NAMES) else f" {g}"),
                 leader_id=leader_id,
-                created_at=moment(60, 45),
+                created_at=moment(75, 60),
             )
             db.add(group)
             db.flush()
@@ -355,9 +360,10 @@ def generate(
                 if (index, g) == (0, 1)
                 else (rng.choice(["Leo", "Lara", "Luke"]), f"Leader{index}{g}")
             )
-            leader = person(fn, ln, "verifier", church, group, created_at=moment(60, 46))
+            leader = person(fn, ln, "verifier", church, group, created_at=moment(75, 60))
             leader.id = leader_id
             db.add(leader)
+            leader.status_set_by_id = head.id
             record(leader, None, "verifier", head, "appoint", leader.created_at)
             group_rows.append((church, group))
             leaders[group_id] = leader
@@ -379,11 +385,14 @@ def generate(
         "revoked": "revoked",
     }
     members: list[tuple[Person, str]] = []
+    admitted_at: dict[uuid.UUID, datetime] = {}
     for index in range(people):
         group_id = (
             group_ids[index % len(group_ids)] if index < len(cast_roles) else rng.choice(group_ids)
         )
         church, group, leader = church_of[group_id], group_of[group_id], leaders[group_id]
+        # One origin per person: their name, nationality, languages, nativity and skills agree.
+        nat_key = rng.choices(list(GROUP_WEIGHTS), list(GROUP_WEIGHTS.values()))[0]
         if index < len(cast_roles):  # the named cast, in the first groups
             role = cast_roles[index]
             status = cast_status[role]
@@ -392,13 +401,12 @@ def generate(
             taken_emails.add(str(email))
         else:
             status = rng.choices(statuses, weights)[0]
-            nat = rng.choices(list(GROUP_WEIGHTS), list(GROUP_WEIGHTS.values()))[0]
-            pool = GROUPS[nat]
+            pool = GROUPS[nat_key]
             first, last = rng.choice(pool["first"]), rng.choice(pool["last"])  # type: ignore[arg-type]
             email = None
-        created = moment(58, 3)
-        nat_key = rng.choices(list(GROUP_WEIGHTS), list(GROUP_WEIGHTS.values()))[0]
         pool = GROUPS[nat_key]
+        # Admitted and revoked people signed up long enough ago for their history to be in the past.
+        created = moment(58, 25) if status != "pending" else moment(30, 0)
         has_rate = rng.random() < 0.85
         profile: dict[str, object] = {}
         if status == "provider":
@@ -425,14 +433,8 @@ def generate(
         db.add(row)
         record(row, None, "pending", None, "signup", created)
         if status in ("searcher", "provider"):
-            record(
-                row,
-                "pending",
-                status,
-                leader,
-                "admit",
-                created + timedelta(days=rng.uniform(0.2, 4)),
-            )
+            admitted_at[row.id] = created + timedelta(days=rng.uniform(0.2, 4))
+            record(row, "pending", status, leader, "admit", admitted_at[row.id])
         elif status == "revoked":
             via = rng.choice(["searcher", "provider"])
             record(row, "pending", via, leader, "admit", created + timedelta(days=1))
@@ -514,7 +516,9 @@ def generate(
                 continue
             score = rng.choices(range(1, 11), [1, 1, 1, 2, 4, 6, 12, 18, 18, 12])[0]
             band = "high" if score >= 8 else "mid" if score >= 5 else "low"
-            when = moment(40)
+            # After both of them were admitted, and before now.
+            start = max(admitted_at[rater.id], admitted_at[target.id])
+            when = start + (now - start) * rng.random()
             ratings.append(
                 Rating(
                     rater_id=rater.id,

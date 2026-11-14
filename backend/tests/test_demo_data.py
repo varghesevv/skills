@@ -131,3 +131,50 @@ def test_an_existing_owner_keeps_their_church(session: Session) -> None:
     assert "owner" not in [r.status for r in rows]  # the real OWNER is not copied
     owners = session.scalars(select(Person).where(Person.status == "owner")).all()
     assert [o.email for o in owners] == ["real.owner@example.com"]
+
+
+def test_the_history_agrees_with_the_people_and_lies_in_the_past(session: Session) -> None:
+    from datetime import UTC, datetime
+
+    generate(session, PASSWORD, churches=3, groups_per_church=3, people=120)
+    now = datetime.now(UTC)
+    latest: dict[object, StatusChange] = {}
+    for change in session.scalars(select(StatusChange).order_by(StatusChange.at)):
+        assert change.at <= now, (change.kind, change.at)
+        latest[change.person_id] = change
+    for person in session.scalars(select(Person)):
+        last = latest[person.id]
+        assert last.to_status == person.status
+        assert last.changed_by_id == person.status_set_by_id, (person.status, last.kind)
+    for rating in session.scalars(select(Rating)):
+        assert rating.rated_on <= now
+        for who in (rating.rater_id, rating.provider_id):
+            admitted = session.scalars(
+                select(StatusChange.at).where(
+                    StatusChange.person_id == who,
+                    StatusChange.kind.in_(["admit", "appoint", "operator"]),
+                )
+            ).first()
+            assert admitted is not None and admitted <= rating.rated_on
+
+
+def test_a_person_has_one_origin(session: Session) -> None:
+    from app.demo_data import GROUPS
+
+    generate(session, PASSWORD, churches=2, groups_per_church=2, people=150)
+    names_of: dict[str, set[str]] = {}
+    for pool in GROUPS.values():
+        names_of.setdefault(str(pool["nationality"]), set()).update(pool["first"])  # type: ignore[arg-type]
+    providers = session.scalars(
+        select(Person).where(Person.status == "provider", Person.email.like("%demo.example.com"))
+    ).all()
+    checked = 0
+    for person in providers:
+        if person.nationality is None or person.full_name is None:
+            continue
+        first = person.full_name.split(" ", 1)[0]
+        if first in {"Priya"}:  # the named cast takes names of its own
+            continue
+        assert first in names_of[person.nationality], (person.full_name, person.nationality)
+        checked += 1
+    assert checked > 20

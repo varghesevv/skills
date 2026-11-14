@@ -198,8 +198,9 @@ def seed_demo() -> int:
         try:
             rows = generate(db, password, churches=2, groups_per_church=2, people=24)
         except DemoDataExists:
-            print(_STARTING_OVER, file=sys.stderr)
-            return 1
+            # Seeding twice is harmless (it was never an error): say so and stop.
+            print("Demo people already exist; nothing was created.")
+            return 0
     print(f"Demo people created: {len(rows)}.")
     print("Log in with these emails and the DEMO_USER_PASSWORD value from your environment:")
     names = {name for _, name in CAST}
