@@ -423,6 +423,16 @@ describe('one person', () => {
     expect(api.count('GET /verifier/people/p1')).toBe(1)
   })
 
+  it('moves focus into the question to decline, and back to the button when it is dropped', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), routes())
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Decline Nadia Applicant' }))
+    expect(screen.getByText(/This closes the application of Nadia Applicant/)).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Decline Nadia Applicant' })).toHaveFocus()
+  })
+
   it('shows only the outcome after a decline, and not the number', async () => {
     const user = userEvent.setup({ delay: null })
     signedInAs(makeMe(), routes(DETAIL, { 'POST /verifier/people/p1/decline': () => json(204) }))

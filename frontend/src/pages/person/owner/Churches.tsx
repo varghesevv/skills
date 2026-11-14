@@ -14,6 +14,7 @@ import {
 } from '../../../api/person'
 import type { ChurchInvitation, ChurchInvitationCreated, OwnerChurch } from '../../../api/types'
 import { usePerson } from '../../../auth/AuthContext'
+import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { t } from '../../../i18n'
 import { INVITE_LINK_PREFIX } from '../../../portals/config'
 import { formatDate } from '../../../shared/dates'
@@ -255,6 +256,7 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const [replacing, setReplacing] = useState(false)
+  const opener = useReturnFocus<HTMLButtonElement>(confirming)
   const own = church.id === person.church.id
   const close = useMutation({
     mutationFn: () => closeChurch(church.id),
@@ -295,34 +297,26 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
         <div className="form-actions">
           <ReplaceAdmin church={church} open={replacing} setOpen={setReplacing} onDone={onDone} />
           {!replacing && (
-            <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
+            <button
+              ref={opener}
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => setConfirming(true)}
+            >
               {t('owner.churches.close', { church: church.name })}
             </button>
           )}
         </div>
       )}
       {confirming && (
-        <div role="group" aria-label={t('owner.churches.close', { church: church.name })}>
-          <p>{t('owner.churches.closeWarning', { church: church.name })}</p>
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={close.isPending}
-              onClick={() => close.mutate()}
-            >
-              {t('owner.churches.closeConfirm')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-quiet"
-              disabled={close.isPending}
-              onClick={() => setConfirming(false)}
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
+        <Confirm
+          label={t('owner.churches.close', { church: church.name })}
+          warning={t('owner.churches.closeWarning', { church: church.name })}
+          confirmLabel={t('owner.churches.closeConfirm')}
+          busy={close.isPending}
+          onConfirm={() => close.mutate()}
+          onCancel={() => setConfirming(false)}
+        />
       )}
     </div>
   )

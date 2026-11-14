@@ -81,6 +81,18 @@ describe('close my group', () => {
     })
   })
 
+  it('moves focus into the question, and back to the button when it is dropped', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), lead())
+    renderApp('/member/group')
+    await screen.findByRole('option', { name: 'Harbour' })
+    await user.selectOptions(screen.getByLabelText('Join'), 'g2')
+    await user.click(screen.getByRole('button', { name: 'Close Riverside' }))
+    expect(screen.getByText(/It cannot be undone/)).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Close Riverside' })).toHaveFocus()
+  })
+
   it('can be cancelled at the question', async () => {
     const user = userEvent.setup({ delay: null })
     const api = signedInAs(makeMe(), lead())

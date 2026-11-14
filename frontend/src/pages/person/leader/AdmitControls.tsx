@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { admitPerson, declinePerson } from '../../../api/person'
 import type { AppliedStatus, PersonStatus } from '../../../api/types'
 import { t } from '../../../i18n'
+import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { Alert } from '../../../shared/ui'
 import { leaderProblem } from './problems'
 
@@ -28,6 +29,7 @@ export default function AdmitControls({
 }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
+  const opener = useReturnFocus<HTMLButtonElement>(confirming)
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['applicants'] })
     await queryClient.invalidateQueries({ queryKey: ['members'] })
@@ -84,6 +86,7 @@ export default function AdmitControls({
             {t('leader.admit.provider', { name })}
           </button>
           <button
+            ref={opener}
             type="button"
             className="btn btn-quiet"
             disabled={busy}
@@ -98,31 +101,16 @@ export default function AdmitControls({
           )}
         </div>
       ) : (
-        <div className="span-2" role="group" aria-label={t('leader.decline.open', { name })}>
-          <p>
-            {upgrade
-              ? t('leader.upgrade.warning', { name })
-              : t('leader.decline.warning', { name })}
-          </p>
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={busy}
-              onClick={() => decline.mutate()}
-            >
-              {t('leader.decline.confirm')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-quiet"
-              disabled={busy}
-              onClick={() => setConfirming(false)}
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
+        <Confirm
+          label={t('leader.decline.open', { name })}
+          warning={
+            upgrade ? t('leader.upgrade.warning', { name }) : t('leader.decline.warning', { name })
+          }
+          confirmLabel={t('leader.decline.confirm')}
+          busy={busy}
+          onConfirm={() => decline.mutate()}
+          onCancel={() => setConfirming(false)}
+        />
       )}
     </div>
   )

@@ -7,6 +7,7 @@ import { ApiError } from '../../../api/http'
 import { closeGroup, fetchHomeGroups, type FormerLeaderStatus } from '../../../api/person'
 import { useAuth, usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
+import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { errorMessage } from '../../../shared/errors'
 import { setFlash } from '../../../shared/flash'
 import { Alert, SelectField } from '../../../shared/ui'
@@ -34,6 +35,7 @@ export default function MyGroup() {
   const keeps = person.status === 'admin' || person.status === 'owner'
   const [former, setFormer] = useState<FormerLeaderStatus>(keeps ? 'keep' : 'provider')
   const [confirming, setConfirming] = useState(false)
+  const opener = useReturnFocus<HTMLButtonElement>(confirming)
   const groups = useQuery({
     queryKey: ['church-groups', person.church.id],
     queryFn: () => fetchHomeGroups(person.church.id),
@@ -130,34 +132,21 @@ export default function MyGroup() {
                   />
                 )}
                 <div className="form-actions span-2">
-                  <button type="submit" className="btn btn-quiet" disabled={!target}>
+                  <button ref={opener} type="submit" className="btn btn-quiet" disabled={!target}>
                     {t('myGroup.close.submit', { group: name })}
                   </button>
                 </div>
               </form>
             )}
             {confirming && (
-              <div role="group" aria-label={t('myGroup.close.title', { group: name })}>
-                <p>{t('myGroup.close.warning', { group: name })}</p>
-                <div className="form-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={close.isPending}
-                    onClick={() => close.mutate()}
-                  >
-                    {t('myGroup.close.confirm')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-quiet"
-                    disabled={close.isPending}
-                    onClick={() => setConfirming(false)}
-                  >
-                    {t('common.cancel')}
-                  </button>
-                </div>
-              </div>
+              <Confirm
+                label={t('myGroup.close.title', { group: name })}
+                warning={t('myGroup.close.warning', { group: name })}
+                confirmLabel={t('myGroup.close.confirm')}
+                busy={close.isPending}
+                onConfirm={() => close.mutate()}
+                onCancel={() => setConfirming(false)}
+              />
             )}
           </>
         )}
