@@ -92,7 +92,6 @@ function InviteForm() {
       aria-label={t('owner.invite.title')}
       onSubmit={(event) => {
         event.preventDefault()
-        setCreated(null)
         if (name.trim().length >= 2 && email.trim()) invite.mutate()
       }}
     >

@@ -60,7 +60,7 @@ describe('who sees the churches', () => {
     signedInAs(makeMe(), owner({ [CHURCHES]: () => json(200, { items: [OWN], total: 1 }) }))
     renderApp('/member/churches')
     expect(await screen.findByRole('heading', { name: 'Grace Church' })).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Churches' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Organisations' })).toHaveAttribute(
       'href',
       '/member/churches',
     )
@@ -94,7 +94,7 @@ describe('the list of churches', () => {
     )
     renderApp('/member/churches')
     const own = (await screen.findByRole('heading', { name: 'Grace Church' })).closest('li')!
-    expect(within(own).getByText(/3 groups, 40 members, 2 revoked/)).toBeVisible()
+    expect(within(own).getByText(/3 home groups, 40 members, 2 revoked/)).toBeVisible()
     expect(within(own).getByText(/Yours/)).toBeVisible()
     expect(within(own).queryByRole('button')).toBeNull()
     const hope = screen.getByRole('heading', { name: 'Hope Church' }).closest('li')!
@@ -120,8 +120,25 @@ describe('the list of churches', () => {
     expect(api.count('POST /owner/churches/church-2/close')).toBe(0)
     expect(screen.getByText(/It cannot be undone/)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Yes, close it' }))
-    expect(await screen.findByText('Hope Church is closed: 1 groups and 9 accounts.')).toBeVisible()
+    expect(
+      await screen.findByText('Hope Church is closed: 1 home groups and 9 accounts.'),
+    ).toBeVisible()
     expect(api.count('POST /owner/churches/church-2/close')).toBe(1)
+  })
+
+  it('puts a refusal to close the own church in words', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      owner({
+        [CHURCHES]: () => json(200, { items: [HOPE], total: 1 }),
+        'POST /owner/churches/church-2/close': () => apiError(409, 'owner_church'),
+      }),
+    )
+    renderApp('/member/churches')
+    await user.click(await screen.findByRole('button', { name: 'Close Hope Church' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, close it' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot close your own/)
   })
 
   it('can be cancelled at the question, and shows a refusal in words', async () => {
@@ -156,7 +173,7 @@ describe('the list of churches', () => {
     )
     renderApp('/member/churches')
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
-    expect(await screen.findByText('No churches yet.')).toBeVisible()
+    expect(await screen.findByText('No organisations yet.')).toBeVisible()
   })
 })
 
@@ -186,12 +203,36 @@ describe('invite the ADMIN of a new church', () => {
       church_name: 'Hope Church',
       email: 'ada@example.com',
     })
-    // The fields are empty again, and the next invitation hides the earlier link.
+    // The fields are empty again.
     expect(screen.getByLabelText(/^Name of the/)).toHaveValue('')
     await user.type(screen.getByLabelText(/^Name of the/), 'Next Church')
     await user.type(screen.getByLabelText(/^Email address of the/), 'next@example.com')
     await user.click(screen.getByRole('button', { name: 'Create the invitation' }))
     expect(await screen.findByLabelText('Invitation link')).toBeVisible()
+  })
+
+  it('keeps the link of the first invitation when the second one is refused', async () => {
+    const user = userEvent.setup({ delay: null })
+    let calls = 0
+    signedInAs(
+      makeMe(),
+      owner({
+        'POST /owner/churches': () =>
+          ++calls === 1
+            ? json(201, { id: 'i1', token: 'tok-first-0001', expires_at: '2026-11-28T08:00:00Z' })
+            : apiError(409, 'account_exists'),
+      }),
+    )
+    renderApp('/member/churches')
+    await fill(user, 'Hope Church', 'ada@example.com')
+    await user.click(screen.getByRole('button', { name: 'Create the invitation' }))
+    await screen.findByLabelText('Invitation link')
+    await fill(user, 'Next Church', 'next@example.com')
+    await user.click(screen.getByRole('button', { name: 'Create the invitation' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/belongs to an account already/)
+    expect(screen.getByLabelText('Invitation link')).toHaveValue(
+      `${window.location.origin}/invite/tok-first-0001`,
+    )
   })
 
   it('keeps the button off until both fields are filled', async () => {
