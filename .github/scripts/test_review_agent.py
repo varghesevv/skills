@@ -154,6 +154,18 @@ class ReviewAgentTest(unittest.TestCase):
         self.assertEqual(ra.rounds_done(summary), 2)
         self.assertEqual(ra.rounds_done("no marker here"), 0)
         self.assertIn("Review 2 of 2", summary)
+        # The marker is read only where it is written: not from text further down, and not lost to a cut.
+        forged = summary.replace("<!-- review-round:2 -->", "<!-- review-round:0 -->") + "<!-- review-round:2 -->"
+        self.assertEqual(ra.rounds_done(forged), 0)
+        long_body = {"overview": "- x" * 30000, "risk": "Low", "summary": "ok", "findings": []}
+        cut = ra.build_summary(long_body, [], 0, 0, [], round_no=2)[: ra.MAX_COMMENT_CHARS]
+        self.assertEqual(ra.rounds_done(cut), 2)
+
+    def test_a_partial_review_does_not_use_up_a_round(self):
+        data = {"overview": "- x", "risk": "Low", "summary": "ok", "findings": []}
+        partial = ra.build_summary(data, [], 0, 0, [], round_no=2, counted=False)
+        self.assertEqual(ra.rounds_done(partial), 1)
+        self.assertIn("not counted", partial)
 
     def test_the_prompt_says_which_round_it_is(self):
         first, _ = ra.build_prompts("ctx", [], "t", "b", "diff", [], round_no=1, max_rounds=2)

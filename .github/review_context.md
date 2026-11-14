@@ -8,7 +8,7 @@ Two lines: `main` is deployed to the demo on every merge (only demo-safe changes
 1. **Secrets:** none in code, tests, docs, workflows, config, logs or commit/PR text. Secrets come from the environment or CI secrets only (ADR-0011). Test credentials are generated at run time.
 2. **Logging:** never log credentials, tokens, device tokens, message text or phone numbers.
 3. **Authorization (IDOR):** every handler checks the role AND the person's scope or ownership. Out of scope answers `404`, the same as unknown, so existence is not revealed.
-4. **Tokens:** access tokens carry only the person id; the status is read from the database on every request. Link and invitation tokens are stored hashed, shown once, sent in request bodies (never in API paths or query keys), and every failure gives the same `404`.
+4. **Tokens:** access tokens carry only the person id (the model line) and the status is read from the database on every request. Refresh tokens rotate with reuse detection, and disabling or closing an account revokes them. Login throttling is keyed by (email, IP) with the IP from trusted proxy headers only. Link and invitation tokens are stored hashed, shown once, sent in request bodies (never in API paths or query keys), and every failure gives the same `404`. The demo password-reset link in the log is the one documented exception to the logging rule.
 5. **Phone numbers:** returned only by the reveal endpoint, except the leader views (`GET /verifier/people/{id}`), which log each view. Lists, search results and notifications never carry a number or an email.
 6. **Untrusted input and output:** validate with Pydantic or typed models; escape user text on output.
 
@@ -31,3 +31,6 @@ Statuses: revoked < pending < searcher < provider < verifier < admin < owner. An
 - New endpoints and screens need tests for unauthorized, wrong-role and out-of-scope cases, and for loading, empty and error states.
 - The OpenAPI file (`docs/openapi.json`) is generated; the specification, ADRs and runbook change in the same PR as the behaviour.
 - A PR that touches `.github/` or `infra/` waits for the owner.
+
+## 6. Until the cut-over
+PRs on `main` still serve the older organisation model, whose rules apply to them: the admin approves organisations before they log in; a freelancer is searchable with at least one skill (no rate or rating is required); only work hosts rate (1-10), once per freelancer; the mobile number is returned only by `POST /freelancers/{id}/reveal-mobile` (work host only, recorded, rate limited); the admin has no mobile access. PRs on `model/verification` follow sections 2 to 5 instead; the old-model code is removed at the cut-over (S6).

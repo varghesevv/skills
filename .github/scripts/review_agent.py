@@ -173,7 +173,9 @@ def github_request(url: str, token: str, method: str = "GET", payload: dict | No
         return json.loads(res.read().decode("utf-8") or "null")
 
 
-ROUND_RE = re.compile(r"<!-- review-round:(\d+) -->")
+# The marker sits on the line right after the heading, so a cut-off or text written by the model
+# further down can neither remove it nor stand in for it.
+ROUND_RE = re.compile(r"\A[^\n]*\n<!-- review-round:(\d+) -->")
 
 
 def find_summary(repo: str, pr_num: str, token: str) -> tuple[int | None, str]:
@@ -193,7 +195,7 @@ def find_summary(repo: str, pr_num: str, token: str) -> tuple[int | None, str]:
 
 def rounds_done(summary_text: str) -> int:
     """How many reviews this reviewer already gave, from the marker in its summary."""
-    match = ROUND_RE.search(summary_text)
+    match = ROUND_RE.match(summary_text)
     return int(match.group(1)) if match else 0
 
 
@@ -444,17 +446,23 @@ def build_summary(
     omitted: list[str],
     round_no: int = 1,
     max_rounds: int = DEFAULT_MAX_ROUNDS,
+    counted: bool = True,
 ) -> str:
     risk = data.get("risk") if data.get("risk") in ("Low", "Medium", "High") else "Unknown"
     summary_text = data.get("summary")
     summary_text = summary_text.strip() if isinstance(summary_text, str) else ""
     overview = data.get("overview")
     overview = overview.strip() if isinstance(overview, str) and overview.strip() else "_No overview produced._"
+    # A run with requests that failed does not use up a round: the retry it asks for must be allowed.
+    done = round_no if counted else round_no - 1
     lines = [
-        COMMENT_HEADING, "",
+        COMMENT_HEADING,
+        f"<!-- review-round:{done} -->",
+        "",
         "#### 📝 What this PR does", overview, "",
         f"**Risk: {risk}.** {summary_text}", "",
-        f"_Review {round_no} of {max_rounds}._", "",
+        f"_Review {round_no} of {max_rounds}._" if counted else "_Partial review: not counted, run again._",
+        "",
     ]
     if inline_total or general:
         lines.append(
@@ -472,7 +480,6 @@ def build_summary(
         "_Advisory automated review. Inline points are review threads: reply with how you handled one "
         "(or why it is a false positive) and resolve it. The human reviewer decides._"
     )
-    lines.append(f"<!-- review-round:{round_no} -->")
     return neutralise_mentions("\n".join(lines))
 
 
@@ -816,7 +823,9 @@ def main() -> int:
 
     post_or_update_comment(
         repo, pr_num, token,
-        build_summary(data, general, len(prior) + len(fresh), len(fresh), omitted, round_no, max_rounds),
+        build_summary(
+            data, general, len(prior) + len(fresh), len(fresh), omitted, round_no, max_rounds, not failed
+        ),
     )
     return 0
 
