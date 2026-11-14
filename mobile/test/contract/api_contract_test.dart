@@ -42,6 +42,22 @@ void main() {
   Set<String> properties(String schema) =>
       (schemaNamed(schema)['properties'] as Map).keys.cast<String>().toSet();
 
+  /// The schemas a property refers to (directly, or inside `anyOf` for an optional one).
+  Set<String> refsOf(String schema, String field) {
+    final property = Map<String, Object?>.from(
+      (schemaNamed(schema)['properties'] as Map)[field] as Map,
+    );
+    final candidates = [
+      property,
+      for (final option in (property['anyOf'] as List?) ?? const [])
+        Map<String, Object?>.from(option as Map),
+    ];
+    return {
+      for (final c in candidates)
+        if (c[r'$ref'] != null) (c[r'$ref'] as String).split('/').last,
+    };
+  }
+
   Set<String> required(String schema) =>
       ((schemaNamed(schema)['required'] as List?) ?? const [])
           .cast<String>()
@@ -496,8 +512,15 @@ void main() {
         'GroupStarted',
       );
       expect(properties('GroupStarted'), {'group'});
-      // The nested names the app reads: who asks, which church, which group.
+      // The nested names the app reads (who asks, which church, which group) are all `IdName`,
+      // which has exactly the `id` and `name` it reads.
       expect(properties('IdName'), {'id', 'name'});
+      for (final field in ['church', 'requester', 'requester_group']) {
+        expect(refsOf('GroupRequestOut', field), {'IdName'}, reason: field);
+      }
+      expect(refsOf('GroupRequestCreated', 'group'), {'IdName'});
+      expect(refsOf('GroupRequestCreated', 'request'), {'GroupRequestOut'});
+      expect(refsOf('GroupStarted', 'group'), {'IdName'});
     });
 
     test('only the person page has a number', () {
