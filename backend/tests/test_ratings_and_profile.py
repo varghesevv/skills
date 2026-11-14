@@ -89,6 +89,16 @@ def test_nobody_rates_themselves(client: TestClient, world: World) -> None:
     assert world.session.scalar(select(func.count()).select_from(Rating)) == 0
 
 
+def test_a_searcher_rating_themselves_gets_the_404_of_anyone_who_is_not_a_provider(
+    client: TestClient, world: World
+) -> None:
+    searcher = add_member(world, "searcher")
+    response = client.post(
+        f"{API}/ratings", json=body(searcher), headers=headers_of(client, searcher)
+    )
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize("status", ["pending", "revoked"])
 def test_an_applicant_or_a_revoked_person_does_not_rate(
     client: TestClient, world: World, status: str

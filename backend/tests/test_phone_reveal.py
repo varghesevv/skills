@@ -6,10 +6,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
+from app.core.errors import ApiError
 from app.models.reveals import PersonPhoneReveal
+from app.schemas.profiles import RevealRequest
+from app.services.reveals import reveal_mobile_number
 from tests.api_helpers import API
 from tests.test_admission import headers_of
 from tests.test_person_auth import Member, add_member
@@ -191,3 +194,55 @@ def test_daily_limit_and_window_slides(client: TestClient, world: World) -> None
     )
     world.session.flush()
     assert reveal(client, world, provider.person.id, searcher).status_code == 200
+
+
+def _stale(world: World, member: Member) -> None:
+    """Change the row behind the session's back, as a request running at the same time would."""
+    world.session.flush()
+    world.session.execute(
+        text("UPDATE people SET status = 'revoked', home_group_id = NULL WHERE id = :id"),
+        {"id": member.person.id},
+    )
+
+
+def test_a_provider_revoked_meanwhile_is_not_revealed(client: TestClient, world: World) -> None:
+    from app.core.config import get_settings
+
+    provider, searcher = add_member(world, "provider"), add_member(world, "searcher")
+    assert provider.person.status == "provider"  # the session holds the person as they were
+    _stale(world, provider)
+    with pytest.raises(ApiError) as caught:
+        reveal_mobile_number(
+            world.session,
+            get_settings(),
+            revealer=searcher.person,
+            provider_id=provider.person.id,
+            body=RevealRequest(channel="show", source="detail"),
+        )
+    assert (caught.value.status_code, caught.value.code) == (404, "not_found")
+    assert reveals(world.session) == 0
+
+
+def test_a_person_revoked_meanwhile_does_not_reveal(client: TestClient, world: World) -> None:
+    from app.core.config import get_settings
+
+    provider, searcher = add_member(world, "provider"), add_member(world, "searcher")
+    assert searcher.person.status == "searcher"
+    _stale(world, searcher)
+    with pytest.raises(ApiError) as caught:
+        reveal_mobile_number(
+            world.session,
+            get_settings(),
+            revealer=searcher.person,
+            provider_id=provider.person.id,
+            body=RevealRequest(channel="show", source="detail"),
+        )
+    assert (caught.value.status_code, caught.value.code) == (403, "account_revoked")
+    assert reveals(world.session) == 0
+
+
+def test_a_searcher_who_targets_themselves_gets_the_404_of_anyone_who_is_not_a_provider(
+    client: TestClient, world: World
+) -> None:
+    searcher = add_member(world, "searcher")
+    assert reveal(client, world, searcher.person.id, searcher).status_code == 404

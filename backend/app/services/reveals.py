@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.models.church import Person
+from app.models.enums import STATUS_RANK
 from app.models.reveals import PersonPhoneReveal
 from app.schemas.profiles import RevealRequest
 from app.services import locks
@@ -49,6 +50,16 @@ def check_reveal_limits(db: Session, settings: Settings, revealer_id: uuid.UUID)
             )
 
 
+def _still_allowed(revealer: Person) -> None:
+    """The person asking, as they are now: open, not revoked, a SEARCHER or above."""
+    if revealer.closed_at is not None:
+        raise ApiError(401, "invalid_token", "The account no longer exists")
+    if revealer.status == "revoked":
+        raise ApiError(403, "account_revoked", "This account has been revoked")
+    if STATUS_RANK[revealer.status] < STATUS_RANK["searcher"]:
+        raise ApiError(403, "not_admitted", "This is not available to you yet")
+
+
 def reveal_mobile_number(
     db: Session,
     settings: Settings,
@@ -62,18 +73,22 @@ def reveal_mobile_number(
     Only an open account of PROVIDER or above is revealed, exactly as only such an account is
     listed and opened by id; anyone else is the same `404`. Nobody reveals their own number.
     """
+    # Lock both people (in id order, as everywhere) before looking at either: what is checked
+    # next is what is in the database now, and a provider who is revoked or closed meanwhile is
+    # not revealed. The same goes for the person asking.
+    locks.lock_people(db, [revealer.id, provider_id])
+    _still_allowed(revealer)
     provider = visible_provider(db, provider_id)
     if provider.id == revealer.id:
         raise ApiError(422, "own_number", "This is your own number")
-    # Lock the person's row so two parallel reveals cannot both slip under the limit. The second
-    # request waits here, and its count then includes the first one's committed row. This relies
-    # on PostgreSQL's default READ COMMITTED isolation (the project's setting): under REPEATABLE
-    # READ the second request would still use its older snapshot and could exceed the limit. Keep
-    # the default isolation level for this path, or retry on serialization failure.
     number = provider.mobile_number
     if number is None:  # an open account always has one (a database rule)
         raise ApiError(404, "not_found", "Provider not found")
-    locks.lock_people(db, [revealer.id])
+    # The count below relies on PostgreSQL's default READ COMMITTED isolation (the project's
+    # setting): the second of two parallel reveals waits at the lock above, and its count then
+    # includes the first one's committed row. Under REPEATABLE READ it would use an older
+    # snapshot and could exceed the limit. Keep the default isolation level for this path, or
+    # retry on serialization failure.
     check_reveal_limits(db, settings, revealer.id)
     db.add(
         PersonPhoneReveal(
