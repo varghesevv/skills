@@ -154,16 +154,19 @@ describe('revoke', () => {
     expect(screen.getByText(/Only an .* or the .* can revoke a/)).toBeVisible()
   })
 
-  it.each(['admin', 'owner'])('does not offer to revoke an ADMIN to a %s here', async (actor) => {
-    signedInAs(makeMe(), {
-      ...person(detail({ status: 'admin' })),
-      'GET /me': () => json(200, makePerson({ status: actor as 'admin' })),
-    })
-    renderApp('/member/people/p1')
-    await screen.findByRole('heading', { name: 'Sam Searcher' })
-    expect(screen.queryByRole('button', { name: /^Revoke/ })).toBeNull()
-    expect(screen.getByText(/Hand that on first/)).toBeVisible()
-  })
+  it.each(['admin'])(
+    'does not offer to revoke an ADMIN to an %s: only the OWNER can',
+    async (actor) => {
+      signedInAs(makeMe(), {
+        ...person(detail({ status: 'admin' })),
+        'GET /me': () => json(200, makePerson({ status: actor as 'admin' })),
+      })
+      renderApp('/member/people/p1')
+      await screen.findByRole('heading', { name: 'Sam Searcher' })
+      expect(screen.queryByRole('button', { name: /^Revoke/ })).toBeNull()
+      expect(screen.getByText(/Hand that on first/)).toBeVisible()
+    },
+  )
 
   it('does not offer to revoke the OWNER, an applicant or someone already revoked', async () => {
     for (const status of ['owner', 'pending']) {
