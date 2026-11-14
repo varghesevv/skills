@@ -142,14 +142,20 @@ class GroupInvitationRow {
 
 /// A link just made: the token is here and nowhere else, and only until the screen is left.
 class GroupInvitationCreated {
-  const GroupInvitationCreated({required this.token, required this.expiresAt});
+  const GroupInvitationCreated({
+    required this.id,
+    required this.token,
+    required this.expiresAt,
+  });
 
   factory GroupInvitationCreated.fromJson(Map<String, Object?> json) =>
       GroupInvitationCreated(
+        id: json['id'] as String,
         token: json['token'] as String,
         expiresAt: DateTime.parse(json['expires_at'] as String),
       );
 
+  final String id;
   final String token;
   final DateTime expiresAt;
 }

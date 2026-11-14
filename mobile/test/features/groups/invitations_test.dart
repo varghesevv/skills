@@ -168,6 +168,75 @@ void main() {
       expect(app.adapter.count('DELETE', '/verifier/group-invitations/i1'), 1);
     });
 
+    testWidgets('ending the link that was just made takes it off the screen', (
+      tester,
+    ) async {
+      final token = fresh('tok');
+      final app = await _open(
+        tester,
+        arrange: (a) => a
+          ..reply(
+            'POST',
+            '/verifier/group-invitations',
+            FakeReply(201, {
+              'id': 'i1',
+              'token': token,
+              'expires_at': '2026-12-20T08:00:00Z',
+            }),
+          )
+          ..reply('DELETE', '/verifier/group-invitations/i1', FakeReply(204)),
+      );
+      app.adapter.setReply(
+        'GET',
+        '/verifier/group-invitations',
+        FakeReply(200, {
+          'items': [_row('i1', '2026-11-20', '2026-12-20')],
+        }),
+      );
+      await tapKey(tester, 'make-join-link');
+      expect(find.byKey(const Key('join-link')), findsOneWidget);
+      app.adapter.setReply(
+        'GET',
+        '/verifier/group-invitations',
+        FakeReply(200, {'items': []}),
+      );
+      await tapKey(tester, 'revoke-invitation-i1');
+      expect(find.byKey(const Key('join-link')), findsNothing);
+      expect(find.byKey(const Key('copy-join-link')), findsNothing);
+      expect(find.text('The link no longer works.'), findsOneWidget);
+    });
+
+    testWidgets('ending another link leaves the one just made on the screen', (
+      tester,
+    ) async {
+      final token = fresh('tok');
+      final app = await _open(
+        tester,
+        rows: [_row('i0', '2026-11-01', '2026-12-01')],
+        arrange: (a) => a
+          ..reply(
+            'POST',
+            '/verifier/group-invitations',
+            FakeReply(201, {
+              'id': 'i1',
+              'token': token,
+              'expires_at': '2026-12-20T08:00:00Z',
+            }),
+          )
+          ..reply('DELETE', '/verifier/group-invitations/i0', FakeReply(204)),
+      );
+      await tapKey(tester, 'make-join-link');
+      app.adapter.setReply(
+        'GET',
+        '/verifier/group-invitations',
+        FakeReply(200, {
+          'items': [_row('i1', '2026-11-20', '2026-12-20')],
+        }),
+      );
+      await tapKey(tester, 'revoke-invitation-i0');
+      expect(find.textContaining('/join/$token'), findsOneWidget);
+    });
+
     testWidgets('says so for a leader who handed their group on', (
       tester,
     ) async {

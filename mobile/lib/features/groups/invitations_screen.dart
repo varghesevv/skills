@@ -84,7 +84,14 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
     try {
       await ref.read(groupRepositoryProvider).revokeInvitation(id);
       if (!mounted) return;
-      setState(() => _notice = text('invitations.revoked'));
+      setState(() {
+        _notice = text('invitations.revoked');
+        // The link that was just shown is dead when it is the one that was ended.
+        if (_created?.id == id) {
+          _created = null;
+          _copied = false;
+        }
+      });
       await _load();
     } catch (error) {
       if (mounted) setState(() => _error = _problem(text, error));
