@@ -27,6 +27,9 @@ const owner = (extra = {}) => ({
   ...extra,
 })
 
+// Made at run time: no token-like text is kept in the source (ADR-0011).
+const FIRST = `link-${crypto.randomUUID()}`
+
 const OWN = {
   id: 'church-1',
   name: 'Grace Church',
@@ -189,7 +192,7 @@ describe('invite the ADMIN of a new church', () => {
       makeMe(),
       owner({
         'POST /owner/churches': () =>
-          json(201, { id: 'i1', token: 'tok-abcdefghij', expires_at: '2026-11-28T08:00:00Z' }),
+          json(201, { id: 'i1', token: FIRST, expires_at: '2026-11-28T08:00:00Z' }),
       }),
     )
     renderApp('/member/churches')
@@ -197,7 +200,7 @@ describe('invite the ADMIN of a new church', () => {
     await user.click(screen.getByRole('button', { name: 'Create the invitation' }))
     expect(await screen.findByText(/shown only now/)).toBeVisible()
     expect(screen.getByLabelText('Invitation link')).toHaveValue(
-      `${window.location.origin}/invite/tok-abcdefghij`,
+      `${window.location.origin}/invite/${FIRST}`,
     )
     expect(api.calls.find((c) => c.key === 'POST /owner/churches')?.body).toEqual({
       church_name: 'Hope Church',
@@ -219,7 +222,7 @@ describe('invite the ADMIN of a new church', () => {
       owner({
         'POST /owner/churches': () =>
           ++calls === 1
-            ? json(201, { id: 'i1', token: 'tok-first-0001', expires_at: '2026-11-28T08:00:00Z' })
+            ? json(201, { id: 'i1', token: FIRST, expires_at: '2026-11-28T08:00:00Z' })
             : apiError(409, 'account_exists'),
       }),
     )
@@ -231,7 +234,7 @@ describe('invite the ADMIN of a new church', () => {
     await user.click(screen.getByRole('button', { name: 'Create the invitation' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/belongs to an account already/)
     expect(screen.getByLabelText('Invitation link')).toHaveValue(
-      `${window.location.origin}/invite/tok-first-0001`,
+      `${window.location.origin}/invite/${FIRST}`,
     )
   })
 
