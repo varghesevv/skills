@@ -407,6 +407,13 @@ export type Handover = {
   created_at: string
 }
 export type HandoverAccepted = { owner: IdName; former_owner: IdName; former_owner_status: string }
+export type ContactView = {
+  id: string
+  viewer: IdName
+  person: IdName
+  screen: string
+  viewed_at: string
+}
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string

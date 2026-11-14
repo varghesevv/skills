@@ -12,6 +12,7 @@ import type {
   ChurchInvitation,
   ChurchInvitationCreated,
   ChurchSummary,
+  ContactView,
   HomeGroupSummary,
   IdName,
   InvitationInfo,
@@ -323,6 +324,14 @@ export function replaceAdmin(
       ...(groupSuccessorId ? { group_successor_id: groupSuccessorId } : {}),
     },
   })
+}
+
+/** Who looked at whose number on a leader's screen, newest first. Never the number itself. */
+export function fetchContactViews(page: number, filter: { viewerId?: string; personId?: string }) {
+  const extra =
+    (filter.viewerId ? `&viewer_id=${filter.viewerId}` : '') +
+    (filter.personId ? `&person_id=${filter.personId}` : '')
+  return request<Paged<ContactView>>(`/owner/contact-views?${paging(page)}${extra}`)
 }
 
 export type FormerLeaderStatus = 'provider' | 'searcher' | 'keep'
