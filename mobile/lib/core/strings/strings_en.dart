@@ -352,6 +352,7 @@ const stringsEn = <String, String>{
   'moves.state.completed': 'Done',
   'moves.state.cancelled': 'Cancelled',
   'moves.agreed.person': 'The member agreed',
+  'moves.waiting.person': 'Waiting for the member',
   'moves.agreed.from': 'The leader they leave agreed',
   'moves.agreed.to': 'The leader they join agreed',
   'moves.waiting.from': 'Waiting for the leader they leave',

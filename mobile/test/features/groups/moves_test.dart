@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -376,6 +378,47 @@ void main() {
     testWidgets('says when there are none', (tester) async {
       await _open(tester, _provider());
       expect(find.text('No moves.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'does not fail when the screen is left before the answer comes',
+      (tester) async {
+        final gate = Completer<void>();
+        await _open(
+          tester,
+          personJson(status: 'provider', name: 'Sam Searcher'),
+          moves: [_move(personId: 'p1')],
+          arrange: (a) => a.reply(
+            'POST',
+            '/move-requests/m1/cancel',
+            FakeReply(
+              200,
+              _move(state: 'cancelled', personId: 'p1'),
+              const {},
+              gate.future,
+            ),
+          ),
+        );
+        final cancel = find.byKey(const Key('cancel-m1'));
+        await tester.ensureVisible(cancel);
+        await tester.tap(cancel);
+        await tester.pump();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('says the member has not agreed when the server says so', (
+      tester,
+    ) async {
+      final unagreed = _move();
+      (unagreed['agreed'] as Map<String, Object?>)['person'] = false;
+      await _open(tester, _leader(), moves: [unagreed]);
+      expect(find.text('Waiting for the member'), findsOneWidget);
+      expect(find.text('The member agreed'), findsNothing);
     });
   });
 

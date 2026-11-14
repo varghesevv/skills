@@ -276,14 +276,16 @@ class _MoveTileState extends ConsumerState<_MoveTile> {
   bool _busy = false;
   String? _error;
 
-  Future<void> _run(Future<String> Function() action) async {
+  Future<void> _run(Future<String> Function(AppText text) action) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     final text = ref.read(appTextProvider);
     try {
-      widget.onDone(await action());
+      final message = await action(text);
+      // The screen may have been left while the answer was on its way.
+      if (mounted) widget.onDone(message);
     } catch (error) {
       if (mounted) setState(() => _error = _problem(text, error));
     } finally {
@@ -325,7 +327,11 @@ class _MoveTileState extends ConsumerState<_MoveTile> {
             '${text('moves.state.${row.state}')} · ${formatDay(row.createdAt)}',
           ),
           if (open) ...[
-            Text(text('moves.agreed.person')),
+            Text(
+              row.agreedPerson
+                  ? text('moves.agreed.person')
+                  : text('moves.waiting.person'),
+            ),
             Text(
               row.agreedFromLeader
                   ? text('moves.agreed.from')
@@ -343,11 +349,10 @@ class _MoveTileState extends ConsumerState<_MoveTile> {
               key: Key('agree-${row.id}'),
               onPressed: _busy
                   ? null
-                  : () => _run(() async {
+                  : () => _run((t) async {
                       final moved = await ref
                           .read(groupRepositoryProvider)
                           .agree(row.id);
-                      final t = ref.read(appTextProvider);
                       return moved.state == 'completed'
                           ? t('moves.moved', {'name': row.personName})
                           : t('moves.agreed', {'name': row.personName});
@@ -359,9 +364,9 @@ class _MoveTileState extends ConsumerState<_MoveTile> {
               key: Key('cancel-${row.id}'),
               onPressed: _busy
                   ? null
-                  : () => _run(() async {
+                  : () => _run((t) async {
                       await ref.read(groupRepositoryProvider).cancel(row.id);
-                      return ref.read(appTextProvider)('moves.cancelled');
+                      return t('moves.cancelled');
                     }),
               child: Text(text('moves.cancel', {'name': row.personName})),
             ),
