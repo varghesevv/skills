@@ -1,8 +1,8 @@
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
-from app.models.availability import FreelancerUnavailability
+from app.models.availability import FreelancerUnavailability, PersonUnavailability
 from app.models.base import Base
 from app.models.church import Church, HomeGroup, Person
-from app.models.labels import FreelancerLabel, Label
+from app.models.labels import FreelancerLabel, Label, PersonLabel
 from app.models.ratings import UserRating
 from app.models.reports import ReportRun, ReportSchedule
 from app.models.reveals import PhoneReveal
@@ -40,6 +40,8 @@ __all__ = [
     "Freelancer",
     "FreelancerLabel",
     "FreelancerUnavailability",
+    "PersonLabel",
+    "PersonUnavailability",
     "Label",
     "LoginHistory",
     "OrgFreelancer",

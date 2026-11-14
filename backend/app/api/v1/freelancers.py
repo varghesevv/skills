@@ -6,13 +6,14 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_principal, require_roles
+from app.api.deps import current_person, get_principal, require_roles
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
-from app.models.availability import FreelancerUnavailability
-from app.models.labels import FreelancerLabel, Label
+from app.models.availability import FreelancerUnavailability, PersonUnavailability
+from app.models.church import Person
+from app.models.labels import Label, PersonLabel
 from app.models.ratings import UserRating
 from app.models.users import Freelancer, Organisation
 from app.models.vouching import OrgFreelancer
@@ -32,9 +33,10 @@ from app.schemas.profiles import (
     VouchingOrg,
     VouchOut,
 )
+from app.services.locks import lock_people
 from app.services.profiles import (
-    current_account,
     freelancer_labels,
+    person_labels,
     rating_summary,
     to_float,
     utc_now,
@@ -44,63 +46,64 @@ from app.services.reveals import reveal_mobile_number
 router = APIRouter(prefix="/freelancers", tags=["freelancers"])
 
 FreelancerOnly = Annotated[Principal, Depends(require_roles("freelancer"))]
+ProviderOrAbove = Annotated[Person, Depends(current_person("provider"))]
 Viewer = Annotated[Principal, Depends(require_roles("workhost", "organisation", "admin"))]
 Authenticated = Annotated[Principal, Depends(get_principal)]
 
 
-def _me(db: Session, principal: Principal) -> Freelancer:
-    return current_account(db, Freelancer, principal)
-
-
-def _me_response(db: Session, me: Freelancer) -> FreelancerMe:
+def _me_response(db: Session, me: Person) -> FreelancerMe:
     return FreelancerMe(
         id=me.id,
         full_name=me.full_name,
-        email=me.user_email,
-        mobile_number=me.mobile_number,
+        email=me.email or "",
+        mobile_number=me.mobile_number or "",
         whatsapp_availability=me.whatsapp_availability,
         nationality=me.nationality,
         primary_language=me.primary_language,
         rate_per_hour=to_float(me.rate_per_hour),
         rate_currency=me.rate_currency,
         is_rate_negotiable=me.is_rate_negotiable,
-        labels=freelancer_labels(db, me.id),
+        labels=person_labels(db, me.id),
         created_at=me.created_at,
     )
 
 
-# ---- own profile --------------------------------------------------------------------------
+# ---- own profile (the person's, for a provider or above) ----------------------------------
 
 
 @router.get("/me")
-def get_me(principal: FreelancerOnly, db: Session = Depends(get_session)) -> FreelancerMe:
-    return _me_response(db, _me(db, principal))
+def get_me(provider: ProviderOrAbove, db: Session = Depends(get_session)) -> FreelancerMe:
+    return _me_response(db, provider)
 
 
 @router.put("/me")
 def update_me(
-    body: FreelancerUpdate, principal: FreelancerOnly, db: Session = Depends(get_session)
+    body: FreelancerUpdate, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> FreelancerMe:
-    me = _me(db, principal)
     if body.full_name is not None:
-        me.full_name = body.full_name
-    me.mobile_number = body.mobile_number
-    me.whatsapp_availability = body.whatsapp_availability
-    me.nationality = body.nationality
-    me.primary_language = body.primary_language
-    me.rate_per_hour = body.rate_per_hour
-    me.rate_currency = body.rate_currency
-    me.is_rate_negotiable = body.is_rate_negotiable
-    db.commit()
-    return _me_response(db, me)
+        provider.full_name = body.full_name
+    provider.mobile_number = body.mobile_number
+    provider.whatsapp_availability = body.whatsapp_availability
+    provider.nationality = body.nationality
+    provider.primary_language = body.primary_language
+    provider.rate_per_hour = body.rate_per_hour
+    provider.rate_currency = body.rate_currency
+    provider.is_rate_negotiable = body.is_rate_negotiable
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ApiError(
+            409, "account_exists", "An account with these details already exists"
+        ) from None
+    return _me_response(db, provider)
 
 
 @router.put("/me/labels")
 def replace_labels(
-    body: LabelsUpdate, principal: FreelancerOnly, db: Session = Depends(get_session)
+    body: LabelsUpdate, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> list[FreelancerLabelOut]:
-    """Replace the freelancer's whole label set. Skill levels attach to a specific skill."""
-    me = _me(db, principal)
+    """Replace the person's whole label set. Skill levels attach to a specific skill."""
     chosen = [selection.label_id for selection in body.labels]
     if len(set(chosen)) != len(chosen):
         raise ApiError(422, "duplicate_label", "A label was selected more than once")
@@ -122,19 +125,21 @@ def replace_labels(
             raise ApiError(
                 422, "invalid_level", "Only skills take a level, and it must be a skill level"
             )
-    db.execute(delete(FreelancerLabel).where(FreelancerLabel.freelancer_id == me.id))
+    # One replacement at a time per person: a double submit waits instead of failing on the key.
+    lock_people(db, [provider.id])
+    db.execute(delete(PersonLabel).where(PersonLabel.person_id == provider.id))
     db.add_all(
-        FreelancerLabel(freelancer_id=me.id, label_id=s.label_id, level_label_id=s.level_label_id)
+        PersonLabel(person_id=provider.id, label_id=s.label_id, level_label_id=s.level_label_id)
         for s in body.labels
     )
     db.commit()
-    return freelancer_labels(db, me.id)
+    return person_labels(db, provider.id)
 
 
 # ---- unavailability -----------------------------------------------------------------------
 
 
-def _unavailability_out(row: FreelancerUnavailability) -> UnavailabilityOut:
+def _unavailability_out(row: PersonUnavailability | FreelancerUnavailability) -> UnavailabilityOut:
     return UnavailabilityOut(
         id=row.id, unavailable_from=row.unavailable_from, unavailable_to=row.unavailable_to
     )
@@ -150,31 +155,31 @@ def _commit_unavailability(db: Session) -> None:
         ) from None
 
 
-def _own_period(db: Session, me: Freelancer, period_id: uuid.UUID) -> FreelancerUnavailability:
-    row = db.get(FreelancerUnavailability, period_id)
-    if row is None or row.freelancer_id != me.id:
+def _own_period(db: Session, me: Person, period_id: uuid.UUID) -> PersonUnavailability:
+    row = db.get(PersonUnavailability, period_id)
+    if row is None or row.person_id != me.id:
         raise ApiError(404, "not_found", "Unavailability period not found")
     return row
 
 
 @router.get("/me/unavailability")
 def list_unavailability(
-    principal: FreelancerOnly, db: Session = Depends(get_session)
+    provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> list[UnavailabilityOut]:
     rows = db.scalars(
-        select(FreelancerUnavailability)
-        .where(FreelancerUnavailability.freelancer_id == principal.user_id)
-        .order_by(FreelancerUnavailability.unavailable_from)
+        select(PersonUnavailability)
+        .where(PersonUnavailability.person_id == provider.id)
+        .order_by(PersonUnavailability.unavailable_from)
     ).all()
     return [_unavailability_out(row) for row in rows]
 
 
 @router.post("/me/unavailability", status_code=status.HTTP_201_CREATED)
 def add_unavailability(
-    body: UnavailabilityIn, principal: FreelancerOnly, db: Session = Depends(get_session)
+    body: UnavailabilityIn, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> UnavailabilityOut:
-    row = FreelancerUnavailability(
-        freelancer_id=_me(db, principal).id,
+    row = PersonUnavailability(
+        person_id=provider.id,
         unavailable_from=body.unavailable_from,
         unavailable_to=body.unavailable_to,
     )
@@ -187,10 +192,10 @@ def add_unavailability(
 def update_unavailability(
     period_id: uuid.UUID,
     body: UnavailabilityIn,
-    principal: FreelancerOnly,
+    provider: ProviderOrAbove,
     db: Session = Depends(get_session),
 ) -> UnavailabilityOut:
-    row = _own_period(db, _me(db, principal), period_id)
+    row = _own_period(db, provider, period_id)
     row.unavailable_from = body.unavailable_from
     row.unavailable_to = body.unavailable_to
     _commit_unavailability(db)
@@ -199,9 +204,9 @@ def update_unavailability(
 
 @router.delete("/me/unavailability/{period_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_unavailability(
-    period_id: uuid.UUID, principal: FreelancerOnly, db: Session = Depends(get_session)
+    period_id: uuid.UUID, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> Response:
-    db.delete(_own_period(db, _me(db, principal), period_id))
+    db.delete(_own_period(db, provider, period_id))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

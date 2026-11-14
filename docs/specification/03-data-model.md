@@ -26,8 +26,8 @@ Migration `0007` creates the tables of this file that belong to the new identity
 | `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. | S5.2, with the older routes that use them |
 | `admins` | Dropped. The platform admin is the OWNER, a row in `people`. | S5.2; the `create-owner` command exists since S2.4 |
 | `labels` | Kept unchanged. | |
-| `freelancer_labels` | Renamed `person_labels`, key `person_id`. | S5.1 |
-| `freelancer_unavailability` | Renamed `person_unavailability`, key `person_id`. | S5.1 |
+| `freelancer_labels` | Replaced by `person_labels`, key `person_id` (created in S5.1, D-41); the older table stays until its last reader (the reports and the demo data generator, after the search) moves to the new table. | S5.1 creates, S5.3 drops |
+| `freelancer_unavailability` | Replaced by `person_unavailability`, key `person_id` (created in S5.1, D-41); the older table stays until its last reader (the reports and the demo data generator, after the search) moves to the new table. | S5.1 creates, S5.3 drops |
 | `user_ratings` | Kept as `ratings`, with `rater_id` and `provider_id` pointing at `people`. | S5.2 |
 | `phone_reveals` | Kept, with `revealer_id` and `provider_id`. | S5.2 |
 | `login_history` | Kept; `user_type` dropped, `person_id` added. | S2.3 accepts `person` in `user_type` (migration 0008), the person's id goes in `user_id`; the column is dropped with the last older account type (S5.2) |

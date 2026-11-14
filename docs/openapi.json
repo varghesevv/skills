@@ -5480,7 +5480,7 @@
     },
     "/api/v1/freelancers/me/labels": {
       "put": {
-        "description": "Replace the freelancer's whole label set. Skill levels attach to a specific skill.",
+        "description": "Replace the person's whole label set. Skill levels attach to a specific skill.",
         "operationId": "replace_labels_api_v1_freelancers_me_labels_put",
         "requestBody": {
           "content": {
