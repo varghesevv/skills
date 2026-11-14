@@ -87,6 +87,15 @@ The Gemini workflow now has the same trigger as the Claude one: `workflow_dispat
 - The model, key and comment format are the same; each reviewer still keeps its own comment, so both can be run on one PR.
 - Trade-off: a pull request gets a review only when someone starts it. The branch rules and the human reviewer remain the gate.
 
+### 7. Two reviews per reviewer, calibrated findings (added 2026-11)
+
+Experience on the trust-model pull requests: every extra round produced new low-value points (naming, "cannot confirm from this diff", layout of documents) while the real defects came in the first two rounds.
+
+- A pull request gets at most **two reviews from each reviewer**. The summary carries the count (`<!-- review-round:N -->`, "Review N of 2"); a third run does nothing but write a note to the job summary, unless the new `force` input is ticked.
+- The prompt knows the round. Round one is asked to be complete; the last round only checks that earlier points were fixed and reports defects that are still there or that the fixes introduced, with no optional points.
+- Severity is defined (blocker, a defect you can show with an input and a wrong result, optional), at most three optional points are kept, and points the model cannot confirm from the diff are not reported.
+- The common brief and the component briefs now describe the church trust model (invariants, lock order, history, tokens, phone numbers) and list the project conventions that must not be reported, so the same false positives do not return.
+
 ## Alternatives considered
 
 - **Gemini Code Assist GitHub app.** No code to maintain, but less control over context, output format, data sent and cost. A valid fallback if the script becomes a burden.

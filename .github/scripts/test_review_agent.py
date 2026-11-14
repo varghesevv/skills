@@ -148,5 +148,29 @@ class ReviewAgentTest(unittest.TestCase):
         self.assertIn("No overview produced", out)
 
 
+    def test_rounds_are_counted_from_the_summary_marker(self):
+        summary = ra.build_summary({"overview": "- x", "risk": "Low", "summary": "ok", "findings": []},
+                                   [], 0, 0, [], round_no=2)
+        self.assertEqual(ra.rounds_done(summary), 2)
+        self.assertEqual(ra.rounds_done("no marker here"), 0)
+        self.assertIn("Review 2 of 2", summary)
+
+    def test_the_prompt_says_which_round_it_is(self):
+        first, _ = ra.build_prompts("ctx", [], "t", "b", "diff", [], round_no=1, max_rounds=2)
+        last, _ = ra.build_prompts("ctx", [], "t", "b", "diff", [], round_no=2, max_rounds=2)
+        self.assertIn("round 1 of 2", first)
+        self.assertIn("last review", last)
+        self.assertIn("No \"consider\" points", last)
+        self.assertNotIn("last review", first)
+
+    def test_only_the_first_optional_findings_are_kept(self):
+        findings = [{"severity": "blocker"}] + [{"severity": "consider", "n": i} for i in range(6)]
+        findings.append({"severity": "should_fix"})
+        kept = ra.cap_consider(findings)
+        self.assertEqual(len(kept), 1 + ra.MAX_CONSIDER + 1)
+        self.assertEqual(kept[0]["severity"], "blocker")
+        self.assertEqual(kept[-1]["severity"], "should_fix")
+        self.assertEqual(ra.cap_consider(None), [])
+
 if __name__ == "__main__":
     unittest.main()

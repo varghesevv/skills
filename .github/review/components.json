@@ -16,6 +16,7 @@
     "docs/specification/04-api.md",
     "frontend/src/api/",
     "mobile/lib/core/api/",
-    "mobile/lib/core/network/"
+    "mobile/lib/core/network/",
+    "mobile/test/contract/"
   ]
 }
