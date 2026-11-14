@@ -3,12 +3,15 @@ import { useState } from 'react'
 
 import {
   fetchHomeGroups,
+  fetchMembers,
   reconfirmPerson,
   reinstatePerson,
   revokePerson,
 } from '../../../api/person'
 import type { PersonDetail } from '../../../api/types'
+import { usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
+import { errorMessage } from '../../../shared/errors'
 import { Alert, SelectField } from '../../../shared/ui'
 import { leaderProblem } from './problems'
 
@@ -20,8 +23,9 @@ export type Change = Partial<
 const LEADS = ['verifier', 'admin', 'owner']
 
 /** Revoke (after asking), reinstate a revoked person into a group of their church, or confirm a
- *  flagged status. The server decides who may; this only hides what cannot work. A leader is
- *  not revoked here: they are replaced first, on the screens of the ADMIN. */
+ *  flagged status. The server decides who may; this only hides what cannot work. A VERIFIER is
+ *  revoked by an ADMIN or the OWNER together with their successor; an ADMIN is replaced by the
+ *  OWNER, on the screens of the OWNER. */
 export default function StatusControls({
   person,
   onDone,
@@ -30,17 +34,21 @@ export default function StatusControls({
   onDone: (message: string, change: Change) => void
 }) {
   const queryClient = useQueryClient()
+  const actor = usePerson()
   const name = person.full_name
+  const isVerifier = person.status === 'verifier'
+  const actorIsAdmin = actor.status === 'admin' || actor.status === 'owner'
   const refresh = async () => {
     for (const key of ['applicants', 'members', 'revoked', 'flagged'])
       await queryClient.invalidateQueries({ queryKey: [key] })
   }
   const [confirming, setConfirming] = useState(false)
+  const [successor, setSuccessor] = useState('')
   const [group, setGroup] = useState('')
   const [to, setTo] = useState<'searcher' | 'provider'>('searcher')
 
   const revoke = useMutation({
-    mutationFn: () => revokePerson(person.id),
+    mutationFn: () => revokePerson(person.id, isVerifier && successor ? successor : undefined),
     onSuccess: async () => {
       await refresh()
       setConfirming(false)
@@ -78,9 +86,20 @@ export default function StatusControls({
       })
     },
   })
+  // The members who could lead the group of a VERIFIER who is revoked.
+  const members = useQuery({
+    queryKey: ['members', 1, '', person.home_group?.id ?? ''],
+    queryFn: () => fetchMembers(1, undefined, person.home_group?.id),
+    enabled: confirming && isVerifier && !!person.home_group,
+  })
+  const others = (members.data?.items ?? []).filter((m) => m.id !== person.id)
+  const needsSuccessor = isVerifier && (members.isPending || members.isError || others.length > 0)
   const busy = revoke.isPending || reinstate.isPending || reconfirm.isPending
   const failure = revoke.error ?? reinstate.error ?? reconfirm.error
-  const canRevoke = !revoked && !LEADS.includes(person.status) && person.status !== 'pending'
+  const canRevoke =
+    !revoked &&
+    person.status !== 'pending' &&
+    (!LEADS.includes(person.status) || (isVerifier && actorIsAdmin))
 
   return (
     <div className="form-grid">
@@ -148,8 +167,10 @@ export default function StatusControls({
         </form>
       )}
 
-      {!revoked && LEADS.includes(person.status) && person.status !== 'owner' && (
-        <p className="hint span-2">{t('leader.revoke.leads', { name })}</p>
+      {!revoked && LEADS.includes(person.status) && person.status !== 'owner' && !canRevoke && (
+        <p className="hint span-2">
+          {isVerifier ? t('leader.revoke.adminOnly', { name }) : t('leader.revoke.leads', { name })}
+        </p>
       )}
 
       {canRevoke &&
@@ -166,12 +187,51 @@ export default function StatusControls({
           </div>
         ) : (
           <div className="span-2" role="group" aria-label={t('leader.revoke.open', { name })}>
-            <p>{t('leader.revoke.warning', { name })}</p>
+            <p>
+              {isVerifier
+                ? t('leader.revoke.warningLeader', { name })
+                : t('leader.revoke.warning', { name })}
+            </p>
+            {isVerifier && members.isPending && (
+              <p role="status" className="muted">
+                {t('loading')}
+              </p>
+            )}
+            {isVerifier && members.isError && (
+              <Alert kind="error">
+                <p>{errorMessage(members.error)}</p>
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() => void members.refetch()}
+                >
+                  {t('common.retry')}
+                </button>
+              </Alert>
+            )}
+            {isVerifier && members.isSuccess && others.length === 0 && (
+              <p className="hint">{t('leader.revoke.alone')}</p>
+            )}
+            {isVerifier && members.isSuccess && others.length > 0 && (
+              <SelectField
+                label={t('leader.revoke.successor')}
+                name="revoke-successor"
+                value={successor}
+                onChange={setSuccessor}
+                options={[
+                  { value: '', label: t('leader.revoke.choose') },
+                  ...others.map((m) => ({
+                    value: m.id,
+                    label: `${m.full_name} · ${t(`status.${m.status}`)}`,
+                  })),
+                ]}
+              />
+            )}
             <div className="form-actions">
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={busy}
+                disabled={busy || (needsSuccessor && !successor)}
                 onClick={() => revoke.mutate()}
               >
                 {t('leader.revoke.confirm')}

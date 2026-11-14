@@ -7,6 +7,7 @@ import { t } from '../i18n'
 import { NOTIFICATIONS_KEY, NOTIFICATIONS_POLL_MS } from '../pages/person/Notifications'
 import {
   ADMIN_GROUPS,
+  LEADER_GROUP,
   LEADER_APPLICANTS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
@@ -46,6 +47,9 @@ export default function PersonLayout() {
             </Link>
             <Link className="btn btn-quiet" to={LEADER_MEMBERS}>
               {t('leader.nav.members')}
+            </Link>
+            <Link className="btn btn-quiet" to={LEADER_GROUP}>
+              {t('leader.nav.group')}
             </Link>
             <Link className="btn btn-quiet" to={PERSON_MOVES}>
               {t('leader.nav.moves')}

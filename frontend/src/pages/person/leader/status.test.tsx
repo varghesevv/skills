@@ -136,8 +136,19 @@ describe('revoke', () => {
     expect(api.count('PUT /verifier/people/p1/status')).toBe(0)
   })
 
-  it.each(['verifier', 'admin'])('does not offer to revoke a %s, and says why', async (status) => {
-    signedInAs(makeMe(), person(detail({ status })))
+  it('does not offer a VERIFIER to revoke another VERIFIER, and says only an ADMIN can', async () => {
+    signedInAs(makeMe(), person(detail({ status: 'verifier' })))
+    renderApp('/member/people/p1')
+    await screen.findByRole('heading', { name: 'Sam Searcher' })
+    expect(screen.queryByRole('button', { name: /^Revoke/ })).toBeNull()
+    expect(screen.getByText(/Only an .* or the .* can revoke a/)).toBeVisible()
+  })
+
+  it.each(['admin', 'owner'])('does not offer to revoke an ADMIN to a %s here', async (actor) => {
+    signedInAs(makeMe(), {
+      ...person(detail({ status: 'admin' })),
+      'GET /me': () => json(200, makePerson({ status: actor as 'admin' })),
+    })
     renderApp('/member/people/p1')
     await screen.findByRole('heading', { name: 'Sam Searcher' })
     expect(screen.queryByRole('button', { name: /^Revoke/ })).toBeNull()
@@ -164,6 +175,123 @@ describe('revoke', () => {
     await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
     await user.click(screen.getByRole('button', { name: 'Yes, revoke' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/A leader above you decided this/)
+  })
+})
+
+describe('revoke a VERIFIER with a successor', () => {
+  const MEMBERS = 'GET /verifier/members?limit=50&offset=0&home_group_id=group-1'
+  const member = (id: string, name: string, status: string) => ({
+    id,
+    full_name: name,
+    status,
+    home_group: { id: 'group-1', name: 'Riverside' },
+    status_set_by: null,
+    flagged_for_recheck: false,
+  })
+  const asAdmin = (extra = {}) => ({
+    ...base,
+    'GET /me': () => json(200, makePerson({ status: 'admin', id: 'me-admin' })),
+    'GET /verifier/people/p1': () => json(200, detail({ status: 'verifier' })),
+    ...extra,
+  })
+
+  it('asks who leads the group, and revokes with the choice', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(
+      makeMe(),
+      asAdmin({
+        [MEMBERS]: () =>
+          json(200, {
+            items: [
+              member('p1', 'Sam Searcher', 'verifier'),
+              member('p2', 'Pia Provider', 'provider'),
+            ],
+            total: 2,
+          }),
+        'PUT /verifier/people/p1/status': () =>
+          json(200, {
+            id: 'p1',
+            status: 'revoked',
+            home_group_id: null,
+            flagged_for_recheck: false,
+          }),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    expect(screen.getByText(/leads a .* Choose who leads it from now on/)).toBeVisible()
+    await screen.findByRole('option', { name: /Pia Provider/ })
+    expect(screen.queryByRole('option', { name: /Sam Searcher/ })).toBeNull()
+    const confirm = screen.getByRole('button', { name: 'Yes, revoke' })
+    expect(confirm).toBeDisabled()
+    await user.selectOptions(screen.getByLabelText(/Leads the .* from now on/), 'p2')
+    await user.click(confirm)
+    expect(await screen.findByText('Sam Searcher was revoked.')).toBeVisible()
+    expect(api.calls.find((c) => c.key === 'PUT /verifier/people/p1/status')?.body).toEqual({
+      to: 'revoked',
+      successor_id: 'p2',
+    })
+  })
+
+  it('revokes without a choice when they are alone in the group, which closes it', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(
+      makeMe(),
+      asAdmin({
+        [MEMBERS]: () => json(200, { items: [member('p1', 'Sam Searcher', 'verifier')], total: 1 }),
+        'PUT /verifier/people/p1/status': () =>
+          json(200, {
+            id: 'p1',
+            status: 'revoked',
+            home_group_id: null,
+            flagged_for_recheck: false,
+          }),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    expect(await screen.findByText(/closes with the revocation/)).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Yes, revoke' }))
+    await screen.findByText('Sam Searcher was revoked.')
+    expect(api.calls.find((c) => c.key === 'PUT /verifier/people/p1/status')?.body).toEqual({
+      to: 'revoked',
+    })
+  })
+
+  it('keeps the button off and offers a retry when the members cannot be loaded', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    signedInAs(
+      makeMe(),
+      asAdmin({
+        [MEMBERS]: () =>
+          ++attempts === 1
+            ? apiError(503, 'service_unavailable')
+            : json(200, { items: [member('p2', 'Pia Provider', 'provider')], total: 1 }),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    expect(screen.getByRole('button', { name: 'Yes, revoke' })).toBeDisabled()
+    await user.click(retry)
+    expect(await screen.findByRole('option', { name: /Pia Provider/ })).toBeVisible()
+  })
+
+  it('shows the refusal when the successor is not a member', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      asAdmin({
+        [MEMBERS]: () => json(200, { items: [member('p2', 'Pia Provider', 'provider')], total: 1 }),
+        'PUT /verifier/people/p1/status': () => apiError(409, 'successor_required'),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    await user.selectOptions(await screen.findByLabelText(/Leads the .* from now on/), 'p2')
+    await user.click(screen.getByRole('button', { name: 'Yes, revoke' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Hand that on first/)
   })
 })
 
