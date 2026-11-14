@@ -662,6 +662,61 @@
         "title": "CloseAccountRequest",
         "type": "object"
       },
+      "ContactViewList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContactViewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ContactViewList",
+        "type": "object"
+      },
+      "ContactViewOut": {
+        "description": "One time a leader's screen showed a person's mobile number. Never the number itself.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "person": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "screen": {
+            "title": "Screen",
+            "type": "string"
+          },
+          "viewed_at": {
+            "format": "date-time",
+            "title": "Viewed At",
+            "type": "string"
+          },
+          "viewer": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "id",
+          "viewer",
+          "person",
+          "screen",
+          "viewed_at"
+        ],
+        "title": "ContactViewOut",
+        "type": "object"
+      },
       "DirectMove": {
         "properties": {
           "home_group_id": {
@@ -7643,6 +7698,103 @@
           }
         ],
         "summary": "Close Church",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/contact-views": {
+      "get": {
+        "description": "Who looked at whose mobile number on a leader's screen, and when, newest first (never the\nnumber). Paged: `limit` (1 to 100, default 50), `offset`; filter by `viewer_id` or\n`person_id`. Rows older than the retention (12 months) are deleted by `purge-contact-views`.",
+        "operationId": "contact_views_list_api_v1_owner_contact_views_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "viewer_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Viewer Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactViewList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Contact Views List",
         "tags": [
           "owner"
         ]

@@ -238,4 +238,9 @@ class ContactView(UUIDPrimaryKeyMixin, Base):
     screen: Mapped[str] = mapped_column(String(50))
     viewed_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
-    __table_args__ = (Index(None, "viewer_id", "viewed_at"), Index(None, "person_id"))
+    # `viewed_at` alone: the OWNER reads the newest first, and the retention deletes by age.
+    __table_args__ = (
+        Index(None, "viewer_id", "viewed_at"),
+        Index(None, "person_id"),
+        Index(None, "viewed_at"),
+    )
