@@ -217,15 +217,14 @@ const en = {
   'admin.groups.former': 'The leader who steps down becomes',
   'admin.groups.former.provider': '{A_freelancer}',
   'admin.groups.former.searcher': '{A_workhost}',
-  'admin.groups.former.keep': 'No change (an {admin} or the {owner} keep their status)',
+  'admin.groups.former.keep': 'No change: they keep their status',
   'admin.groups.submit': 'Change the leader',
   'admin.groups.done': '{leader} leads {group} from now on.',
-  'admin.groups.more':
-    'Only the first {count} members are shown. Move the person you want into the first page by name, or ask for a search screen.',
+  'admin.groups.more': 'Only the first {count} of {total} members are shown.',
   'admin.groups.nobody': 'Nobody else is in this {homegroup} yet, so there is nobody to choose.',
   'admin.error.notMember': 'Choose a member of this {homegroup}.',
   'admin.error.choice':
-    'That choice does not fit this leader. An {admin} or the {owner} keep their status; a {verifier} becomes {a_freelancer} or {a_workhost}.',
+    'That choice does not fit this leader. {Admins} and the {owner} keep their status; a {verifier} becomes {a_freelancer} or {a_workhost}.',
   'admin.move.title': 'Move {name} to another {homegroup}',
   'admin.move.to': 'Move to',
   'admin.move.choose': 'Choose…',

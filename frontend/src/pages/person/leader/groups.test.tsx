@@ -134,7 +134,7 @@ describe('change the leader of a group', () => {
     })
     renderApp('/member/groups')
     await user.click(await screen.findByRole('button', { name: 'Change the leader of Riverside' }))
-    expect(await screen.findByText(/Only the first 1 members are shown/)).toBeVisible()
+    expect(await screen.findByText('Only the first 1 of 120 members are shown.')).toBeVisible()
   })
 
   it('offers a retry when the members cannot be loaded', async () => {
@@ -152,6 +152,30 @@ describe('change the leader of a group', () => {
     await user.click(await screen.findByRole('button', { name: 'Change the leader of Riverside' }))
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('option', { name: /Sam Searcher/ })).toBeVisible()
+  })
+
+  it.each([
+    ['verifier', ['freelancer', 'work host']],
+    ['admin', ['No change: they keep their status']],
+  ])('offers a %s leader only what fits them', async (status, labels) => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      ...as('owner'),
+      [GROUPS]: TWO_GROUPS,
+      [MEMBERS]: () =>
+        json(200, {
+          items: [row('p1', 'Lena Leader', status), row('p2', 'Sam Searcher', 'searcher')],
+          total: 2,
+        }),
+    })
+    renderApp('/member/groups')
+    await user.click(await screen.findByRole('button', { name: 'Change the leader of Riverside' }))
+    await screen.findByRole('option', { name: /Sam Searcher/ })
+    const select = screen.getByLabelText(/steps down becomes/)
+    const shown = Array.from(select.querySelectorAll('option')).map((o) => o.textContent)
+    expect(shown.map((t) => t?.replace(/^An? /, ''))).toEqual(
+      labels.map((t) => t.replace(/^An? /, '')),
+    )
   })
 
   it('says so when nobody else is in the group', async () => {

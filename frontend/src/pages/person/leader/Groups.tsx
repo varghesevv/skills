@@ -84,7 +84,7 @@ function GroupRow({
     enabled: open,
   })
   const change = useMutation({
-    mutationFn: () => replaceLeader(group.id, successor, former),
+    mutationFn: () => replaceLeader(group.id, successor, formerValue),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['church-groups'] })
       await queryClient.invalidateQueries({ queryKey: ['members'] })
@@ -98,6 +98,15 @@ function GroupRow({
   const leaderRow = (m: { full_name: string; status: string }) =>
     m.full_name === group.leader_name && ['verifier', 'admin', 'owner'].includes(m.status)
   const candidates = (members.data?.items ?? []).filter((m) => !leaderRow(m))
+  // What the leader can become depends on who they are: an ADMIN or the OWNER keep their status.
+  const leader = members.data?.items.find(leaderRow)
+  const keeps = leader?.status === 'admin' || leader?.status === 'owner'
+  const formerOptions: FormerLeaderStatus[] = !leader
+    ? ['provider', 'searcher', 'keep']
+    : keeps
+      ? ['keep']
+      : ['provider', 'searcher']
+  const formerValue = formerOptions.includes(former) ? former : formerOptions[0]
   return (
     <div>
       <h2>{group.name}</h2>
@@ -120,6 +129,11 @@ function GroupRow({
               {problem(change.error)}
             </Alert>
           )}
+          {members.isPending && (
+            <p role="status" className="muted span-2">
+              {t('loading')}
+            </p>
+          )}
           {members.isError && (
             <Alert kind="error">
               <p>{errorMessage(members.error)}</p>
@@ -134,10 +148,13 @@ function GroupRow({
           )}
           {members.data && members.data.total > members.data.items.length && (
             <p className="hint span-2">
-              {t('admin.groups.more', { count: members.data.items.length })}
+              {t('admin.groups.more', {
+                count: members.data.items.length,
+                total: members.data.total,
+              })}
             </p>
           )}
-          {members.data && candidates.length === 0 ? (
+          {members.isPending || members.isError ? null : candidates.length === 0 ? (
             <p className="muted span-2">{t('admin.groups.nobody')}</p>
           ) : (
             <>
@@ -157,9 +174,9 @@ function GroupRow({
               <SelectField
                 label={t('admin.groups.former')}
                 name={`former-${group.id}`}
-                value={former}
+                value={formerValue}
                 onChange={(value) => setFormer(value as FormerLeaderStatus)}
-                options={(['provider', 'searcher', 'keep'] as const).map((value) => ({
+                options={formerOptions.map((value) => ({
                   value,
                   label: t(`admin.groups.former.${value}`),
                 }))}
