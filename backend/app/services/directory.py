@@ -120,6 +120,7 @@ def owner_churches(db: Session, *, limit: int, offset: int) -> tuple[list[Church
             id=c.id,
             name=c.name,
             admin_name=admins.get(c.admin_id, ""),
+            admin_id=c.admin_id if c.closed_at is None else None,
             open=c.closed_at is None,
             groups=groups.get(c.id, 0),
             members=members.get(c.id, 0),

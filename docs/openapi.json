@@ -579,6 +579,18 @@
       },
       "ChurchSummaryOwner": {
         "properties": {
+          "admin_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Id"
+          },
           "admin_name": {
             "title": "Admin Name",
             "type": "string"
@@ -8961,7 +8973,7 @@
     },
     "/api/v1/verifier/members": {
       "get": {
-        "description": "Admitted people in scope, by name. Filter by `status` or `home_group_id`.",
+        "description": "Admitted people in scope, by name. Filter by `status`, `home_group_id` or `church_id`.",
         "operationId": "members_api_v1_verifier_members_get",
         "parameters": [
           {
@@ -9026,6 +9038,23 @@
                 }
               ],
               "title": "Home Group Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "church_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Church Id"
             }
           }
         ],
