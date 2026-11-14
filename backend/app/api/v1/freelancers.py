@@ -33,6 +33,7 @@ from app.schemas.profiles import (
     VouchingOrg,
     VouchOut,
 )
+from app.services.locks import lock_people
 from app.services.profiles import (
     freelancer_labels,
     person_labels,
@@ -124,6 +125,8 @@ def replace_labels(
             raise ApiError(
                 422, "invalid_level", "Only skills take a level, and it must be a skill level"
             )
+    # One replacement at a time per person: a double submit waits instead of failing on the key.
+    lock_people(db, [provider.id])
     db.execute(delete(PersonLabel).where(PersonLabel.person_id == provider.id))
     db.add_all(
         PersonLabel(person_id=provider.id, label_id=s.label_id, level_label_id=s.level_label_id)
