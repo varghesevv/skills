@@ -165,6 +165,68 @@ describe('invitation links to my group', () => {
     expect(screen.queryByText('The link no longer works.')).toBeNull()
   })
 
+  it('a failed ending does not stand next to the success of making a link', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      ...base([row('i1', '2026-11-10', '2026-12-10')]),
+      'DELETE /verifier/group-invitations/i1': () => apiError(500, 'server_error'),
+      [MAKE]: () => json(201, { id: 'i2', token: token(), expires_at: '2026-12-20T08:00:00Z' }),
+    })
+    renderApp('/member/invitations')
+    await screen.findByTestId('invitation-i1')
+    await user.click(screen.getByRole('button', { name: /End this link/ }))
+    await screen.findByRole('alert')
+    await user.click(screen.getByRole('button', { name: 'Make a link' }))
+    await screen.findByLabelText('Invitation link')
+    expect(screen.queryByText(/Something went wrong/)).toBeNull()
+  })
+
+  it('a failed make does not hide the success of ending a link', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      ...base([row('i1', '2026-11-10', '2026-12-10')]),
+      'DELETE /verifier/group-invitations/i1': () => new Response(null, { status: 204 }),
+      [MAKE]: () => apiError(500, 'server_error'),
+    })
+    renderApp('/member/invitations')
+    await screen.findByTestId('invitation-i1')
+    await user.click(screen.getByRole('button', { name: 'Make a link' }))
+    await screen.findByText(/Something went wrong/)
+    held = []
+    await user.click(screen.getByRole('button', { name: /End this link/ }))
+    expect(await screen.findByText('The link no longer works.')).toBeVisible()
+    expect(screen.queryByText(/Something went wrong/)).toBeNull()
+  })
+
+  it('reloads the list when ending a link is refused, so a link gone elsewhere disappears', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      ...base([row('i1', '2026-11-10', '2026-12-10')]),
+      'DELETE /verifier/group-invitations/i1': () => apiError(404, 'not_found'),
+    })
+    renderApp('/member/invitations')
+    await screen.findByTestId('invitation-i1')
+    held = []
+    await user.click(screen.getByRole('button', { name: /End this link/ }))
+    expect(await screen.findByText('No link works now.')).toBeVisible()
+    expect(screen.queryByTestId('invitation-i1')).toBeNull()
+  })
+
+  it('names each button after the link it ends', async () => {
+    signedInAs(
+      makeMe(),
+      base([row('i1', '2026-11-10', '2026-12-10'), row('i2', '2026-11-12', '2026-12-12')]),
+    )
+    renderApp('/member/invitations')
+    await screen.findByTestId('invitation-i1')
+    const buttons = screen.getAllByRole('button', { name: /End this link/ })
+    expect(buttons.map((b) => b.getAttribute('aria-describedby'))).toEqual([
+      'invitation-text-i1',
+      'invitation-text-i2',
+    ])
+    expect(buttons[0]).toHaveAccessibleDescription(/works until/)
+  })
+
   it('says so for a leader who handed their group on, when making a link', async () => {
     const user = userEvent.setup({ delay: null })
     signedInAs(makeMe(), { ...base(), [MAKE]: () => apiError(409, 'no_home_group') })

@@ -41,7 +41,10 @@ export default function GroupInvitations() {
   const field = useRef<HTMLInputElement>(null)
   const make = useMutation({
     mutationFn: makeGroupInvitation,
-    onMutate: () => setEnded(false),
+    onMutate: () => {
+      setEnded(false)
+      end.reset()
+    },
     onSuccess: async (result) => {
       setCreated(result)
       setCopied(false)
@@ -50,12 +53,16 @@ export default function GroupInvitations() {
   })
   const end = useMutation({
     mutationFn: (id: string) => endGroupInvitation(id),
-    onMutate: () => setEnded(false),
-    onSuccess: async (_none, id) => {
+    onMutate: () => {
+      setEnded(false)
+      make.reset()
+    },
+    // A refused ending (the link expired or ended elsewhere) leaves the list stale as well.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+    onSuccess: (_none, id) => {
       // The link that was just made is gone from the screen when it is the one that ended.
       if (created?.id === id) setCreated(null)
       setEnded(true)
-      await queryClient.invalidateQueries({ queryKey: KEY })
     },
   })
   const url = created ? joinUrl(created.token) : ''
@@ -127,7 +134,7 @@ export default function GroupInvitations() {
                 <ul className="plain-list">
                   {data.items.map((row) => (
                     <li key={row.id} data-testid={`invitation-${row.id}`}>
-                      <span>
+                      <span id={`invitation-text-${row.id}`}>
                         {t('invitations.row', {
                           made: formatDate(row.created_at),
                           until: formatDate(row.expires_at),
@@ -136,6 +143,7 @@ export default function GroupInvitations() {
                       <button
                         type="button"
                         className="btn btn-quiet"
+                        aria-describedby={`invitation-text-${row.id}`}
                         disabled={end.isPending}
                         onClick={() => end.mutate(row.id)}
                       >
