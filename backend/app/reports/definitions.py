@@ -175,7 +175,7 @@ def top_rated(db: Session, p: ReportParams) -> list[Section]:
         select(code_of(Rating.provider_id), average, count)
         .select_from(Rating)
         .join(Person, Person.id == Rating.provider_id)
-        .where(in_window)
+        .where(in_window, *in_church(p, Person.church_id))
         .group_by(Rating.provider_id)
         .having(count >= p.min_ratings)
         .order_by(average.desc(), count.desc(), Rating.provider_id)
@@ -187,7 +187,7 @@ def top_rated(db: Session, p: ReportParams) -> list[Section]:
         .join(PersonLabel, PersonLabel.person_id == Rating.provider_id)
         .join(Label, and_(Label.id == PersonLabel.label_id, Label.label_type == "skill"))
         .join(Person, Person.id == Rating.provider_id)
-        .where(in_window)
+        .where(in_window, *in_church(p, Person.church_id))
         .group_by(Label.label_name)
         .order_by(average.desc(), Label.label_name)
     ).all()
@@ -404,7 +404,7 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
     if p.church_id is not None:  # the reveals of the providers of that church
         in_window = and_(
             in_window,
-            true(),
+            exists().where(Person.id == reveal.provider_id, Person.church_id == p.church_id),
         )
     reveals = func.count(reveal.id)
 
@@ -752,11 +752,6 @@ REGISTRY: dict[str, ReportDef] = {report.name: report for report in REPORTS}
 
 
 def get_definition(name: str) -> ReportDef:
-    try:
-        return REGISTRY[name]
-    except KeyError:
-        raise ReportError("Unknown report") from None
-(name: str) -> ReportDef:
     try:
         return REGISTRY[name]
     except KeyError:
