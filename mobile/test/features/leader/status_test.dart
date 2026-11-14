@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/router.dart';
 import 'package:skills_app/core/auth/person_me.dart';
+import 'package:skills_app/features/person/person_providers.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
@@ -28,7 +30,7 @@ Map<String, Object?> _detail({
   'requested_status': null,
   'church': {'id': 'church-1', 'name': 'Grace Church'},
   'home_group': group,
-  'status_set_by': {'name': 'Lena Leader'},
+  'status_set_by': {'name': 'Vic Verifier'},
   'flagged_for_recheck': flagged,
   'applied_at': '2026-11-10T08:00:00Z',
   'history': [],
@@ -337,6 +339,10 @@ void main() {
       final put = app.adapter.seen.firstWhere((r) => r.method == 'PUT');
       expect(put.body, {'to': 'revoked'});
       expect(app.adapter.count('GET', '/verifier/people/p2'), 1);
+      // The page shows who set the status now, and the change as the newest line of the history.
+      expect(find.text('Vic Verifier'), findsNothing);
+      expect(find.textContaining('Revoked: '), findsOneWidget);
+      expect(find.textContaining('by Lena Leader'), findsOneWidget);
     });
 
     testWidgets('can be cancelled', (tester) async {
@@ -401,6 +407,8 @@ void main() {
       expect(put.body, {'to': 'provider', 'home_group_id': 'group-2'});
       expect(find.byKey(const Key('reinstate-submit')), findsNothing);
       expect(find.text('Harbour'), findsOneWidget);
+      expect(find.text('Vic Verifier'), findsNothing);
+      expect(find.textContaining('Reinstated: '), findsOneWidget);
     });
 
     testWidgets('says when the church has no open group', (tester) async {
@@ -436,6 +444,40 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'forgets a chosen group that is gone when the list is loaded again',
+      (tester) async {
+        final app = await _person(
+          tester,
+          detail: _detail(status: 'revoked', group: null),
+        );
+        await _choose(tester, 'reinstate-group', 'Harbour');
+        // Harbour closes meanwhile; the next list no longer has it.
+        app.adapter.setReply(
+          'GET',
+          '/churches/church-1/home-groups',
+          FakeReply(200, {
+            'items': [
+              {
+                'id': 'group-1',
+                'name': 'Riverside',
+                'leader_name': 'Lena Leader',
+              },
+            ],
+          }),
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byKey(const Key('reinstate-group'))),
+        );
+        container.invalidate(homeGroupsProvider('church-1'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final submit = find.byKey(const Key('reinstate-submit'));
+        await tester.ensureVisible(submit);
+        expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+      },
+    );
 
     testWidgets('offers a retry when the groups cannot be loaded', (
       tester,
@@ -485,6 +527,9 @@ void main() {
       expect(find.byKey(const Key('reconfirm')), findsNothing);
       expect(app.adapter.count('POST', '/verifier/people/p2/reconfirm'), 1);
       expect(app.adapter.count('GET', '/verifier/people/p2'), 1);
+      // The caller is the new link, so the old one is no longer shown as having set it.
+      expect(find.text('Vic Verifier'), findsNothing);
+      expect(find.textContaining('Re-confirmed: '), findsOneWidget);
     });
 
     testWidgets('offers nothing when there is no flag', (tester) async {

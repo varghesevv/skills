@@ -85,11 +85,17 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
           _declined = true;
         case Admitted(:final result):
           _detail = _detail?.withStatus(result.status, result.requestedStatus);
-        case StatusChanged(:final status, :final homeGroup, :final flagged):
+        case StatusChanged(
+          :final status,
+          :final homeGroup,
+          :final flagged,
+          :final entry,
+        ):
           _detail = _detail?.withChange(
             status: status,
             homeGroup: homeGroup,
             flagged: flagged,
+            entry: entry,
           );
       }
     });

@@ -364,8 +364,7 @@ const stringsEn = <String, String>{
   'leader.error.alreadyRevoked': 'This person is already revoked. Reload.',
   'leader.error.notRevoked': 'This person is not revoked. Reload.',
   'leader.error.notFlagged': 'This person no longer needs a re-check. Reload.',
-  'leader.error.successor':
-      'This person leads a group or a church. Hand that on first.',
+  'leader.error.successor': 'This person leads a {homegroup} or a {organisation}. Hand that on first.',
   'leader.nav.title': 'People in my group',
   'leader.person.call': 'Call {name}',
   'leader.members.filter.label': 'Show',

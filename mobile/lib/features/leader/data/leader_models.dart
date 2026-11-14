@@ -308,12 +308,16 @@ class PersonDetail {
     required String status,
     required IdName? homeGroup,
     required bool flagged,
+    required HistoryEntry entry,
   }) => _copy(
     status: status,
     requestedStatus: status == 'revoked' ? null : requestedStatus,
     homeGroup: homeGroup,
     setHomeGroup: true,
     flagged: flagged,
+    // The caller set this status, and the change is the newest line of the history.
+    statusSetByName: entry.changedByName,
+    history: [...history, entry],
   );
 
   PersonDetail _copy({
@@ -322,6 +326,8 @@ class PersonDetail {
     IdName? homeGroup,
     bool setHomeGroup = false,
     bool? flagged,
+    String? statusSetByName,
+    List<HistoryEntry>? history,
   }) => PersonDetail(
     id: id,
     fullName: fullName,
@@ -332,10 +338,10 @@ class PersonDetail {
     churchName: churchName,
     homeGroupId: setHomeGroup ? homeGroup?.id : homeGroupId,
     homeGroupName: setHomeGroup ? homeGroup?.name : homeGroupName,
-    statusSetByName: statusSetByName,
+    statusSetByName: statusSetByName ?? this.statusSetByName,
     flaggedForRecheck: flagged ?? flaggedForRecheck,
     appliedAt: appliedAt,
-    history: history,
+    history: history ?? this.history,
     chain: chain,
     vouches: vouches,
     canAdmitAsProvider: canAdmitAsProvider,

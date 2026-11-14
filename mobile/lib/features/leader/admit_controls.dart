@@ -22,11 +22,15 @@ class StatusChanged extends Outcome {
     required this.status,
     required this.homeGroup,
     required this.flagged,
+    required this.entry,
   });
 
   final String status;
   final IdName? homeGroup;
   final bool flagged;
+
+  /// The line this change adds to the history, made by the person who did it.
+  final HistoryEntry entry;
 }
 
 class Admitted extends Outcome {

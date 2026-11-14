@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../core/session/session_controller.dart';
 import '../../core/strings/app_text.dart';
 import '../../shared/widgets/message_banner.dart';
 import '../person/person_providers.dart';
@@ -51,33 +52,49 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
 
   String get _name => widget.detail.fullName;
 
+  /// The history line of a change: made now, by the person using the app.
+  HistoryEntry _entry(String kind, String to) => HistoryEntry(
+    kind: kind,
+    fromStatus: widget.detail.status,
+    toStatus: to,
+    changedByName: ref.read(personProvider)?.fullName,
+    at: DateTime.now(),
+  );
+
   Future<void> _revoke() => _run(() async {
     await ref.read(leaderRepositoryProvider).revoke(widget.detail.id);
     if (!mounted) return;
     setState(() => _confirming = false);
     widget.onDone(
       ref.read(appTextProvider)('leader.revoke.done', {'name': _name}),
-      const StatusChanged(status: 'revoked', homeGroup: null, flagged: false),
-    );
-  });
-
-  Future<void> _reinstate(List<HomeGroupChoice> groups) => _run(() async {
-    final result = await ref
-        .read(leaderRepositoryProvider)
-        .reinstate(widget.detail.id, _to, _group);
-    if (!mounted) return;
-    final chosen = groups.where((g) => g.id == _group).firstOrNull;
-    widget.onDone(
-      ref.read(appTextProvider)('leader.reinstate.done', {'name': _name}),
       StatusChanged(
-        status: result.status,
-        homeGroup: chosen == null
-            ? null
-            : IdName(id: chosen.id, name: chosen.name),
-        flagged: result.flaggedForRecheck,
+        status: 'revoked',
+        homeGroup: null,
+        flagged: false,
+        entry: _entry('revoke', 'revoked'),
       ),
     );
   });
+
+  Future<void> _reinstate(List<HomeGroupChoice> groups, String group) =>
+      _run(() async {
+        final result = await ref
+            .read(leaderRepositoryProvider)
+            .reinstate(widget.detail.id, _to, group);
+        if (!mounted) return;
+        final chosen = groups.where((g) => g.id == group).firstOrNull;
+        widget.onDone(
+          ref.read(appTextProvider)('leader.reinstate.done', {'name': _name}),
+          StatusChanged(
+            status: result.status,
+            homeGroup: chosen == null
+                ? null
+                : IdName(id: chosen.id, name: chosen.name),
+            flagged: result.flaggedForRecheck,
+            entry: _entry('reinstate', result.status),
+          ),
+        );
+      });
 
   Future<void> _reconfirm() => _run(() async {
     final result = await ref
@@ -93,6 +110,7 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
             ? null
             : IdName(id: detail.homeGroupId!, name: detail.homeGroupName ?? ''),
         flagged: result.flaggedForRecheck,
+        entry: _entry('reconfirm', result.status),
       ),
     );
   });
@@ -192,6 +210,8 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
         final choices = [
           for (final g in items) HomeGroupChoice(id: g.id, name: g.name),
         ];
+        // A group that is no longer offered (closed meanwhile) cannot stay chosen.
+        final group = choices.any((g) => g.id == _group) ? _group : '';
         if (choices.isEmpty) {
           return Text(text('leader.reinstate.noGroups'));
         }
@@ -208,7 +228,7 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
             ),
             DropdownButtonFormField<String>(
               key: const Key('reinstate-group'),
-              initialValue: _group,
+              initialValue: group,
               decoration: InputDecoration(
                 labelText: text('leader.reinstate.group'),
               ),
@@ -237,9 +257,9 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
             const SizedBox(height: 8),
             FilledButton(
               key: const Key('reinstate-submit'),
-              onPressed: _busy || _group.isEmpty
+              onPressed: _busy || group.isEmpty
                   ? null
-                  : () => _reinstate(choices),
+                  : () => _reinstate(choices, group),
               child: Text(text('leader.reinstate.submit', name)),
             ),
           ],
