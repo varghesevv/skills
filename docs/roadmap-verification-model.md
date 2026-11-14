@@ -93,7 +93,7 @@ Backend first, then web and mobile.
 - [x] 4.5 Backend: OWNER handover (4.5a; D-38); operator change (4.5b; D-39).
 - [x] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step (`backend/tests/test_random_sequence.py`; it found no hole in S4).
 - [x] 4.7 Web: revoke and reinstate, flags (4.7a); group requests (4.7b).
-- [x] 4.8 Web: ADMIN screens: the groups of the church and change of leader (4.8a), moves (4.8b-1), revoke a leader with a successor and close one's own group (4.8b-2). The OWNER's replacement of an ADMIN is in 4.9.
+- [x] 4.8 Web: ADMIN screens: the groups of the church and change of leader (4.8a), moves (4.8b-1), revoke a leader with a successor and close one's own group (4.8b-2). The church's people and revoked list are the Members and Revoked pages (3.5, 4.7a), which an ADMIN sees for the whole church. The OWNER's replacement of an ADMIN is in 4.9.
 - [ ] 4.9 Web: OWNER screens: churches, invitations, labels management, handover, and the log of phone number views (backend endpoint first; O-03 retention).
 - [ ] 4.10 Mobile: revoke and reinstate, flags; ADMIN screens (group requests, succession); close account.
 - [ ] 4.11 Slice check: end-to-end tests of a leader leaving, a revocation with flags, and an OWNER handover.

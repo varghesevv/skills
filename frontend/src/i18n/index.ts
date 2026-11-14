@@ -303,6 +303,7 @@ const en = {
     '{name} leads a {homegroup}. Choose who leads it from now on. {name} loses access and is removed from it, and everyone whose status they set will be flagged to be re-checked.',
   'leader.revoke.successor': 'Leads the {homegroup} from now on',
   'leader.revoke.choose': 'Choose a member…',
+  'leader.revoke.needSuccessor': 'Choose who leads the {homegroup} from now on, then revoke.',
   'leader.revoke.alone': 'Nobody else is in this {homegroup}, so it closes with the revocation.',
   'leader.revoke.adminOnly':
     '{name} leads a {homegroup}. Only an {admin} or the {owner} can revoke a {verifier}.',

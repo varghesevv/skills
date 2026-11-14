@@ -11,6 +11,7 @@ import {
 import type { PersonDetail } from '../../../api/types'
 import { usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
+import { ApiError } from '../../../api/http'
 import { errorMessage } from '../../../shared/errors'
 import { Alert, SelectField } from '../../../shared/ui'
 import { leaderProblem } from './problems'
@@ -21,6 +22,17 @@ export type Change = Partial<
 >
 
 const LEADS = ['verifier', 'admin', 'owner']
+
+/** The words for a refused status change; a VERIFIER's revocation has two of its own. */
+function revokeProblem(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'successor_required') {
+    return t('leader.revoke.needSuccessor')
+  }
+  if (error instanceof ApiError && error.code === 'successor_not_member') {
+    return t('admin.error.notMember')
+  }
+  return leaderProblem(error)
+}
 
 /** Revoke (after asking), reinstate a revoked person into a group of their church, or confirm a
  *  flagged status. The server decides who may; this only hides what cannot work. A VERIFIER is
@@ -39,7 +51,7 @@ export default function StatusControls({
   const isVerifier = person.status === 'verifier'
   const actorIsAdmin = actor.status === 'admin' || actor.status === 'owner'
   const refresh = async () => {
-    for (const key of ['applicants', 'members', 'revoked', 'flagged'])
+    for (const key of ['applicants', 'members', 'revoked', 'flagged', 'church-groups'])
       await queryClient.invalidateQueries({ queryKey: [key] })
   }
   const [confirming, setConfirming] = useState(false)
@@ -105,7 +117,7 @@ export default function StatusControls({
     <div className="form-grid">
       {failure && (
         <Alert kind="error" focus>
-          {leaderProblem(failure)}
+          {revokeProblem(failure)}
         </Alert>
       )}
 
@@ -208,6 +220,14 @@ export default function StatusControls({
                   {t('common.retry')}
                 </button>
               </Alert>
+            )}
+            {isVerifier && members.isSuccess && members.data.total > members.data.items.length && (
+              <p className="hint">
+                {t('admin.groups.more', {
+                  count: members.data.items.length,
+                  total: members.data.total,
+                })}
+              </p>
             )}
             {isVerifier && members.isSuccess && others.length === 0 && (
               <p className="hint">{t('leader.revoke.alone')}</p>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { fetchMe } from '../../../api/auth'
 import { ApiError } from '../../../api/http'
@@ -7,7 +8,9 @@ import { closeGroup, fetchHomeGroups, type FormerLeaderStatus } from '../../../a
 import { useAuth, usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
 import { errorMessage } from '../../../shared/errors'
+import { setFlash } from '../../../shared/flash'
 import { Alert, SelectField } from '../../../shared/ui'
+import { PERSON_HOME } from '../../../portals/config'
 import { usePageTitle } from '../../../shared/usePageTitle'
 
 function problem(error: unknown): string {
@@ -24,13 +27,13 @@ export default function MyGroup() {
   const person = usePerson()
   const { setPerson } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   usePageTitle(t('myGroup.title'))
   const group = person.home_group
   const [target, setTarget] = useState('')
   const keeps = person.status === 'admin' || person.status === 'owner'
   const [former, setFormer] = useState<FormerLeaderStatus>(keeps ? 'keep' : 'provider')
   const [confirming, setConfirming] = useState(false)
-  const [done, setDone] = useState<string | null>(null)
   const groups = useQuery({
     queryKey: ['church-groups', person.church.id],
     queryFn: () => fetchHomeGroups(person.church.id),
@@ -40,20 +43,24 @@ export default function MyGroup() {
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['church-groups'] })
       await queryClient.invalidateQueries({ queryKey: ['members'] })
-      setConfirming(false)
-      setDone(
+      // A VERIFIER is a provider or a searcher now, so this page is no longer theirs and its guard
+      // would send them home without a word. Go home first with the outcome, then change who they
+      // are: the notice is kept in the navigation state.
+      let me = null
+      try {
+        const fresh = await fetchMe()
+        if (fresh.user_type === 'person') me = fresh
+      } catch {
+        /* the next page load shows it */
+      }
+      setFlash(
         t('myGroup.close.done', {
           closed: result.closed_group.name,
           joined: result.joined_group.name,
         }),
       )
-      // They lead no group now, so who they are changed too.
-      try {
-        const me = await fetchMe()
-        if (me.user_type === 'person') setPerson(me)
-      } catch {
-        /* the next page load shows it */
-      }
+      navigate(PERSON_HOME, { replace: true })
+      if (me) setPerson(me)
     },
   })
   const others = (groups.data?.items ?? []).filter((g) => g.id !== group?.id)
@@ -62,12 +69,7 @@ export default function MyGroup() {
     <div className="container">
       <div className="card">
         <h1>{t('myGroup.title')}</h1>
-        {done && (
-          <Alert kind="success" focus>
-            {done}
-          </Alert>
-        )}
-        {!done && group && (
+        {group && (
           <>
             <p className="lead">{t('myGroup.lead', { group: name })}</p>
             {close.error && (

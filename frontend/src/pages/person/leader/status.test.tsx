@@ -278,7 +278,7 @@ describe('revoke a VERIFIER with a successor', () => {
     expect(await screen.findByRole('option', { name: /Pia Provider/ })).toBeVisible()
   })
 
-  it('shows the refusal when the successor is not a member', async () => {
+  it('says to choose a successor when the server still asks for one', async () => {
     const user = userEvent.setup({ delay: null })
     signedInAs(
       makeMe(),
@@ -291,7 +291,39 @@ describe('revoke a VERIFIER with a successor', () => {
     await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
     await user.selectOptions(await screen.findByLabelText(/Leads the .* from now on/), 'p2')
     await user.click(screen.getByRole('button', { name: 'Yes, revoke' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Hand that on first/)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Choose who leads the .* from now on/,
+    )
+  })
+
+  it('says to choose a member of the group when the successor is not one', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      asAdmin({
+        [MEMBERS]: () => json(200, { items: [member('p2', 'Pia Provider', 'provider')], total: 1 }),
+        'PUT /verifier/people/p1/status': () => apiError(409, 'successor_not_member'),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    await user.selectOptions(await screen.findByLabelText(/Leads the .* from now on/), 'p2')
+    await user.click(screen.getByRole('button', { name: 'Yes, revoke' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Choose a member of this/)
+  })
+
+  it('tells the ADMIN when only the first page of the members is shown', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      asAdmin({
+        [MEMBERS]: () =>
+          json(200, { items: [member('p2', 'Pia Provider', 'provider')], total: 90 }),
+      }),
+    )
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    expect(await screen.findByText('Only the first 1 of 90 members are shown.')).toBeVisible()
   })
 })
 

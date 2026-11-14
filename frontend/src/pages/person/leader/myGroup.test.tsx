@@ -43,11 +43,23 @@ const CLOSED = {
 }
 
 describe('close my group', () => {
-  it('asks first, then closes it into the chosen group, as a provider', async () => {
+  it('asks first, closes it, and shows the outcome on the home of the person they became', async () => {
     const user = userEvent.setup({ delay: null })
+    let closed = false
     const api = signedInAs(makeMe(), {
-      ...lead(),
-      'POST /home-groups/group-1/close': () => json(200, CLOSED),
+      ...lead('verifier', () =>
+        closed
+          ? makePerson({ status: 'searcher', home_group: { id: 'g2', name: 'Harbour' } })
+          : makePerson({
+              status: 'verifier',
+              full_name: 'Lena Leader',
+              leader: { name: 'Lena Leader' },
+            }),
+      ),
+      'POST /home-groups/group-1/close': () => {
+        closed = true
+        return json(200, CLOSED)
+      },
     })
     renderApp('/member/group')
     await screen.findByRole('option', { name: 'Harbour' })
@@ -60,7 +72,9 @@ describe('close my group', () => {
     expect(api.count('POST /home-groups/group-1/close')).toBe(0)
     expect(screen.getByText(/It cannot be undone/)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Yes, close it' }))
+    // Now a searcher: the leader page is no longer theirs, and the outcome is still read.
     expect(await screen.findByText('Riverside is closed. You joined Harbour.')).toBeVisible()
+    expect(screen.getByText(/^Welcome/)).toBeVisible()
     expect(api.calls.find((c) => c.key === 'POST /home-groups/group-1/close')?.body).toEqual({
       move_to_group_id: 'g2',
       former_leader_status: 'searcher',
@@ -101,6 +115,7 @@ describe('close my group', () => {
   it.each([
     ['group_not_empty', 409, /Others are still in this/],
     ['invalid_choice', 422, /does not fit you/],
+    ['state_changed', 409, /changed meanwhile/],
   ])('puts %s in words', async (code, status, words) => {
     const user = userEvent.setup({ delay: null })
     signedInAs(makeMe(), {
