@@ -26,6 +26,10 @@ String _problem(AppText text, Object error) {
         return text('groupRequests.error.decided');
       case 'requester_unavailable':
         return text('groupRequests.error.gone');
+      case 'successor_not_member':
+        return text('groupRequests.error.member');
+      case 'not_admitted':
+        return text('groupRequests.error.admitted');
     }
   }
   return text.error(error);
@@ -47,6 +51,8 @@ class _GroupRequestsScreenState extends ConsumerState<GroupRequestsScreen> {
   bool _loading = true;
   int _request = 0;
   Object? _error;
+  bool _failedMore =
+      false; // the failed call was a next page, so retry that and not a reload
   String? _notice;
 
   @override
@@ -57,6 +63,7 @@ class _GroupRequestsScreenState extends ConsumerState<GroupRequestsScreen> {
 
   Future<void> _load({bool more = false}) async {
     final request = ++_request;
+    _failedMore = more;
     setState(() {
       _loading = true;
       _error = null;
@@ -126,7 +133,7 @@ class _GroupRequestsScreenState extends ConsumerState<GroupRequestsScreen> {
                 const SizedBox(height: 8),
                 FilledButton(
                   key: const Key('retry'),
-                  onPressed: () => _load(more: _items.isNotEmpty),
+                  onPressed: () => _load(more: _failedMore),
                   child: Text(text('common.retry')),
                 ),
               ],

@@ -25,6 +25,8 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
   int _request =
       0; // the latest load; an older answer that arrives later is dropped
   Object? _error;
+  bool _failedMore =
+      false; // retry the call that failed: a next page, or a reload
   String? _done;
 
   @override
@@ -35,6 +37,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
 
   Future<void> _load({bool more = false}) async {
     final request = ++_request;
+    _failedMore = more;
     setState(() {
       _loading = true;
       _error = null;
@@ -87,7 +90,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                 const SizedBox(height: 8),
                 FilledButton(
                   key: const Key('retry'),
-                  onPressed: () => _load(more: _items.isNotEmpty),
+                  onPressed: () => _load(more: _failedMore),
                   child: Text(text('common.retry')),
                 ),
               ],

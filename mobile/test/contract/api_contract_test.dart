@@ -496,6 +496,8 @@ void main() {
         'GroupStarted',
       );
       expect(properties('GroupStarted'), {'group'});
+      // The nested names the app reads: who asks, which church, which group.
+      expect(properties('IdName'), {'id', 'name'});
     });
 
     test('only the person page has a number', () {

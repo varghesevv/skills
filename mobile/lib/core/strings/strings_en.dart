@@ -366,6 +366,8 @@ const stringsEn = <String, String>{
       'Choose who leads the {homegroup} you lead now.',
   'groupRequests.error.decided': 'This request was decided already. Reload.',
   'groupRequests.error.gone': 'The member is no longer in the {organisation}.',
+  'groupRequests.error.member': 'Choose a member of that {homegroup}.',
+  'groupRequests.error.admitted': 'This is not available to you yet.',
   'notifications.group_request_new': '{name} asks to start a {homegroup}',
   'notifications.group_request_approved':
       '{name} approved your request to start a {homegroup}',

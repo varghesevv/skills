@@ -124,6 +124,7 @@ void main() {
     for (final c in [
       ('group_name_taken', 409, 'with this name already exists'),
       ('request_open', 409, 'already have a request waiting'),
+      ('not_admitted', 403, 'not available to you yet'),
     ]) {
       testWidgets('puts ${c.$1} in words', (tester) async {
         final app = await _open(tester, _provider());
@@ -336,12 +337,13 @@ void main() {
       },
     );
 
-    testWidgets('puts the refusals of an approval in words', (tester) async {
-      for (final c in [
-        ('not_open', 'decided already'),
-        ('successor_required', 'Choose who leads the'),
-        ('requester_unavailable', 'no longer in the'),
-      ]) {
+    for (final c in [
+      ('not_open', 'decided already'),
+      ('successor_required', 'Choose who leads the'),
+      ('requester_unavailable', 'no longer in the'),
+      ('successor_not_member', 'Choose a member of that'),
+    ]) {
+      testWidgets('puts ${c.$1} of an approval in words', (tester) async {
         final app = await _open(
           tester,
           _admin(leads: false),
@@ -358,13 +360,54 @@ void main() {
             ),
         );
         await tapKey(tester, 'approve-r1');
-        expect(find.textContaining(c.$2), findsOneWidget, reason: c.$1);
+        expect(find.textContaining(c.$2), findsOneWidget);
         expect(app.adapter.count('POST', '/group-requests/r1/approve'), 1);
-        tester.view.resetPhysicalSize();
-        await tester.pumpWidget(const SizedBox());
-        break; // one app per test: the other codes share the mapping and are listed above
-      }
-    });
+      });
+    }
+
+    testWidgets(
+      'retries a reload that failed as a reload, not as a next page',
+      (tester) async {
+        final app = await _open(
+          tester,
+          _admin(leads: false),
+          arrange: (a) => a
+            ..setReply(
+              'GET',
+              '/group-requests',
+              FakeReply(200, _page([_request()])),
+            )
+            ..reply(
+              'POST',
+              '/group-requests/r1/approve',
+              FakeReply(200, {
+                'group': {'id': 'g2', 'name': 'Harbour'},
+              }),
+            ),
+        );
+        // The reload after the approval fails.
+        app.adapter.setReply(
+          'GET',
+          '/group-requests',
+          FakeReply(500, _refusal('server_error')),
+        );
+        await tapKey(tester, 'approve-r1');
+        expect(find.byKey(const Key('retry')), findsOneWidget);
+        app.adapter.setReply(
+          'GET',
+          '/group-requests',
+          FakeReply(200, _page([])),
+        );
+        await tapKey(tester, 'retry');
+        // A reload starts from the first page; the decided request is gone.
+        final reloads = app.adapter.seen
+            .where((r) => r.path == '/group-requests' && r.method == 'GET')
+            .toList();
+        expect(reloads.last.query['offset'], 0);
+        expect(find.byKey(const Key('approve-r1')), findsNothing);
+        expect(find.text('No requests.'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'starts a group at once, choosing who leads their own, and refreshes who they are',
