@@ -6,11 +6,14 @@ import type {
   FlaggedRow,
   GroupRequest,
   GroupRequestCreated,
+  ChurchInvitation,
+  ChurchInvitationCreated,
   ChurchSummary,
   HomeGroupSummary,
   IdName,
   InvitationInfo,
   MoveRequest,
+  OwnerChurch,
   MemberRow,
   RevokedRow,
   StatusResult,
@@ -217,6 +220,36 @@ export function agreeToMove(id: string) {
 
 export function cancelMove(id: string) {
   return request<MoveRequest>(`/move-requests/${id}/cancel`, { method: 'POST' })
+}
+
+// ---- the OWNER's churches ----
+
+export function fetchOwnerChurches(page: number) {
+  return request<Paged<OwnerChurch>>(`/owner/churches?${paging(page)}`)
+}
+
+/** The link token is in the answer once; only its hash is kept. */
+export function inviteAdmin(churchName: string, email: string) {
+  return request<ChurchInvitationCreated>('/owner/churches', {
+    method: 'POST',
+    body: { church_name: churchName, email },
+  })
+}
+
+export function fetchChurchInvitations(page: number) {
+  return request<Paged<ChurchInvitation>>(`/owner/churches/invitations?${paging(page)}`)
+}
+
+export function cancelChurchInvitation(id: string) {
+  return request<void>(`/owner/churches/invitations/${id}`, { method: 'DELETE' })
+}
+
+/** Closes the church, its groups and its members' accounts together; kept for the history. */
+export function closeChurch(id: string) {
+  return request<{ id: string; name: string; closed_groups: number; closed_accounts: number }>(
+    `/owner/churches/${id}/close`,
+    { method: 'POST' },
+  )
 }
 
 export type FormerLeaderStatus = 'provider' | 'searcher' | 'keep'

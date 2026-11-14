@@ -8,6 +8,7 @@ import { NOTIFICATIONS_KEY, NOTIFICATIONS_POLL_MS } from '../pages/person/Notifi
 import {
   ADMIN_GROUPS,
   LEADER_GROUP,
+  OWNER_CHURCHES,
   LEADER_APPLICANTS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
@@ -54,6 +55,11 @@ export default function PersonLayout() {
             <Link className="btn btn-quiet" to={PERSON_MOVES}>
               {t('leader.nav.moves')}
             </Link>
+            {person.status === 'owner' && (
+              <Link className="btn btn-quiet" to={OWNER_CHURCHES}>
+                {t('owner.nav.churches')}
+              </Link>
+            )}
             {admin && (
               <Link className="btn btn-quiet" to={ADMIN_GROUPS}>
                 {t('admin.nav.groups')}

@@ -71,3 +71,11 @@ export function RequireAdmin() {
   const admin = user.user_type === 'person' && ['admin', 'owner'].includes(user.status)
   return admin ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
+
+/** The screens of the OWNER. Everyone else goes to their own home. */
+export function RequireOwner() {
+  const { user } = useAuth()
+  if (!user) return <LoadingScreen />
+  const owner = user.user_type === 'person' && user.status === 'owner'
+  return owner ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
+}
