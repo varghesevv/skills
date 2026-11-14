@@ -118,3 +118,52 @@ class MoveRow {
   final String state;
   final DateTime createdAt;
 }
+
+/// An invitation link to the group a leader leads, as the list shows it: it has no token, which
+/// was shown once when the link was made.
+class GroupInvitationRow {
+  const GroupInvitationRow({
+    required this.id,
+    required this.createdAt,
+    required this.expiresAt,
+  });
+
+  factory GroupInvitationRow.fromJson(Map<String, Object?> json) =>
+      GroupInvitationRow(
+        id: json['id'] as String,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        expiresAt: DateTime.parse(json['expires_at'] as String),
+      );
+
+  final String id;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+}
+
+/// A link just made: the token is here and nowhere else, and only until the screen is left.
+class GroupInvitationCreated {
+  const GroupInvitationCreated({
+    required this.id,
+    required this.token,
+    required this.expiresAt,
+  });
+
+  factory GroupInvitationCreated.fromJson(Map<String, Object?> json) =>
+      GroupInvitationCreated(
+        id: json['id'] as String,
+        token: json['token'] as String,
+        expiresAt: DateTime.parse(json['expires_at'] as String),
+      );
+
+  final String id;
+  final String token;
+  final DateTime expiresAt;
+}
+
+/// The address a leader sends to people who may join their group. The page lives on the same
+/// host as the API, so the address is the API address without its `/api/v1` path.
+String joinLinkFor(String token, {required String apiBase}) {
+  final uri = Uri.tryParse(apiBase);
+  final origin = uri == null || !uri.hasAuthority ? '' : uri.origin;
+  return '$origin/join/$token';
+}

@@ -173,6 +173,9 @@ void main() {
       'POST /move-requests/{request_id}/cancel': '200',
       'PUT /home-groups/{group_id}/leader': '200',
       'POST /verifier/people/{person_id}/move': '200',
+      'GET /verifier/group-invitations': '200',
+      'POST /verifier/group-invitations': '201',
+      'DELETE /verifier/group-invitations/{invitation_id}': '204',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -588,6 +591,30 @@ void main() {
         expect(refsOf('Moved', 'home_group'), {'IdName'});
       },
     );
+
+    test('the group invitation links have the fields the app reads', () {
+      expect(
+        responseSchema('GET', '/verifier/group-invitations', '200'),
+        'GroupInvitationList',
+      );
+      expect(properties('GroupInvitationList'), {'items'});
+      expect(properties('GroupInvitationSummary'), {
+        'id',
+        'created_at',
+        'expires_at',
+      });
+      expect(
+        responseSchema('POST', '/verifier/group-invitations', '201'),
+        'GroupInvitationCreated',
+      );
+      expect(properties('GroupInvitationCreated'), {
+        'id',
+        'token',
+        'expires_at',
+      });
+      // The list never carries a token: it was shown once, when the link was made.
+      expect(properties('GroupInvitationSummary'), isNot(contains('token')));
+    });
 
     test('only the person page has a number', () {
       for (final schema in [
