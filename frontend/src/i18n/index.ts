@@ -136,6 +136,7 @@ const en = {
   'notifications.someone': 'Someone',
   // The screens of a leader (roadmap S3.5).
   'leader.nav.label': 'Leader',
+  'provider.nav.label': 'My profile',
   'leader.nav.applicants': 'Applicants',
   'leader.nav.members': 'Members',
   'leader.nav.revoked': 'Revoked',

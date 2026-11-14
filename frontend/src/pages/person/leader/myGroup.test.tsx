@@ -181,7 +181,7 @@ describe('close my group', () => {
     second.unmount()
     signedInAs(makeMe(), lead())
     renderApp('/member')
-    expect(await screen.findByRole('link', { name: /^My / })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /^My (?!ratings)/ })).toHaveAttribute(
       'href',
       '/member/group',
     )
