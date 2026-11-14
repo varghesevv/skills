@@ -158,6 +158,13 @@ class _Member extends ConsumerWidget {
           ),
         ],
         ListTile(
+          key: const Key('group-requests'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(text('groupRequests.link')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(personGroupRequests),
+        ),
+        ListTile(
           key: const Key('vouch-for-someone'),
           contentPadding: EdgeInsets.zero,
           title: Text(text('vouch.paste.open')),

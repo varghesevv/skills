@@ -21,6 +21,16 @@ String notificationText(AppText text, NotificationItem item) {
     'provider_application' => text('notifications.provider_application', {
       'name': name,
     }),
+    'group_request_new' => text('notifications.group_request_new', {
+      'name': name,
+    }),
+    'group_request_approved' => text('notifications.group_request_approved', {
+      'name': name,
+    }),
+    'group_request_declined' => text('notifications.group_request_declined', {
+      'name': name,
+    }),
+    'reinstated' => text('notifications.reinstated', {'name': name}),
     'provider_declined' => text('notifications.provider_declined', {
       'name': name,
     }),

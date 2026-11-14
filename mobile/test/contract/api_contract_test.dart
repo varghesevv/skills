@@ -147,6 +147,10 @@ void main() {
       'GET /verifier/flagged': '200',
       'PUT /verifier/people/{person_id}/status': '200',
       'POST /verifier/people/{person_id}/reconfirm': '200',
+      'GET /group-requests': '200',
+      'POST /group-requests': '201',
+      'POST /group-requests/{request_id}/approve': '200',
+      'POST /group-requests/{request_id}/decline': '204',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -460,6 +464,39 @@ void main() {
         );
       },
     );
+
+    test('the group requests have the fields the app reads and sends', () {
+      expect(
+        responseSchema('GET', '/group-requests', '200'),
+        'GroupRequestList',
+      );
+      expect(properties('GroupRequestList'), {'items', 'total'});
+      expect(
+        properties('GroupRequestOut'),
+        containsAll([
+          'id',
+          'group_name',
+          'church',
+          'requester',
+          'state',
+          'created_at',
+          'requester_leads_a_group',
+          'requester_group',
+        ]),
+      );
+      expect(
+        responseSchema('POST', '/group-requests', '201'),
+        'GroupRequestCreated',
+      );
+      expect(properties('GroupRequestCreated'), {'request', 'group'});
+      expect(properties('GroupRequestCreate'), {'group_name', 'successor_id'});
+      expect(properties('GroupRequestApprove'), {'successor_id'});
+      expect(
+        responseSchema('POST', '/group-requests/{request_id}/approve', '200'),
+        'GroupStarted',
+      );
+      expect(properties('GroupStarted'), {'group'});
+    });
 
     test('only the person page has a number', () {
       for (final schema in [
