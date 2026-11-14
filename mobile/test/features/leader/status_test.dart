@@ -354,6 +354,69 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a reload that failed is retried as a reload, from the first page',
+      (tester) async {
+        final app = await pumpApp(
+          tester,
+          arrange: (adapter, store) {
+            signedInAsPerson(adapter, store, _leader());
+            adapter
+              ..reply('GET', '/me/notifications', FakeReply(200, _noNotes))
+              ..reply(
+                'GET',
+                '/verifier/flagged',
+                FakeReply(
+                  200,
+                  _page([
+                    {
+                      'id': 'p2',
+                      'full_name': 'Sam Searcher',
+                      'status': 'searcher',
+                      'home_group': null,
+                      'status_set_by': null,
+                    },
+                  ]),
+                ),
+              )
+              ..reply(
+                'GET',
+                '/verifier/people/p2',
+                FakeReply(200, _detail(flagged: true)),
+              )
+              ..reply(
+                'POST',
+                '/verifier/people/p2/reconfirm',
+                FakeReply(200, _statusResult('searcher')),
+              );
+          },
+        );
+        await tapKey(tester, 'leader-flagged');
+        await tapKey(tester, 'flagged-p2');
+        await tapKey(tester, 'reconfirm');
+        // The reload on the way back fails; the stale row is still there.
+        app.adapter.setReply(
+          'GET',
+          '/verifier/flagged',
+          FakeReply(500, _refusal('server_error')),
+        );
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('retry')), findsOneWidget);
+        app.adapter.setReply(
+          'GET',
+          '/verifier/flagged',
+          FakeReply(200, _page([])),
+        );
+        await tapKey(tester, 'retry');
+        final asks = app.adapter.seen
+            .where((r) => r.path == '/verifier/flagged')
+            .toList();
+        expect(asks.last.query['offset'], 0);
+        expect(find.text('Nobody needs a re-check.'), findsOneWidget);
+      },
+    );
+
     testWidgets('says when nobody needs a re-check', (tester) async {
       await pumpApp(
         tester,

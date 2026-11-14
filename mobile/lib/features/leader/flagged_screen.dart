@@ -22,6 +22,8 @@ class _FlaggedScreenState extends ConsumerState<FlaggedScreen> {
   bool _loading = true;
   int _request = 0;
   Object? _error;
+  bool _failedMore =
+      false; // retry the call that failed: a next page, or a reload
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _FlaggedScreenState extends ConsumerState<FlaggedScreen> {
 
   Future<void> _load({bool more = false}) async {
     final request = ++_request;
+    _failedMore = more;
     setState(() {
       _loading = true;
       _error = null;
@@ -70,7 +73,7 @@ class _FlaggedScreenState extends ConsumerState<FlaggedScreen> {
                 const SizedBox(height: 8),
                 FilledButton(
                   key: const Key('retry'),
-                  onPressed: () => _load(more: _items.isNotEmpty),
+                  onPressed: () => _load(more: _failedMore),
                   child: Text(text('common.retry')),
                 ),
               ],

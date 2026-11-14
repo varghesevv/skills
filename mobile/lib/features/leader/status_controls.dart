@@ -227,6 +227,7 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
               ),
             ),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               key: const Key('reinstate-group'),
               initialValue: group,
               decoration: InputDecoration(
@@ -243,6 +244,7 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
               onChanged: (value) => setState(() => _group = value ?? ''),
             ),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               key: const Key('reinstate-status'),
               initialValue: _to,
               decoration: InputDecoration(
