@@ -131,8 +131,10 @@ describe('search', () => {
     await user.click(screen.getAllByRole('button', { name: 'Show results' })[0])
     expect(await screen.findByText('1 freelancer(s) found')).toBeVisible()
     expect(api.count(byGroup)).toBe(1)
-    expect(screen.getByRole('button', { name: 'Remove filter: Hope Church' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Remove filter: Harbour' })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'Remove filter: Organisation: Hope Church' }),
+    ).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Remove filter: Home group: Harbour' })).toBeVisible()
   })
 
   it('explains a missing currency instead of calling the API', async () => {
