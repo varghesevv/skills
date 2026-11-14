@@ -34,3 +34,26 @@ class UserRating(UUIDPrimaryKeyMixin, Base):
         CheckConstraint("rating BETWEEN 1 AND 10", name="rating_range"),
         Index(None, "freelancer_id"),
     )
+
+
+class Rating(UUIDPrimaryKeyMixin, Base):
+    """A person's rating (1 to 10) of a provider. One rating per pair, editable, never self.
+
+    The rating stays when either account is closed. The rater is never shown to the provider.
+    """
+
+    __tablename__ = "ratings"
+
+    rater_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    provider_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    rating: Mapped[int] = mapped_column(SmallInteger)
+    comment: Mapped[str | None] = mapped_column(Text)
+    rated_on: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("rater_id", "provider_id", name="rater_provider"),
+        CheckConstraint("rating BETWEEN 1 AND 10", name="rating_range"),
+        CheckConstraint("rater_id <> provider_id", name="not_self"),
+        Index(None, "provider_id"),
+    )

@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.models.reports import ReportRun
 from app.models.vouching import OrgFreelancer
 from tests.api_helpers import API, signup
-from tests.test_search_api import freelancer
+from tests.old_accounts import freelancer
 
 REPORTS = f"{API}/reports"
 WINDOW = "from=2026-10-20&to=2026-10-21"

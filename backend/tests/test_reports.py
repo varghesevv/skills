@@ -27,7 +27,7 @@ from app.reports.types import ReportParams, ReportResult, Section
 from app.reports.windows import window_from_dates
 from app.services.accounts import create_account
 from app.worker.jobs import catch_up, sync_jobs
-from tests.test_search_api import freelancer
+from tests.old_accounts import freelancer
 
 DUBAI = "Asia/Dubai"
 

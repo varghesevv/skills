@@ -28,7 +28,7 @@ Migration `0007` creates the tables of this file that belong to the new identity
 | `labels` | Kept unchanged. | |
 | `freelancer_labels` | Replaced by `person_labels`, key `person_id` (created in S5.1, D-41); the older table stays until its last reader (the reports and the demo data generator, after the search) moves to the new table. | S5.1 creates, S5.3 drops |
 | `freelancer_unavailability` | Replaced by `person_unavailability`, key `person_id` (created in S5.1, D-41); the older table stays until its last reader (the reports and the demo data generator, after the search) moves to the new table. | S5.1 creates, S5.3 drops |
-| `user_ratings` | Kept as `ratings`, with `rater_id` and `provider_id` pointing at `people`. | S5.2 |
+| `user_ratings` | Replaced by `ratings`, with `rater_id` and `provider_id` pointing at `people` (created in S5.2a, D-42); the older table stays until the reports stop reading it. | S5.2a creates, S5.3 drops |
 | `phone_reveals` | Kept, with `revealer_id` and `provider_id`. | S5.2 |
 | `login_history` | Kept; `user_type` dropped, `person_id` added. | S2.3 accepts `person` in `user_type` (migration 0008), the person's id goes in `user_id`; the column is dropped with the last older account type (S5.2) |
 | `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. | Same as `login_history` |
