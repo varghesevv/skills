@@ -1587,6 +1587,11 @@
             "type": "boolean"
           },
           "state": {
+            "enum": [
+              "open",
+              "approved",
+              "declined"
+            ],
             "title": "State",
             "type": "string"
           }
