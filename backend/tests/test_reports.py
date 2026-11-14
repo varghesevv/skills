@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.models import (
     MoveRequest,
     Person,
+    PersonLabel,
     PersonPhoneReveal,
     PersonUnavailability,
     Rating,
@@ -21,6 +22,7 @@ from app.models import (
     Vouch,
 )
 from app.models.auth import LoginHistory
+from app.models.labels import Label
 from app.models.reports import ReportRun, ReportSchedule
 from app.reports.definitions import REGISTRY
 from app.reports.render import to_csv
@@ -445,6 +447,84 @@ def test_trust_events_count_what_happened_in_the_period(world: World) -> None:
         params(date(2026, 10, 20), date(2026, 10, 21), church_id=world.church.id),
     ).sections
     assert mine[2].rows == [] and mine[3].rows == []
+
+
+def test_reports_limited_to_a_church_hold_only_that_church(world: World) -> None:
+    session = world.session
+    other_church, other_group, _ = world.add_church("Hope Church")
+
+    def there(status: str) -> Person:
+        person = make_person(other_church, other_group, status)
+        session.add(person)
+        session.flush()
+        return person
+
+    here_provider, there_provider = provider(world), there("provider")
+    session.add(
+        PersonLabel(
+            person_id=there_provider.id,
+            label_id=session.scalars(select(Label.id).where(Label.label_name == "plumbing")).one(),
+        )
+    )
+    here_searcher, there_searcher = add_member(world, "searcher"), there("searcher")
+    now = dubai(10, 12)
+    session.execute(
+        update(Person)
+        .where(Person.id.in_([here_searcher.person.id, there_searcher.id]))
+        .values(last_login_at=now)
+    )
+    for rater, target in (
+        (here_searcher.person, here_provider.person),
+        (there_searcher, there_provider),
+    ):
+        session.add(Rating(rater_id=rater.id, provider_id=target.id, rating=7, rated_on=now))
+        session.add(
+            PersonPhoneReveal(
+                revealer_id=rater.id,
+                provider_id=target.id,
+                revealed_at=now,
+                channel="show",
+                source="detail",
+            )
+        )
+        session.add(
+            LoginHistory(
+                user_type="person",
+                user_id=rater.id,
+                login_email="x@example.com",
+                succeeded=True,
+                login_time=now,
+            )
+        )
+    session.add(
+        LoginHistory(
+            user_type="person", login_email="nobody@example.com", succeeded=False, login_time=now
+        )
+    )
+    session.flush()
+    window = params(date(2026, 10, 10), date(2026, 10, 10))
+    limited = params(date(2026, 10, 10), date(2026, 10, 10), church_id=other_church.id)
+
+    both = build_report(session, "top_rated", window).sections[0].rows
+    assert {row[0] for row in both} == {code(here_provider.person), code(there_provider)}
+    only = build_report(session, "top_rated", limited).sections[0].rows
+    assert [row[0] for row in only] == [code(there_provider)]
+    per_skill = build_report(session, "top_rated", limited).sections[1].rows
+    assert per_skill == [["plumbing", 7.0, 1, 1]]
+
+    everyone = build_report(session, "phone_reveals", window).sections
+    assert dict(everyone[0].rows)["reveals"] == 2
+    mine = build_report(session, "phone_reveals", limited).sections
+    assert dict(mine[0].rows)["reveals"] == 1
+    assert [row[0] for row in mine[5].rows] == [code(there_provider)]
+    assert [row[0] for row in mine[2].rows] == [code(there_searcher)]
+
+    all_rows = {row[0]: row[1:] for row in rows_of(session, "active_users", window)}
+    assert all_rows["searcher"] == [2, 2, 0]
+    assert all_rows["unknown address"] == [0, 0, 1]
+    church_rows = {row[0]: row[1:] for row in rows_of(session, "active_users", limited)}
+    assert church_rows["searcher"] == [1, 1, 0]
+    assert "unknown address" not in church_rows  # a failed attempt belongs to no church
 
 
 def test_monthly_summary_runs_every_report(world: World) -> None:

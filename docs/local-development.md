@@ -420,7 +420,7 @@ Open the new file in `backend/migrations/versions/` and read it. Automatic gener
 
 ## 10. Reports
 
-Admins create and download reports in the web site (Admin → Reports, Report history and Schedules). From the command line:
+The OWNER runs and downloads reports in the web site (Reports, Report history and Schedules); an ADMIN runs the reports limited to their church, and does not see run history or schedules. From the command line:
 
 ```bash
 docker compose exec api python -m app.reports list

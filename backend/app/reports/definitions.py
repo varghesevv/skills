@@ -98,6 +98,7 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
                 Person.status == status,
                 Person.last_login_at >= p.start,
                 Person.last_login_at < p.end,
+                *in_church(p, Person.church_id),
             )
         )
         logins = (
@@ -109,13 +110,14 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
                 Person.status == status,
                 LoginHistory.login_time >= p.start,
                 LoginHistory.login_time < p.end,
+                *in_church(p, Person.church_id),
             )
         )
         ok = db.scalar(logins.where(LoginHistory.succeeded.is_(True)))
         failed = db.scalar(logins.where(LoginHistory.succeeded.is_(False)))
         rows.append((status, active or 0, ok or 0, failed or 0))
-    if not p.status:
-        # A failed attempt with an address nobody has belongs to no status.
+    if not p.status and p.church_id is None:
+        # A failed attempt with an address nobody has belongs to no status and to no church.
         unknown = db.scalar(
             select(func.count())
             .select_from(LoginHistory)
@@ -171,6 +173,8 @@ def top_rated(db: Session, p: ReportParams) -> list[Section]:
     in_window = and_(Rating.rated_on >= p.start, Rating.rated_on < p.end)
     top = db.execute(
         select(code_of(Rating.provider_id), average, count)
+        .select_from(Rating)
+        .join(Person, Person.id == Rating.provider_id)
         .where(in_window)
         .group_by(Rating.provider_id)
         .having(count >= p.min_ratings)
@@ -182,6 +186,7 @@ def top_rated(db: Session, p: ReportParams) -> list[Section]:
         .select_from(Rating)
         .join(PersonLabel, PersonLabel.person_id == Rating.provider_id)
         .join(Label, and_(Label.id == PersonLabel.label_id, Label.label_type == "skill"))
+        .join(Person, Person.id == Rating.provider_id)
         .where(in_window)
         .group_by(Label.label_name)
         .order_by(average.desc(), Label.label_name)
@@ -396,6 +401,11 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
     """How often a number was revealed, who asked, and for whom (people shown by code)."""
     reveal = PersonPhoneReveal
     in_window = and_(reveal.revealed_at >= p.start, reveal.revealed_at < p.end)
+    if p.church_id is not None:  # the reveals of the providers of that church
+        in_window = and_(
+            in_window,
+            true(),
+        )
     reveals = func.count(reveal.id)
 
     total, searchers, providers, dial, search = db.execute(
@@ -742,6 +752,11 @@ REGISTRY: dict[str, ReportDef] = {report.name: report for report in REPORTS}
 
 
 def get_definition(name: str) -> ReportDef:
+    try:
+        return REGISTRY[name]
+    except KeyError:
+        raise ReportError("Unknown report") from None
+(name: str) -> ReportDef:
     try:
         return REGISTRY[name]
     except KeyError:
