@@ -4,6 +4,8 @@ import type {
   AppliedStatus,
   ApplicantRow,
   FlaggedRow,
+  GroupRequest,
+  GroupRequestCreated,
   ChurchSummary,
   HomeGroupSummary,
   InvitationInfo,
@@ -165,6 +167,29 @@ export function reinstatePerson(id: string, to: 'searcher' | 'provider', homeGro
 /** Clear a re-check flag: the caller becomes the new link in the person's chain of trust. */
 export function reconfirmPerson(id: string) {
   return request<StatusResult>(`/verifier/people/${id}/reconfirm`, { method: 'POST' })
+}
+
+export function fetchGroupRequests(page: number) {
+  return request<Paged<GroupRequest>>(`/group-requests?${paging(page)}`)
+}
+
+/** An ADMIN or the OWNER start the group at once; for anyone else this is a request. */
+export function askForGroup(groupName: string, successorId?: string) {
+  return request<GroupRequestCreated>('/group-requests', {
+    method: 'POST',
+    body: { group_name: groupName, ...(successorId ? { successor_id: successorId } : {}) },
+  })
+}
+
+export function approveGroupRequest(id: string, successorId?: string) {
+  return request<{ group: { id: string; name: string } }>(`/group-requests/${id}/approve`, {
+    method: 'POST',
+    body: successorId ? { successor_id: successorId } : {},
+  })
+}
+
+export function declineGroupRequest(id: string) {
+  return request<void>(`/group-requests/${id}/decline`, { method: 'POST' })
 }
 
 /** A searcher asks to become a provider; they stay a searcher while they collect vouches. */

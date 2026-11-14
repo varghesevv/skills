@@ -31,6 +31,14 @@ export function notificationText(item: NotificationItem): string {
       return t('notifications.provider_application', { name })
     case 'provider_declined':
       return t('notifications.provider_declined', { name })
+    case 'group_request_new':
+      return t('notifications.group_request_new', { name })
+    case 'group_request_approved':
+      return t('notifications.group_request_approved', { name })
+    case 'group_request_declined':
+      return t('notifications.group_request_declined', { name })
+    case 'reinstated':
+      return t('notifications.reinstated', { name })
     case 'admitted':
       return t('notifications.admitted', { name })
     default:
