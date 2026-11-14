@@ -8,9 +8,9 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 - Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
 - Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
 - Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131), S3.8 (133 backend journey, 134 mobile contract); S3 (trust: vouching and admission) is complete.
-- Done also: S4.1 (135), S4.2a (136), S4.2b (137), S4.3a (138), S4.3b (139), S4.4a (141), S4.4b (142), S4.4c (143), S4.5a (144), S4.5b (146), S4.6 (the random-sequence test), S4.7a (148), S4.7b (149), S4.8a (152, the groups of the church, change a leader, move a member), S4.8b-1 (153, move requests and their agreements), S4.8b-2 (156, revoke a VERIFIER with a successor, close one's own group), S4.9a (157, the OWNER's churches and invitations), S4.9b (158, the page an invited ADMIN opens), S4.9c backend (159, church filter and the ADMIN's id), S4.9c web (160, handover), S4.9d (161, replace an ADMIN), S4.9e backend (162, the log of phone number views, D-40), S4.9e web log (163).
-- In progress: the follow-up for focus in the confirmation questions (one shared component).
-- Next: S4.9e web, revoke an ADMIN; then S4.10, S4.11. Label management for the OWNER moves to S5.4, because the label endpoints are still those of the old administrator until S5.1 gives them to the OWNER.
+- Done also: S4.1 (135), S4.2a (136), S4.2b (137), S4.3a (138), S4.3b (139), S4.4a (141), S4.4b (142), S4.4c (143), S4.5a (144), S4.5b (146), S4.6 (the random-sequence test), S4.7a (148), S4.7b (149), S4.8a (152, the groups of the church, change a leader, move a member), S4.8b-1 (153, move requests and their agreements), S4.8b-2 (156, revoke a VERIFIER with a successor, close one's own group), S4.9a (157, the OWNER's churches and invitations), S4.9b (158, the page an invited ADMIN opens), S4.9c backend (159, church filter and the ADMIN's id), S4.9c web (160, handover), S4.9d (161, replace an ADMIN), S4.9e backend (162, the log of phone number views, D-40), S4.9e web log (163), the shared confirmation question (164).
+- In progress: S4.9e-2 (web: the OWNER revokes an ADMIN).
+- Next: S4.10 (mobile), S4.11 (slice check). Label management for the OWNER moves to S5.4, because the label endpoints are still those of the old administrator until S5.1 gives them to the OWNER.
 - Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
@@ -94,7 +94,7 @@ Backend first, then web and mobile.
 - [x] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step (`backend/tests/test_random_sequence.py`; it found no hole in S4).
 - [x] 4.7 Web: revoke and reinstate, flags (4.7a); group requests (4.7b).
 - [x] 4.8 Web: ADMIN screens: the groups of the church and change of leader (4.8a), moves (4.8b-1), revoke a leader with a successor and close one's own group (4.8b-2). The church's people and revoked list are the Members and Revoked pages (3.5, 4.7a), which an ADMIN sees for the whole church. The OWNER's replacement of an ADMIN is in 4.9.
-- [ ] 4.9 Web: OWNER screens: churches, invitations, labels management, handover, and the log of phone number views (backend endpoint first; O-03 retention).
+- [x] 4.9 Web: OWNER screens: churches, invitations, labels management, handover, and the log of phone number views (backend endpoint first; O-03 retention).
 - [ ] 4.10 Mobile: revoke and reinstate, flags; ADMIN screens (group requests, succession); close account.
 - [ ] 4.11 Slice check: end-to-end tests of a leader leaving, a revocation with flags, and an OWNER handover.
 

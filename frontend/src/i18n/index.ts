@@ -434,6 +434,20 @@ const en = {
   'leader.revoke.adminOnly':
     '{name} leads a {homegroup}. Only an {admin} or the {owner} can revoke a {verifier}.',
   'leader.revoke.done': '{name} was revoked.',
+  'revokeAdmin.open': 'Revoke {name}',
+  'revokeAdmin.warning':
+    '{name} is the {admin} of {church}. Choose who is the {admin} from now on, and who leads the {homegroup} {name} leads. {name} loses access and is removed, and everyone whose status they set will be flagged to be re-checked.',
+  'revokeAdmin.successor': 'New {admin} of {church}',
+  'revokeAdmin.group': 'Leads the {homegroup} of {name} from now on',
+  'revokeAdmin.choose': 'Choose a member…',
+  'revokeAdmin.groupAlone': 'Nobody else is in that {homegroup}, so it closes with the revocation.',
+  'revokeAdmin.noMembers':
+    'Nobody else is in this {organisation}, so there is nobody to take over. Close the {organisation} instead, from the {organisations} page.',
+  'revokeAdmin.more': 'Only the first {count} of {total} members are shown.',
+  'revokeAdmin.error.needChoice':
+    'Choose a new {admin} and who leads the {homegroup}, then revoke.',
+  'revokeAdmin.error.member':
+    'Choose members of this {organisation}, and the leader of the {homegroup} from that {homegroup}.',
   'leader.revoke.leads':
     '{name} leads a {homegroup} or a church. Hand that on first; then they can be revoked.',
   'leader.reinstate.title': 'Bring {name} back',

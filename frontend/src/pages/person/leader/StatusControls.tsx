@@ -15,6 +15,7 @@ import { ApiError } from '../../../api/http'
 import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { errorMessage } from '../../../shared/errors'
 import { Alert, SelectField } from '../../../shared/ui'
+import RevokeAdmin from './RevokeAdmin'
 import { leaderProblem } from './problems'
 
 /** What the page shows of a person after a change: the answer of the server, applied in place. */
@@ -181,10 +182,20 @@ export default function StatusControls({
         </form>
       )}
 
-      {!revoked && LEADS.includes(person.status) && person.status !== 'owner' && !canRevoke && (
-        <p className="hint span-2">
-          {isVerifier ? t('leader.revoke.adminOnly', { name }) : t('leader.revoke.leads', { name })}
-        </p>
+      {!revoked &&
+        LEADS.includes(person.status) &&
+        person.status !== 'owner' &&
+        !canRevoke &&
+        !(person.status === 'admin' && actor.status === 'owner') && (
+          <p className="hint span-2">
+            {isVerifier
+              ? t('leader.revoke.adminOnly', { name })
+              : t('leader.revoke.leads', { name })}
+          </p>
+        )}
+
+      {!revoked && person.status === 'admin' && actor.status === 'owner' && (
+        <RevokeAdmin person={person} onDone={onDone} />
       )}
 
       {canRevoke &&

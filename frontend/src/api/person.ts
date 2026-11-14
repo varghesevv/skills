@@ -186,11 +186,16 @@ export function fetchFlagged(page: number) {
 }
 
 /** Revoke someone below you. A VERIFIER's group gets `successorId` as its leader in the same step
- *  (without one it closes, if they are alone in it). */
-export function revokePerson(id: string, successorId?: string) {
+ *  (without one it closes, if they are alone in it). An ADMIN's church gets `successorId` as its
+ *  ADMIN and the group they led `groupSuccessorId` as its leader. */
+export function revokePerson(id: string, successorId?: string, groupSuccessorId?: string) {
   return request<StatusResult>(`/verifier/people/${id}/status`, {
     method: 'PUT',
-    body: { to: 'revoked', ...(successorId ? { successor_id: successorId } : {}) },
+    body: {
+      to: 'revoked',
+      ...(successorId ? { successor_id: successorId } : {}),
+      ...(groupSuccessorId ? { group_successor_id: groupSuccessorId } : {}),
+    },
   })
 }
 
