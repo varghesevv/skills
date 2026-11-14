@@ -45,6 +45,11 @@ export function notificationText(item: NotificationItem): string {
     case 'member_moved_in':
     case 'member_moved_out':
       return t(`notifications.${item.kind}`, { name })
+    case 'handover_requested':
+    case 'handover_cancelled':
+    case 'owner_handed_over':
+    case 'owner_appointed':
+      return t(`notifications.${item.kind}`, { name })
     case 'admitted':
       return t('notifications.admitted', { name })
     default:
