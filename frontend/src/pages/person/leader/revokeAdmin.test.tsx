@@ -188,4 +188,30 @@ describe('the OWNER revokes an ADMIN', () => {
     await user.click(screen.getByRole('button', { name: 'Revoke Ada Admin' }))
     expect(await screen.findByLabelText(/^New admin of Hope Church/i)).toHaveValue('')
   })
+
+  it('marks the cached groups of the church stale, because a group changed leader or closed', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      owner({
+        'PUT /verifier/people/p1/status': () =>
+          json(200, {
+            id: 'p1',
+            status: 'revoked',
+            home_group_id: null,
+            flagged_for_recheck: false,
+          }),
+      }),
+    )
+    const { queryClient } = renderApp('/member/people/p1')
+    // Another page of the session already holds a list of groups (no page here watches it).
+    queryClient.setQueryData(['church-groups', 'church-9'], { items: [] })
+    expect(queryClient.getQueryState(['church-groups', 'church-9'])?.isInvalidated).toBe(false)
+    await open(user)
+    await user.selectOptions(await screen.findByLabelText(/^New admin of Hope Church/i), 'm1')
+    await user.selectOptions(screen.getByLabelText(/^Leads the .* of Ada Admin/), 'm2')
+    await user.click(screen.getByRole('button', { name: 'Yes, revoke' }))
+    await screen.findByText('Ada Admin was revoked.')
+    expect(queryClient.getQueryState(['church-groups', 'church-9'])?.isInvalidated).toBe(true)
+  })
 })

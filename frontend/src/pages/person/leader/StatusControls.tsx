@@ -15,6 +15,7 @@ import { ApiError } from '../../../api/http'
 import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { errorMessage } from '../../../shared/errors'
 import { Alert, SelectField } from '../../../shared/ui'
+import { REVOCATION_KEYS } from './refreshKeys'
 import RevokeAdmin from './RevokeAdmin'
 import { leaderProblem } from './problems'
 
@@ -53,8 +54,7 @@ export default function StatusControls({
   const isVerifier = person.status === 'verifier'
   const actorIsAdmin = actor.status === 'admin' || actor.status === 'owner'
   const refresh = async () => {
-    for (const key of ['applicants', 'members', 'revoked', 'flagged', 'church-groups'])
-      await queryClient.invalidateQueries({ queryKey: [key] })
+    for (const key of REVOCATION_KEYS) await queryClient.invalidateQueries({ queryKey: [key] })
   }
   const [confirming, setConfirming] = useState(false)
   const opener = useReturnFocus<HTMLButtonElement>(confirming)

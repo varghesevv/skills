@@ -9,6 +9,7 @@ import { errorMessage } from '../../../shared/errors'
 import { Alert, SelectField } from '../../../shared/ui'
 import { t } from '../../../i18n'
 import { leaderProblem } from './problems'
+import { REVOCATION_KEYS } from './refreshKeys'
 import type { Change } from './StatusControls'
 
 /** What a refused revocation of an ADMIN means. The server's code decides the words. */
@@ -49,8 +50,7 @@ export default function RevokeAdmin({
   const revoke = useMutation({
     mutationFn: () => revokePerson(person.id, successor, groupSuccessor || undefined),
     onSuccess: async () => {
-      for (const key of ['applicants', 'members', 'revoked', 'flagged', 'owner-churches'])
-        await queryClient.invalidateQueries({ queryKey: [key] })
+      for (const key of REVOCATION_KEYS) await queryClient.invalidateQueries({ queryKey: [key] })
       setConfirming(false)
       onDone(t('leader.revoke.done', { name }), {
         status: 'revoked',

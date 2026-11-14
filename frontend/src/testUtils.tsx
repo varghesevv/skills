@@ -89,13 +89,15 @@ export function mockApi(routes: Record<string, Handler>) {
 
 export function renderApp(route = '/') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         <App />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  // The client is returned so that a test can look at what is cached and what was invalidated.
+  return { ...view, queryClient: client }
 }
 
 export const OLD_REFRESH = 'refresh-old'
