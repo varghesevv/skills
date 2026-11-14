@@ -8054,7 +8054,7 @@
     },
     "/api/v1/reports": {
       "get": {
-        "description": "The reports you may run. Organisations see only reports limited to their own data.",
+        "description": "The reports you may run. An ADMIN sees only those limited to their own church.",
         "operationId": "list_reports_api_v1_reports_get",
         "responses": {
           "200": {
@@ -8393,16 +8393,19 @@
           },
           {
             "in": "query",
-            "name": "user_type",
+            "name": "status",
             "required": false,
             "schema": {
               "anyOf": [
                 {
                   "enum": [
-                    "freelancer",
-                    "workhost",
-                    "organisation",
-                    "admin"
+                    "revoked",
+                    "pending",
+                    "searcher",
+                    "provider",
+                    "verifier",
+                    "admin",
+                    "owner"
                   ],
                   "type": "string"
                 },
@@ -8410,7 +8413,7 @@
                   "type": "null"
                 }
               ],
-              "title": "User Type"
+              "title": "Status"
             }
           },
           {
@@ -8462,7 +8465,7 @@
           },
           {
             "in": "query",
-            "name": "org_id",
+            "name": "church_id",
             "required": false,
             "schema": {
               "anyOf": [
@@ -8474,7 +8477,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Org Id"
+              "title": "Church Id"
             }
           }
         ],

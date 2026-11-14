@@ -1,4 +1,10 @@
-"""The report queries. Each returns sections (a title, columns and rows)."""
+"""The report queries. Each returns sections (a title, columns and rows).
+
+Reports hold aggregates. The few rows about one person show a short reference code (the first
+8 characters of the id), never a name, an email or a mobile number. Every query counts only the
+people it is about and limits itself to `p.church_id` when that is set (an ADMIN's reports
+always are).
+"""
 
 from collections.abc import Sequence
 from datetime import timedelta
@@ -6,90 +12,128 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
+    ColumnElement,
     Date,
-    Select,
+    String,
     and_,
     cast,
     exists,
     func,
-    literal_column,
     select,
     text,
     true,
-    union_all,
 )
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.models.auth import LoginHistory
-from app.models.labels import FreelancerLabel, Label
-from app.models.ratings import UserRating
-from app.models.reveals import PhoneReveal
-from app.models.users import Admin, Freelancer, Organisation, WorkHost
-from app.models.vouching import OrgFreelancer
+from app.models.church import Church, HomeGroup, Person
+from app.models.enums import STATUS_RANK
+from app.models.labels import Label, PersonLabel
+from app.models.ratings import Rating
+from app.models.reveals import PersonPhoneReveal
+from app.models.trust import MoveRequest, StatusChange, Vouch
 from app.reports.types import ReportDef, ReportError, ReportParams, Section, cell
 
 MAX_AVAILABILITY_DAYS = 93
 TOP_RATED_LIMIT = 50
 REVEAL_LIST_LIMIT = 50
-SELF_REGISTERED = (
-    ("freelancer", Freelancer),
-    ("workhost", WorkHost),
-    ("organisation", Organisation),
-)
-ALL_ACCOUNTS = (*SELF_REGISTERED, ("admin", Admin))
+PROVIDER_OR_ABOVE = [s for s, rank in STATUS_RANK.items() if rank >= STATUS_RANK["provider"]]
+LEADER_STATUSES = ["verifier", "admin", "owner"]
 
 
 def section(title: str, columns: list[str], rows: Sequence[Sequence[Any]]) -> Section:
     return Section(title, columns, [[cell(value) for value in row] for row in rows])
 
 
+def code_of(column: Any) -> Any:
+    """A short reference code for a person: the first 8 characters of the id."""
+    return func.left(cast(column, String), 8)
+
+
+def in_church(p: ReportParams, column: Any) -> list[ColumnElement[bool]]:
+    return [column == p.church_id] if p.church_id is not None else []
+
+
+def searchable_providers(p: ReportParams) -> list[ColumnElement[bool]]:
+    """Open accounts of PROVIDER or above (the people a search can list) in the chosen church."""
+    return [
+        Person.closed_at.is_(None),
+        Person.status.in_(PROVIDER_OR_ABOVE),
+        exists().where(
+            PersonLabel.person_id == Person.id,
+            PersonLabel.label_id == Label.id,
+            Label.label_type == "skill",
+        ),
+        *in_church(p, Person.church_id),
+    ]
+
+
 # ---- RP-01 ---------------------------------------------------------------------------------
 
 
 def registrations_per_day(db: Session, p: ReportParams) -> list[Section]:
-    parts: list[Select[Any]] = [
-        select(
-            cast(func.timezone(p.timezone, model.created_at), Date).label("day"),
-            literal_column(f"'{user_type}'").label("user_type"),
-            func.count().label("registrations"),
-        )
-        .where(model.created_at >= p.start, model.created_at < p.end)
-        .group_by(literal_column("1"))
-        for user_type, model in SELF_REGISTERED
-    ]
-    rows = db.execute(union_all(*parts).order_by(literal_column("1"), literal_column("2"))).all()
-    return [section("Registrations per day", ["day", "user_type", "registrations"], rows)]
+    day = cast(func.timezone(p.timezone, Person.created_at), Date)
+    rows = db.execute(
+        select(day, Church.name, Person.status, func.count())
+        .select_from(Person)
+        .join(Church, Church.id == Person.church_id)
+        .where(Person.created_at >= p.start, Person.created_at < p.end, *in_church(p, Church.id))
+        .group_by(day, Church.name, Person.status)
+        .order_by(day, Church.name, Person.status)
+    ).all()
+    return [section("Sign-ups per day", ["day", "church", "status_now", "sign_ups"], rows)]
 
 
 # ---- RP-02 ---------------------------------------------------------------------------------
 
 
 def active_users(db: Session, p: ReportParams) -> list[Section]:
+    statuses = [p.status] if p.status else list(STATUS_RANK)
     rows = []
-    for user_type, model in ALL_ACCOUNTS:
-        if p.user_type not in (None, user_type):
-            continue
+    for status in statuses:
         active = db.scalar(
             select(func.count())
-            .select_from(model)
-            .where(model.last_login_at >= p.start, model.last_login_at < p.end)
+            .select_from(Person)
+            .where(
+                Person.status == status,
+                Person.last_login_at >= p.start,
+                Person.last_login_at < p.end,
+                *in_church(p, Person.church_id),
+            )
         )
         logins = (
             select(func.count())
             .select_from(LoginHistory)
+            .join(Person, Person.id == LoginHistory.user_id)
             .where(
-                LoginHistory.user_type == user_type,
+                LoginHistory.user_type == "person",
+                Person.status == status,
                 LoginHistory.login_time >= p.start,
                 LoginHistory.login_time < p.end,
+                *in_church(p, Person.church_id),
             )
         )
         ok = db.scalar(logins.where(LoginHistory.succeeded.is_(True)))
         failed = db.scalar(logins.where(LoginHistory.succeeded.is_(False)))
-        rows.append((user_type, active or 0, ok or 0, failed or 0))
+        rows.append((status, active or 0, ok or 0, failed or 0))
+    if not p.status and p.church_id is None:
+        # A failed attempt with an address nobody has belongs to no status and to no church.
+        unknown = db.scalar(
+            select(func.count())
+            .select_from(LoginHistory)
+            .where(
+                LoginHistory.user_type == "person",
+                LoginHistory.user_id.is_(None),
+                LoginHistory.succeeded.is_(False),
+                LoginHistory.login_time >= p.start,
+                LoginHistory.login_time < p.end,
+            )
+        )
+        rows.append(("unknown address", 0, 0, unknown or 0))
     return [
         section(
-            "Active users and logins",
-            ["user_type", "active_users", "successful_logins", "failed_logins"],
+            "Active people and logins",
+            ["status", "active_people", "successful_logins", "failed_logins"],
             rows,
         )
     ]
@@ -98,57 +142,64 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
 # ---- RP-03 ---------------------------------------------------------------------------------
 
 
-def freelancers_by_label(db: Session, p: ReportParams) -> list[Section]:
-    count = func.count(FreelancerLabel.freelancer_id)
+def providers_by_label(db: Session, p: ReportParams) -> list[Section]:
+    count = func.count(Person.id)
     rows = db.execute(
         select(Label.label_type, Label.label_name, count)
         .select_from(Label)
-        .outerjoin(FreelancerLabel, FreelancerLabel.label_id == Label.id)
+        .outerjoin(PersonLabel, PersonLabel.label_id == Label.id)
+        .outerjoin(
+            Person,
+            and_(
+                Person.id == PersonLabel.person_id,
+                Person.closed_at.is_(None),
+                Person.status.in_(PROVIDER_OR_ABOVE),
+                *in_church(p, Person.church_id),
+            ),
+        )
         .where(Label.is_active.is_(True), Label.label_type != "skill_level")
         .group_by(Label.label_type, Label.label_name)
         .order_by(Label.label_type, count.desc(), Label.label_name)
     ).all()
-    return [section("Freelancers by label", ["label_type", "label", "freelancers"], rows)]
+    return [section("Providers by label", ["label_type", "label", "providers"], rows)]
 
 
 # ---- RP-04 ---------------------------------------------------------------------------------
 
 
 def top_rated(db: Session, p: ReportParams) -> list[Section]:
-    average = func.avg(UserRating.rating)
-    count = func.count(UserRating.id)
-    in_window = and_(UserRating.rated_on >= p.start, UserRating.rated_on < p.end)
+    average = func.avg(Rating.rating)
+    count = func.count(Rating.id)
+    in_window = and_(Rating.rated_on >= p.start, Rating.rated_on < p.end)
     top = db.execute(
-        select(UserRating.freelancer_id, average, count)
-        .where(in_window)
-        .group_by(UserRating.freelancer_id)
+        select(code_of(Rating.provider_id), average, count)
+        .select_from(Rating)
+        .join(Person, Person.id == Rating.provider_id)
+        .where(in_window, *in_church(p, Person.church_id))
+        .group_by(Rating.provider_id)
         .having(count >= p.min_ratings)
-        .order_by(average.desc(), count.desc(), UserRating.freelancer_id)
+        .order_by(average.desc(), count.desc(), Rating.provider_id)
         .limit(TOP_RATED_LIMIT)
     ).all()
     per_skill = db.execute(
-        select(
-            Label.label_name,
-            average,
-            count,
-            func.count(func.distinct(UserRating.freelancer_id)),
-        )
-        .select_from(UserRating)
-        .join(FreelancerLabel, FreelancerLabel.freelancer_id == UserRating.freelancer_id)
-        .join(Label, and_(Label.id == FreelancerLabel.label_id, Label.label_type == "skill"))
-        .where(in_window)
+        select(Label.label_name, average, count, func.count(func.distinct(Rating.provider_id)))
+        .select_from(Rating)
+        .join(PersonLabel, PersonLabel.person_id == Rating.provider_id)
+        .join(Label, and_(Label.id == PersonLabel.label_id, Label.label_type == "skill"))
+        .join(Person, Person.id == Rating.provider_id)
+        .where(in_window, *in_church(p, Person.church_id))
         .group_by(Label.label_name)
         .order_by(average.desc(), Label.label_name)
     ).all()
     return [
         section(
-            f"Top rated freelancers (at least {p.min_ratings} rating(s))",
-            ["freelancer_id", "average_rating", "ratings"],
+            f"Top rated providers (at least {p.min_ratings} rating(s))",
+            ["provider_code", "average_rating", "ratings"],
             top,
         ),
         section(
             "Average rating per skill",
-            ["skill", "average_rating", "ratings", "freelancers_rated"],
+            ["skill", "average_rating", "ratings", "providers_rated"],
             per_skill,
         ),
     ]
@@ -157,34 +208,99 @@ def top_rated(db: Session, p: ReportParams) -> list[Section]:
 # ---- RP-05 ---------------------------------------------------------------------------------
 
 
-def vouching_summary(db: Session, p: ReportParams) -> list[Section]:
-    link = OrgFreelancer.freelancer_id
-    query = (
+def verification_summary(db: Session, p: ReportParams) -> list[Section]:
+    """People by status per church and home group, and what verifying did in the period."""
+    group_id = func.coalesce(Person.home_group_id, Person.last_home_group_id)
+    people = db.execute(
         select(
-            Organisation.id,
-            Organisation.org_name,
-            func.count(link),
-            func.count(link).filter(
-                and_(OrgFreelancer.status == "approved", OrgFreelancer.is_active.is_(True))
-            ),
-            func.count(link).filter(OrgFreelancer.status == "pending"),
-            func.count(link).filter(OrgFreelancer.is_active.is_(False)),
+            Church.name,
+            HomeGroup.name,
+            func.count().filter(Person.status == "pending"),
+            func.count().filter(Person.status == "searcher"),
+            func.count().filter(Person.status == "provider"),
+            func.count().filter(Person.status.in_(LEADER_STATUSES)),
+            func.count().filter(Person.status == "revoked"),
         )
-        .select_from(Organisation)
-        .outerjoin(OrgFreelancer, OrgFreelancer.org_id == Organisation.id)
-        .where(Organisation.approval_status == "approved")
-        .group_by(Organisation.id, Organisation.org_name)
-        .order_by(Organisation.org_name, Organisation.id)
+        .select_from(Person)
+        .join(Church, Church.id == Person.church_id)
+        .join(HomeGroup, HomeGroup.id == group_id)
+        .where(Person.closed_at.is_(None), *in_church(p, Church.id))
+        .group_by(Church.name, HomeGroup.name)
+        .order_by(Church.name, HomeGroup.name)
+    ).all()
+
+    signup = aliased(StatusChange)
+    admission = aliased(StatusChange)
+    admitted_vouches = (
+        select(func.count())
+        .select_from(Vouch)
+        .where(Vouch.applicant_id == admission.person_id, Vouch.withdrawn_at.is_(None))
+        .correlate(admission)
+        .scalar_subquery()
     )
-    if p.org_id is not None:
-        query = query.where(Organisation.id == p.org_id)
-    rows = db.execute(query).all()
+    admissions = (
+        select(
+            Church.name,
+            func.count(admission.id),
+            func.avg(func.extract("epoch", admission.at - signup.at) / 86400.0),
+            func.avg(admitted_vouches),
+        )
+        .select_from(admission)
+        .join(Person, Person.id == admission.person_id)
+        .join(Church, Church.id == Person.church_id)
+        .outerjoin(signup, and_(signup.person_id == admission.person_id, signup.kind == "signup"))
+        .where(
+            admission.kind == "admit",
+            admission.at >= p.start,
+            admission.at < p.end,
+            *in_church(p, Church.id),
+        )
+        .group_by(Church.name)
+    )
+    # Declining closes an applicant's account (decision D-27): an applicant whose account was
+    # closed in the period is a decline, or one who left while waiting.
+    declines = (
+        select(Church.name, func.count())
+        .select_from(Person)
+        .join(Church, Church.id == Person.church_id)
+        .where(
+            Person.closed_at >= p.start,
+            Person.closed_at < p.end,
+            Person.status == "pending",
+            *in_church(p, Church.id),
+        )
+        .group_by(Church.name)
+    )
+    admitted = {name: (n, days, vouches) for name, n, days, vouches in db.execute(admissions)}
+    declined = dict(db.execute(declines).tuples().all())
+    churches = sorted(set(admitted) | set(declined))
+    period = [
+        (
+            name,
+            admitted.get(name, (0, None, None))[0],
+            declined.get(name, 0),
+            admitted.get(name, (0, None, None))[1],
+            admitted.get(name, (0, None, None))[2],
+        )
+        for name in churches
+    ]
     return [
         section(
-            "Organisation vouching summary",
-            ["org_id", "organisation", "freelancers", "active", "pending", "inactive"],
-            rows,
-        )
+            "People by church, home group and status",
+            ["church", "home_group", "pending", "searchers", "providers", "leaders", "revoked"],
+            people,
+        ),
+        section(
+            "Admissions and declines in the period",
+            [
+                "church",
+                "admissions",
+                "declines_or_left_while_pending",
+                "average_days_from_sign_up_to_admission",
+                "average_vouches_per_admission",
+            ],
+            period,
+        ),
     ]
 
 
@@ -195,28 +311,33 @@ def rate_distribution(db: Session, p: ReportParams) -> list[Section]:
     query = (
         select(
             Label.label_name,
-            Freelancer.rate_currency,
-            func.count(Freelancer.id),
-            func.avg(Freelancer.rate_per_hour),
-            func.min(Freelancer.rate_per_hour),
-            func.max(Freelancer.rate_per_hour),
+            Person.rate_currency,
+            func.count(Person.id),
+            func.avg(Person.rate_per_hour),
+            func.min(Person.rate_per_hour),
+            func.max(Person.rate_per_hour),
         )
-        .select_from(Freelancer)
-        .join(FreelancerLabel, FreelancerLabel.freelancer_id == Freelancer.id)
-        .join(Label, and_(Label.id == FreelancerLabel.label_id, Label.label_type == "skill"))
-        .where(Freelancer.rate_per_hour.is_not(None))
-        .group_by(Label.label_name, Freelancer.rate_currency)
-        .order_by(Label.label_name, Freelancer.rate_currency)
+        .select_from(Person)
+        .join(PersonLabel, PersonLabel.person_id == Person.id)
+        .join(Label, and_(Label.id == PersonLabel.label_id, Label.label_type == "skill"))
+        .where(
+            Person.rate_per_hour.is_not(None),
+            Person.closed_at.is_(None),
+            Person.status.in_(PROVIDER_OR_ABOVE),
+            *in_church(p, Person.church_id),
+        )
+        .group_by(Label.label_name, Person.rate_currency)
+        .order_by(Label.label_name, Person.rate_currency)
     )
     if p.skill:
         query = query.where(func.lower(Label.label_name) == p.skill.lower())
     if p.currency:
-        query = query.where(Freelancer.rate_currency == p.currency.upper())
+        query = query.where(Person.rate_currency == p.currency.upper())
     rows = db.execute(query).all()
     return [
         section(
             "Hourly rate by skill and currency",
-            ["skill", "currency", "freelancers", "average_rate", "min_rate", "max_rate"],
+            ["skill", "currency", "providers", "average_rate", "min_rate", "max_rate"],
             rows,
         )
     ]
@@ -230,14 +351,21 @@ _AVAILABILITY_SQL = text(
         SELECT d::date AS day
         FROM generate_series(CAST(:first AS date), CAST(:last AS date), interval '1 day') AS d
     ), searchable AS (
-        SELECT id FROM freelancers WHERE rate_per_hour IS NOT NULL
+        SELECT p.id FROM people p
+        WHERE p.closed_at IS NULL
+          AND p.status IN ('provider', 'verifier', 'admin', 'owner')
+          AND (CAST(:church AS uuid) IS NULL OR p.church_id = CAST(:church AS uuid))
+          AND EXISTS (
+              SELECT 1 FROM person_labels pl JOIN labels l ON l.id = pl.label_id
+              WHERE pl.person_id = p.id AND l.label_type = 'skill'
+          )
     )
     SELECT days.day,
-           (SELECT count(*) FROM searchable) AS searchable_freelancers,
-           count(DISTINCT u.freelancer_id) AS unavailable
+           (SELECT count(*) FROM searchable) AS searchable_providers,
+           count(DISTINCT u.person_id) AS unavailable
     FROM days
-    LEFT JOIN freelancer_unavailability u
-      ON u.freelancer_id IN (SELECT id FROM searchable)
+    LEFT JOIN person_unavailability u
+      ON u.person_id IN (SELECT id FROM searchable)
      AND u.unavailable_from < ((days.day + 1)::timestamp AT TIME ZONE :tz)
      AND u.unavailable_to > (days.day::timestamp AT TIME ZONE :tz)
     GROUP BY days.day
@@ -252,12 +380,15 @@ def availability_overview(db: Session, p: ReportParams) -> list[Section]:
     last = (p.end.astimezone(zone) - timedelta(microseconds=1)).date()
     if (last - first).days + 1 > MAX_AVAILABILITY_DAYS:
         raise ReportError(f"The availability report covers at most {MAX_AVAILABILITY_DAYS} days")
-    result = db.execute(_AVAILABILITY_SQL, {"first": first, "last": last, "tz": p.timezone}).all()
+    result = db.execute(
+        _AVAILABILITY_SQL,
+        {"first": first, "last": last, "tz": p.timezone, "church": p.church_id},
+    ).all()
     rows = [(day, total, unavailable, total - unavailable) for day, total, unavailable in result]
     return [
         section(
-            "Availability of searchable freelancers",
-            ["day", "searchable_freelancers", "unavailable", "available"],
+            "Availability of searchable providers",
+            ["day", "searchable_providers", "unavailable", "available"],
             rows,
         )
     ]
@@ -267,41 +398,47 @@ def availability_overview(db: Session, p: ReportParams) -> list[Section]:
 
 
 def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
-    """How often work hosts asked for a mobile number, who asked, and for whom."""
-    in_window = and_(PhoneReveal.revealed_at >= p.start, PhoneReveal.revealed_at < p.end)
-    reveals = func.count(PhoneReveal.id)
+    """How often a number was revealed, who asked, and for whom (people shown by code)."""
+    reveal = PersonPhoneReveal
+    in_window = and_(reveal.revealed_at >= p.start, reveal.revealed_at < p.end)
+    if p.church_id is not None:  # the reveals of the providers of that church
+        in_window = and_(
+            in_window,
+            exists().where(Person.id == reveal.provider_id, Person.church_id == p.church_id),
+        )
+    reveals = func.count(reveal.id)
 
-    total, hosts, freelancers, dial, search = db.execute(
+    total, searchers, providers, dial, search = db.execute(
         select(
             reveals,
-            func.count(func.distinct(PhoneReveal.work_host_id)),
-            func.count(func.distinct(PhoneReveal.freelancer_id)),
-            reveals.filter(PhoneReveal.channel == "dial"),
-            reveals.filter(PhoneReveal.source == "search"),
+            func.count(func.distinct(reveal.revealer_id)),
+            func.count(func.distinct(reveal.provider_id)),
+            reveals.filter(reveal.channel == "dial"),
+            reveals.filter(reveal.source == "search"),
         ).where(in_window)
     ).one()
 
     pairs = (
         select(
-            PhoneReveal.work_host_id,
-            PhoneReveal.freelancer_id,
-            func.min(PhoneReveal.revealed_at).label("first_reveal"),
+            reveal.revealer_id,
+            reveal.provider_id,
+            func.min(reveal.revealed_at).label("first_reveal"),
         )
         .where(in_window)
-        .group_by(PhoneReveal.work_host_id, PhoneReveal.freelancer_id)
+        .group_by(reveal.revealer_id, reveal.provider_id)
         .subquery()
     )
     pair_count = db.scalar(select(func.count()).select_from(pairs)) or 0
-    # A pair counts as "rated afterwards" when the same host rated that freelancer after the reveal.
+    # A pair counts as "rated afterwards" when the same person rated that provider after the reveal.
     rated_after = (
         db.scalar(
             select(func.count())
             .select_from(pairs)
             .where(
                 exists().where(
-                    UserRating.work_host_id == pairs.c.work_host_id,
-                    UserRating.freelancer_id == pairs.c.freelancer_id,
-                    UserRating.rated_on >= pairs.c.first_reveal,
+                    Rating.rater_id == pairs.c.revealer_id,
+                    Rating.provider_id == pairs.c.provider_id,
+                    Rating.rated_on >= pairs.c.first_reveal,
                 )
             )
         )
@@ -309,45 +446,43 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
     )
     summary = [
         ("reveals", total),
-        ("work_hosts", hosts),
-        ("freelancers_revealed", freelancers),
+        ("searchers", searchers),
+        ("providers_revealed", providers),
         ("reveals_on_phone_dialler", dial),
         ("reveals_shown_on_screen", total - dial),
         ("reveals_from_search_page", search),
         ("reveals_from_detail_page", total - search),
-        ("host_freelancer_pairs", pair_count),
+        ("searcher_provider_pairs", pair_count),
         ("pairs_rated_afterwards", rated_after),
         ("rated_afterwards_percent", round(100 * rated_after / pair_count, 1) if pair_count else 0),
     ]
 
-    day = cast(func.timezone(p.timezone, PhoneReveal.revealed_at), Date)
+    day = cast(func.timezone(p.timezone, reveal.revealed_at), Date)
     per_day = db.execute(
-        select(day, PhoneReveal.channel, reveals)
+        select(day, reveal.channel, reveals)
         .where(in_window)
-        .group_by(day, PhoneReveal.channel)
-        .order_by(day, PhoneReveal.channel)
+        .group_by(day, reveal.channel)
+        .order_by(day, reveal.channel)
     ).all()
 
-    per_host = db.execute(
+    per_searcher = db.execute(
         select(
-            PhoneReveal.work_host_id,
-            WorkHost.full_name,
+            code_of(reveal.revealer_id),
             reveals,
-            func.count(func.distinct(PhoneReveal.freelancer_id)),
-            func.max(PhoneReveal.revealed_at),
+            func.count(func.distinct(reveal.provider_id)),
+            func.max(reveal.revealed_at),
         )
-        .join(WorkHost, WorkHost.id == PhoneReveal.work_host_id)
         .where(in_window)
-        .group_by(PhoneReveal.work_host_id, WorkHost.full_name)
-        .order_by(reveals.desc(), WorkHost.full_name, PhoneReveal.work_host_id)
+        .group_by(reveal.revealer_id)
+        .order_by(reveals.desc(), reveal.revealer_id)
         .limit(REVEAL_LIST_LIMIT)
     ).all()
 
     per_skill = db.execute(
-        select(Label.label_name, reveals, func.count(func.distinct(PhoneReveal.freelancer_id)))
-        .select_from(PhoneReveal)
-        .join(FreelancerLabel, FreelancerLabel.freelancer_id == PhoneReveal.freelancer_id)
-        .join(Label, and_(Label.id == FreelancerLabel.label_id, Label.label_type == "skill"))
+        select(Label.label_name, reveals, func.count(func.distinct(reveal.provider_id)))
+        .select_from(reveal)
+        .join(PersonLabel, PersonLabel.person_id == reveal.provider_id)
+        .join(Label, and_(Label.id == PersonLabel.label_id, Label.label_type == "skill"))
         .where(in_window)
         .group_by(Label.label_name)
         .order_by(reveals.desc(), Label.label_name)
@@ -357,12 +492,10 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
     # list of the reveal row it is joined to, so the reveal row must come first in FROM.
     # render_derived() names the output column (AS alias(skill)); unnest has no column name of
     # its own.
-    searched = (
-        func.unnest(PhoneReveal.searched_skills).table_valued("skill").render_derived().lateral()
-    )
+    searched = func.unnest(reveal.searched_skills).table_valued("skill").render_derived().lateral()
     per_searched = db.execute(
         select(searched.c.skill, func.count())
-        .select_from(PhoneReveal)
+        .select_from(reveal)
         .join(searched, true())
         .where(in_window)
         .group_by(searched.c.skill)
@@ -371,15 +504,13 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
 
     most_revealed = db.execute(
         select(
-            PhoneReveal.freelancer_id,
-            Freelancer.full_name,
+            code_of(reveal.provider_id),
             reveals,
-            func.count(func.distinct(PhoneReveal.work_host_id)),
+            func.count(func.distinct(reveal.revealer_id)),
         )
-        .join(Freelancer, Freelancer.id == PhoneReveal.freelancer_id)
         .where(in_window)
-        .group_by(PhoneReveal.freelancer_id, Freelancer.full_name)
-        .order_by(reveals.desc(), Freelancer.full_name, PhoneReveal.freelancer_id)
+        .group_by(reveal.provider_id)
+        .order_by(reveals.desc(), reveal.provider_id)
         .limit(REVEAL_LIST_LIMIT)
     ).all()
 
@@ -387,45 +518,119 @@ def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
         section("Mobile number reveals: summary", ["measure", "value"], summary),
         section("Reveals per day", ["day", "channel", "reveals"], per_day),
         section(
-            "Reveals per work host",
-            ["work_host_id", "work_host", "reveals", "freelancers", "last_reveal"],
-            per_host,
+            "Reveals per searcher",
+            ["searcher_code", "reveals", "providers", "last_reveal"],
+            per_searcher,
         ),
-        section(
-            "Reveals per skill of the freelancer", ["skill", "reveals", "freelancers"], per_skill
-        ),
+        section("Reveals per skill of the provider", ["skill", "reveals", "providers"], per_skill),
         section("Skills searched for before a reveal", ["skill", "reveals"], per_searched),
         section(
-            "Most revealed freelancers",
-            ["freelancer_id", "freelancer", "reveals", "work_hosts"],
+            "Most revealed providers",
+            ["provider_code", "reveals", "searchers"],
             most_revealed,
         ),
+    ]
+
+
+# ---- RP-09 ---------------------------------------------------------------------------------
+
+TRUST_KINDS = ("revoke", "reinstate", "reconfirm", "appoint", "step-down", "handover")
+
+
+def trust_events(db: Session, p: ReportParams) -> list[Section]:
+    """Revocations, reinstatements, leader changes, closures and moves in the period."""
+    kind_counts = db.execute(
+        select(Church.name, StatusChange.kind, func.count())
+        .select_from(StatusChange)
+        .join(Person, Person.id == StatusChange.person_id)
+        .join(Church, Church.id == Person.church_id)
+        .where(
+            StatusChange.kind.in_(TRUST_KINDS),
+            StatusChange.at >= p.start,
+            StatusChange.at < p.end,
+            *in_church(p, Church.id),
+        )
+        .group_by(Church.name, StatusChange.kind)
+        .order_by(Church.name, StatusChange.kind)
+    ).all()
+    flagged_now = db.execute(
+        select(Church.name, func.count())
+        .select_from(Person)
+        .join(Church, Church.id == Person.church_id)
+        .where(
+            Person.flagged_for_recheck.is_(True),
+            Person.closed_at.is_(None),
+            *in_church(p, Church.id),
+        )
+        .group_by(Church.name)
+        .order_by(Church.name)
+    ).all()
+    groups_closed = db.execute(
+        select(Church.name, func.count())
+        .select_from(HomeGroup)
+        .join(Church, Church.id == HomeGroup.church_id)
+        .where(
+            HomeGroup.closed_at >= p.start,
+            HomeGroup.closed_at < p.end,
+            *in_church(p, Church.id),
+        )
+        .group_by(Church.name)
+        .order_by(Church.name)
+    ).all()
+    churches_closed = (
+        []
+        if p.church_id is not None  # a church's ADMIN never reads about the closing of churches
+        else db.execute(
+            select(Church.name, Church.closed_at).where(
+                Church.closed_at >= p.start, Church.closed_at < p.end
+            )
+        ).all()
+    )
+    moves = db.execute(
+        select(Church.name, func.count())
+        .select_from(MoveRequest)
+        .join(Person, Person.id == MoveRequest.person_id)
+        .join(Church, Church.id == Person.church_id)
+        .where(
+            MoveRequest.completed_at >= p.start,
+            MoveRequest.completed_at < p.end,
+            *in_church(p, Church.id),
+        )
+        .group_by(Church.name)
+        .order_by(Church.name)
+    ).all()
+    return [
+        section("Trust events by church and kind", ["church", "kind", "events"], kind_counts),
+        section("People flagged for a re-check now", ["church", "flagged"], flagged_now),
+        section("Home groups closed", ["church", "groups_closed"], groups_closed),
+        section("Churches closed", ["church", "closed_at"], churches_closed),
+        section("Moves between home groups completed", ["church", "moves"], moves),
     ]
 
 
 # ---- scheduled reports ---------------------------------------------------------------------
 
 
-def users_registered(db: Session, p: ReportParams) -> list[Section]:
-    counts: list[tuple[str, int]] = []
-    people: list[tuple[Any, ...]] = []
-    for user_type, model in SELF_REGISTERED:
-        rows = db.execute(
-            select(model.id, model.user_email, model.created_at)
-            .where(model.created_at >= p.start, model.created_at < p.end)
-            .order_by(model.created_at, model.id)
-        ).all()
-        counts.append((user_type, len(rows)))
-        people.extend((user_type, *row) for row in rows)
-    people.sort(key=lambda row: str(row[3]))
+def signups_daily(db: Session, p: ReportParams) -> list[Section]:
+    """New applicants in the window by what they ask to be (or their status now) and church."""
+    asked = func.coalesce(Person.requested_status, Person.status)
+    rows = db.execute(
+        select(Church.name, asked, func.count())
+        .select_from(Person)
+        .join(Church, Church.id == Person.church_id)
+        .where(Person.created_at >= p.start, Person.created_at < p.end, *in_church(p, Church.id))
+        .group_by(Church.name, asked)
+        .order_by(Church.name, asked)
+    ).all()
+    total = sum(row[2] for row in rows)
     return [
-        section("New users by type", ["user_type", "new_users"], counts),
-        section("New users", ["user_type", "id", "email", "registered_at"], people),
+        section("New applicants by church and requested status", ["church", "status", "new"], rows),
+        section("Total", ["measure", "value"], [("new_applicants", total)]),
     ]
 
 
 def weekly_summary(db: Session, p: ReportParams) -> list[Section]:
-    return [*top_rated(db, p), *vouching_summary(db, p)]
+    return [*verification_summary(db, p), *trust_events(db, p)]
 
 
 def monthly_summary(db: Session, p: ReportParams) -> list[Section]:
@@ -433,12 +638,13 @@ def monthly_summary(db: Session, p: ReportParams) -> list[Section]:
     for build in (
         registrations_per_day,
         active_users,
-        freelancers_by_label,
+        providers_by_label,
         top_rated,
-        vouching_summary,
+        verification_summary,
         rate_distribution,
         availability_overview,
         phone_reveals,
+        trust_events,
     ):
         sections.extend(build(db, p))
     return sections
@@ -448,41 +654,43 @@ REPORTS: list[ReportDef] = [
     ReportDef(
         "registrations_per_day",
         "RP-01",
-        "Registrations per day",
-        "New accounts per day and user type.",
+        "Sign-ups per day",
+        "New people per day, by church and by what they are now.",
         registrations_per_day,
+        admin_scoped=True,
     ),
     ReportDef(
         "active_users",
         "RP-02",
-        "Active users and logins",
-        "Users who logged in, and successful and failed logins.",
+        "Active people and logins",
+        "People who logged in, and successful and failed logins, by status.",
         active_users,
-        filters=("user_type",),
+        filters=("status",),
     ),
     ReportDef(
-        "freelancers_by_label",
+        "providers_by_label",
         "RP-03",
-        "Freelancers by skill, language, nativity and timing",
-        "How many freelancers have each label.",
-        freelancers_by_label,
+        "Providers by skill, language, nativity and timing",
+        "How many providers have each label.",
+        providers_by_label,
+        admin_scoped=True,
     ),
     ReportDef(
         "top_rated",
         "RP-04",
-        "Top rated freelancers and rating per skill",
-        "Best rated freelancers and the average rating per skill.",
+        "Top rated providers and rating per skill",
+        "Best rated providers (by code) and the average rating per skill.",
         top_rated,
         filters=("min_ratings",),
     ),
     ReportDef(
-        "vouching_summary",
+        "verification_summary",
         "RP-05",
-        "Organisation vouching summary",
-        "Freelancers per organisation, active and inactive.",
-        vouching_summary,
-        filters=("org_id",),
-        org_scoped=True,
+        "Verification summary",
+        "People by status per church and home group, admissions and declines in the period, "
+        "days from sign-up to admission and vouches per admission.",
+        verification_summary,
+        admin_scoped=True,
     ),
     ReportDef(
         "rate_distribution",
@@ -495,32 +703,41 @@ REPORTS: list[ReportDef] = [
     ReportDef(
         "availability_overview",
         "RP-07",
-        "Freelancer availability overview",
-        "Searchable freelancers available on each day (at most 93 days).",
+        "Provider availability overview",
+        "Searchable providers available on each day (at most 93 days).",
         availability_overview,
+        admin_scoped=True,
     ),
     ReportDef(
         "phone_reveals",
         "RP-08",
         "Mobile number reveals",
-        "How often work hosts revealed mobile numbers: per day, per work host, per skill, "
-        "most revealed freelancers and how many reveals were followed by a rating.",
+        "How often numbers were revealed: per day, per searcher, per skill, most revealed "
+        "providers and how many reveals were followed by a rating.",
         phone_reveals,
     ),
     ReportDef(
-        "users_registered_daily",
+        "trust_events",
+        "RP-09",
+        "Trust events",
+        "Revocations, reinstatements, re-checks, leader changes, group and church closures "
+        "and moves.",
+        trust_events,
+        admin_scoped=True,
+    ),
+    ReportDef(
+        "signups_daily",
         "SC-01",
-        "Users registered in the last day",
-        "New freelancers, work hosts and organisations with counts and rows. Scheduled daily.",
-        users_registered,
+        "Sign-ups in the last day",
+        "New applicants by requested status and church. Scheduled daily.",
+        signups_daily,
     ),
     ReportDef(
         "weekly_summary",
         "SC-02",
         "Weekly summary",
-        "Top rated freelancers and the vouching summary. Scheduled weekly.",
+        "The verification summary and the trust events. Scheduled weekly.",
         weekly_summary,
-        filters=("min_ratings",),
     ),
     ReportDef(
         "monthly_summary",
@@ -528,6 +745,7 @@ REPORTS: list[ReportDef] = [
         "Monthly summary",
         "All standard reports for the month. Scheduled monthly.",
         monthly_summary,
+        filters=("min_ratings",),
     ),
 ]
 REGISTRY: dict[str, ReportDef] = {report.name: report for report in REPORTS}

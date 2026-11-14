@@ -48,5 +48,5 @@ def scheduled_window(name: str, now: datetime, timezone: str) -> tuple[datetime,
         first = today.replace(day=1)
         previous_first = (first - timedelta(days=1)).replace(day=1)
         return local_midnight(previous_first, zone), local_midnight(first, zone)
-    # users_registered_daily and any other scheduled report: yesterday
+    # signups_daily and any other scheduled report: yesterday
     return local_midnight(today - timedelta(days=1), zone), local_midnight(today, zone)

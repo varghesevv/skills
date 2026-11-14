@@ -420,11 +420,11 @@ Open the new file in `backend/migrations/versions/` and read it. Automatic gener
 
 ## 10. Reports
 
-Admins create and download reports in the web site (Admin → Reports, Report history and Schedules). From the command line:
+The OWNER runs and downloads reports in the web site (Reports, Report history and Schedules); an ADMIN runs the reports limited to their church, and does not see run history or schedules. From the command line:
 
 ```bash
 docker compose exec api python -m app.reports list
-docker compose exec api python -m app.reports run users_registered_daily --from 2026-10-20 --to 2026-10-20
+docker compose exec api python -m app.reports run signups_daily --from 2026-10-20 --to 2026-10-20
 ```
 
 Files are written to the reports folder inside the container. The `worker` container runs the scheduled reports (daily, weekly, monthly); `docker compose logs -f worker` shows when it runs. Only one worker should ever run.

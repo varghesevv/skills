@@ -1,8 +1,6 @@
-"""Report queries, files, idempotent runs and the scheduler jobs."""
+"""Report queries over people, files, idempotent runs and the scheduler jobs."""
 
 import dataclasses
-import secrets
-import uuid
 from contextlib import nullcontext
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -13,23 +11,37 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models import (
+    MoveRequest,
+    Person,
+    PersonLabel,
+    PersonPhoneReveal,
+    PersonUnavailability,
+    Rating,
+    StatusChange,
+    Vouch,
+)
 from app.models.auth import LoginHistory
-from app.models.availability import FreelancerUnavailability
-from app.models.ratings import UserRating
+from app.models.labels import Label
 from app.models.reports import ReportRun, ReportSchedule
-from app.models.reveals import PhoneReveal
-from app.models.users import Freelancer, Organisation, WorkHost
-from app.models.vouching import OrgFreelancer
 from app.reports.definitions import REGISTRY
 from app.reports.render import to_csv
 from app.reports.runner import build_report, run_report, run_with_retry
-from app.reports.types import ReportParams, ReportResult, Section
+from app.reports.types import ReportError, ReportParams, ReportResult, Section
 from app.reports.windows import window_from_dates
-from app.services.accounts import create_account
 from app.worker.jobs import catch_up, sync_jobs
-from tests.old_accounts import freelancer
+from tests.test_person_auth import Member, add_member
+from tests.test_search_api import provider
+from tests.trust_helpers import World, make_person
+
+pytestmark = pytest.mark.db
 
 DUBAI = "Asia/Dubai"
+
+
+@pytest.fixture
+def world(session: Session) -> World:
+    return World(session)
 
 
 def dubai(day: int, hour: int, minute: int = 0) -> datetime:
@@ -46,116 +58,135 @@ def rows_of(session: Session, name: str, p: ReportParams, index: int = 0) -> lis
     return build_report(session, name, p).sections[index].rows  # type: ignore[return-value]
 
 
-def set_created(session: Session, model: type, account_id: uuid.UUID, when: datetime) -> None:
-    session.execute(update(model).where(model.id == account_id).values(created_at=when))
-    session.commit()
+def set_created(session: Session, person: Person, when: datetime) -> None:
+    session.execute(update(Person).where(Person.id == person.id).values(created_at=when))
+    session.flush()
 
 
-def make_host(session: Session, email: str) -> WorkHost:
-    account = create_account(
-        session,
-        "workhost",
-        email=email,
-        mobile_number="+971500000002",
-        password=secrets.token_urlsafe(16),
-    )
-    assert isinstance(account, WorkHost)
-    return account
-
-
-def make_org(session: Session, email: str, name: str, *, approved: bool = True) -> Organisation:
-    account = create_account(
-        session,
-        "organisation",
-        email=email,
-        mobile_number="+971500000003",
-        password=secrets.token_urlsafe(16),
-        org_name=name,
-    )
-    assert isinstance(account, Organisation)
-    if approved:
-        account.approval_status = "approved"
-        session.commit()
-    return account
+def code(person: Person) -> str:
+    return str(person.id)[:8]
 
 
 # ---- the reports --------------------------------------------------------------------------
 
 
-def test_registrations_per_day_counts_days_in_dubai_time(session: Session) -> None:
-    f1, f2, f3, f_out = (freelancer(session, f"r{i}@example.com") for i in range(4))
-    host = make_host(session, "rh@example.com")
-    set_created(session, Freelancer, f1.id, dubai(20, 10))
-    set_created(session, Freelancer, f2.id, dubai(20, 23, 30))
-    set_created(session, Freelancer, f3.id, dubai(21, 0, 30))  # still the 20th in UTC
-    set_created(session, Freelancer, f_out.id, dubai(22, 1))
-    set_created(session, WorkHost, host.id, dubai(20, 12))
-
+def test_registrations_per_day_counts_days_in_dubai_time(world: World) -> None:
+    session = world.session
+    one, two, three, outside = (
+        add_member(world, "searcher"),
+        add_member(world, "pending"),
+        add_member(world, "provider"),
+        add_member(world, "searcher"),
+    )
+    set_created(session, one.person, dubai(20, 10))
+    set_created(session, two.person, dubai(20, 23, 30))
+    set_created(session, three.person, dubai(21, 0, 30))  # still the 20th in UTC
+    set_created(session, outside.person, dubai(22, 1))
     rows = rows_of(session, "registrations_per_day", params(date(2026, 10, 20), date(2026, 10, 21)))
+    name = world.church.name
     assert rows == [
-        ["2026-10-20", "freelancer", 2],
-        ["2026-10-20", "workhost", 1],
-        ["2026-10-21", "freelancer", 1],
+        ["2026-10-20", name, "pending", 1],
+        ["2026-10-20", name, "searcher", 1],
+        ["2026-10-21", name, "provider", 1],
     ]
 
 
-def test_users_registered_daily_lists_counts_and_people(session: Session) -> None:
-    new = freelancer(session, "new.person@example.com")
-    old = freelancer(session, "old.person@example.com")
-    org = make_org(session, "neworg@example.com", "New Org")
-    set_created(session, Freelancer, new.id, dubai(20, 9))
-    set_created(session, Freelancer, old.id, dubai(15, 9))
-    set_created(session, Organisation, org.id, dubai(20, 18))
-    day = params(date(2026, 10, 20), date(2026, 10, 20))
-    counts, people = build_report(session, "users_registered_daily", day).sections
-    assert counts.rows == [["freelancer", 1], ["workhost", 0], ["organisation", 1]]
-    assert [(row[0], row[2]) for row in people.rows] == [
-        ("freelancer", "new.person@example.com"),
-        ("organisation", "neworg@example.com"),
-    ]
+def test_a_report_can_be_limited_to_one_church(world: World) -> None:
+    session = world.session
+    other_church, other_group, _ = world.add_church("Hope Church")
+    here = add_member(world, "searcher")
+    there = make_person(other_church, other_group, "searcher")
+    session.add(there)
+    session.flush()
+    set_created(session, here.person, dubai(20, 10))
+    set_created(session, there, dubai(20, 11))
+    window = params(date(2026, 10, 20), date(2026, 10, 20))
+    both = rows_of(session, "registrations_per_day", window)
+    assert {row[1] for row in both} == {world.church.name, "Hope Church"}
+    only = rows_of(
+        session,
+        "registrations_per_day",
+        params(date(2026, 10, 20), date(2026, 10, 20), church_id=other_church.id),
+    )
+    assert [row[1] for row in only] == ["Hope Church"]
 
 
-def test_active_users_counts_logins(session: Session) -> None:
-    active = freelancer(session, "act@example.com")
-    idle = make_host(session, "idle@example.com")
+def test_signups_daily_counts_new_applicants_by_what_they_asked_for(world: World) -> None:
+    session = world.session
+    for requested in ("searcher", "provider", "provider"):
+        member = add_member(world, "pending", requested_status=requested)
+        set_created(session, member.person, dubai(20, 9))
+    old = add_member(world, "pending", requested_status="searcher")
+    set_created(session, old.person, dubai(15, 9))
+    sections = build_report(
+        session, "signups_daily", params(date(2026, 10, 20), date(2026, 10, 20))
+    ).sections
+    name = world.church.name
+    assert sections[0].rows == [[name, "provider", 2], [name, "searcher", 1]]
+    assert sections[1].rows == [["new_applicants", 3]]
+
+
+def test_active_people_and_logins_by_status(world: World) -> None:
+    session = world.session
+    active = add_member(world, "searcher")
+    idle = add_member(world, "provider")
     session.execute(
-        update(Freelancer).where(Freelancer.id == active.id).values(last_login_at=dubai(20, 9))
+        update(Person).where(Person.id == active.person.id).values(last_login_at=dubai(20, 9))
     )
     session.execute(
-        update(WorkHost).where(WorkHost.id == idle.id).values(last_login_at=dubai(1, 9))
+        update(Person).where(Person.id == idle.person.id).values(last_login_at=dubai(1, 9))
     )
     for when, ok in ((dubai(20, 9), True), (dubai(20, 10), True), (dubai(20, 11), False)):
         session.add(
             LoginHistory(
-                user_type="freelancer",
-                user_id=active.id,
+                user_type="person",
+                user_id=active.person.id,
                 login_email="act@example.com",
                 succeeded=ok,
                 login_time=when,
             )
         )
-    session.add(
-        LoginHistory(
-            user_type="freelancer",
-            login_email="act@example.com",
-            succeeded=False,
-            login_time=dubai(1, 9),  # outside the window
-        )
+    session.add_all(
+        [
+            LoginHistory(  # an address nobody has
+                user_type="person",
+                login_email="nobody@example.com",
+                succeeded=False,
+                login_time=dubai(20, 12),
+            ),
+            LoginHistory(  # outside the window
+                user_type="person",
+                user_id=active.person.id,
+                login_email="act@example.com",
+                succeeded=False,
+                login_time=dubai(1, 9),
+            ),
+        ]
     )
-    session.commit()
+    session.flush()
     day = params(date(2026, 10, 20), date(2026, 10, 20))
     rows = {row[0]: row[1:] for row in rows_of(session, "active_users", day)}
-    assert rows["freelancer"] == [1, 2, 1]
-    assert rows["workhost"] == [0, 0, 0]
-    workhosts_only = params(date(2026, 10, 20), date(2026, 10, 20), user_type="workhost")
-    only = rows_of(session, "active_users", workhosts_only)
-    assert [row[0] for row in only] == ["workhost"]
+    assert rows["searcher"] == [1, 2, 1]
+    assert rows["provider"] == [0, 0, 0]
+    assert rows["unknown address"] == [0, 0, 1]
+    only = rows_of(
+        session, "active_users", params(date(2026, 10, 20), date(2026, 10, 20), status="provider")
+    )
+    assert [row[0] for row in only] == ["provider"]
 
 
-def test_freelancers_by_label(session: Session) -> None:
-    freelancer(session, "l1@example.com", labels=(("language", "English"),))
-    freelancer(session, "l2@example.com", skills=(("plumbing", "basic"), ("electrical", None)))
-    rows = rows_of(session, "freelancers_by_label", params(date(2026, 10, 1), date(2026, 10, 2)))
+def test_providers_by_label_counts_only_open_providers(world: World) -> None:
+    session = world.session
+    provider(world, labels=(("language", "English"),))
+    provider(world, skills=(("plumbing", "basic"), ("electrical", None)))
+    provider(world, status="searcher")  # not a provider
+    closed = provider(world)
+    closed.person.closed_at = datetime.now(UTC)
+    closed.person.home_group_id = None
+    closed.person.full_name = closed.person.email = closed.person.mobile_number = None
+    closed.person.password_hash = None
+    session.flush()
+    rows = rows_of(session, "providers_by_label", params(date(2026, 10, 1), date(2026, 10, 2)))
     by_label = {(row[0], row[1]): row[2] for row in rows}
     assert by_label[("skill", "plumbing")] == 2
     assert by_label[("skill", "electrical")] == 1
@@ -164,81 +195,121 @@ def test_freelancers_by_label(session: Session) -> None:
     assert not any(row[0] == "skill_level" for row in rows)
 
 
-def test_top_rated_and_rating_per_skill(session: Session) -> None:
-    best = freelancer(session, "tb@example.com")
-    other = freelancer(session, "to@example.com")
-    host_a, host_b = make_host(session, "tha@example.com"), make_host(session, "thb@example.com")
+def test_top_rated_and_rating_per_skill_show_codes_not_names(world: World) -> None:
+    session = world.session
+    best, other = provider(world), provider(world, skills=(("plumbing", None),))
+    raters = [add_member(world, "searcher") for _ in range(2)]
     now = datetime.now(UTC)
-    for host, target, rating in ((host_a, best, 8), (host_b, best, 10), (host_a, other, 6)):
+    for rater, target, rating in (
+        (raters[0], best, 8),
+        (raters[1], best, 10),
+        (raters[0], other, 6),
+    ):
         session.add(
-            UserRating(work_host_id=host.id, freelancer_id=target.id, rating=rating, rated_on=now)
+            Rating(
+                rater_id=rater.person.id, provider_id=target.person.id, rating=rating, rated_on=now
+            )
         )
-    session.commit()
+    session.flush()
     window = ReportParams(
         start=now - timedelta(days=1), end=now + timedelta(days=1), timezone=DUBAI
     )
     top, per_skill = build_report(session, "top_rated", window).sections
-    assert [row[0] for row in top.rows] == [str(best.id), str(other.id)]
+    assert [row[0] for row in top.rows] == [code(best.person), code(other.person)]
     assert top.rows[0][1:] == [9.0, 2]
     assert per_skill.rows == [["plumbing", 8.0, 3, 2]]
+    assert str(best.person.full_name) not in str(top.rows)
 
     strict = dataclasses.replace(window, min_ratings=2)
     assert [row[0] for row in build_report(session, "top_rated", strict).sections[0].rows] == [
-        str(best.id)
+        code(best.person)
     ]
 
 
-def test_vouching_summary_and_organisation_scope(session: Session) -> None:
-    alpha = make_org(session, "alpha@example.com", "Alpha Org")
-    make_org(session, "beta@example.com", "Beta Org")
-    make_org(session, "gamma@example.com", "Gamma Org", approved=False)
-    people = [freelancer(session, f"vs{i}@example.com") for i in range(3)]
+def test_verification_summary_counts_people_admissions_and_declines(world: World) -> None:
+    session = world.session
+    group = world.group
+    searcher = add_member(world, "pending")
+    add_member(world, "provider")
+    add_member(world, "pending")
+    gone = add_member(world, "provider")
+    gone.person.status = "revoked"
+    gone.person.last_home_group_id = group.id
+    gone.person.home_group_id = None
+    declined = add_member(world, "pending")
+    declined.person.closed_at = dubai(20, 12)
+    declined.person.home_group_id = None
+    declined.person.full_name = declined.person.email = declined.person.mobile_number = None
+    declined.person.password_hash = None
+    # An admission on the 20th, five days after the sign-up, with two vouches (given while the
+    # applicant was still pending: the database accepts a vouch for no one else).
+    voucher_one, voucher_two = add_member(world, "provider"), add_member(world, "provider")
     session.add_all(
         [
-            OrgFreelancer(org_id=alpha.id, freelancer_id=people[0].id, status="approved"),
-            OrgFreelancer(org_id=alpha.id, freelancer_id=people[1].id, status="pending"),
-            OrgFreelancer(
-                org_id=alpha.id, freelancer_id=people[2].id, status="revoked", is_active=False
+            Vouch(applicant_id=searcher.person.id, voucher_id=voucher_one.person.id),
+            Vouch(applicant_id=searcher.person.id, voucher_id=voucher_two.person.id),
+            StatusChange(
+                person_id=searcher.person.id,
+                from_status=None,
+                to_status="pending",
+                kind="signup",
+                at=dubai(15, 9),
             ),
         ]
     )
-    session.commit()
-    window = params(date(2026, 10, 1), date(2026, 10, 2))
-    rows = rows_of(session, "vouching_summary", window)
-    assert [(row[1], *row[2:]) for row in rows] == [
-        ("Alpha Org", 3, 1, 1, 1),
-        ("Beta Org", 0, 0, 0, 0),
-    ]
-    scoped = rows_of(session, "vouching_summary", dataclasses.replace(window, org_id=alpha.id))
-    assert [row[1] for row in scoped] == ["Alpha Org"]
+    session.flush()
+    searcher.person.status = "searcher"
+    session.add(
+        StatusChange(
+            person_id=searcher.person.id,
+            from_status="pending",
+            to_status="searcher",
+            changed_by_id=world.owner.id,
+            kind="admit",
+            at=dubai(20, 9),
+        )
+    )
+    session.flush()
+    sections = build_report(
+        session, "verification_summary", params(date(2026, 10, 20), date(2026, 10, 20))
+    ).sections
+    people = {(row[0], row[1]): row[2:] for row in sections[0].rows}
+    # pending, searchers, providers, leaders, revoked (the closed person is not counted)
+    assert people[(world.church.name, group.name)] == [1, 1, 3, 1, 1]
+    period = sections[1].rows
+    assert period == [[world.church.name, 1, 1, 5.0, 2.0]]
 
 
-def test_rate_distribution_filters(session: Session) -> None:
-    freelancer(session, "d1@example.com", rate=20)
-    freelancer(session, "d2@example.com", rate=40)
-    freelancer(session, "d3@example.com", rate=30, currency="USD", skills=(("electrical", None),))
+def test_rate_distribution_filters(world: World) -> None:
+    provider(world, rate=20)
+    provider(world, rate=40)
+    provider(world, rate=30, currency="USD", skills=(("electrical", None),))
+    provider(world, status="searcher", rate=999)  # not a provider
     window = params(date(2026, 10, 1), date(2026, 10, 2))
-    assert rows_of(session, "rate_distribution", window) == [
+    rows = rows_of(world.session, "rate_distribution", window)
+    assert rows == [
         ["electrical", "USD", 1, 30.0, 30.0, 30.0],
         ["plumbing", "AED", 2, 30.0, 20.0, 40.0],
     ]
-    by_skill = dataclasses.replace(window, skill="PLUMBING")
-    only_skill = rows_of(session, "rate_distribution", by_skill)
-    assert [row[0] for row in only_skill] == ["plumbing"]
-    only_usd = rows_of(session, "rate_distribution", dataclasses.replace(window, currency="usd"))
-    assert [row[1] for row in only_usd] == ["USD"]
+    only_aed = params(date(2026, 10, 1), date(2026, 10, 2), currency="aed")
+    assert [row[0] for row in rows_of(world.session, "rate_distribution", only_aed)] == ["plumbing"]
+    only_skill = params(date(2026, 10, 1), date(2026, 10, 2), skill="ELECTRICAL")
+    assert [row[0] for row in rows_of(world.session, "rate_distribution", only_skill)] == [
+        "electrical"
+    ]
 
 
-def test_availability_overview(session: Session) -> None:
-    busy = freelancer(session, "av1@example.com")
-    freelancer(session, "av2@example.com")
-    freelancer(session, "av3@example.com", rate=None)  # not searchable, not counted
+def test_availability_overview(world: World) -> None:
+    session = world.session
+    busy = provider(world)
+    provider(world)
+    provider(world, skills=())  # no skill: not searchable, not counted
     session.add(
-        FreelancerUnavailability(
-            freelancer_id=busy.id, unavailable_from=dubai(21, 10), unavailable_to=dubai(21, 12)
+        PersonUnavailability(
+            person_id=busy.person.id, unavailable_from=dubai(21, 10), unavailable_to=dubai(21, 12)
         )
     )
-    session.commit()
+    session.flush()
     rows = rows_of(session, "availability_overview", params(date(2026, 10, 20), date(2026, 10, 22)))
     assert rows == [
         ["2026-10-20", 2, 0, 2],
@@ -248,26 +319,22 @@ def test_availability_overview(session: Session) -> None:
 
 
 def test_availability_overview_limits_the_range(session: Session) -> None:
-    from app.reports.types import ReportError
-
     with pytest.raises(ReportError):
         build_report(session, "availability_overview", params(date(2026, 1, 1), date(2026, 6, 1)))
 
 
-def test_phone_reveals_report(session: Session) -> None:
-    plumber = freelancer(session, "pr1@example.com", skills=(("plumbing", None),))
-    cook = freelancer(session, "pr2@example.com", skills=(("electrical", None),))
-    host = make_host(session, "prh1@example.com")
-    other = make_host(session, "prh2@example.com")
+def test_phone_reveals_report(world: World) -> None:
+    session = world.session
+    plumber = provider(world, skills=(("plumbing", None),))
+    cook = provider(world, skills=(("electrical", None),))
+    one, other = add_member(world, "searcher"), add_member(world, "searcher")
     inside = dubai(10, 12)
 
-    def reveal(
-        who: WorkHost, target: Freelancer, channel: str, source: str, skills: list[str]
-    ) -> None:
+    def reveal(who: Member, target: Member, channel: str, source: str, skills: list[str]) -> None:
         session.add(
-            PhoneReveal(
-                work_host_id=who.id,
-                freelancer_id=target.id,
+            PersonPhoneReveal(
+                revealer_id=who.person.id,
+                provider_id=target.person.id,
                 revealed_at=inside,
                 channel=channel,
                 source=source,
@@ -275,56 +342,198 @@ def test_phone_reveals_report(session: Session) -> None:
             )
         )
 
-    reveal(host, plumber, "dial", "search", ["plumbing", "networking"])
-    reveal(host, plumber, "show", "detail", [])  # the same pair again
-    reveal(host, cook, "show", "search", ["plumbing"])
+    reveal(one, plumber, "dial", "search", ["plumbing", "networking"])
+    reveal(one, plumber, "show", "detail", [])  # the same pair again
+    reveal(one, cook, "show", "search", ["plumbing"])
     reveal(other, plumber, "show", "search", [])
     session.add(  # outside the window: ignored
-        PhoneReveal(
-            work_host_id=other.id,
-            freelancer_id=cook.id,
+        PersonPhoneReveal(
+            revealer_id=other.person.id,
+            provider_id=cook.person.id,
             revealed_at=dubai(20, 12),
             channel="show",
             source="search",
         )
     )
-    rating = UserRating(
-        work_host_id=host.id, freelancer_id=plumber.id, rating=8, rated_on=dubai(11, 9)
+    session.add(
+        Rating(
+            rater_id=one.person.id, provider_id=plumber.person.id, rating=8, rated_on=dubai(11, 9)
+        )
     )
-    session.add(rating)
-    session.commit()
+    session.flush()
 
-    window = params(date(2026, 10, 10), date(2026, 10, 12))
-    sections = build_report(session, "phone_reveals", window).sections
+    sections = build_report(
+        session, "phone_reveals", params(date(2026, 10, 10), date(2026, 10, 12))
+    ).sections
     summary = dict(sections[0].rows)
     assert summary["reveals"] == 4
-    assert summary["work_hosts"] == 2
-    assert summary["freelancers_revealed"] == 2
+    assert summary["searchers"] == 2
+    assert summary["providers_revealed"] == 2
     assert summary["reveals_on_phone_dialler"] == 1
     assert summary["reveals_from_search_page"] == 3
-    assert summary["host_freelancer_pairs"] == 3
+    assert summary["searcher_provider_pairs"] == 3
     assert summary["pairs_rated_afterwards"] == 1
     assert summary["rated_afterwards_percent"] == 33.3
-    assert sections[2].rows[0][2:4] == [3, 2]  # the busiest work host
+    assert sections[2].rows[0][:1] == [code(one.person)]  # the busiest searcher, by code
+    assert sections[2].rows[0][1:3] == [3, 2]
     assert sections[3].rows == [["plumbing", 3, 1], ["electrical", 1, 1]]
     assert sections[4].rows == [["plumbing", 2], ["networking", 1]]
-    assert sections[5].rows[0][2:] == [3, 2]
+    assert sections[5].rows[0][:1] == [code(plumber.person)]
+    assert sections[5].rows[0][1:] == [3, 2]
+    assert str(one.person.full_name) not in str(sections)
 
 
 def test_phone_reveals_report_when_empty(session: Session) -> None:
-    window = params(date(2026, 10, 10), date(2026, 10, 12))
-    sections = build_report(session, "phone_reveals", window).sections
+    sections = build_report(
+        session, "phone_reveals", params(date(2026, 10, 10), date(2026, 10, 12))
+    ).sections
     assert dict(sections[0].rows)["reveals"] == 0
     assert dict(sections[0].rows)["rated_afterwards_percent"] == 0
     assert all(section.rows == [] for section in sections[1:])
 
 
-def test_monthly_summary_runs_every_report(session: Session) -> None:
-    freelancer(session, "m1@example.com")
+def test_trust_events_count_what_happened_in_the_period(world: World) -> None:
+    session = world.session
+    member = add_member(world, "provider")
+    flagged = add_member(world, "searcher", flagged_for_recheck=True)
+
+    def change(kind: str, at: datetime, to: str = "revoked") -> None:
+        session.add(
+            StatusChange(
+                person_id=member.person.id,
+                from_status="provider",
+                to_status=to,
+                changed_by_id=world.owner.id,
+                kind=kind,
+                at=at,
+            )
+        )
+
+    change("revoke", dubai(20, 9))
+    change("revoke", dubai(20, 10))
+    change("reinstate", dubai(21, 9), "provider")
+    change("revoke", dubai(15, 9))  # outside the window
+    other_church, other_group, _ = world.add_church("Hope Church")
+    other_group.closed_at = dubai(20, 8)
+    other_church.closed_at = dubai(20, 8)
+    lead = add_member(world, "searcher")
+    second_group = world.add_group(lead.person, "Second group")
+    session.add(
+        MoveRequest(
+            person_id=member.person.id,
+            from_group_id=world.group.id,
+            to_group_id=second_group.id,
+            created_at=dubai(19, 9),
+            completed_at=dubai(20, 9),
+        )
+    )
+    session.flush()
     sections = build_report(
-        session, "monthly_summary", params(date(2026, 10, 1), date(2026, 10, 31))
+        session, "trust_events", params(date(2026, 10, 20), date(2026, 10, 21))
     ).sections
-    assert len(sections) == 14  # RP-01 to RP-08: RP-04 gives two sections, RP-08 gives six
+    assert sections[0].rows == [
+        [world.church.name, "reinstate", 1],
+        [world.church.name, "revoke", 2],
+    ]
+    assert sections[1].rows == [[world.church.name, 1]]
+    assert sections[2].rows == [["Hope Church", 1]]
+    assert [row[0] for row in sections[3].rows] == ["Hope Church"]
+    assert sections[4].rows == [[world.church.name, 1]]
+    assert flagged.person.flagged_for_recheck is True
+    # An ADMIN's church sees none of the other church's closures.
+    mine = build_report(
+        session,
+        "trust_events",
+        params(date(2026, 10, 20), date(2026, 10, 21), church_id=world.church.id),
+    ).sections
+    assert mine[2].rows == [] and mine[3].rows == []
+
+
+def test_reports_limited_to_a_church_hold_only_that_church(world: World) -> None:
+    session = world.session
+    other_church, other_group, _ = world.add_church("Hope Church")
+
+    def there(status: str) -> Person:
+        person = make_person(other_church, other_group, status)
+        session.add(person)
+        session.flush()
+        return person
+
+    here_provider, there_provider = provider(world), there("provider")
+    session.add(
+        PersonLabel(
+            person_id=there_provider.id,
+            label_id=session.scalars(select(Label.id).where(Label.label_name == "plumbing")).one(),
+        )
+    )
+    here_searcher, there_searcher = add_member(world, "searcher"), there("searcher")
+    now = dubai(10, 12)
+    session.execute(
+        update(Person)
+        .where(Person.id.in_([here_searcher.person.id, there_searcher.id]))
+        .values(last_login_at=now)
+    )
+    for rater, target in (
+        (here_searcher.person, here_provider.person),
+        (there_searcher, there_provider),
+    ):
+        session.add(Rating(rater_id=rater.id, provider_id=target.id, rating=7, rated_on=now))
+        session.add(
+            PersonPhoneReveal(
+                revealer_id=rater.id,
+                provider_id=target.id,
+                revealed_at=now,
+                channel="show",
+                source="detail",
+            )
+        )
+        session.add(
+            LoginHistory(
+                user_type="person",
+                user_id=rater.id,
+                login_email="x@example.com",
+                succeeded=True,
+                login_time=now,
+            )
+        )
+    session.add(
+        LoginHistory(
+            user_type="person", login_email="nobody@example.com", succeeded=False, login_time=now
+        )
+    )
+    session.flush()
+    window = params(date(2026, 10, 10), date(2026, 10, 10))
+    limited = params(date(2026, 10, 10), date(2026, 10, 10), church_id=other_church.id)
+
+    both = build_report(session, "top_rated", window).sections[0].rows
+    assert {row[0] for row in both} == {code(here_provider.person), code(there_provider)}
+    only = build_report(session, "top_rated", limited).sections[0].rows
+    assert [row[0] for row in only] == [code(there_provider)]
+    per_skill = build_report(session, "top_rated", limited).sections[1].rows
+    assert per_skill == [["plumbing", 7.0, 1, 1]]
+
+    everyone = build_report(session, "phone_reveals", window).sections
+    assert dict(everyone[0].rows)["reveals"] == 2
+    mine = build_report(session, "phone_reveals", limited).sections
+    assert dict(mine[0].rows)["reveals"] == 1
+    assert [row[0] for row in mine[5].rows] == [code(there_provider)]
+    assert [row[0] for row in mine[2].rows] == [code(there_searcher)]
+
+    all_rows = {row[0]: row[1:] for row in rows_of(session, "active_users", window)}
+    assert all_rows["searcher"] == [2, 2, 0]
+    assert all_rows["unknown address"] == [0, 0, 1]
+    church_rows = {row[0]: row[1:] for row in rows_of(session, "active_users", limited)}
+    assert church_rows["searcher"] == [1, 1, 0]
+    assert "unknown address" not in church_rows  # a failed attempt belongs to no church
+
+
+def test_monthly_summary_runs_every_report(world: World) -> None:
+    provider(world)
+    sections = build_report(
+        world.session, "monthly_summary", params(date(2026, 10, 1), date(2026, 10, 31))
+    ).sections
+    # RP-01 to RP-09: RP-04 gives two sections, RP-05 two, RP-08 six and RP-09 five.
+    assert len(sections) == 20
 
 
 # ---- output files ------------------------------------------------------------------------
@@ -348,10 +557,10 @@ def test_csv_with_several_sections_has_titles() -> None:
 
 
 def test_run_writes_files_and_is_idempotent(session: Session, tmp_path: Path) -> None:
-    freelancer(session, "run1@example.com")
+    World(session)  # a church with its OWNER, so there is something to count
     start, end = window_from_dates(date(2026, 10, 20), date(2026, 10, 20), DUBAI)
     run, executed = run_report(
-        session, "users_registered_daily", start, end, output_dir=tmp_path, timezone=DUBAI
+        session, "signups_daily", start, end, output_dir=tmp_path, timezone=DUBAI
     )
     assert executed
     assert run.status == "succeeded"
@@ -360,10 +569,10 @@ def test_run_writes_files_and_is_idempotent(session: Session, tmp_path: Path) ->
     csv_file = tmp_path / run.file_path
     assert csv_file.is_file()
     assert csv_file.with_suffix(".html").is_file()
-    assert "New users by type" in csv_file.read_text()
+    assert "New applicants by church and requested status" in csv_file.read_text()
 
     again, executed_again = run_report(
-        session, "users_registered_daily", start, end, output_dir=tmp_path, timezone=DUBAI
+        session, "signups_daily", start, end, output_dir=tmp_path, timezone=DUBAI
     )
     assert not executed_again
     assert again.id == run.id
@@ -374,7 +583,7 @@ def test_failed_run_is_recorded_and_retried(
     session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     start, end = window_from_dates(date(2026, 10, 20), date(2026, 10, 20), DUBAI)
-    original = REGISTRY["users_registered_daily"]
+    original = REGISTRY["signups_daily"]
 
     def explode(*_: object) -> list[Section]:
         raise RuntimeError("boom")
@@ -399,7 +608,7 @@ def test_run_with_retry_tries_a_second_time(
     session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     start, end = window_from_dates(date(2026, 10, 20), date(2026, 10, 20), DUBAI)
-    original = REGISTRY["users_registered_daily"]
+    original = REGISTRY["signups_daily"]
     calls: list[int] = []
 
     def flaky(db: Session, p: ReportParams) -> list[Section]:
@@ -425,7 +634,7 @@ def test_run_with_retry_tries_a_second_time(
 def test_stale_running_run_is_taken_over(session: Session, tmp_path: Path) -> None:
     start, end = window_from_dates(date(2026, 10, 20), date(2026, 10, 20), DUBAI)
     stale = ReportRun(
-        report_name="users_registered_daily",
+        report_name="signups_daily",
         window_from=start,
         window_to=end,
         status="running",
@@ -441,7 +650,7 @@ def test_stale_running_run_is_taken_over(session: Session, tmp_path: Path) -> No
     session.add_all([stale, fresh])
     session.commit()
     taken, executed = run_report(
-        session, "users_registered_daily", start, end, output_dir=tmp_path, timezone=DUBAI
+        session, "signups_daily", start, end, output_dir=tmp_path, timezone=DUBAI
     )
     assert executed
     assert taken.status == "succeeded"
@@ -471,11 +680,11 @@ def check_sync_jobs(scheduler: BackgroundScheduler, session: Session) -> None:
         return nullcontext(session)
 
     names = sync_jobs(scheduler, factory, settings)
-    assert names == ["monthly_summary", "users_registered_daily", "weekly_summary"]
+    assert names == ["monthly_summary", "signups_daily", "weekly_summary"]
     assert {job.id for job in scheduler.get_jobs()} == set(names)
 
     daily = session.scalar(
-        select(ReportSchedule).where(ReportSchedule.report_name == "users_registered_daily")
+        select(ReportSchedule).where(ReportSchedule.report_name == "signups_daily")
     )
     weekly = session.scalar(
         select(ReportSchedule).where(ReportSchedule.report_name == "weekly_summary")
@@ -486,15 +695,15 @@ def check_sync_jobs(scheduler: BackgroundScheduler, session: Session) -> None:
     weekly.is_enabled = False
     session.commit()
     sync_jobs(scheduler, factory, settings)
-    assert {job.id for job in scheduler.get_jobs()} == {"monthly_summary", "users_registered_daily"}
-    changed = scheduler.get_job("users_registered_daily")
+    assert {job.id for job in scheduler.get_jobs()} == {"monthly_summary", "signups_daily"}
+    changed = scheduler.get_job("signups_daily")
     assert changed is not None
     assert changed.name.startswith("30 1 * * *|")
 
     daily.cron_expression = "not a cron"
     session.commit()
     sync_jobs(scheduler, factory, settings)  # an invalid schedule must not crash the worker
-    assert {job.id for job in scheduler.get_jobs()} == {"monthly_summary", "users_registered_daily"}
+    assert {job.id for job in scheduler.get_jobs()} == {"monthly_summary", "signups_daily"}
 
 
 def test_catch_up_runs_missed_windows_once(
@@ -512,7 +721,7 @@ def test_catch_up_runs_missed_windows_once(
         runs = session.scalars(select(ReportRun)).all()
         assert sorted(run.report_name for run in runs) == [
             "monthly_summary",
-            "users_registered_daily",
+            "signups_daily",
             "weekly_summary",
         ]
         assert all(run.status == "succeeded" for run in runs)
