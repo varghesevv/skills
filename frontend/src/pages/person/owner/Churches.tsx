@@ -13,6 +13,7 @@ import {
 import type { ChurchInvitation, ChurchInvitationCreated, OwnerChurch } from '../../../api/types'
 import { usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
+import { INVITE_LINK_PREFIX } from '../../../portals/config'
 import { formatDate } from '../../../shared/dates'
 import { errorMessage } from '../../../shared/errors'
 import { Alert, Pager, QueryBoundary, TextField } from '../../../shared/ui'
@@ -20,7 +21,7 @@ import { usePageTitle } from '../../../shared/usePageTitle'
 
 /** The address an invited ADMIN opens. The token is the last part and travels only there. */
 export function inviteUrl(token: string): string {
-  return `${window.location.origin}/invite/${token}`
+  return `${window.location.origin}${INVITE_LINK_PREFIX}${token}`
 }
 
 /** What a refused action means for the OWNER. The server's code decides the words. */

@@ -125,6 +125,14 @@ export const signupDetailsSchema = z.object({
   password: newPassword,
 })
 
+/** An invited ADMIN: about them and the first home group; the address is the one invited. */
+export const acceptInvitationSchema = z.object({
+  full_name: fullName,
+  mobile_number: mobile,
+  password: newPassword,
+  home_group_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
+})
+
 export const resetPasswordSchema = z.object({ new_password: newPassword })
 
 export type FieldErrors = Record<string, string>
