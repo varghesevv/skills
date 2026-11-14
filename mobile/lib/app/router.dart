@@ -13,7 +13,9 @@ import '../features/auth/register_screen.dart';
 import '../features/auth/welcome_screen.dart';
 import '../features/leader/applicants_screen.dart';
 import '../features/leader/leader_paths.dart';
+import '../features/leader/flagged_screen.dart';
 import '../features/leader/members_screen.dart';
+import '../features/leader/revoked_screen.dart';
 import '../features/leader/person_detail_screen.dart';
 import '../features/person/my_vouches_screen.dart';
 import '../features/person/notifications_screen.dart';
@@ -39,10 +41,12 @@ const _signedOutPrefixes = [
 @visibleForTesting
 bool personMayVisit(PersonMe person, String path) {
   if (path == personHome) return true;
-  // The leader screens: applicants, members and one person's page.
+  // The leader screens: applicants, members, the revoked, the flagged and one person's page.
   final isLeaderPage =
       path == leaderApplicants ||
       path == leaderMembers ||
+      path == leaderRevoked ||
+      path == leaderFlagged ||
       path.startsWith('$leaderPeople/');
   return switch (person.status) {
     PersonStatus.revoked => false,
@@ -136,6 +140,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'members',
             builder: (context, state) => const MembersScreen(),
+          ),
+          GoRoute(
+            path: 'flagged',
+            builder: (context, state) => const FlaggedScreen(),
+          ),
+          GoRoute(
+            path: 'revoked',
+            builder: (context, state) => const RevokedScreen(),
           ),
           GoRoute(
             path: 'people/:id',

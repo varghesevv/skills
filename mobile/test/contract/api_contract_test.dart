@@ -143,6 +143,10 @@ void main() {
       'GET /verifier/people/{person_id}': '200',
       'POST /verifier/people/{person_id}/admit': '200',
       'POST /verifier/people/{person_id}/decline': '204',
+      'GET /verifier/revoked': '200',
+      'GET /verifier/flagged': '200',
+      'PUT /verifier/people/{person_id}/status': '200',
+      'POST /verifier/people/{person_id}/reconfirm': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -368,6 +372,7 @@ void main() {
           'chain_of_trust',
           'vouches',
           'can_admit_as_provider',
+          'flagged_for_recheck',
         ]),
       );
       expect(
@@ -392,6 +397,69 @@ void main() {
         containsAll(['status', 'requested_status']),
       );
     });
+
+    test('the revoked and the flagged lists have the fields the app reads', () {
+      expect(responseSchema('GET', '/verifier/revoked', '200'), 'RevokedList');
+      expect(properties('RevokedList'), {'items', 'total'});
+      expect(
+        properties('RevokedRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'removed_from',
+          'revoked_by',
+          'revoked_at',
+        ]),
+      );
+      expect(responseSchema('GET', '/verifier/flagged', '200'), 'FlaggedList');
+      expect(properties('FlaggedList'), {'items', 'total'});
+      expect(
+        properties('FlaggedRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'status',
+          'home_group',
+          'status_set_by',
+        ]),
+      );
+    });
+
+    test(
+      'revoking and reinstating send a status, and answer with the new one',
+      () {
+        expect(
+          requestSchema('PUT', '/verifier/people/{person_id}/status'),
+          'StatusRequest',
+        );
+        // The app sends `to` and, to reinstate, `home_group_id`; the successors are for leaders.
+        expect(
+          properties('StatusRequest'),
+          containsAll([
+            'to',
+            'home_group_id',
+            'successor_id',
+            'group_successor_id',
+          ]),
+        );
+        expect(
+          responseSchema('PUT', '/verifier/people/{person_id}/status', '200'),
+          'StatusResult',
+        );
+        expect(
+          responseSchema(
+            'POST',
+            '/verifier/people/{person_id}/reconfirm',
+            '200',
+          ),
+          'StatusResult',
+        );
+        expect(
+          properties('StatusResult'),
+          containsAll(['id', 'status', 'home_group_id', 'flagged_for_recheck']),
+        );
+      },
+    );
 
     test('only the person page has a number', () {
       for (final schema in [

@@ -9,6 +9,7 @@ import '../../shared/widgets/message_banner.dart';
 import 'admit_controls.dart';
 import 'data/leader_models.dart';
 import 'leader_providers.dart';
+import 'status_controls.dart';
 
 const _kinds = {
   'signup',
@@ -84,6 +85,18 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
           _declined = true;
         case Admitted(:final result):
           _detail = _detail?.withStatus(result.status, result.requestedStatus);
+        case StatusChanged(
+          :final status,
+          :final homeGroup,
+          :final flagged,
+          :final entry,
+        ):
+          _detail = _detail?.withChange(
+            status: status,
+            homeGroup: homeGroup,
+            flagged: flagged,
+            entry: entry,
+          );
       }
     });
   }
@@ -227,6 +240,8 @@ class _View extends StatelessWidget {
             onDone: onDone,
           ),
         ],
+        const SizedBox(height: 8),
+        StatusControls(detail: detail, onDone: onDone),
         _heading(context, text('leader.person.vouches')),
         if (detail.vouches.isEmpty) Text(text('leader.person.none')),
         for (final voucher in detail.vouches)

@@ -141,6 +141,78 @@ class HistoryEntry {
   final DateTime at;
 }
 
+/// A revoked person in the leader's scope, with the group they were removed from.
+class RevokedRow {
+  const RevokedRow({
+    required this.id,
+    required this.fullName,
+    required this.removedFromName,
+    required this.revokedByName,
+    required this.revokedAt,
+  });
+
+  factory RevokedRow.fromJson(Map<String, Object?> json) => RevokedRow(
+    id: json['id'] as String,
+    fullName: json['full_name'] as String,
+    removedFromName: _idName(json['removed_from'])?.name,
+    revokedByName: _nameOf(json['revoked_by']),
+    revokedAt: json['revoked_at'] == null
+        ? null
+        : DateTime.parse(json['revoked_at'] as String),
+  );
+
+  final String id;
+  final String fullName;
+  final String? removedFromName;
+  final String? revokedByName;
+  final DateTime? revokedAt;
+}
+
+/// A person whose status was set by someone since revoked: they keep access until a leader
+/// confirms them.
+class FlaggedRow {
+  const FlaggedRow({
+    required this.id,
+    required this.fullName,
+    required this.status,
+    required this.homeGroupName,
+    required this.statusSetByName,
+  });
+
+  factory FlaggedRow.fromJson(Map<String, Object?> json) => FlaggedRow(
+    id: json['id'] as String,
+    fullName: json['full_name'] as String,
+    status: json['status'] as String,
+    homeGroupName: _idName(json['home_group'])?.name,
+    statusSetByName: _nameOf(json['status_set_by']),
+  );
+
+  final String id;
+  final String fullName;
+  final String status;
+  final String? homeGroupName;
+  final String? statusSetByName;
+}
+
+/// The answer to a revocation, a reinstatement or a re-confirmation.
+class StatusResult {
+  const StatusResult({
+    required this.status,
+    required this.homeGroupId,
+    required this.flaggedForRecheck,
+  });
+
+  factory StatusResult.fromJson(Map<String, Object?> json) => StatusResult(
+    status: json['status'] as String,
+    homeGroupId: json['home_group_id'] as String?,
+    flaggedForRecheck: json['flagged_for_recheck'] as bool? ?? false,
+  );
+
+  final String status;
+  final String? homeGroupId;
+  final bool flaggedForRecheck;
+}
+
 class ChainLink {
   const ChainLink({
     required this.id,
@@ -168,9 +240,12 @@ class PersonDetail {
     required this.mobileNumber,
     required this.status,
     required this.requestedStatus,
+    required this.churchId,
     required this.churchName,
+    required this.homeGroupId,
     required this.homeGroupName,
     required this.statusSetByName,
+    required this.flaggedForRecheck,
     required this.appliedAt,
     required this.history,
     required this.chain,
@@ -184,9 +259,12 @@ class PersonDetail {
     mobileNumber: json['mobile_number'] as String,
     status: json['status'] as String,
     requestedStatus: json['requested_status'] as String?,
+    churchId: _idName(json['church'])!.id,
     churchName: _idName(json['church'])!.name,
+    homeGroupId: _idName(json['home_group'])?.id,
     homeGroupName: _idName(json['home_group'])?.name,
     statusSetByName: _nameOf(json['status_set_by']),
+    flaggedForRecheck: json['flagged_for_recheck'] as bool? ?? false,
     appliedAt: DateTime.parse(json['applied_at'] as String),
     history: [
       for (final item in json['history'] as List)
@@ -206,9 +284,14 @@ class PersonDetail {
   final String mobileNumber;
   final String status;
   final String? requestedStatus;
+  final String churchId;
   final String churchName;
+  final String? homeGroupId;
   final String? homeGroupName;
   final String? statusSetByName;
+
+  /// Set by someone since revoked: a leader confirms the status to clear it.
+  final bool flaggedForRecheck;
   final DateTime appliedAt;
   final List<HistoryEntry> history;
   final List<ChainLink> chain;
@@ -218,21 +301,51 @@ class PersonDetail {
   final bool canAdmitAsProvider;
 
   PersonDetail withStatus(String status, String? requestedStatus) =>
-      PersonDetail(
-        id: id,
-        fullName: fullName,
-        mobileNumber: mobileNumber,
-        status: status,
-        requestedStatus: requestedStatus,
-        churchName: churchName,
-        homeGroupName: homeGroupName,
-        statusSetByName: statusSetByName,
-        appliedAt: appliedAt,
-        history: history,
-        chain: chain,
-        vouches: vouches,
-        canAdmitAsProvider: canAdmitAsProvider,
-      );
+      _copy(status: status, requestedStatus: requestedStatus);
+
+  /// After a revocation, a reinstatement or a re-confirmation: what the server's answer changed.
+  PersonDetail withChange({
+    required String status,
+    required IdName? homeGroup,
+    required bool flagged,
+    required HistoryEntry entry,
+  }) => _copy(
+    status: status,
+    requestedStatus: status == 'revoked' ? null : requestedStatus,
+    homeGroup: homeGroup,
+    setHomeGroup: true,
+    flagged: flagged,
+    // The caller set this status, and the change is the newest line of the history.
+    statusSetByName: entry.changedByName,
+    history: [...history, entry],
+  );
+
+  PersonDetail _copy({
+    required String status,
+    required String? requestedStatus,
+    IdName? homeGroup,
+    bool setHomeGroup = false,
+    bool? flagged,
+    String? statusSetByName,
+    List<HistoryEntry>? history,
+  }) => PersonDetail(
+    id: id,
+    fullName: fullName,
+    mobileNumber: mobileNumber,
+    status: status,
+    requestedStatus: requestedStatus,
+    churchId: churchId,
+    churchName: churchName,
+    homeGroupId: setHomeGroup ? homeGroup?.id : homeGroupId,
+    homeGroupName: setHomeGroup ? homeGroup?.name : homeGroupName,
+    statusSetByName: statusSetByName ?? this.statusSetByName,
+    flaggedForRecheck: flagged ?? flaggedForRecheck,
+    appliedAt: appliedAt,
+    history: history ?? this.history,
+    chain: chain,
+    vouches: vouches,
+    canAdmitAsProvider: canAdmitAsProvider,
+  );
 }
 
 class AdmitResult {

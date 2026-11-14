@@ -465,7 +465,8 @@ const en = {
   'leader.error.alreadyRevoked': 'This person is already revoked. Reload.',
   'leader.error.notRevoked': 'This person is not revoked. Reload.',
   'leader.error.notFlagged': 'This person no longer needs a re-check. Reload.',
-  'leader.error.successor': 'This person leads a group or a church. Hand that on first.',
+  'leader.error.successor':
+    'This person leads a {homegroup} or a {organisation}. Hand that on first.',
   'leader.person.title': 'Details',
   'leader.person.status': 'Status',
   'leader.person.church': '{Organisation}',
