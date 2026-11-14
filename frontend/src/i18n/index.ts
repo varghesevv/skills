@@ -329,6 +329,7 @@ const en = {
   'views.none': 'Nobody has looked at a number.',
   'views.row': '{viewer} looked at the number of {person}',
   'views.noName': 'a closed account',
+  'views.thisClosed': 'this closed account',
   'views.only.viewer': 'Only what {name} looked at',
   'views.only.person': 'Only who looked at {name}',
   'views.filter.viewer': 'Showing what {name} looked at',

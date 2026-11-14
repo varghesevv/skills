@@ -176,4 +176,44 @@ describe('the log', () => {
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Nobody has looked at a number.')).toBeVisible()
   })
+
+  it('moves focus to the line that says what is shown, and back to the heading when cleared', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      owner({
+        'GET /owner/contact-views?limit=50&offset=0&viewer_id=lena': () =>
+          json(200, { items: [ROWS[0]], total: 1 }),
+      }),
+    )
+    renderApp('/member/views')
+    const first = (
+      await screen.findByText(/^Lena Leader looked at the number of Fay First/)
+    ).closest('li')!
+    await user.click(within(first).getByRole('button', { name: 'Only what Lena Leader looked at' }))
+    const line = await screen.findByText(/Showing what Lena Leader looked at/)
+    expect(line).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Show everything' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Who looked at phone numbers' }),
+    ).toHaveFocus()
+  })
+
+  it('does not read a filter on one closed account as all closed accounts', async () => {
+    const user = userEvent.setup({ delay: null })
+    const gone = { id: 'gone', name: '' }
+    signedInAs(
+      makeMe(),
+      owner({
+        [ALL]: () => json(200, { items: [row('v9', gone, FAY)], total: 1 }),
+        'GET /owner/contact-views?limit=50&offset=0&viewer_id=gone': () =>
+          json(200, { items: [row('v9', gone, FAY)], total: 1 }),
+      }),
+    )
+    renderApp('/member/views')
+    await user.click(
+      await screen.findByRole('button', { name: 'Only what a closed account looked at' }),
+    )
+    expect(await screen.findByText(/Showing what this closed account looked at/)).toBeVisible()
+  })
 })
