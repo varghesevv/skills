@@ -463,4 +463,69 @@ describe('replace the ADMIN of a church', () => {
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Only the first 1 of 90 members are shown.')).toBeVisible()
   })
+
+  it("offers as leader of the old ADMIN's group only the members of that group", async () => {
+    const user = userEvent.setup({ delay: null })
+    const inOther = {
+      ...member('m3', 'Zed Elsewhere', 'provider'),
+      home_group: { id: 'g9', name: 'North' },
+    }
+    signedInAs(
+      makeMe(),
+      withChurches({
+        [MEMBERS]: () =>
+          json(200, {
+            items: [
+              member('ada', 'Ada Admin', 'admin'),
+              member('m1', 'Mia Member', 'provider'),
+              inOther,
+            ],
+            total: 3,
+          }),
+      }),
+    )
+    renderApp('/member/churches')
+    await open(user)
+    await screen.findAllByRole('option', { name: /Zed Elsewhere/ })
+    const groupSelect = screen.getByLabelText(/^Leads the .* the old admin led/)
+    const names = Array.from(groupSelect.querySelectorAll('option')).map((o) => o.textContent)
+    expect(names.some((n) => n?.includes('Mia Member'))).toBe(true)
+    expect(names.some((n) => n?.includes('Zed Elsewhere'))).toBe(false)
+    // The new ADMIN may be chosen from anyone in the church.
+    const successor = screen.getByLabelText('New admin')
+    expect(
+      Array.from(successor.querySelectorAll('option')).some((o) => o.textContent?.includes('Zed')),
+    ).toBe(true)
+  })
+
+  it('forgets a refusal and the choices when the form is dropped and opened again', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      withChurches({
+        [MEMBERS]: () => json(200, { items: [member('m1', 'Mia Member', 'provider')], total: 1 }),
+        'PUT /churches/church-2/admin': () => apiError(409, 'state_changed'),
+      }),
+    )
+    renderApp('/member/churches')
+    await open(user)
+    await user.selectOptions(await screen.findByLabelText('New admin'), 'm1')
+    await user.click(screen.getByRole('button', { name: 'Replace the admin' }))
+    await screen.findByRole('alert')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await open(user)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(await screen.findByLabelText('New admin')).toHaveValue('')
+  })
+
+  it('shows a loading line while the members come, and hides the close button meanwhile', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), withChurches({ [MEMBERS]: () => new Promise(() => {}) as never }))
+    renderApp('/member/churches')
+    await open(user)
+    expect(await screen.findByRole('status')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Close Hope Church' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Close Hope Church' })).toBeVisible()
+  })
 })

@@ -254,6 +254,7 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
   const person = usePerson()
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
+  const [replacing, setReplacing] = useState(false)
   const own = church.id === person.church.id
   const close = useMutation({
     mutationFn: () => closeChurch(church.id),
@@ -292,10 +293,12 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
       )}
       {church.open && !own && !confirming && (
         <div className="form-actions">
-          <ReplaceAdmin church={church} onDone={onDone} />
-          <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
-            {t('owner.churches.close', { church: church.name })}
-          </button>
+          <ReplaceAdmin church={church} open={replacing} setOpen={setReplacing} onDone={onDone} />
+          {!replacing && (
+            <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
+              {t('owner.churches.close', { church: church.name })}
+            </button>
+          )}
         </div>
       )}
       {confirming && (
@@ -328,13 +331,16 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
 /** The OWNER replaces the ADMIN of another church with one of its members. */
 function ReplaceAdmin({
   church,
+  open,
+  setOpen,
   onDone,
 }: {
   church: OwnerChurch
+  open: boolean
+  setOpen: (open: boolean) => void
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
   const [successor, setSuccessor] = useState('')
   const [groupSuccessor, setGroupSuccessor] = useState('')
   const [former, setFormer] = useState<'provider' | 'searcher'>('provider')
@@ -360,8 +366,20 @@ function ReplaceAdmin({
       await queryClient.invalidateQueries({ queryKey: ['members'] })
     },
   })
+  // Dropping the form drops what was chosen and any refusal with it.
+  const close = () => {
+    replace.reset()
+    setSuccessor('')
+    setGroupSuccessor('')
+    setOpen(false)
+  }
   // The old ADMIN is not a choice for the new one.
   const others = (members.data?.items ?? []).filter((m) => m.id !== church.admin_id)
+  // The leader of their group is one of its members: the old ADMIN's row says which group.
+  const oldAdmin = (members.data?.items ?? []).find((m) => m.id === church.admin_id)
+  const inTheirGroup = oldAdmin?.home_group
+    ? others.filter((m) => m.home_group?.id === oldAdmin.home_group?.id)
+    : others
   const options = (rows: typeof others, none?: string) => [
     { value: '', label: none ?? t('owner.admin.choose') },
     ...rows.map((m) => ({ value: m.id, label: `${m.full_name} · ${t(`status.${m.status}`)}` })),
@@ -435,7 +453,7 @@ function ReplaceAdmin({
             name={`group-${church.id}`}
             value={groupSuccessor}
             onChange={setGroupSuccessor}
-            options={options(others, t('owner.admin.groupNone'))}
+            options={options(inTheirGroup, t('owner.admin.groupNone'))}
           />
           <div className="form-actions span-2">
             <button
@@ -445,7 +463,7 @@ function ReplaceAdmin({
             >
               {t('owner.admin.submit')}
             </button>
-            <button type="button" className="btn btn-quiet" onClick={() => setOpen(false)}>
+            <button type="button" className="btn btn-quiet" onClick={close}>
               {t('common.cancel')}
             </button>
           </div>
@@ -453,7 +471,7 @@ function ReplaceAdmin({
       )}
       {(!members.isSuccess || others.length === 0) && (
         <div className="form-actions span-2">
-          <button type="button" className="btn btn-quiet" onClick={() => setOpen(false)}>
+          <button type="button" className="btn btn-quiet" onClick={close}>
             {t('common.cancel')}
           </button>
         </div>
