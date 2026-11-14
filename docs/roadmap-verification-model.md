@@ -100,7 +100,7 @@ Backend first, then web and mobile.
 - [x] 4.11 Slice check: end-to-end tests of a leader leaving, a revocation with flags, and an OWNER handover (`backend/tests/test_church_life_journey.py`, through the real endpoints and a real database).
 
 ### S5. Product features on the new identity — 14 pull requests
-- [x] 5.1 Backend: provider profile, labels, unavailability owned by the person (paths unchanged; D-41: new `person_labels` and `person_unavailability` tables next to the older ones, which go in 5.2; labels managed by the OWNER).
+- [x] 5.1 Backend: provider profile, labels, unavailability owned by the person (paths unchanged; D-41: new `person_labels` and `person_unavailability` tables next to the older ones, which go in 5.3; labels managed by the OWNER).
 - [ ] 5.2 Backend: search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers. Closed accounts keep their status as history, so every query and the reveal and rating paths must exclude `closed_at IS NOT NULL`, with a test for a closed provider.
 - [ ] 5.3 Backend: reports redefined (verification reports; the Reveal report stays); schedules; demo data generator and seed; OpenAPI export and contract; the older labels and unavailability tables are dropped here, as their last readers move (D-41).
 - [ ] 5.4 Web: member shell and navigation by status; provider pages (profile, labels, availability, ratings received); label management for the OWNER (moved from 4.9).
