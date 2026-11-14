@@ -160,7 +160,7 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 - Phone number views: each `GET /verifier/people/{id}` adds a row to `contact_views` (who, whom, when, never the number). The OWNER reads the log at `GET /owner/contact-views`. It is kept 12 calendar months (decision O-03, D-40): delete older rows with `python -m app.cli purge-contact-views` (`--months N` to change it; run it by hand or from a scheduled job, for example monthly). Nothing deletes them automatically.
 - Links in addresses: the home group invitation, the vouch link and the invitation to be an ADMIN are shared as web addresses (`/join/<token>`, `/vouch/<token>`, `/invite/<token>`), so the web server's own access log records them. The API never has the token in an address (the lookups take it in the body). To keep the tokens out of the proxy logs as well, drop the path of these three routes from the Caddy and nginx log format; that is an infrastructure change for the owner, and this is the one place that lists the paths. The web server sends `Referrer-Policy: strict-origin-when-cross-origin`, so other sites only ever get the origin, never the path with a token.
 - Downloads of mobile test builds: each person may download `DOWNLOAD_MAX_PER_HOUR` files per hour (default 20); beyond that HTTP 429 `download_limit_reached` with `Retry-After`. The count is kept in the memory of one API process, so with several instances each allows its own share.
-- Mobile number reveals: each work host may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `phone_reveals` (no number is stored); the admin report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per work host".
+- Mobile number reveals: each person (a SEARCHER or above) may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `person_phone_reveals` (no number is stored; renamed `phone_reveals` in S5.3c); the OWNER's report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per searcher" (people are shown by a short code; the log of reveals ties the code to the person).
 - Port 22 is open only to your addresses; ports 80 and 443 to the world.
 
 ## 9. Data tasks
@@ -168,7 +168,7 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 Run these on the server in `/opt/skills` (see the [local guide](local-development.md) for what they create). The `tools` service gives the commands the demo password without exposing it to the running API:
 
 ```bash
-dc run --rm -T tools python -m app.cli generate-demo-data --csv - --reset > demo-logins.csv   # umask 077 first
+dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # umask 077 first; refuses when demo people exist
 dc run --rm tools python -m app.cli create-admin --email you@example.com --mobile +971500000000
 dc run --rm tools python -m app.cli seed-demo
 ```

@@ -8,7 +8,7 @@
     python -m app.cli purge-notifications [--months 12]
     python -m app.cli purge-contact-views [--months 12]
     python -m app.cli seed-demo
-    python -m app.cli generate-demo-data --csv logins.csv [--reset]
+    python -m app.cli generate-demo-data --csv logins.csv
 
 Passwords are never accepted as command-line arguments (they would end up in shell history and
 process lists): create-owner and create-admin ask for it (or read one line from stdin), and
@@ -20,7 +20,6 @@ import csv
 import getpass
 import os
 import sys
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TextIO
 
@@ -30,7 +29,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import MIN_STRICT_SECRET_LENGTH, WEAK_SECRETS, get_settings
 from app.core.db import get_engine
 from app.core.logging_config import configure_logging
-from app.demo_data import DEMO_DATA_DOMAIN, CredentialRow, generate, remove_generated
+from app.demo_data import CAST, CredentialRow, DemoDataExists, generate
 from app.schemas.auth import (
     MAX_PASSWORD_LENGTH,
     MIN_PASSWORD_LENGTH,
@@ -47,61 +46,6 @@ DEMO_DOMAIN = "example.com"
 # The same rules as the API applies to a sign-up.
 _EMAIL: TypeAdapter[str] = TypeAdapter(Email)
 _PERSON_NAME: TypeAdapter[str] = TypeAdapter(PersonName)
-
-
-@dataclass(frozen=True)
-class DemoUser:
-    user_type: str
-    name: str  # used in the email address
-    mobile: str
-    extra: dict[str, object]
-    approved: bool = True
-
-
-DEMO_USERS = [
-    DemoUser("admin", "admin", "+971500000001", {}),
-    DemoUser(
-        "freelancer",
-        "anita.plumber",
-        "+971500000011",
-        {
-            "full_name": "Anita Sharma",
-            "nationality": "Indian",
-            "primary_language": "Hindi",
-            "whatsapp_availability": True,
-        },
-    ),
-    DemoUser(
-        "freelancer",
-        "joseph.electrician",
-        "+971500000012",
-        {
-            "full_name": "Joseph Thomas",
-            "nationality": "Keralite",
-            "primary_language": "Malayalam",
-        },
-    ),
-    DemoUser(
-        "freelancer",
-        "maria.carer",
-        "+971500000013",
-        {
-            "full_name": "Maria Santos",
-            "nationality": "Philippines",
-            "primary_language": "English",
-        },
-    ),
-    DemoUser("workhost", "host.one", "+971500000021", {"full_name": "Hassan Host"}),
-    DemoUser("workhost", "host.two", "+971500000022", {"full_name": "Layla Host"}),
-    DemoUser("organisation", "org.approved", "+971500000031", {"org_name": "Demo Staffing"}),
-    DemoUser(
-        "organisation",
-        "org.pending",
-        "+971500000032",
-        {"org_name": "Demo Pending Org"},
-        approved=False,
-    ),
-]
 
 
 def _check_password(password: str) -> str | None:
@@ -206,18 +150,17 @@ def _demo_password() -> str | None:
     return password
 
 
-def generate_demo_data(csv_path: str, reset: bool) -> int:
+def generate_demo_data(csv_path: str) -> int:
     """Create the larger demo data set and write the login list (with the shared password)."""
     password = _demo_password()
     if password is None:
         return 1
     with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
-        if reset:
-            print(f"Removed {remove_generated(db)} earlier generated accounts.", file=sys.stderr)
-        elif get_by_email(db, "organisation", f"admin.gulf.care.staffing@{DEMO_DATA_DOMAIN}"):
-            print("Demo data already exists. Use --reset to replace it.", file=sys.stderr)
+        try:
+            rows = generate(db, password)
+        except DemoDataExists:
+            print(_STARTING_OVER, file=sys.stderr)
             return 1
-        rows = generate(db, password)
     # The file holds the password on purpose (it is the login list), so it is owner-only, and
     # nothing is printed to the log. "-" writes to standard output for redirecting into a file.
     if csv_path == "-":
@@ -227,46 +170,42 @@ def generate_demo_data(csv_path: str, reset: bool) -> int:
             _write_logins(out, rows, password)
     counts: dict[str, int] = {}
     for row in rows:
-        counts[row.user_type] = counts.get(row.user_type, 0) + 1
+        counts[row.status] = counts.get(row.status, 0) + 1
     target = "standard output" if csv_path == "-" else csv_path
-    print(f"Created accounts {counts}. Login list written to {target}.", file=sys.stderr)
+    print(f"Created people {counts}. Login list written to {target}.", file=sys.stderr)
     return 0
+
+
+_STARTING_OVER = (
+    "Demo data already exists. The history of people is append-only, so it cannot be removed "
+    "row by row: to start over, wipe the demo database (the operations runbook says how)."
+)
 
 
 def _write_logins(out: TextIO, rows: list[CredentialRow], password: str) -> None:
     writer = csv.writer(out)
-    writer.writerow(["user_type", "email", "password", "name", "status"])
+    writer.writerow(["status", "email", "password", "name", "church", "home_group"])
     for row in rows:
-        writer.writerow([row.user_type, row.email, password, row.name, row.status])
+        writer.writerow([row.status, row.email, password, row.name, row.church, row.home_group])
 
 
 def seed_demo() -> int:
-    """Create the fake demo users (idempotent), all with the DEMO_USER_PASSWORD password."""
+    """Create a small demo: two churches, a few groups and a named cast for every role."""
     password = _demo_password()
     if password is None:
         return 1
-    created = 0
     with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
-        for user in DEMO_USERS:
-            email = f"{user.name}@{DEMO_DOMAIN}"
-            if get_by_email(db, user.user_type, email) is not None:
-                continue
-            account = create_account(
-                db,
-                user.user_type,
-                email=email,
-                mobile_number=user.mobile,
-                password=password,
-                **user.extra,
-            )
-            if user.user_type == "organisation" and user.approved:
-                account.approval_status = "approved"  # type: ignore[union-attr]
-                db.commit()
-            created += 1
-    print(f"Demo users created: {created} (already present: {len(DEMO_USERS) - created})")
+        try:
+            rows = generate(db, password, churches=2, groups_per_church=2, people=24)
+        except DemoDataExists:
+            print(_STARTING_OVER, file=sys.stderr)
+            return 1
+    print(f"Demo people created: {len(rows)}.")
     print("Log in with these emails and the DEMO_USER_PASSWORD value from your environment:")
-    for user in DEMO_USERS:
-        print(f"  {user.user_type:<13} {user.name}@{DEMO_DOMAIN}")
+    names = {name for _, name in CAST}
+    for row in rows:
+        if row.name in names:
+            print(f"  {row.status:<10} {row.email}")
     return 0
 
 
@@ -368,10 +307,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("seed-demo", help="create fake demo users (not allowed in prod)")
     gen = sub.add_parser(
         "generate-demo-data",
-        help="create ~10 organisations, ~50 work hosts, ~200 freelancers and write a login CSV",
+        help="create churches, home groups and ~200 people, and write a login CSV",
     )
     gen.add_argument("--csv", required=True, help="where to write the login list; - for stdout")
-    gen.add_argument("--reset", action="store_true", help="remove earlier generated data first")
     args = parser.parse_args(argv)
     configure_logging()
     if args.command == "create-owner":
@@ -393,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "purge-notifications":
         return purge_notifications(args.months)
     if args.command == "generate-demo-data":
-        return generate_demo_data(args.csv, args.reset)
+        return generate_demo_data(args.csv)
     return seed_demo()
 
 
