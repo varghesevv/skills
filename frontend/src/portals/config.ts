@@ -20,6 +20,7 @@ export const LEADER_REVOKED = '/member/revoked'
 export const LEADER_FLAGGED = '/member/flagged'
 export const LEADER_PERSON = '/member/people'
 /** A vouch link opens here; the token is the last part of the address. */
+export const INVITE_LINK_PREFIX = '/invite/'
 export const VOUCH_LINK_PREFIX = '/vouch/'
 
 export type NavItem = { to: string; labelKey: StringKey; end?: boolean }

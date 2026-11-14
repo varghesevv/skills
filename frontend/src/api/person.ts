@@ -1,6 +1,7 @@
 import { request } from './http'
 import type {
   AdmitResult,
+  AdminInvitationInfo,
   AppliedStatus,
   ApplicantRow,
   FlaggedRow,
@@ -59,6 +60,29 @@ export function lookupInvitation(token: string) {
   return request<InvitationInfo>('/group-invitations/lookup', {
     method: 'POST',
     body: { token },
+    auth: false,
+  })
+}
+
+/** The token travels in the body, never in the address. */
+export function lookupAdminInvitation(token: string) {
+  return request<AdminInvitationInfo>('/admin-invitations/lookup', {
+    method: 'POST',
+    body: { token },
+    auth: false,
+  })
+}
+
+export function acceptAdminInvitation(body: {
+  token: string
+  full_name: string
+  mobile_number: string
+  password: string
+  home_group_name: string
+}) {
+  return request<{ id: string; church_id: string; status: string }>('/admin-invitations/accept', {
+    method: 'POST',
+    body,
     auth: false,
   })
 }

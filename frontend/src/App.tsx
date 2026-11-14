@@ -23,6 +23,7 @@ import MyGroup from './pages/person/leader/MyGroup'
 import Churches from './pages/person/owner/Churches'
 import Groups from './pages/person/leader/Groups'
 import Flagged from './pages/person/leader/Flagged'
+import AcceptInvitation from './pages/person/AcceptInvitation'
 import Moves from './pages/person/Moves'
 import GroupRequests from './pages/person/GroupRequests'
 import Members from './pages/person/leader/Members'
@@ -81,6 +82,7 @@ export default function App() {
           <Route path={PERSON_SIGN_IN.slice(1)} element={<PersonSignIn />} />
           <Route path={PERSON_SIGN_UP.slice(1)} element={<SignUp />} />
           <Route path="join/:token" element={<SignUp />} />
+          <Route path="invite/:token" element={<AcceptInvitation />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />

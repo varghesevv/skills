@@ -260,6 +260,21 @@ const en = {
   'notifications.move_cancelled': 'A move was cancelled by {name}',
   'notifications.member_moved_in': '{name} joined your {homegroup}',
   'notifications.member_moved_out': '{name} left your {homegroup}',
+  'invite.title': 'Become the {admin} of a {organisation}',
+  'invite.checking': 'Checking your invitation…',
+  'invite.bad':
+    'This invitation does not work. It may have been used, cancelled or have expired. Ask the {owner} for a new one.',
+  'invite.lead':
+    'You are invited to be the {admin} of {church}. The invitation was sent to an address at {domain}; you sign in with that address.',
+  'invite.group': 'Name of your first {homegroup}',
+  'invite.groupHint': 'You lead it. People can join it once you share its link.',
+  'invite.submit': 'Accept the invitation',
+  'invite.working': 'Working…',
+  'invite.done.title': 'Welcome',
+  'invite.done.text':
+    'You are the {admin} of the {organisation}. Sign in with the address you were invited at.',
+  'invite.error.taken': 'A {homegroup} with this name exists already. Choose another name.',
+  'invite.error.account': 'This address belongs to an account already.',
   'owner.nav.churches': '{Organisations}',
   'owner.churches.title': '{Organisations}',
   'owner.churches.lead':

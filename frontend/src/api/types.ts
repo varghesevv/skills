@@ -395,6 +395,7 @@ export type ChurchInvitation = {
   expired: boolean
 }
 export type ChurchInvitationCreated = { id: string; token: string; expires_at: string }
+export type AdminInvitationInfo = { church_name: string; email_domain: string }
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string
