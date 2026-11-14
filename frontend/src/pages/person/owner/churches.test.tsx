@@ -75,7 +75,7 @@ describe('who sees the churches', () => {
     renderApp('/member/churches')
     expect(await screen.findByText(/^Welcome/)).toBeVisible()
     expect(api.count(CHURCHES)).toBe(0)
-    expect(screen.queryByRole('link', { name: 'Churches' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Organisations' })).toBeNull()
   })
 
   it('sends a signed-out visitor to sign in', async () => {
