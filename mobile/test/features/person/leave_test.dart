@@ -129,6 +129,24 @@ void main() {
       expect(find.text('This account cannot be closed.'), findsOneWidget);
     });
 
+    testWidgets('shows a refusal at the largest text size without overflow', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        textScale: 2.0,
+        arrange: (adapter, store) {
+          signedInAsPerson(adapter, store, personJson(status: 'provider'));
+          adapter
+            ..reply('GET', '/me/notifications', FakeReply(200, _noNotes))
+            ..reply('DELETE', '/me', FakeReply(409, apiError('leads_a_group')));
+        },
+      );
+      await _leave(tester, fresh('pw'));
+      expect(find.textContaining('You lead a'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('can be cancelled before anything is sent', (tester) async {
       final app = await _open(tester, personJson(status: 'provider'));
       await tapKey(tester, 'leave-open');
