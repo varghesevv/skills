@@ -164,29 +164,33 @@ def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
         c.id: c
         for c in db.scalars(select(Church).where(Church.id.in_({r.church_id for r in requests})))
     }
-    # One query for the groups the requesters belong to, to tell who leads one now.
-    led = {
-        g.id
+    # One query for the groups the requesters belong to: to tell who leads one now, and which.
+    groups = {
+        g.id: g
         for g in db.scalars(
             select(HomeGroup).where(
                 HomeGroup.id.in_({p.home_group_id for p in people.values() if p.home_group_id}),
                 HomeGroup.closed_at.is_(None),
             )
         )
-        if g.leader_id in people and people[g.leader_id].home_group_id == g.id
     }
-    return [
-        GroupRequestOut(
-            id=r.id,
-            group_name=r.group_name,
-            church=IdName(id=r.church_id, name=churches[r.church_id].name),
-            requester=IdName(id=r.requester_id, name=people[r.requester_id].full_name or ""),
-            state=r.state,
-            created_at=r.created_at,
-            requester_leads_a_group=people[r.requester_id].home_group_id in led,
+    views = []
+    for r in requests:
+        requester = people[r.requester_id]
+        group = groups.get(requester.home_group_id) if requester.home_group_id else None
+        views.append(
+            GroupRequestOut(
+                id=r.id,
+                group_name=r.group_name,
+                church=IdName(id=r.church_id, name=churches[r.church_id].name),
+                requester=IdName(id=r.requester_id, name=requester.full_name or ""),
+                state=r.state,
+                created_at=r.created_at,
+                requester_leads_a_group=group is not None and group.leader_id == requester.id,
+                requester_group=IdName(id=group.id, name=group.name) if group else None,
+            )
         )
-        for r in requests
-    ]
+    return views
 
 
 def view(db: Session, request: GroupRequest) -> GroupRequestOut:

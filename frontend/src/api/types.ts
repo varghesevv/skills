@@ -354,6 +354,19 @@ export type StatusResult = {
   home_group_id: string | null
   flagged_for_recheck: boolean
 }
+export type GroupRequest = {
+  id: string
+  group_name: string
+  church: IdName
+  requester: IdName
+  state: 'open' | 'approved' | 'declined'
+  created_at: string
+  /** Approving needs someone to lead the group the requester leads now. */
+  requester_leads_a_group: boolean
+  /** The open group the requester belongs to now: whose members may lead it instead. */
+  requester_group: IdName | null
+}
+export type GroupRequestCreated = { request: GroupRequest; group: IdName | null }
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string

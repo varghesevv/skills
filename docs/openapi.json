@@ -1572,11 +1572,26 @@
           "requester": {
             "$ref": "#/components/schemas/IdName"
           },
+          "requester_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "requester_leads_a_group": {
             "title": "Requester Leads A Group",
             "type": "boolean"
           },
           "state": {
+            "enum": [
+              "open",
+              "approved",
+              "declined"
+            ],
             "title": "State",
             "type": "string"
           }
