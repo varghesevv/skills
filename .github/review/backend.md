@@ -1,12 +1,12 @@
-- **Layout:** routers `app/api/v1/` (HTTP, auth, response only), business rules in `app/services/`, models `app/models/`, schemas `app/schemas/`. Business logic only in a router is a defect.
-- **SQL:** SQLAlchemy expressions only, no raw SQL strings. Check bounded queries, no N+1, no unbounded results (`page_size` max 100), no `COUNT(*)` over wide joins. Every new filter/sort column needs an index. Aggregates are computed in SQL.
-- **Async:** no blocking I/O or synchronous SQLAlchemy calls inside `async def` handlers (use the thread pool or a dedicated engine).
-- **Migrations:** Alembic, one per change; large index additions use `CONCURRENTLY`; table-rewriting `ALTER` needs a plan. Constraints (`UNIQUE`, `FK`, `CHECK`) must back code-level checks. Names follow `NAMING_CONVENTION`.
-- **Time:** timezone-aware UTC only. `Base.type_annotation_map` already maps every `Mapped[datetime]` to `DateTime(timezone=True)`, so do not flag it. `utc_now()` lives in `app/services/profiles.py`.
-- **Freelancers have no approval or active flag** (only organisations have an approval status). Do not ask for one on freelancer lookups.
-- **State machines:** organisation approval (`pending` -> `approved`/`rejected`; only approved can log in). Vouch (`pending` -> `approved` when the freelancer accepts, or `revoked`; revoking sets it inactive; vouching again restarts at `pending`; only approved AND active vouches are shown). Flag illegal transitions, double submits, `status`/`is_active` disagreeing.
-- **Settings:** required settings have no default; the only settings with defaults are the safety limits (`REVEAL_MAX_*`, chat limits). Secrets are `SecretStr`, registered with the log redactor.
-- **Rate limits:** parallel requests must not slip past a limit (row lock or equivalent). Retry-After on 429.
-- **Reports:** validate path handling and recipients; CSV cells starting with `=`, `+`, `-`, `@` are neutralised.
-- **WebSocket/chat (when present):** first-frame auth, never a token in the URL; role and participant check on every frame; idempotent send by `client_message_id`; bounded frame size and rate; no message text in logs.
-- **Tests:** pytest; limits set directly in `conftest.py`; no real secrets.
+- **Layout:** routers `app/api/v1/` (HTTP, auth, response only), rules in `app/services/`, models `app/models/`, schemas `app/schemas/`. Business logic in a router is a defect; a service that commits for a router is fine when the file says so.
+- **Trust rules in the database:** the six invariants are deferrable constraints and commit-time triggers. A new operation that moves people, groups or churches must still end in a state the triggers accept; tests call `check_rules(session)`. Suggest a constraint only when code alone guards a rule.
+- **Concurrency:** lock people (by id) first through `locks.lock_people` / `locked_in_scope`, then home groups, then churches; joining a group takes the group row `FOR SHARE`, closing it `FOR UPDATE`. Flag a path that checks state it did not lock, or locks in another order. A check made before the lock and made again after it is correct.
+- **History and notifications:** every status change adds a `status_changes` row (kind, who; `changed_by` is empty only for sign-up and operator changes) and a notification row in the same transaction. A new notification kind is added to `KINDS` and to the named set in `test_the_events_so_far_all_write_a_known_kind`.
+- **Tokens and limits:** link, invitation and reset tokens are 256-bit, stored as a sha256 hash, shown once, never in a path or query key; every failure is the same `404`. Limits that must hold under parallel requests are counted in the database or behind a lock.
+- **SQL:** SQLAlchemy expressions only, no raw SQL built from input. Bounded and paged (`limit` max 100), no N+1, new filter or sort columns indexed, aggregates in SQL.
+- **Migrations:** Alembic, one per change; constraints back code-level checks; large index additions use `CONCURRENTLY`; names follow `NAMING_CONVENTION`.
+- **Time:** timezone-aware UTC only; `Mapped[datetime]` already maps to `DateTime(timezone=True)`.
+- **Settings:** required settings have no default; only safety limits do. Secrets are `SecretStr`, registered with the log redactor.
+- **Errors:** every refusal is an `ApiError` with a stable `code`; never a 500 for a state the user can cause. New codes are in `docs/specification/04-api.md`.
+- **Tests:** pytest against PostgreSQL; a regression test for each fixed defect; tests build their own people and credentials at run time.
+- **Reports and chat (when present):** CSV cells starting with `=`, `+`, `-`, `@` are neutralised; WebSocket first-frame auth, never a token in the URL, no message text in logs.

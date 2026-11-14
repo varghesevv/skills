@@ -1,6 +1,7 @@
-- React + TypeScript (Vite) served by nginx; wording from `src/terminology/` and `src/i18n/`. User-visible text goes through `t()`; role words through terms, never literals.
-- **Security:** strict CSP (`script-src 'self'`); flag `unsafe-inline`, `unsafe-eval`, unescaped `dangerouslySetInnerHTML`. Tokens only in the token store; never in URLs, logs or query keys.
-- **Mobile number:** the number may only come from the reveal call, live in component state, and never in query cache, URL or logs.
-- **Data:** React Query keys include every input; mutations invalidate what they change; errors map to `errorMessage()` (no raw server text with user input).
-- **Accessibility and layout:** controls at least 44x44 px, labels on every control, no horizontal page scroll from 320 px, focus management for dialogs and drawers.
-- **Tests:** Vitest + Testing Library for each screen (loading, empty, error, validation); Playwright responsive checks for key pages.
+- React + TypeScript (Vite) served by nginx; wording from `src/terminology/` and `src/i18n/`. Every user-visible text goes through `t()`; role words through terms, never literals.
+- **Security:** strict CSP (`script-src 'self'`); flag `unsafe-inline`, `unsafe-eval`, unescaped `dangerouslySetInnerHTML`. Tokens only in the token store; never in URLs, logs or query keys (a link token goes in a request body).
+- **Phone numbers:** only from the reveal call or a leader's person page; kept in component state, never in the query cache, a URL or a log; lists carry none.
+- **Data:** React Query keys include every input; mutations invalidate what they change; errors map to a message by the server's `code`, never raw server text.
+- **Permissions:** the server decides. The UI hides only what cannot work, takes `can_*` flags from the server's answers, and still shows the server's refusal in words. A guard that is looser than the server is fine; one that is stricter than the server hides a feature.
+- **Accessibility and layout:** controls at least 44x44 px, a label on every control, no horizontal scroll from 320 px, focus moves to errors and dialogs.
+- **Tests:** Vitest + Testing Library per screen: loading, empty, error with retry, validation, the success path, and each refusal code the screen maps; a test that fails when the behaviour it names is broken. Playwright responsive checks for key pages.

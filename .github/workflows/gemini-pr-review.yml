@@ -17,6 +17,11 @@ on:
         description: 'Optional: what to look at most closely (up to 300 characters)'
         required: false
         type: string
+      force:
+        description: 'A pull request gets two reviews from each reviewer; tick this for one more'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: gemini-review-${{ inputs.pr_number }}
@@ -68,4 +73,5 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number }}
           REVIEW_COMPONENTS: ${{ inputs.components }}
           REVIEW_FOCUS: ${{ inputs.focus }}
+          REVIEW_FORCE: ${{ inputs.force }}
         run: python .github/scripts/review_agent.py

@@ -148,5 +148,43 @@ class ReviewAgentTest(unittest.TestCase):
         self.assertIn("No overview produced", out)
 
 
+    def test_rounds_are_counted_from_the_summary_marker(self):
+        summary = ra.build_summary({"overview": "- x", "risk": "Low", "summary": "ok", "findings": []},
+                                   [], 0, 0, [], round_no=2)
+        self.assertEqual(ra.rounds_done(summary), 2)
+        self.assertEqual(ra.rounds_done("no marker here"), 0)
+        self.assertIn("Review 2 of 2", summary)
+        # The marker is read only where it is written: not from text further down, and not lost to a cut.
+        forged = summary.replace("<!-- review-round:2 -->", "<!-- review-round:0 -->") + "<!-- review-round:2 -->"
+        self.assertEqual(ra.rounds_done(forged), 0)
+        long_body = {"overview": "- x" * 30000, "risk": "Low", "summary": "ok", "findings": []}
+        cut = ra.build_summary(long_body, [], 0, 0, [], round_no=2)[: ra.MAX_COMMENT_CHARS]
+        self.assertEqual(ra.rounds_done(cut), 2)
+
+    def test_a_partial_review_does_not_use_up_a_round(self):
+        data = {"overview": "- x", "risk": "Low", "summary": "ok", "findings": []}
+        partial = ra.build_summary(data, [], 0, 0, [], round_no=2, counted=False)
+        self.assertEqual(ra.rounds_done(partial), 1)
+        self.assertIn("not counted", partial)
+
+    def test_the_prompt_says_which_round_it_is(self):
+        first, _ = ra.build_prompts("ctx", [], "t", "b", "diff", [], round_no=1, max_rounds=2)
+        last, _ = ra.build_prompts("ctx", [], "t", "b", "diff", [], round_no=2, max_rounds=2)
+        self.assertIn("round 1 of 2", first)
+        self.assertIn("last review", last)
+        self.assertIn("No \"consider\" points", last)
+        self.assertNotIn("last review", first)
+
+    def test_only_the_first_optional_findings_are_kept(self):
+        findings = [{"severity": "blocker"}] + [{"severity": "consider", "n": i} for i in range(6)]
+        findings.append({"severity": "should_fix"})
+        kept = ra.cap_consider(findings)
+        self.assertEqual(len(kept), 1 + ra.MAX_CONSIDER + 1)
+        self.assertEqual(kept[0]["severity"], "blocker")
+        self.assertEqual(kept[-1]["severity"], "should_fix")
+        self.assertEqual(ra.cap_consider(None), [])
+        # On the last round no optional point is kept at all.
+        self.assertEqual([f["severity"] for f in ra.cap_consider(findings, 0)], ["blocker", "should_fix"])
+
 if __name__ == "__main__":
     unittest.main()
