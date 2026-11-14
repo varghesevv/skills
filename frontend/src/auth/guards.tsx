@@ -63,3 +63,11 @@ export function RequireLeader() {
   const leader = user.user_type === 'person' && ['verifier', 'admin', 'owner'].includes(user.status)
   return leader ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
+
+/** The screens of an ADMIN or the OWNER. Everyone else goes to their own home. */
+export function RequireAdmin() {
+  const { user } = useAuth()
+  if (!user) return <LoadingScreen />
+  const admin = user.user_type === 'person' && ['admin', 'owner'].includes(user.status)
+  return admin ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
+}

@@ -197,6 +197,31 @@ export function declineGroupRequest(id: string) {
   return request<void>(`/group-requests/${id}/decline`, { method: 'POST' })
 }
 
+export type FormerLeaderStatus = 'provider' | 'searcher' | 'keep'
+
+/** Replace the leader of a group, or hand on one's own, with a member of it. */
+export function replaceLeader(
+  groupId: string,
+  successorId: string,
+  formerLeaderStatus: FormerLeaderStatus,
+) {
+  return request<{ group: { id: string; name: string }; leader: { id: string; name: string } }>(
+    `/home-groups/${groupId}/leader`,
+    {
+      method: 'PUT',
+      body: { successor_id: successorId, former_leader_status: formerLeaderStatus },
+    },
+  )
+}
+
+/** An ADMIN or the OWNER move an admitted member to another open group of the church. */
+export function movePerson(id: string, homeGroupId: string) {
+  return request<{
+    person: { id: string; name: string }
+    home_group: { id: string; name: string }
+  }>(`/verifier/people/${id}/move`, { method: 'POST', body: { home_group_id: homeGroupId } })
+}
+
 /** A searcher asks to become a provider; they stay a searcher while they collect vouches. */
 export function applyForProvider() {
   return request<PersonMe>('/me/apply-provider', { method: 'POST' })

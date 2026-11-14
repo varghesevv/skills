@@ -6,6 +6,7 @@ import { useAuth, usePerson } from '../auth/AuthContext'
 import { t } from '../i18n'
 import { NOTIFICATIONS_KEY, NOTIFICATIONS_POLL_MS } from '../pages/person/Notifications'
 import {
+  ADMIN_GROUPS,
   LEADER_APPLICANTS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
@@ -27,6 +28,7 @@ export default function PersonLayout() {
   })
   const unread = notifications.data?.unread_count ?? 0
   const leader = ['verifier', 'admin', 'owner'].includes(person.status)
+  const admin = person.status === 'admin' || person.status === 'owner'
   return (
     <div className="public">
       <a className="skip-link" href="#main">
@@ -44,6 +46,11 @@ export default function PersonLayout() {
             <Link className="btn btn-quiet" to={LEADER_MEMBERS}>
               {t('leader.nav.members')}
             </Link>
+            {admin && (
+              <Link className="btn btn-quiet" to={ADMIN_GROUPS}>
+                {t('admin.nav.groups')}
+              </Link>
+            )}
             <Link className="btn btn-quiet" to={LEADER_FLAGGED}>
               {t('leader.nav.flagged')}
             </Link>

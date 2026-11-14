@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { fetchPersonDetail } from '../../../api/person'
 import type { HistoryEntry, PersonDetail as Detail } from '../../../api/types'
 import { ApiError } from '../../../api/http'
+import { usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
 import { LEADER_MEMBERS } from '../../../portals/config'
 import { formatDate, formatDateTime } from '../../../shared/dates'
@@ -11,6 +12,7 @@ import { errorMessage } from '../../../shared/errors'
 import { Alert } from '../../../shared/ui'
 import { usePageTitle } from '../../../shared/usePageTitle'
 import AdmitControls, { type Outcome } from './AdmitControls'
+import MoveControls from './MoveControls'
 import StatusControls, { type Change } from './StatusControls'
 
 const KINDS = [
@@ -152,6 +154,8 @@ function PersonView({
   onDone: (message: string, outcome: Outcome) => void
   onChanged: (message: string, change: Change) => void
 }) {
+  const actor = usePerson()
+  const admin = actor.status === 'admin' || actor.status === 'owner'
   return (
     <>
       <h1>{data.full_name}</h1>
@@ -191,6 +195,9 @@ function PersonView({
       )}
 
       <StatusControls person={data} onDone={onChanged} />
+      {admin && ['searcher', 'provider'].includes(data.status) && (
+        <MoveControls person={data} onDone={onChanged} />
+      )}
 
       <h2>{t('leader.person.vouches')}</h2>
       {data.vouches.length === 0 ? (
