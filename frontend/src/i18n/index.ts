@@ -178,6 +178,8 @@ const en = {
   'groupRequests.name': 'Name of the {homegroup}',
   'groupRequests.successor': 'Leads your current {homegroup} from now on',
   'groupRequests.successorNone': 'Nobody (it closes if you are alone in it)',
+  'groupRequests.choose': 'Choose a member…',
+  'groupRequests.successorOf': 'Leads the {homegroup} of {name} from now on',
   'groupRequests.submit': 'Ask',
   'groupRequests.submitOwn': 'Start it',
   'groupRequests.asked': 'Your request was sent. You will be told when it is decided.',

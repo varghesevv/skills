@@ -334,10 +334,12 @@ def test_a_requester_who_became_a_leader_meanwhile_needs_a_successor(
     member = add_member(world, "provider")
     created = ask(client, member, "Lakeside").json()["request"]
     assert created["requester_leads_a_group"] is False
+    assert created["requester_group"] == {"id": str(world.group.id), "name": world.group.name}
     old_group = world.add_group(member.person, "Quicker")  # they lead another group now
     add_member(world, "searcher", group=old_group)  # which has another member
     listed = client.get(URL, headers=headers_of(client, owner_member(world))).json()["items"]
     assert listed[0]["requester_leads_a_group"] is True
+    assert listed[0]["requester_group"] == {"id": str(old_group.id), "name": "Quicker"}
     refused = decide(client, owner_member(world), created["id"], "approve")
     assert refused.status_code == 409 and refused.json()["error"]["code"] == "successor_required"
     session.refresh(member.person)

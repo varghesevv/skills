@@ -121,9 +121,13 @@ export function fetchApplicants(page: number) {
   return request<Paged<ApplicantRow>>(`/verifier/applicants?${paging(page)}`)
 }
 
-export function fetchMembers(page: number, status?: Exclude<PersonStatus, 'pending' | 'revoked'>) {
+export function fetchMembers(
+  page: number,
+  status?: Exclude<PersonStatus, 'pending' | 'revoked'>,
+  homeGroupId?: string,
+) {
   return request<Paged<MemberRow>>(
-    `/verifier/members?${paging(page)}${status ? `&status=${status}` : ''}`,
+    `/verifier/members?${paging(page)}${status ? `&status=${status}` : ''}${homeGroupId ? `&home_group_id=${homeGroupId}` : ''}`,
   )
 }
 

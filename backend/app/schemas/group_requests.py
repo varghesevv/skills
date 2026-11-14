@@ -30,6 +30,8 @@ class GroupRequestOut(BaseModel):
     created_at: datetime
     # The requester leads a home group now: approving needs a successor for it (roadmap 4.3).
     requester_leads_a_group: bool
+    # The open group the requester belongs to now: whose members may lead it if they leave it.
+    requester_group: IdName | None = None
 
 
 class GroupRequestList(BaseModel):

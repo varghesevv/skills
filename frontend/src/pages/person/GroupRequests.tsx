@@ -58,18 +58,18 @@ export default function GroupRequests() {
 }
 
 /** The members in the caller's scope who could lead a group, from the first page of the list. */
-function useCandidates(enabled: boolean) {
+function useCandidates(enabled: boolean, groupId?: string) {
   return useQuery({
-    queryKey: ['members', 1, ''],
-    queryFn: () => fetchMembers(1),
+    queryKey: ['members', 1, '', groupId ?? ''],
+    queryFn: () => fetchMembers(1, undefined, groupId),
     enabled,
     select: (data) => data.items,
   })
 }
 
-function candidateOptions(rows: MemberRow[] | undefined) {
+function candidateOptions(rows: MemberRow[] | undefined, none: boolean) {
   return [
-    { value: '', label: t('groupRequests.successorNone') },
+    { value: '', label: none ? t('groupRequests.successorNone') : t('groupRequests.choose') },
     ...(rows ?? []).map((m) => ({
       value: m.id,
       label: m.home_group ? `${m.full_name} · ${m.home_group.name}` : m.full_name,
@@ -95,8 +95,13 @@ function AskForm({ decides }: { decides: boolean }) {
       await queryClient.invalidateQueries({ queryKey: ['members'] })
       if (result.group) {
         setDone(t('groupRequests.started', { name: result.group.name }))
-        const me = await fetchMe()
-        if (me.user_type === 'person') setPerson(me)
+        // The group exists now: a failure to refresh who I am must not look like a failed start.
+        try {
+          const me = await fetchMe()
+          if (me.user_type === 'person') setPerson(me)
+        } catch {
+          /* the next page load shows the new group */
+        }
       } else {
         setDone(t('groupRequests.asked'))
       }
@@ -137,7 +142,7 @@ function AskForm({ decides }: { decides: boolean }) {
           name="successor"
           value={successor}
           onChange={setSuccessor}
-          options={candidateOptions(own)}
+          options={candidateOptions(own, true)}
         />
       )}
       <div className="form-actions span-2">
@@ -200,7 +205,13 @@ function Row({
   const queryClient = useQueryClient()
   const [successor, setSuccessor] = useState('')
   const open = request.state === 'open'
-  const candidates = useCandidates(decides && open && request.requester_leads_a_group)
+  const candidates = useCandidates(
+    decides && open && request.requester_leads_a_group,
+    request.requester_group?.id,
+  )
+  // Someone must take over the group the requester leaves, unless they are its only member.
+  const others = (candidates.data ?? []).filter((m) => m.id !== request.requester.id)
+  const needsChoice = request.requester_leads_a_group && (candidates.isPending || others.length > 0)
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['group-requests'] })
     await queryClient.invalidateQueries({ queryKey: ['members'] })
@@ -229,6 +240,8 @@ function Row({
           <>
             {' '}
             · {t('groupRequests.by', { name: request.requester.name, group: request.group_name })}
+            {' · '}
+            {request.church.name}
           </>
         )}
         {' · '}
@@ -249,13 +262,11 @@ function Row({
                 {t('groupRequests.leads', { name: request.requester.name })}
               </p>
               <SelectField
-                label={t('groupRequests.successor')}
+                label={t('groupRequests.successorOf', { name: request.requester.name })}
                 name={`successor-${request.id}`}
                 value={successor}
                 onChange={setSuccessor}
-                options={candidateOptions(
-                  candidates.data?.filter((m) => m.id !== request.requester.id),
-                )}
+                options={candidateOptions(others, others.length === 0 && !candidates.isPending)}
               />
             </>
           )}
@@ -263,7 +274,7 @@ function Row({
             <button
               type="button"
               className="btn btn-primary"
-              disabled={busy}
+              disabled={busy || (needsChoice && !successor)}
               onClick={() => approve.mutate()}
             >
               {t('groupRequests.approve', { group: request.group_name })}

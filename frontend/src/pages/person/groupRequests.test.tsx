@@ -6,6 +6,7 @@ import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../..
 
 const LIST = 'GET /group-requests?limit=50&offset=0'
 const MEMBERS = 'GET /verifier/members?limit=50&offset=0'
+const GROUP_MEMBERS = 'GET /verifier/members?limit=50&offset=0&home_group_id=g1'
 const NOTES = 'GET /me/notifications?limit=50'
 const quiet = { [NOTES]: () => json(200, { items: [], total: 0, unread_count: 0 }) }
 
@@ -17,6 +18,7 @@ const REQUEST = {
   state: 'open',
   created_at: '2026-11-12T08:00:00Z',
   requester_leads_a_group: false,
+  requester_group: { id: 'g1', name: 'Riverside' },
 }
 
 const as = (status: string, extra = {}) => ({
@@ -126,30 +128,26 @@ describe('an ADMIN decides', () => {
     expect(api.count('POST /group-requests/r1/decline')).toBe(1)
   })
 
-  it('asks who leads the requester’s group, and sends the choice', async () => {
+  const LEADING = { ...REQUEST, requester_leads_a_group: true }
+  const member = (id: string, name: string, status: string) => ({
+    id,
+    full_name: name,
+    status,
+    home_group: { id: 'g1', name: 'Riverside' },
+    status_set_by: null,
+    flagged_for_recheck: false,
+  })
+
+  it('asks who leads the requester’s group from that group’s members, and needs a choice', async () => {
     const user = userEvent.setup({ delay: null })
     const api = signedInAs(makeMe(), {
       ...as('admin'),
-      [LIST]: () => json(200, { items: [{ ...REQUEST, requester_leads_a_group: true }], total: 1 }),
-      [MEMBERS]: () =>
+      [LIST]: () => json(200, { items: [LEADING], total: 1 }),
+      [GROUP_MEMBERS]: () =>
         json(200, {
           items: [
-            {
-              id: 'p9',
-              full_name: 'Pia Provider',
-              status: 'verifier',
-              home_group: { id: 'g1', name: 'Riverside' },
-              status_set_by: null,
-              flagged_for_recheck: false,
-            },
-            {
-              id: 'p7',
-              full_name: 'Sam Searcher',
-              status: 'searcher',
-              home_group: { id: 'g1', name: 'Riverside' },
-              status_set_by: null,
-              flagged_for_recheck: false,
-            },
+            member('p9', 'Pia Provider', 'verifier'),
+            member('p7', 'Sam Searcher', 'searcher'),
           ],
           total: 2,
         }),
@@ -159,12 +157,49 @@ describe('an ADMIN decides', () => {
     expect(await screen.findByText(/Pia Provider leads a .* now/)).toBeVisible()
     await screen.findByRole('option', { name: 'Sam Searcher · Riverside' })
     expect(screen.queryByRole('option', { name: /^Pia Provider/ })).toBeNull()
-    await user.selectOptions(screen.getByLabelText(/Leads your current/), 'p7')
-    await user.click(screen.getByRole('button', { name: 'Approve Harbour' }))
+    expect(screen.queryByRole('option', { name: /Nobody/ })).toBeNull()
+    const approve = screen.getByRole('button', { name: 'Approve Harbour' })
+    expect(approve).toBeDisabled()
+    await user.selectOptions(screen.getByLabelText(/Leads the .* of Pia Provider/), 'p7')
+    await user.click(approve)
     await screen.findByText(/Harbour was started/)
     expect(api.calls.find((c) => c.key === 'POST /group-requests/r1/approve')?.body).toEqual({
       successor_id: 'p7',
     })
+  })
+
+  it('lets the requester’s group close when they are alone in it', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(makeMe(), {
+      ...as('admin'),
+      [LIST]: () => json(200, { items: [LEADING], total: 1 }),
+      [GROUP_MEMBERS]: () =>
+        json(200, { items: [member('p9', 'Pia Provider', 'verifier')], total: 1 }),
+      'POST /group-requests/r1/approve': () => json(200, { group: { id: 'g2', name: 'Harbour' } }),
+    })
+    renderApp('/member/group-requests')
+    const approve = await screen.findByRole('button', { name: 'Approve Harbour' })
+    await waitFor(() => expect(approve).toBeEnabled())
+    await user.click(approve)
+    await screen.findByText(/Harbour was started/)
+    expect(api.calls.find((c) => c.key === 'POST /group-requests/r1/approve')?.body).toEqual({})
+  })
+
+  it('names the church of each request to the OWNER', async () => {
+    signedInAs(makeMe(), {
+      ...as('owner'),
+      [LIST]: () =>
+        json(200, {
+          items: [
+            REQUEST,
+            { ...REQUEST, id: 'r2', church: { id: 'church-2', name: 'Hope Church' } },
+          ],
+          total: 2,
+        }),
+    })
+    renderApp('/member/group-requests')
+    expect(await screen.findByText(/Grace Church/)).toBeVisible()
+    expect(screen.getByText(/Hope Church/)).toBeVisible()
   })
 
   it('says so when the request was decided meanwhile, or the name is taken', async () => {
@@ -199,6 +234,107 @@ describe('an ADMIN decides', () => {
     await user.click(screen.getByRole('button', { name: 'Start it' }))
     expect(await screen.findByText(/Harbour was started and you lead it/)).toBeVisible()
     expect(api.count('GET /me')).toBeGreaterThan(1)
+  })
+})
+
+describe('more refusals and failures', () => {
+  it('puts the other refusals of an approval in words', async () => {
+    const user = userEvent.setup({ delay: null })
+    for (const [code, words] of [
+      ['successor_required', /Choose who leads the .* you lead now/],
+      ['requester_unavailable', /no longer in the/],
+    ] as const) {
+      signedInAs(makeMe(), {
+        ...as('admin'),
+        [LIST]: () => json(200, { items: [REQUEST], total: 1 }),
+        'POST /group-requests/r1/approve': () => apiError(409, code),
+      })
+      const { unmount } = renderApp('/member/group-requests')
+      await user.click(await screen.findByRole('button', { name: 'Approve Harbour' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(words)
+      unmount()
+    }
+  })
+
+  it('offers the ADMIN’s own group members as successors and sends the choice', async () => {
+    const user = userEvent.setup({ delay: null })
+    const api = signedInAs(makeMe(), {
+      ...quiet,
+      'GET /me': () => json(200, makePerson({ status: 'admin' })),
+      [LIST]: () => json(200, { items: [], total: 0 }),
+      [MEMBERS]: () =>
+        json(200, {
+          items: [
+            {
+              id: 'p7',
+              full_name: 'Sam Searcher',
+              status: 'searcher',
+              home_group: { id: 'group-1', name: 'Riverside' },
+              status_set_by: null,
+              flagged_for_recheck: false,
+            },
+            {
+              id: 'p8',
+              full_name: 'Other Group',
+              status: 'searcher',
+              home_group: { id: 'g5', name: 'Elsewhere' },
+              status_set_by: null,
+              flagged_for_recheck: false,
+            },
+          ],
+          total: 2,
+        }),
+      'POST /group-requests': () =>
+        json(201, {
+          request: { ...REQUEST, state: 'approved' },
+          group: { id: 'g2', name: 'Harbour' },
+        }),
+    })
+    renderApp('/member/group-requests')
+    await user.type(await screen.findByLabelText(/^Name of the/), 'Harbour')
+    await screen.findByRole('option', { name: /Sam Searcher/ })
+    expect(screen.queryByRole('option', { name: /Other Group/ })).toBeNull()
+    await user.selectOptions(screen.getByLabelText(/Leads your current/), 'p7')
+    await user.click(screen.getByRole('button', { name: 'Start it' }))
+    await screen.findByText(/Harbour was started/)
+    expect(api.calls.find((c) => c.key === 'POST /group-requests')?.body).toEqual({
+      group_name: 'Harbour',
+      successor_id: 'p7',
+    })
+  })
+
+  it('still says the group was started when refreshing who they are fails', async () => {
+    const user = userEvent.setup({ delay: null })
+    let started = false
+    signedInAs(makeMe(), {
+      ...quiet,
+      'GET /me': () =>
+        started
+          ? apiError(503, 'service_unavailable')
+          : json(200, makePerson({ status: 'admin', home_group: null })),
+      [LIST]: () => json(200, { items: [], total: 0 }),
+      'POST /group-requests': () => {
+        started = true
+        return json(201, {
+          request: { ...REQUEST, state: 'approved' },
+          group: { id: 'g2', name: 'Harbour' },
+        })
+      },
+    })
+    renderApp('/member/group-requests')
+    await user.type(await screen.findByLabelText(/^Name of the/), 'Harbour')
+    await user.click(screen.getByRole('button', { name: 'Start it' }))
+    expect(await screen.findByText(/Harbour was started and you lead it/)).toBeVisible()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows an error when the list cannot be loaded', async () => {
+    signedInAs(makeMe(), {
+      ...as('provider'),
+      [LIST]: () => apiError(503, 'service_unavailable'),
+    })
+    renderApp('/member/group-requests')
+    expect(await screen.findByRole('alert')).toBeVisible()
   })
 })
 

@@ -164,15 +164,19 @@ def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
         c.id: c
         for c in db.scalars(select(Church).where(Church.id.in_({r.church_id for r in requests})))
     }
-    # One query for the groups the requesters belong to, to tell who leads one now.
-    led = {
-        g.id
+    # One query for the groups the requesters belong to: to tell who leads one now, and which.
+    groups = {
+        g.id: g
         for g in db.scalars(
             select(HomeGroup).where(
                 HomeGroup.id.in_({p.home_group_id for p in people.values() if p.home_group_id}),
                 HomeGroup.closed_at.is_(None),
             )
         )
+    }
+    led = {
+        g.id
+        for g in groups.values()
         if g.leader_id in people and people[g.leader_id].home_group_id == g.id
     }
     return [
@@ -184,6 +188,11 @@ def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
             state=r.state,
             created_at=r.created_at,
             requester_leads_a_group=people[r.requester_id].home_group_id in led,
+            requester_group=(
+                IdName(id=g.id, name=g.name)
+                if (g := groups.get(people[r.requester_id].home_group_id)) is not None  # type: ignore[arg-type]
+                else None
+            ),
         )
         for r in requests
     ]
