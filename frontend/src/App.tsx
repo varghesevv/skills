@@ -21,6 +21,7 @@ import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
 import MyGroup from './pages/person/leader/MyGroup'
 import HandoverPage from './pages/person/owner/Handover'
+import Views from './pages/person/owner/Views'
 import Churches from './pages/person/owner/Churches'
 import Groups from './pages/person/leader/Groups'
 import Flagged from './pages/person/leader/Flagged'
@@ -42,6 +43,7 @@ import {
   ADMIN_GROUPS,
   OWNER_CHURCHES,
   OWNER_HANDOVER,
+  OWNER_VIEWS,
   LEADER_GROUP,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
@@ -106,6 +108,9 @@ export default function App() {
                 </Route>
                 <Route path={OWNER_HANDOVER.slice(1)} element={<RequireAdmin />}>
                   <Route index element={<HandoverPage />} />
+                </Route>
+                <Route path={OWNER_VIEWS.slice(1)} element={<RequireOwner />}>
+                  <Route index element={<Views />} />
                 </Route>
                 <Route path={OWNER_CHURCHES.slice(1)} element={<RequireOwner />}>
                   <Route index element={<Churches />} />

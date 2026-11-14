@@ -10,6 +10,7 @@ import {
   LEADER_GROUP,
   OWNER_CHURCHES,
   OWNER_HANDOVER,
+  OWNER_VIEWS,
   LEADER_APPLICANTS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
@@ -56,6 +57,11 @@ export default function PersonLayout() {
             <Link className="btn btn-quiet" to={PERSON_MOVES}>
               {t('leader.nav.moves')}
             </Link>
+            {person.status === 'owner' && (
+              <Link className="btn btn-quiet" to={OWNER_VIEWS}>
+                {t('owner.nav.views')}
+              </Link>
+            )}
             {person.status === 'owner' && (
               <Link className="btn btn-quiet" to={OWNER_CHURCHES}>
                 {t('owner.nav.churches')}
