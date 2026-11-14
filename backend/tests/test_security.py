@@ -35,10 +35,9 @@ def test_the_production_hasher_keeps_strong_parameters() -> None:
 
     from tests.conftest import PRODUCTION_HASHER
 
-    parameters = PRODUCTION_HASHER._parameters
-    assert parameters.type is Type.ID
-    assert parameters.memory_cost >= 19_456  # 19 MiB, the OWASP minimum for argon2id
-    assert parameters.time_cost >= 2
+    assert PRODUCTION_HASHER.type is Type.ID
+    assert PRODUCTION_HASHER.memory_cost >= 19_456  # 19 MiB, the OWASP minimum for argon2id
+    assert PRODUCTION_HASHER.time_cost >= 2
 
 
 def test_access_token_round_trip() -> None:
