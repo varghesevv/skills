@@ -86,7 +86,7 @@ def test_a_leader_leaves_only_after_handing_the_group_on(
     # 4. Now he may leave: the account closes, the row and its history stay, nobody is revoked.
     assert leave(client, hal).status_code == 204
     assert login_status(client, hal) == 401
-    refresh(session, hal)
+    refresh(session, hal, other_lead)
     assert hal.person.closed_at is not None
     assert (
         session.scalar(select(func.count()).select_from(Person).where(Person.status == "revoked"))
@@ -248,7 +248,8 @@ def test_the_owner_hands_the_role_on_in_one_step(
         == 1
     )
     assert session.get(Church, church_two.id).admin_id == admin_two.id  # type: ignore[union-attr]
-    assert session.get(HomeGroup, group_two.id) is not None
+    kept = session.get(HomeGroup, group_two.id)
+    assert kept is not None and kept.closed_at is None and kept.leader_id == admin_two.id
 
     # 4. The new OWNER has the OWNER's reach, and the old one no longer has.
     assert client.get(f"{API}/owner/churches", headers=headers_of(client, ada)).status_code == 200
