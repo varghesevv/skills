@@ -167,6 +167,10 @@ void main() {
       'POST /group-requests': '201',
       'POST /group-requests/{request_id}/approve': '200',
       'POST /group-requests/{request_id}/decline': '204',
+      'GET /move-requests': '200',
+      'POST /move-requests': '201',
+      'POST /move-requests/{request_id}/agree': '200',
+      'POST /move-requests/{request_id}/cancel': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -521,6 +525,42 @@ void main() {
       expect(refsOf('GroupRequestCreated', 'group'), {'IdName'});
       expect(refsOf('GroupRequestCreated', 'request'), {'GroupRequestOut'});
       expect(refsOf('GroupStarted', 'group'), {'IdName'});
+    });
+
+    test('the move requests have the fields the app reads and sends', () {
+      expect(responseSchema('GET', '/move-requests', '200'), 'MoveRequestList');
+      expect(properties('MoveRequestList'), {'items', 'total'});
+      expect(
+        properties('MoveRequestOut'),
+        containsAll([
+          'id',
+          'person',
+          'from_group',
+          'to_group',
+          'agreed',
+          'state',
+          'created_at',
+        ]),
+      );
+      for (final field in ['person', 'from_group', 'to_group']) {
+        expect(refsOf('MoveRequestOut', field), {'IdName'}, reason: field);
+      }
+      expect(refsOf('MoveRequestOut', 'agreed'), {'MoveAgreements'});
+      expect(properties('MoveAgreements'), {
+        'person',
+        'from_leader',
+        'to_leader',
+      });
+      expect(properties('MoveRequestCreate'), {'home_group_id'});
+      expect(responseSchema('POST', '/move-requests', '201'), 'MoveRequestOut');
+      expect(
+        responseSchema('POST', '/move-requests/{request_id}/agree', '200'),
+        'MoveRequestOut',
+      );
+      expect(
+        responseSchema('POST', '/move-requests/{request_id}/cancel', '200'),
+        'MoveRequestOut',
+      );
     });
 
     test('only the person page has a number', () {

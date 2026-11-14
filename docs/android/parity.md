@@ -57,7 +57,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Profile (name, mobile) | `/me` | S5.10 | not started | |
 | Vouch from a received link (shows who asks) | new | S3.6 | done: paste the link, see who asks, vouch; tapping a link in another app needs app links (release setup) | `test/features/person/vouching_test.dart` |
 | Share my vouch link (S3.6); apply to become a provider (S3.9) | new | S3.6, S3.9 | done: a searcher asks to offer their skills, stays a searcher, and then has the same link and vouches as a new applicant | `test/features/person/vouching_test.dart`, `test/features/person/provider_upgrade_test.dart` |
-| Start a home group (request); move requests that concern me | new | S4.10b | in progress: starting a home group is done (any admitted member asks and sees their own requests; an ADMIN or the OWNER start one at once, naming who leads their current group when they lead one); move requests come in S4.10b-2 | `test/features/groups/group_requests_test.dart` |
+| Start a home group (request); move requests that concern me | new | S4.10b | done: starting a home group (any admitted member asks and sees their own requests; an ADMIN or the OWNER start one at once, naming who leads their current group when they lead one), and moving to another group by agreement (the member asks, the leader of the group they leave or join agrees once, either leader or the member cancels; every move that concerns the person is listed with who agreed; a leader is told to hand their group on first) | `test/features/groups/group_requests_test.dart` |
 | (new) Message a provider | none on web | S8 | backend B6 | |
 
 ### Verifier screens (VERIFIER and above, within scope)
@@ -126,7 +126,7 @@ Status column: "at least X" means that status or higher.
 | POST `/verifier/people/{id}/admit`, `/decline`; `/reconfirm`, `/move`; PUT `.../status` | at least VERIFIER | Verifier screens | S3.7 (admit, decline), S4.10a (reconfirm, revoke, reinstate), S4.10c (move, revoke a leader) | admit, decline, reconfirm, revoke and reinstate done |
 | POST, GET, DELETE `/verifier/group-invitations` | at least VERIFIER | Share group link | S4.10 | not started |
 | POST, GET `/group-requests`; POST `.../{id}/approve`, `/decline` | at least SEARCHER / ADMIN | Start a group, approve | S4.10b | done |
-| POST, GET `/move-requests`; POST `.../{id}/agree`, `/cancel` | admitted | Moves | S4.10 | not started |
+| POST, GET `/move-requests`; POST `.../{id}/agree`, `/cancel` | admitted | Moves | S4.10b | done |
 | PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10 | not started |
 | GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done on the older rules (role -> status) |
 | GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | in progress: labels screen done |

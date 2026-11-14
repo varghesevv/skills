@@ -8,3 +8,4 @@ const personNotifications = '/member/notifications';
 /// never part of an address that a router log or observer could record.
 const vouchLinkPath = '/vouch';
 const personGroupRequests = '/member/group-requests';
+const personMoves = '/member/moves';

@@ -53,4 +53,37 @@ class GroupRepository {
   Future<void> decline(String id) async {
     await _api.post('/group-requests/$id/decline');
   }
+
+  /// The moves that concern you, as the member or as the leader of either group, newest first.
+  Future<LeaderPage<MoveRow>> moves({int offset = 0}) async => parseResponse(
+    await _api.get(
+      '/move-requests',
+      query: {'limit': pageSize, 'offset': offset},
+    ),
+    (json) => LeaderPage(
+      items: [
+        for (final item in json['items'] as List)
+          MoveRow.fromJson(Map<String, Object?>.from(item as Map)),
+      ],
+      total: json['total'] as int,
+    ),
+  );
+
+  /// Asking is the member's own agreement; the leaders of both groups must agree too. Throws
+  /// `ApiException` (`request_open`, `invalid_choice`, `leads_a_group`, `not_admitted`).
+  Future<MoveRow> askToMove(String homeGroupId) async => parseResponse(
+    await _api.post('/move-requests', body: {'home_group_id': homeGroupId}),
+    MoveRow.fromJson,
+  );
+
+  /// Throws `ApiException` (`not_open`, `already_agreed`, `request_stale`, `not_found`).
+  Future<MoveRow> agree(String id) async => parseResponse(
+    await _api.post('/move-requests/$id/agree'),
+    MoveRow.fromJson,
+  );
+
+  Future<MoveRow> cancel(String id) async => parseResponse(
+    await _api.post('/move-requests/$id/cancel'),
+    MoveRow.fromJson,
+  );
 }

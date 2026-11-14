@@ -68,3 +68,53 @@ class GroupAsked {
   final GroupRequestRow request;
   final String? groupName;
 }
+
+/// A move of one member to another home group of their church, by agreement.
+class MoveRow {
+  const MoveRow({
+    required this.id,
+    required this.personId,
+    required this.personName,
+    required this.fromGroup,
+    required this.toGroup,
+    required this.agreedPerson,
+    required this.agreedFromLeader,
+    required this.agreedToLeader,
+    required this.state,
+    required this.createdAt,
+  });
+
+  factory MoveRow.fromJson(Map<String, Object?> json) {
+    final person = Map<String, Object?>.from(json['person'] as Map);
+    final agreed = Map<String, Object?>.from(json['agreed'] as Map);
+    return MoveRow(
+      id: json['id'] as String,
+      personId: person['id'] as String,
+      personName: person['name'] as String,
+      fromGroup: NamedRef.fromJson(
+        Map<String, Object?>.from(json['from_group'] as Map),
+      ),
+      toGroup: NamedRef.fromJson(
+        Map<String, Object?>.from(json['to_group'] as Map),
+      ),
+      agreedPerson: agreed['person'] as bool,
+      agreedFromLeader: agreed['from_leader'] as bool,
+      agreedToLeader: agreed['to_leader'] as bool,
+      state: json['state'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+
+  final String id;
+  final String personId;
+  final String personName;
+  final NamedRef fromGroup;
+  final NamedRef toGroup;
+  final bool agreedPerson;
+  final bool agreedFromLeader;
+  final bool agreedToLeader;
+
+  /// `open`, `completed` or `cancelled`.
+  final String state;
+  final DateTime createdAt;
+}

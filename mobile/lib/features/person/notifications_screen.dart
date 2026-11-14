@@ -30,6 +30,11 @@ String notificationText(AppText text, NotificationItem item) {
     'group_request_declined' => text('notifications.group_request_declined', {
       'name': name,
     }),
+    'move_requested' ||
+    'move_completed' ||
+    'move_cancelled' ||
+    'member_moved_in' ||
+    'member_moved_out' => text('notifications.${item.kind}', {'name': name}),
     'reinstated' => text('notifications.reinstated', {'name': name}),
     'provider_declined' => text('notifications.provider_declined', {
       'name': name,

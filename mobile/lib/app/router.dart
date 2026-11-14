@@ -14,6 +14,7 @@ import '../features/auth/welcome_screen.dart';
 import '../features/leader/applicants_screen.dart';
 import '../features/leader/leader_paths.dart';
 import '../features/groups/group_requests_screen.dart';
+import '../features/groups/moves_screen.dart';
 import '../features/leader/flagged_screen.dart';
 import '../features/leader/members_screen.dart';
 import '../features/leader/revoked_screen.dart';
@@ -145,6 +146,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'group-requests',
             builder: (context, state) => const GroupRequestsScreen(),
+          ),
+          GoRoute(
+            path: 'moves',
+            builder: (context, state) => const MovesScreen(),
           ),
           GoRoute(
             path: 'flagged',
