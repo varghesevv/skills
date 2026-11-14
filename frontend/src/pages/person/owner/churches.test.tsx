@@ -498,6 +498,22 @@ describe('replace the ADMIN of a church', () => {
     ).toBe(true)
   })
 
+  it('offers nobody as leader of their group when the old ADMIN is not in the loaded page', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(
+      makeMe(),
+      withChurches({
+        [MEMBERS]: () => json(200, { items: [member('m1', 'Mia Member', 'provider')], total: 90 }),
+      }),
+    )
+    renderApp('/member/churches')
+    await open(user)
+    await screen.findAllByRole('option', { name: /Mia Member/ })
+    const groupSelect = screen.getByLabelText(/^Leads the .* the old admin led/)
+    expect(groupSelect.querySelectorAll('option')).toHaveLength(1)
+    expect(screen.getByLabelText('New admin').querySelectorAll('option')).toHaveLength(2)
+  })
+
   it('forgets a refusal and the choices when the form is dropped and opened again', async () => {
     const user = userEvent.setup({ delay: null })
     signedInAs(
@@ -510,12 +526,14 @@ describe('replace the ADMIN of a church', () => {
     renderApp('/member/churches')
     await open(user)
     await user.selectOptions(await screen.findByLabelText('New admin'), 'm1')
+    await user.selectOptions(screen.getByLabelText('The old admin becomes'), 'searcher')
     await user.click(screen.getByRole('button', { name: 'Replace the admin' }))
     await screen.findByRole('alert')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     await open(user)
     expect(screen.queryByRole('alert')).toBeNull()
     expect(await screen.findByLabelText('New admin')).toHaveValue('')
+    expect(screen.getByLabelText('The old admin becomes')).toHaveValue('provider')
   })
 
   it('shows a loading line while the members come, and hides the close button meanwhile', async () => {

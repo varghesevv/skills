@@ -356,6 +356,7 @@ function ReplaceAdmin({
       setOpen(false)
       setSuccessor('')
       setGroupSuccessor('')
+      setFormer('provider')
       onDone(
         t('owner.admin.done', { name: result.admin.name, church: result.church.name }) +
           (result.former_admin_keeps_leading
@@ -371,15 +372,18 @@ function ReplaceAdmin({
     replace.reset()
     setSuccessor('')
     setGroupSuccessor('')
+    setFormer('provider')
     setOpen(false)
   }
   // The old ADMIN is not a choice for the new one.
   const others = (members.data?.items ?? []).filter((m) => m.id !== church.admin_id)
   // The leader of their group is one of its members: the old ADMIN's row says which group.
   const oldAdmin = (members.data?.items ?? []).find((m) => m.id === church.admin_id)
+  // Without their row (a long list is cut at the first page) nobody is offered: the server
+  // refuses a leader from another group, and "nobody" is what an ADMIN alone in it needs.
   const inTheirGroup = oldAdmin?.home_group
     ? others.filter((m) => m.home_group?.id === oldAdmin.home_group?.id)
-    : others
+    : []
   const options = (rows: typeof others, none?: string) => [
     { value: '', label: none ?? t('owner.admin.choose') },
     ...rows.map((m) => ({ value: m.id, label: `${m.full_name} · ${t(`status.${m.status}`)}` })),
