@@ -126,6 +126,16 @@ describe('revoke', () => {
     expect(api.count('GET /verifier/people/p1')).toBe(1)
   })
 
+  it('moves focus into the question and back to the button when it is dropped', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), person(detail()))
+    renderApp('/member/people/p1')
+    await user.click(await screen.findByRole('button', { name: 'Revoke Sam Searcher' }))
+    expect(screen.getByText(/Everyone whose status they set will be flagged/)).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Revoke Sam Searcher' })).toHaveFocus()
+  })
+
   it('can be cancelled', async () => {
     const user = userEvent.setup({ delay: null })
     const api = signedInAs(makeMe(), person(detail()))

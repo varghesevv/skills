@@ -131,6 +131,16 @@ describe('the list of churches', () => {
     expect(api.count('POST /owner/churches/church-2/close')).toBe(1)
   })
 
+  it('moves focus into the question to close, and back to the button when it is dropped', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), owner({ [CHURCHES]: () => json(200, { items: [OWN, HOPE], total: 2 }) }))
+    renderApp('/member/churches')
+    await user.click(await screen.findByRole('button', { name: 'Close Hope Church' }))
+    expect(screen.getByText(/It cannot be undone/)).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Close Hope Church' })).toHaveFocus()
+  })
+
   it('puts a refusal to close the own church in words', async () => {
     const user = userEvent.setup({ delay: null })
     signedInAs(

@@ -12,6 +12,7 @@ import type { PersonDetail } from '../../../api/types'
 import { usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
 import { ApiError } from '../../../api/http'
+import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { errorMessage } from '../../../shared/errors'
 import { Alert, SelectField } from '../../../shared/ui'
 import { leaderProblem } from './problems'
@@ -55,6 +56,7 @@ export default function StatusControls({
       await queryClient.invalidateQueries({ queryKey: [key] })
   }
   const [confirming, setConfirming] = useState(false)
+  const opener = useReturnFocus<HTMLButtonElement>(confirming)
   const [successor, setSuccessor] = useState('')
   const [group, setGroup] = useState('')
   const [to, setTo] = useState<'searcher' | 'provider'>('searcher')
@@ -189,6 +191,7 @@ export default function StatusControls({
         (!confirming ? (
           <div className="form-actions span-2">
             <button
+              ref={opener}
               type="button"
               className="btn btn-quiet"
               disabled={busy}
@@ -198,12 +201,19 @@ export default function StatusControls({
             </button>
           </div>
         ) : (
-          <div className="span-2" role="group" aria-label={t('leader.revoke.open', { name })}>
-            <p>
-              {isVerifier
+          <Confirm
+            label={t('leader.revoke.open', { name })}
+            warning={
+              isVerifier
                 ? t('leader.revoke.warningLeader', { name })
-                : t('leader.revoke.warning', { name })}
-            </p>
+                : t('leader.revoke.warning', { name })
+            }
+            confirmLabel={t('leader.revoke.confirm')}
+            busy={busy}
+            confirmDisabled={needsSuccessor && !successor}
+            onConfirm={() => revoke.mutate()}
+            onCancel={() => setConfirming(false)}
+          >
             {isVerifier && members.isPending && (
               <p role="status" className="muted">
                 {t('loading')}
@@ -247,25 +257,7 @@ export default function StatusControls({
                 ]}
               />
             )}
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={busy || (needsSuccessor && !successor)}
-                onClick={() => revoke.mutate()}
-              >
-                {t('leader.revoke.confirm')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-quiet"
-                disabled={busy}
-                onClick={() => setConfirming(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </div>
+          </Confirm>
         ))}
     </div>
   )

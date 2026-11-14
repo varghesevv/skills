@@ -77,7 +77,7 @@ Every page, for every status, works on phones, tablets and desktops. This is a r
 - **Mobile number:** shown as a greyed placeholder with a **Reveal** button on searcher search results and the provider detail page. Reveal calls the server; on a touch device (`hover: none` and `pointer: coarse`) it then opens the dialler, otherwise it shows the number as a `tel:` link. The number lives only in the component state. A refused request (limit reached) shows the wait time and the button stays available.
 - **Filters** on provider search: a slide-in panel on mobile and tablet, a side panel on desktop.
 - **Calendar** (unavailability): month view on tablet and desktop, list view on mobile.
-- **Dialogs and menus:** full-screen sheets on mobile, centred dialogs on larger screens; focus is trapped and returned on close.
+- **Dialogs and menus:** full-screen sheets on mobile, centred dialogs on larger screens; focus is trapped and returned on close. A question that must be answered before something that cannot be undone (decline, revoke, close a group or a church, accept the OWNER role) is one shared component: the warning receives focus when it appears, so it is read out, and focus returns to the button that opened it when the question is dropped.
 - **Images and charts:** scale to the container; charts redraw on resize.
 
 ### Usability on touch devices

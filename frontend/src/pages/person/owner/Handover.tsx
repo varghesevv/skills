@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { fetchMe } from '../../../api/auth'
@@ -16,6 +16,7 @@ import type { Handover } from '../../../api/types'
 import { useAuth, usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
 import { PERSON_HOME } from '../../../portals/config'
+import { Confirm, useReturnFocus } from '../../../shared/Confirm'
 import { errorMessage } from '../../../shared/errors'
 import { setFlash } from '../../../shared/flash'
 import { Alert, QueryBoundary, SelectField } from '../../../shared/ui'
@@ -85,15 +86,7 @@ function Waiting({
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
-  const warning = useRef<HTMLParagraphElement>(null)
-  const acceptButton = useRef<HTMLButtonElement>(null)
-  const opened = useRef(false)
-  // Focus follows the question: into it when it opens, back to the button when it is dropped.
-  useEffect(() => {
-    if (confirming) warning.current?.focus()
-    else if (opened.current) acceptButton.current?.focus()
-    opened.current = confirming || opened.current
-  }, [confirming])
+  const acceptButton = useReturnFocus<HTMLButtonElement>(confirming)
   const mine = request.owner.id === person.id
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['handover'] })
   const cancel = useMutation({
@@ -184,29 +177,14 @@ function Waiting({
           </button>
         </div>
       ) : (
-        <div role="group" aria-label={t('handover.accept')}>
-          <p ref={warning} tabIndex={-1}>
-            {t('handover.acceptWarning')}
-          </p>
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={busy}
-              onClick={() => accept.mutate()}
-            >
-              {t('handover.acceptConfirm')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-quiet"
-              disabled={busy}
-              onClick={() => setConfirming(false)}
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
+        <Confirm
+          label={t('handover.accept')}
+          warning={t('handover.acceptWarning')}
+          confirmLabel={t('handover.acceptConfirm')}
+          busy={busy}
+          onConfirm={() => accept.mutate()}
+          onCancel={() => setConfirming(false)}
+        />
       )}
     </div>
   )
