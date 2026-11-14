@@ -305,6 +305,7 @@ def generate(
             )
             status = "owner" if index == 0 else "admin"
             head_id = uuid.uuid4()
+            first_created = moment(90, 60)
             church = Church(id=uuid.uuid4(), name=name, admin_id=head_id)
             db.add(church)
             db.flush()
@@ -313,7 +314,7 @@ def generate(
                 church_id=church.id,
                 name=GROUP_NAMES[0],
                 leader_id=head_id,
-                created_at=moment(90, 60),
+                created_at=first_created,
             )
             db.add(first_group)
             db.flush()
@@ -324,7 +325,7 @@ def generate(
                 church,
                 first_group,
                 email=f"{first}.{last}@{DEMO_DATA_DOMAIN}".lower(),
-                created_at=moment(90, 61),
+                created_at=first_created,
             )
             head.id = head_id
             db.add(head)
@@ -346,12 +347,13 @@ def generate(
         people_by_group[first_group.id] = []
         for g in range(1, groups_per_church):
             group_id, leader_id = uuid.uuid4(), uuid.uuid4()
+            group_created = moment(75, 60)  # the leader is appointed when the group begins
             group = HomeGroup(
                 id=group_id,
                 church_id=church.id,
                 name=GROUP_NAMES[g % len(GROUP_NAMES)] + ("" if g < len(GROUP_NAMES) else f" {g}"),
                 leader_id=leader_id,
-                created_at=moment(75, 60),
+                created_at=group_created,
             )
             db.add(group)
             db.flush()
@@ -360,7 +362,7 @@ def generate(
                 if (index, g) == (0, 1)
                 else (rng.choice(["Leo", "Lara", "Luke"]), f"Leader{index}{g}")
             )
-            leader = person(fn, ln, "verifier", church, group, created_at=moment(75, 60))
+            leader = person(fn, ln, "verifier", church, group, created_at=group_created)
             leader.id = leader_id
             db.add(leader)
             leader.status_set_by_id = head.id
@@ -533,7 +535,7 @@ def generate(
                     PersonPhoneReveal(
                         revealer_id=rater.id,
                         provider_id=target.id,
-                        revealed_at=when - timedelta(minutes=rng.randint(1, 60)),
+                        revealed_at=max(start, when - timedelta(minutes=rng.randint(1, 60))),
                         channel=rng.choice(["dial", "show"]),
                         source=rng.choice(["search", "detail"]),
                     )

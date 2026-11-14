@@ -18,6 +18,7 @@ from app.models import (
     HomeGroup,
     Person,
     PersonLabel,
+    PersonPhoneReveal,
     PersonUnavailability,
     Rating,
     StatusChange,
@@ -156,6 +157,23 @@ def test_the_history_agrees_with_the_people_and_lies_in_the_past(session: Sessio
                 )
             ).first()
             assert admitted is not None and admitted <= rating.rated_on
+    for reveal in session.scalars(select(PersonPhoneReveal)):
+        for who in (reveal.revealer_id, reveal.provider_id):
+            admitted = session.scalars(
+                select(StatusChange.at).where(
+                    StatusChange.person_id == who,
+                    StatusChange.kind.in_(["admit", "appoint", "operator"]),
+                )
+            ).first()
+            assert admitted is not None and admitted <= reveal.revealed_at <= now
+    for group in session.scalars(select(HomeGroup)):
+        appointed = session.scalars(
+            select(StatusChange.at).where(
+                StatusChange.person_id == group.leader_id,
+                StatusChange.kind.in_(["appoint", "operator"]),
+            )
+        ).first()
+        assert appointed is not None and group.created_at <= appointed
 
 
 def test_a_person_has_one_origin(session: Session) -> None:
