@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/strings/app_text.dart';
 import '../../shared/widgets/message_banner.dart';
+import '../person/leads.dart';
 import '../person/person_providers.dart';
 import '../person/person_router_paths.dart';
 
@@ -93,6 +94,12 @@ class _MyGroupScreenState extends ConsumerState<MyGroupScreen> {
           _error = _problem(text, error);
           _confirming = false;
         });
+        // The group or the target may be gone: ask for the list again, so it drops out.
+        if (error is ApiException &&
+            (error.code == 'state_changed' || error.code == 'not_found')) {
+          final church = ref.read(personProvider)?.church.id;
+          if (church != null) ref.invalidate(homeGroupsProvider(church));
+        }
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -105,6 +112,19 @@ class _MyGroupScreenState extends ConsumerState<MyGroupScreen> {
     final person = ref.watch(personProvider);
     final group = person?.homeGroup;
     if (person == null || group == null) return const SizedBox.shrink();
+    // Only the leader of a group closes it. An ADMIN or the OWNER may belong to a group that
+    // someone else leads, or have handed theirs on.
+    if (!leadsOwnGroup(person)) {
+      return Scaffold(
+        appBar: AppBar(title: Text(text('myGroup.title'))),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(text('myGroup.notLeader')),
+          ),
+        ),
+      );
+    }
     final keeps = const {'admin', 'owner'}.contains(person.status.name);
     final groups = ref.watch(homeGroupsProvider(person.church.id));
     final name = {'group': group.name};

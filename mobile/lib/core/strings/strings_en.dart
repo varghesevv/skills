@@ -336,6 +336,8 @@ const stringsEn = <String, String>{
   'myGroup.nav': 'My {homegroup}',
   'myGroup.title': 'My {homegroup}',
   'myGroup.lead': 'You lead {group}. A {homegroup} closes when its leader is its last member, who then joins another {homegroup}. If others are in it, an {admin} or the {owner} choose a new leader first.',
+  'myGroup.notLeader':
+      'You do not lead a {homegroup} now, so there is nothing to close.',
   'myGroup.close.title': 'Close {group}',
   'myGroup.close.to': 'Join',
   'myGroup.close.choose': 'Choose…',

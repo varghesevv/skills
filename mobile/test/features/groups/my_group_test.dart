@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:skills_app/app/router.dart';
 import 'package:skills_app/core/auth/person_me.dart';
 import 'package:skills_app/features/person/person_providers.dart';
@@ -84,6 +85,33 @@ void main() {
       );
       expect(find.byKey(const Key('leader-group')), findsNothing);
     });
+
+    testWidgets(
+      'an ADMIN who does not lead a group has no tile, and the page says so',
+      (tester) async {
+        await pumpApp(
+          tester,
+          arrange: (adapter, store) {
+            signedInAsPerson(
+              adapter,
+              store,
+              personJson(
+                status: 'admin',
+                name: 'Ada Admin',
+                leader: 'Lena Leader',
+              ),
+            );
+            adapter.reply('GET', '/me/notifications', FakeReply(200, _noNotes));
+          },
+        );
+        expect(find.byKey(const Key('leader-group')), findsNothing);
+        GoRouter.of(tester.element(find.byType(Scaffold).first))
+            .go('/member/group');
+        await tester.pumpAndSettle();
+        expect(find.textContaining('do not lead a'), findsOneWidget);
+        expect(find.byKey(const Key('join')), findsNothing);
+      },
+    );
 
     test('only leaders may open the page', () {
       PersonMe of(String s) => PersonMe.fromJson(personJson(status: s));
@@ -207,6 +235,31 @@ void main() {
         expect(find.byKey(const Key('close-open')), findsOneWidget);
       });
     }
+
+    testWidgets(
+      'asks for the groups again after a closing that no longer fits',
+      (tester) async {
+        final app = await _open(
+          tester,
+          arrange: (a) => a.reply(
+            'POST',
+            '/home-groups/group-1/close',
+            FakeReply(409, _refusal('state_changed')),
+          ),
+        );
+        final before = app.adapter.count(
+          'GET',
+          '/churches/church-1/home-groups',
+        );
+        await _choose(tester, 'join', 'Harbour');
+        await tapKey(tester, 'close-open');
+        await tapKey(tester, 'close-confirm');
+        expect(
+          app.adapter.count('GET', '/churches/church-1/home-groups'),
+          greaterThan(before),
+        );
+      },
+    );
 
     testWidgets('says when there is no other group to join', (tester) async {
       await _open(
