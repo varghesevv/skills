@@ -300,6 +300,60 @@ void main() {
       expect(find.textContaining('Riverside'), findsWidgets);
     });
 
+    testWidgets(
+      'the list asks again when a person page is left, so a confirmed person goes',
+      (tester) async {
+        final app = await pumpApp(
+          tester,
+          arrange: (adapter, store) {
+            signedInAsPerson(adapter, store, _leader());
+            adapter
+              ..reply('GET', '/me/notifications', FakeReply(200, _noNotes))
+              ..reply(
+                'GET',
+                '/verifier/flagged',
+                FakeReply(
+                  200,
+                  _page([
+                    {
+                      'id': 'p2',
+                      'full_name': 'Sam Searcher',
+                      'status': 'searcher',
+                      'home_group': {'id': 'group-1', 'name': 'Riverside'},
+                      'status_set_by': {'name': 'Vic Verifier'},
+                    },
+                  ]),
+                ),
+              )
+              ..reply(
+                'GET',
+                '/verifier/people/p2',
+                FakeReply(200, _detail(flagged: true)),
+              )
+              ..reply(
+                'POST',
+                '/verifier/people/p2/reconfirm',
+                FakeReply(200, _statusResult('searcher', group: 'group-1')),
+              );
+          },
+        );
+        await tapKey(tester, 'leader-flagged');
+        await tapKey(tester, 'flagged-p2');
+        await tapKey(tester, 'reconfirm');
+        // The server no longer lists the person once the flag is cleared.
+        app.adapter.setReply(
+          'GET',
+          '/verifier/flagged',
+          FakeReply(200, _page([])),
+        );
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(app.adapter.count('GET', '/verifier/flagged'), 2);
+        expect(find.text('Sam Searcher'), findsNothing);
+        expect(find.text('Nobody needs a re-check.'), findsOneWidget);
+      },
+    );
+
     testWidgets('says when nobody needs a re-check', (tester) async {
       await pumpApp(
         tester,

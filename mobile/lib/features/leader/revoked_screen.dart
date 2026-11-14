@@ -99,7 +99,11 @@ class _RevokedScreenState extends ConsumerState<RevokedScreen> {
                     ].join(' · '),
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('$leaderPeople/${row.id}'),
+                  onTap: () async {
+                    await context.push('$leaderPeople/${row.id}');
+                    // The page may have changed the person: the list shows what is true now.
+                    if (mounted) await _load();
+                  },
                 ),
               if (_items.length < _total && _error == null)
                 TextButton(
