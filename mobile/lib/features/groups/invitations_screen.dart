@@ -79,6 +79,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null; // an earlier success must not stand next to a new failure
     });
     final text = ref.read(appTextProvider);
     try {

@@ -237,6 +237,38 @@ void main() {
       expect(find.textContaining('/join/$token'), findsOneWidget);
     });
 
+    testWidgets(
+      'a failed ending does not stand next to the success of an earlier one',
+      (tester) async {
+        final app = await _open(
+          tester,
+          rows: [
+            _row('i1', '2026-11-10', '2026-12-10'),
+            _row('i2', '2026-11-12', '2026-12-12'),
+          ],
+          arrange: (a) => a
+            ..reply('DELETE', '/verifier/group-invitations/i1', FakeReply(204))
+            ..reply(
+              'DELETE',
+              '/verifier/group-invitations/i2',
+              FakeReply(500, _refusal('server_error')),
+            ),
+        );
+        app.adapter.setReply(
+          'GET',
+          '/verifier/group-invitations',
+          FakeReply(200, {
+            'items': [_row('i2', '2026-11-12', '2026-12-12')],
+          }),
+        );
+        await tapKey(tester, 'revoke-invitation-i1');
+        expect(find.text('The link no longer works.'), findsOneWidget);
+        await tapKey(tester, 'revoke-invitation-i2');
+        expect(find.text('The link no longer works.'), findsNothing);
+        expect(find.textContaining('went wrong'), findsWidgets);
+      },
+    );
+
     testWidgets('says so for a leader who handed their group on', (
       tester,
     ) async {
