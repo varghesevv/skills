@@ -105,4 +105,24 @@ class GroupRepository {
       (json['leader'] as Map)['name'] as String,
     ),
   );
+
+  /// The links to the leader's group that still work, without tokens. Throws `ApiException`
+  /// (`no_home_group` for an ADMIN or the OWNER who has handed their group on).
+  Future<List<GroupInvitationRow>> invitations() async => parseResponse(
+    await _api.get('/verifier/group-invitations'),
+    (json) => [
+      for (final item in json['items'] as List)
+        GroupInvitationRow.fromJson(Map<String, Object?>.from(item as Map)),
+    ],
+  );
+
+  /// The token is in the answer once; only a hash is kept.
+  Future<GroupInvitationCreated> createInvitation() async => parseResponse(
+    await _api.post('/verifier/group-invitations'),
+    GroupInvitationCreated.fromJson,
+  );
+
+  Future<void> revokeInvitation(String id) async {
+    await _api.delete('/verifier/group-invitations/$id');
+  }
 }

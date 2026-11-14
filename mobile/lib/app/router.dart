@@ -14,6 +14,7 @@ import '../features/auth/welcome_screen.dart';
 import '../features/leader/applicants_screen.dart';
 import '../features/leader/leader_paths.dart';
 import '../features/groups/group_requests_screen.dart';
+import '../features/groups/invitations_screen.dart';
 import '../features/groups/moves_screen.dart';
 import '../features/leader/admin_groups_screen.dart';
 import '../features/leader/flagged_screen.dart';
@@ -50,6 +51,7 @@ bool personMayVisit(PersonMe person, String path) {
       path == leaderMembers ||
       path == leaderRevoked ||
       path == leaderFlagged ||
+      path == leaderInvitations ||
       path.startsWith('$leaderPeople/');
   // The groups of the church are for an ADMIN or the OWNER only.
   final isAdminPage = path == adminGroups;
@@ -160,6 +162,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'groups',
             builder: (context, state) => const AdminGroupsScreen(),
+          ),
+          GoRoute(
+            path: 'invitations',
+            builder: (context, state) => const InvitationsScreen(),
           ),
           GoRoute(
             path: 'flagged',

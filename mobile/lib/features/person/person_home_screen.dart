@@ -152,6 +152,13 @@ class _Member extends ConsumerWidget {
               onTap: () => context.push(adminGroups),
             ),
           ListTile(
+            key: const Key('leader-invitations'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('invitations.nav')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(leaderInvitations),
+          ),
+          ListTile(
             key: const Key('leader-flagged'),
             contentPadding: EdgeInsets.zero,
             title: Text(text('leader.nav.flagged')),

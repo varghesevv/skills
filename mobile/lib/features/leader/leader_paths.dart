@@ -5,3 +5,4 @@ const leaderPeople = '/member/people';
 const leaderRevoked = '/member/revoked';
 const leaderFlagged = '/member/flagged';
 const adminGroups = '/member/groups';
+const leaderInvitations = '/member/invitations';
