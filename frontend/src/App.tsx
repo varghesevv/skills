@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import {
   RequireAuth,
+  RequireAdmin,
   RequireLeader,
   RequireOlderAccount,
   RequirePerson,
@@ -17,6 +18,7 @@ import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
+import Groups from './pages/person/leader/Groups'
 import Flagged from './pages/person/leader/Flagged'
 import GroupRequests from './pages/person/GroupRequests'
 import Members from './pages/person/leader/Members'
@@ -31,6 +33,7 @@ import VouchPage from './pages/person/VouchPage'
 import ResetPassword from './pages/ResetPassword'
 import {
   LEADER_APPLICANTS,
+  ADMIN_GROUPS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
   LEADER_REVOKED,
@@ -86,6 +89,9 @@ export default function App() {
               <Route element={<RequireLeader />}>
                 <Route path={LEADER_APPLICANTS.slice(1)} element={<Applicants />} />
                 <Route path={LEADER_MEMBERS.slice(1)} element={<Members />} />
+                <Route path={ADMIN_GROUPS.slice(1)} element={<RequireAdmin />}>
+                  <Route index element={<Groups />} />
+                </Route>
                 <Route path={LEADER_FLAGGED.slice(1)} element={<Flagged />} />
                 <Route path={LEADER_REVOKED.slice(1)} element={<Revoked />} />
                 <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />
