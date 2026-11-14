@@ -2,3 +2,4 @@
 - Role words: use the actual `user_type` values or the documented neutral names; never invent states, endpoints or settings that the specs do not define without saying they are proposals.
 - No secrets, private team notes (church name, pricing, domain, legal) or real personal data in documents. Commands and examples must use placeholders.
 - Decisions that change the architecture need an ADR (`docs/adr/`), and new settings need a runbook line.
+- The verification model has two parts that must agree: the prose of `docs/verification.md` and its Data model summary. A change to one without the other is a finding. Decisions go in `docs/verification-decisions.md` (D-numbers); the state block and checklist of `docs/roadmap-verification-model.md` are updated in each PR of the roadmap.

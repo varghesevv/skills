@@ -43,6 +43,18 @@ os.environ["REVEAL_MAX_PER_DAY"] = "5"
 # A random signing key for this test run only; nothing secret is stored in the source.
 os.environ.setdefault("JWT_SECRET", secrets.token_hex(32))
 
+# The suite hashes and checks passwords hundreds of times. With the production cost of argon2
+# (64 MiB, three passes) that is about 70 ms a call on a laptop and several times more on the small
+# CI runner: more than half of the run. Tests use the cheapest parameters argon2 allows (the hash is
+# still argon2id). The production hasher is kept here and test_security checks it stays strong.
+from argon2 import PasswordHasher  # noqa: E402
+
+from app.core import security  # noqa: E402
+
+PRODUCTION_HASHER = security._hasher
+security._hasher = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
+security._DUMMY_HASH = security._hasher.hash(secrets.token_urlsafe(16))
+
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 TEST_DB_NAME = "skills_test"
 MIGRATION_DB_NAME = "skills_migration_test"
