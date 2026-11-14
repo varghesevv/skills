@@ -9,11 +9,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
-from app.core.security import Principal
+from app.models.church import Person
 from app.models.reports import ReportRun, ReportSchedule
 from app.reports.definitions import REGISTRY, REPORTS, get_definition
 from app.reports.render import to_csv, to_json
@@ -31,8 +31,10 @@ from app.schemas.reports import (
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
-AdminOnly = Annotated[Principal, Depends(require_roles("admin"))]
-Reader = Annotated[Principal, Depends(require_roles("admin", "organisation"))]
+# Reports are for the OWNER (every church) and an ADMIN (their own church, always). Run history,
+# kept files and schedules are the OWNER's alone (docs/specification/05-reports.md).
+OwnerOnly = Annotated[Person, Depends(current_person("owner"))]
+Reader = Annotated[Person, Depends(current_person("admin"))]
 
 
 def _definition(name: str) -> ReportDef:
@@ -67,8 +69,8 @@ def _schedule_out(schedule: ReportSchedule) -> ScheduleOut:
 
 
 @router.get("")
-def list_reports(principal: Reader) -> list[ReportInfo]:
-    """The reports you may run. Organisations see only reports limited to their own data."""
+def list_reports(person: Reader) -> list[ReportInfo]:
+    """The reports you may run. An ADMIN sees only those limited to their own church."""
     return [
         ReportInfo(
             name=report.name,
@@ -78,7 +80,7 @@ def list_reports(principal: Reader) -> list[ReportInfo]:
             filters=list(report.filters),
         )
         for report in REPORTS
-        if principal.user_type == "admin" or report.org_scoped
+        if person.status == "owner" or report.admin_scoped
     ]
 
 
@@ -87,7 +89,7 @@ def list_reports(principal: Reader) -> list[ReportInfo]:
 
 @router.get("/runs")
 def list_runs(
-    _: AdminOnly,
+    _: OwnerOnly,
     db: Session = Depends(get_session),
     paging: Pagination = Depends(pagination),
     report_name: str | None = None,
@@ -117,7 +119,7 @@ def list_runs(
 @router.get("/runs/{run_id}/download")
 def download_run(
     run_id: uuid.UUID,
-    _: AdminOnly,
+    _: OwnerOnly,
     db: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
     output_format: Annotated[Literal["csv", "html"], Query(alias="format")] = "csv",
@@ -135,7 +137,7 @@ def download_run(
 
 
 @router.get("/schedules")
-def list_schedules(_: AdminOnly, db: Session = Depends(get_session)) -> list[ScheduleOut]:
+def list_schedules(_: OwnerOnly, db: Session = Depends(get_session)) -> list[ScheduleOut]:
     rows = db.scalars(select(ReportSchedule).order_by(ReportSchedule.report_name)).all()
     return [_schedule_out(row) for row in rows]
 
@@ -144,7 +146,7 @@ def list_schedules(_: AdminOnly, db: Session = Depends(get_session)) -> list[Sch
 def update_schedule(
     report_name: str,
     body: ScheduleUpdate,
-    _: AdminOnly,
+    _: OwnerOnly,
     db: Session = Depends(get_session),
 ) -> ScheduleOut:
     """Change when a report runs. The worker picks the change up within a minute."""
@@ -173,25 +175,26 @@ def update_schedule(
 @router.get("/{name}", response_model=None)
 def run_on_demand(
     name: str,
-    principal: Reader,
+    person: Reader,
     db: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
     date_from: Annotated[date | None, Query(alias="from")] = None,
     date_to: Annotated[date | None, Query(alias="to")] = None,
     output_format: Annotated[Literal["json", "csv"], Query(alias="format")] = "json",
-    user_type: Literal["freelancer", "workhost", "organisation", "admin"] | None = None,
+    status: Literal["revoked", "pending", "searcher", "provider", "verifier", "admin", "owner"]
+    | None = None,
     skill: Annotated[str | None, Query(max_length=100)] = None,
     currency: Annotated[str | None, Query(min_length=3, max_length=3)] = None,
     min_ratings: Annotated[int, Query(ge=1, le=1000)] = 1,
-    org_id: uuid.UUID | None = None,
+    church_id: uuid.UUID | None = None,
 ) -> Response:
     """Run a report now and return it as JSON or CSV. Nothing is stored."""
     definition = _definition(name)
-    org_filter = org_id
-    if principal.user_type == "organisation":
-        if not definition.org_scoped:
+    church_filter = church_id
+    if person.status != "owner":
+        if not definition.admin_scoped:
             raise ApiError(403, "forbidden", "You are not allowed to run this report")
-        org_filter = principal.user_id  # an organisation only ever sees its own data
+        church_filter = person.church_id  # an ADMIN only ever sees their own church
     if (date_from is None) != (date_to is None):
         raise ApiError(422, "report_window", "Give both from and to, or neither")
     timezone = settings.report_timezone
@@ -204,11 +207,11 @@ def run_on_demand(
             start=start,
             end=end,
             timezone=timezone,
-            user_type=user_type,
+            status=status,
             skill=skill,
             currency=currency,
             min_ratings=min_ratings,
-            org_id=org_filter,
+            church_id=church_filter,
         )
         result = build_report(db, name, params)
     except ReportError as exc:
@@ -228,7 +231,7 @@ def run_and_store(
     name: str,
     body: RunRequest,
     response: Response,
-    _: AdminOnly,
+    _: OwnerOnly,
     db: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> ReportRunOut:

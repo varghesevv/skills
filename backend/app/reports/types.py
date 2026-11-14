@@ -50,11 +50,13 @@ class ReportParams:
     start: datetime
     end: datetime
     timezone: str
-    user_type: str | None = None
+    status: str | None = None
     skill: str | None = None
     currency: str | None = None
     min_ratings: int = 1
-    org_id: uuid.UUID | None = None
+    # Limits the data to one church. An ADMIN's reports always carry their church; the OWNER's
+    # run over every church unless one is chosen. Scheduled runs are the OWNER's, whole platform.
+    church_id: uuid.UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -65,4 +67,4 @@ class ReportDef:
     description: str
     build: Callable[[Session, ReportParams], list[Section]]
     filters: tuple[str, ...] = ()
-    org_scoped: bool = False  # organisations may run it, limited to their own data
+    admin_scoped: bool = False  # an ADMIN may run it, limited to their church
