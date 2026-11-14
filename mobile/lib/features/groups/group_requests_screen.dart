@@ -409,14 +409,16 @@ class _RequestTileState extends ConsumerState<_RequestTile> {
   bool _busy = false;
   String? _error;
 
-  Future<void> _run(Future<String> Function() action) async {
+  Future<void> _run(Future<String> Function(AppText text) action) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     final text = ref.read(appTextProvider);
     try {
-      widget.onDone(await action());
+      final message = await action(text);
+      // The screen may have been left while the answer was on its way.
+      if (mounted) widget.onDone(message);
     } catch (error) {
       if (mounted) setState(() => _error = _problem(text, error));
     } finally {
@@ -480,17 +482,14 @@ class _RequestTileState extends ConsumerState<_RequestTile> {
               onPressed:
                   _busy || (needsMembers && _needsChoice && _successor.isEmpty)
                   ? null
-                  : () => _run(() async {
+                  : () => _run((t) async {
                       final name = await ref
                           .read(groupRepositoryProvider)
                           .approve(
                             row.id,
                             successorId: _successor.isEmpty ? null : _successor,
                           );
-                      return ref.read(appTextProvider)(
-                        'groupRequests.approved',
-                        {'name': name},
-                      );
+                      return t('groupRequests.approved', {'name': name});
                     }),
               child: Text(
                 text('groupRequests.approve', {'group': row.groupName}),
@@ -500,11 +499,9 @@ class _RequestTileState extends ConsumerState<_RequestTile> {
               key: Key('decline-${row.id}'),
               onPressed: _busy
                   ? null
-                  : () => _run(() async {
+                  : () => _run((t) async {
                       await ref.read(groupRepositoryProvider).decline(row.id);
-                      return ref.read(appTextProvider)(
-                        'groupRequests.declined',
-                      );
+                      return t('groupRequests.declined');
                     }),
               child: Text(
                 text('groupRequests.decline', {'group': row.groupName}),

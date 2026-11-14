@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -205,6 +207,37 @@ void main() {
       expect(post.body, {});
       expect(find.byKey(const Key('approve-r1')), findsNothing);
     });
+
+    testWidgets(
+      'does not fail when the screen is left before the answer comes',
+      (tester) async {
+        final gate = Completer<void>();
+        await _open(
+          tester,
+          _admin(leads: false),
+          arrange: (a) => a
+            ..setReply(
+              'GET',
+              '/group-requests',
+              FakeReply(200, _page([_request()])),
+            )
+            ..reply(
+              'POST',
+              '/group-requests/r1/decline',
+              FakeReply(204, null, const {}, gate.future),
+            ),
+        );
+        final decline = find.byKey(const Key('decline-r1'));
+        await tester.ensureVisible(decline);
+        await tester.tap(decline);
+        await tester.pump();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('declines a request', (tester) async {
       final app = await _open(
