@@ -99,10 +99,14 @@ class LeaderRepository {
 
   /// Revoke someone below you. Throws `ApiException` (`status_not_allowed`, `already_revoked`,
   /// `successor_required` for a leader, `not_found`).
-  Future<StatusResult> revoke(String id) async => parseResponse(
-    await _api.put('/verifier/people/$id/status', body: {'to': 'revoked'}),
-    StatusResult.fromJson,
-  );
+  Future<StatusResult> revoke(String id, {String? successorId}) async =>
+      parseResponse(
+        await _api.put(
+          '/verifier/people/$id/status',
+          body: {'to': 'revoked', 'successor_id': ?successorId},
+        ),
+        StatusResult.fromJson,
+      );
 
   /// Bring a revoked person back into a home group of their church, as a searcher or a provider.
   Future<StatusResult> reinstate(
@@ -121,5 +125,16 @@ class LeaderRepository {
   Future<StatusResult> reconfirm(String id) async => parseResponse(
     await _api.post('/verifier/people/$id/reconfirm'),
     StatusResult.fromJson,
+  );
+
+  /// An ADMIN or the OWNER move an admitted member who leads nothing to another open group of the
+  /// church. Throws `ApiException` (`leads_a_group`, `invalid_choice`, `not_found`).
+  Future<IdName> move(String id, String homeGroupId) async => parseResponse(
+    await _api.post(
+      '/verifier/people/$id/move',
+      body: {'home_group_id': homeGroupId},
+    ),
+    (json) =>
+        IdName.fromJson(Map<String, Object?>.from(json['home_group'] as Map)),
   );
 }

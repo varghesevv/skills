@@ -75,7 +75,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
 | Group requests: approve, decline | new | S4.10b | done: an ADMIN sees the waiting requests of the church (the OWNER those of every church) and approves or declines each; when the requester leads a group, the successor comes from that group's members (`requester_group`), required unless the requester is alone in it; a failed member list keeps Approve off with a retry | `test/features/groups/group_requests_test.dart` |
-| Appoint or replace a group leader; move members; the church's people and revoked list | new | S4.10 | not started | |
+| Appoint or replace a group leader; move members; the church's people and revoked list | new | S4.10c | done: the ADMIN's menu has the groups of the church with their leaders, each with a way to choose who leads it from now on (from that group's members; the old leader becomes a provider or a searcher, or keeps their status as an ADMIN or the OWNER), and on a member's page a move to another group of the church; an ADMIN or the OWNER also revoke a VERIFIER there together with the successor of their group; the church's people and the revoked list are the Members and Revoked screens, which an ADMIN sees for the whole church | `test/features/leader/admin_test.dart` |
 | Church reports (table; CSV via share sheet) | RP-01, RP-03, RP-05, RP-07, RP-09 | after S5 | not started | |
 
 ### OWNER (web only, no app screens)
@@ -123,11 +123,11 @@ Status column: "at least X" means that status or higher.
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any except REVOKED | Notifications | S3.6 | done |
 | POST `/vouch-links/lookup`, `/vouch-links/vouch` (token in the body); DELETE `/vouches/{id}` | at least SEARCHER | Vouch from a link, withdraw | S3.6 | done |
 | GET `/verifier/applicants`, `/members`, `/people/{id}`; `/revoked`, `/flagged` | at least VERIFIER | Verifier screens | S3.7 (applicants, members, one person), S4.10a (revoked, flagged) | done |
-| POST `/verifier/people/{id}/admit`, `/decline`; `/reconfirm`, `/move`; PUT `.../status` | at least VERIFIER | Verifier screens | S3.7 (admit, decline), S4.10a (reconfirm, revoke, reinstate), S4.10c (move, revoke a leader) | admit, decline, reconfirm, revoke and reinstate done |
+| POST `/verifier/people/{id}/admit`, `/decline`; `/reconfirm`, `/move`; PUT `.../status` | at least VERIFIER | Verifier screens | S3.7 (admit, decline), S4.10a (reconfirm, revoke, reinstate), S4.10c (move, revoke a VERIFIER) | done |
 | POST, GET, DELETE `/verifier/group-invitations` | at least VERIFIER | Share group link | S4.10 | not started |
 | POST, GET `/group-requests`; POST `.../{id}/approve`, `/decline` | at least SEARCHER / ADMIN | Start a group, approve | S4.10b | done |
 | POST, GET `/move-requests`; POST `.../{id}/agree`, `/cancel` | admitted | Moves | S4.10b | done |
-| PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10 | not started |
+| PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10c (leader), S4.10d (close; the OWNER's `/churches/{id}/admin` is web only, decision D-11) | leader done |
 | GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done on the older rules (role -> status) |
 | GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | in progress: labels screen done |
 | GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | ratings received done; detail not started |

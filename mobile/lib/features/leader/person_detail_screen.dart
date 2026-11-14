@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
+import '../../core/auth/person_me.dart';
 import '../../core/providers.dart';
+import '../../core/session/session_controller.dart';
 import '../../core/strings/app_text.dart';
 import '../../shared/widgets/message_banner.dart';
 import 'admit_controls.dart';
 import 'data/leader_models.dart';
 import 'leader_providers.dart';
+import 'move_controls.dart';
 import 'status_controls.dart';
 
 const _kinds = {
@@ -134,6 +137,7 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     } else {
       body = _View(
         detail: detail,
+        actor: ref.watch(personProvider),
         text: text,
         done: _done,
         onDone: _onDone,
@@ -154,6 +158,7 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
 class _View extends StatelessWidget {
   const _View({
     required this.detail,
+    required this.actor,
     required this.text,
     required this.done,
     required this.onDone,
@@ -161,6 +166,9 @@ class _View extends StatelessWidget {
   });
 
   final PersonDetail detail;
+
+  /// The person using the app: what they may do on this page depends on their status.
+  final PersonMe? actor;
   final AppText text;
   final String? done;
   final void Function(String message, Outcome outcome) onDone;
@@ -242,6 +250,10 @@ class _View extends StatelessWidget {
         ],
         const SizedBox(height: 8),
         StatusControls(detail: detail, onDone: onDone),
+        if ((actor?.status == PersonStatus.admin ||
+                actor?.status == PersonStatus.owner) &&
+            (detail.status == 'searcher' || detail.status == 'provider'))
+          MoveControls(detail: detail, onDone: onDone),
         _heading(context, text('leader.person.vouches')),
         if (detail.vouches.isEmpty) Text(text('leader.person.none')),
         for (final voucher in detail.vouches)

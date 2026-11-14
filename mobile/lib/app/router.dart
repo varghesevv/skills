@@ -15,6 +15,7 @@ import '../features/leader/applicants_screen.dart';
 import '../features/leader/leader_paths.dart';
 import '../features/groups/group_requests_screen.dart';
 import '../features/groups/moves_screen.dart';
+import '../features/leader/admin_groups_screen.dart';
 import '../features/leader/flagged_screen.dart';
 import '../features/leader/members_screen.dart';
 import '../features/leader/revoked_screen.dart';
@@ -50,12 +51,17 @@ bool personMayVisit(PersonMe person, String path) {
       path == leaderRevoked ||
       path == leaderFlagged ||
       path.startsWith('$leaderPeople/');
+  // The groups of the church are for an ADMIN or the OWNER only.
+  final isAdminPage = path == adminGroups;
   return switch (person.status) {
     PersonStatus.revoked => false,
     PersonStatus.pending => path == personNotifications,
     _ =>
       (path.startsWith('$personHome/') || path == vouchLinkPath) &&
-          (!isLeaderPage || person.status.isLeader),
+          (!isLeaderPage || person.status.isLeader) &&
+          (!isAdminPage ||
+              person.status == PersonStatus.admin ||
+              person.status == PersonStatus.owner),
   };
 }
 
@@ -150,6 +156,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'moves',
             builder: (context, state) => const MovesScreen(),
+          ),
+          GoRoute(
+            path: 'groups',
+            builder: (context, state) => const AdminGroupsScreen(),
           ),
           GoRoute(
             path: 'flagged',

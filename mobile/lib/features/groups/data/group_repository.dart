@@ -86,4 +86,23 @@ class GroupRepository {
     await _api.post('/move-requests/$id/cancel'),
     MoveRow.fromJson,
   );
+
+  /// An ADMIN or the OWNER replace the leader of a group, or hand on their own, with a member of
+  /// it. [former] is `provider` or `searcher` for a VERIFIER, `keep` for an ADMIN or the OWNER.
+  /// Throws `ApiException` (`successor_not_member`, `invalid_choice`, `status_not_allowed`,
+  /// `state_changed`, `not_found`). Answers the group's name and the new leader's name.
+  Future<(String group, String leader)> replaceLeader(
+    String groupId,
+    String successorId,
+    String former,
+  ) async => parseResponse(
+    await _api.put(
+      '/home-groups/$groupId/leader',
+      body: {'successor_id': successorId, 'former_leader_status': former},
+    ),
+    (json) => (
+      (json['group'] as Map)['name'] as String,
+      (json['leader'] as Map)['name'] as String,
+    ),
+  );
 }

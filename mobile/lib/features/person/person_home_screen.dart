@@ -142,6 +142,15 @@ class _Member extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(leaderMembers),
           ),
+          if (person.status == PersonStatus.admin ||
+              person.status == PersonStatus.owner)
+            ListTile(
+              key: const Key('admin-groups'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(text('admin.nav.groups')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(adminGroups),
+            ),
           ListTile(
             key: const Key('leader-flagged'),
             contentPadding: EdgeInsets.zero,
