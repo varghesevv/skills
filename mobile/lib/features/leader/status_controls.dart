@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
+import '../../core/auth/person_me.dart';
 import '../../core/strings/app_text.dart';
 import '../../shared/widgets/message_banner.dart';
 import '../person/person_providers.dart';
@@ -31,6 +32,11 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
   String? _error;
   String _group = '';
   String _to = 'searcher';
+  // The members who could lead the group of a VERIFIER who is revoked.
+  List<MemberRow>? _members;
+  int _membersTotal = 0;
+  Object? _membersError;
+  String _successor = '';
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
@@ -52,6 +58,32 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
 
   String get _name => widget.detail.fullName;
 
+  bool get _isVerifier => widget.detail.status == 'verifier';
+
+  Future<void> _loadMembers() async {
+    final group = widget.detail.homeGroupId;
+    if (group == null) {
+      setState(() => _members = const []);
+      return;
+    }
+    setState(() => _membersError = null);
+    try {
+      final page = await ref
+          .read(leaderRepositoryProvider)
+          .members(homeGroupId: group);
+      if (!mounted) return;
+      setState(() {
+        _members = [
+          for (final m in page.items)
+            if (m.id != widget.detail.id) m,
+        ];
+        _membersTotal = page.total;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _membersError = error);
+    }
+  }
+
   /// The history line of a change: made now, by the person using the app.
   HistoryEntry _entry(String kind, String to) => HistoryEntry(
     kind: kind,
@@ -62,7 +94,12 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
   );
 
   Future<void> _revoke() => _run(() async {
-    await ref.read(leaderRepositoryProvider).revoke(widget.detail.id);
+    await ref
+        .read(leaderRepositoryProvider)
+        .revoke(
+          widget.detail.id,
+          successorId: _isVerifier && _successor.isNotEmpty ? _successor : null,
+        );
     if (!mounted) return;
     setState(() => _confirming = false);
     widget.onDone(
@@ -121,10 +158,15 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
     final detail = widget.detail;
     final name = {'name': _name};
     final revoked = detail.status == 'revoked';
+    final actor = ref.watch(personProvider);
+    final actorIsAdmin =
+        actor != null &&
+        (actor.status == PersonStatus.admin ||
+            actor.status == PersonStatus.owner);
     final canRevoke =
         !revoked &&
         detail.status != 'pending' &&
-        !_leads.contains(detail.status);
+        (!_leads.contains(detail.status) || (_isVerifier && actorIsAdmin));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -142,9 +184,14 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
         if (revoked) _reinstateForm(text, name),
         if (!revoked &&
             _leads.contains(detail.status) &&
-            detail.status != 'owner') ...[
+            detail.status != 'owner' &&
+            !canRevoke) ...[
           const SizedBox(height: 8),
-          Text(text('leader.revoke.leads', name)),
+          Text(
+            _isVerifier
+                ? text('leader.revoke.adminOnly', name)
+                : text('leader.revoke.leads', name),
+          ),
         ],
         if (canRevoke) ...[
           const SizedBox(height: 8),
@@ -153,7 +200,15 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
               key: const Key('revoke-open'),
               onPressed: _busy
                   ? null
-                  : () => setState(() => _confirming = true),
+                  : () {
+                      setState(() {
+                        _confirming = true;
+                        // A list and a choice from an earlier opening must not be offered again.
+                        _members = null;
+                        _successor = '';
+                      });
+                      if (_isVerifier) _loadMembers();
+                    },
               child: Text(text('leader.revoke.open', name)),
             )
           else
@@ -163,11 +218,18 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(text('leader.revoke.warning', name)),
+                  Text(
+                    _isVerifier
+                        ? text('leader.revoke.warningLeader', name)
+                        : text('leader.revoke.warning', name),
+                  ),
+                  if (_isVerifier) _successorPicker(text),
                   const SizedBox(height: 8),
                   FilledButton(
                     key: const Key('revoke-confirm'),
-                    onPressed: _busy ? null : _revoke,
+                    onPressed: _busy || (_isVerifier && _needsSuccessor)
+                        ? null
+                        : _revoke,
                     child: Text(text('leader.revoke.confirm')),
                   ),
                   TextButton(
@@ -181,6 +243,72 @@ class _StatusControlsState extends ConsumerState<StatusControls> {
               ),
             ),
         ],
+      ],
+    );
+  }
+
+  /// A choice of successor is needed while the members load or fail, and when there are others.
+  bool get _needsSuccessor {
+    final members = _members;
+    return _membersError != null ||
+        members == null ||
+        (members.isNotEmpty && _successor.isEmpty);
+  }
+
+  Widget _successorPicker(AppText text) {
+    final members = _members;
+    if (_membersError != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MessageBanner(text.error(_membersError!)),
+          FilledButton(
+            key: const Key('retry-members'),
+            onPressed: _loadMembers,
+            child: Text(text('common.retry')),
+          ),
+        ],
+      );
+    }
+    if (members == null) {
+      return Center(
+        child: Semantics(
+          label: text('config.loading'),
+          child: const CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (members.isEmpty) return Text(text('leader.revoke.alone'));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_membersTotal > members.length + 1)
+          Text(
+            text('admin.groups.more', {
+              'count': '${members.length + 1}',
+              'total': '$_membersTotal',
+            }),
+          ),
+        DropdownButtonFormField<String>(
+          isExpanded: true,
+          key: const Key('revoke-successor'),
+          initialValue: _successor,
+          decoration: InputDecoration(
+            labelText: text('leader.revoke.successor'),
+          ),
+          items: [
+            DropdownMenuItem(
+              value: '',
+              child: Text(text('leader.revoke.choose')),
+            ),
+            for (final m in members)
+              DropdownMenuItem(
+                value: m.id,
+                child: Text('${m.fullName} · ${text('status.${m.status}')}'),
+              ),
+          ],
+          onChanged: (value) => setState(() => _successor = value ?? ''),
+        ),
       ],
     );
   }

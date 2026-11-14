@@ -171,6 +171,8 @@ void main() {
       'POST /move-requests': '201',
       'POST /move-requests/{request_id}/agree': '200',
       'POST /move-requests/{request_id}/cancel': '200',
+      'PUT /home-groups/{group_id}/leader': '200',
+      'POST /verifier/people/{person_id}/move': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -562,6 +564,30 @@ void main() {
         'MoveRequestOut',
       );
     });
+
+    test(
+      'changing a leader and moving a member have the fields the app uses',
+      () {
+        expect(properties('LeaderChange'), {
+          'successor_id',
+          'former_leader_status',
+        });
+        expect(
+          responseSchema('PUT', '/home-groups/{group_id}/leader', '200'),
+          'LeaderChanged',
+        );
+        expect(properties('LeaderChanged'), {'group', 'leader'});
+        expect(refsOf('LeaderChanged', 'group'), {'IdName'});
+        expect(refsOf('LeaderChanged', 'leader'), {'IdName'});
+        expect(properties('DirectMove'), {'home_group_id'});
+        expect(
+          responseSchema('POST', '/verifier/people/{person_id}/move', '200'),
+          'Moved',
+        );
+        expect(properties('Moved'), {'person', 'home_group'});
+        expect(refsOf('Moved', 'home_group'), {'IdName'});
+      },
+    );
 
     test('only the person page has a number', () {
       for (final schema in [

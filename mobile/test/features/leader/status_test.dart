@@ -471,7 +471,7 @@ void main() {
     });
 
     testWidgets('is not offered for a leader, who is told why', (tester) async {
-      await _person(tester, detail: _detail(status: 'verifier'));
+      await _person(tester, detail: _detail(status: 'admin'));
       expect(find.byKey(const Key('revoke-open')), findsNothing);
       expect(find.textContaining('Hand that on first'), findsOneWidget);
     });

@@ -66,8 +66,8 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 |---|---|---|---|---|
 | Applicants with vouches (most-vouched first), admit, decline | `leader/Applicants.tsx` | S3.7 | done: each applicant with the vouchers (those that no longer count marked), admit as a searcher or a provider (the provider button is off unless the server says it will work), decline after asking; a searcher who asks to become a provider (the S3.9 backend, pull request 127) has only the provider admission, and decline ends just the request; paged (50) with pull to refresh | `test/features/leader/leader_test.dart` |
 | Members; person view with status history. The mobile number is shown here only, one person at a time, each view logged without the number: the exception defined in [spec 07 Privacy of verifier views](../specification/07-non-functional.md) and decision D-17. Same handling as Reveal: held in memory only, never logged, cached, written to disk or sent to crash or analytics tools | `leader/Members.tsx`, `leader/PersonDetail.tsx` | S3.7 | done: members by name with who admitted them and the re-check flag, a filter by status, and one person's page with the number (tap to open the dialler), vouches, history and chain of trust; the answer is kept in the screen only and asked for once, because each ask is logged | `test/features/leader/leader_test.dart` |
-| Revoked list, revoke, reinstate; flagged people, re-confirm | new | S4.10a | done: the leader menu has the revoked and the flagged lists (paged by 50, no numbers); on one person's page a leader revokes a searcher or provider after asking, reinstates a revoked person into an open group of their church as a searcher or a provider, and confirms a flagged status, the page updating itself from the server's answer; a leader (VERIFIER, ADMIN) is not revoked here, the page says so (revoking one with a successor is S4.10c) | `test/features/leader/status_test.dart` |
-| Group invitation link (share) | new | S4.10c | not started | |
+| Revoked list, revoke, reinstate; flagged people, re-confirm | new | S4.10a | done: the leader menu has the revoked and the flagged lists (paged by 50, no numbers); on one person's page a leader revokes a searcher or provider after asking, reinstates a revoked person into an open group of their church as a searcher or a provider, and confirms a flagged status, the page updating itself from the server's answer; a leader is not revoked by someone who may not: the page says so (an ADMIN or the OWNER revoke a VERIFIER there with the successor of their group, S4.10c; an ADMIN is revoked only by the OWNER, on the web) | `test/features/leader/status_test.dart` |
+| Group invitation link (share) | new | S4.10c-2 | not started | |
 | Step down and succession | new | S4.10 | not started | |
 
 ### ADMIN screens (in the app and on the web)
@@ -75,7 +75,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
 | Group requests: approve, decline | new | S4.10b | done: an ADMIN sees the waiting requests of the church (the OWNER those of every church) and approves or declines each; when the requester leads a group, the successor comes from that group's members (`requester_group`), required unless the requester is alone in it; a failed member list keeps Approve off with a retry | `test/features/groups/group_requests_test.dart` |
-| Appoint or replace a group leader; move members; the church's people and revoked list | new | S4.10 | not started | |
+| Appoint or replace a group leader; move members; the church's people and revoked list | new | S4.10c | done: the ADMIN's menu has the groups of the church with their leaders, each with a way to choose who leads it from now on (from that group's members; the old leader becomes a provider or a searcher, or keeps their status as an ADMIN or the OWNER), and on a member's page a move to another group of the church; an ADMIN or the OWNER also revoke a VERIFIER there together with the successor of their group; the church's people and the revoked list are the Members and Revoked screens, which an ADMIN sees for the whole church | `test/features/leader/admin_test.dart` |
 | Church reports (table; CSV via share sheet) | RP-01, RP-03, RP-05, RP-07, RP-09 | after S5 | not started | |
 
 ### OWNER (web only, no app screens)
@@ -123,11 +123,11 @@ Status column: "at least X" means that status or higher.
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any except REVOKED | Notifications | S3.6 | done |
 | POST `/vouch-links/lookup`, `/vouch-links/vouch` (token in the body); DELETE `/vouches/{id}` | at least SEARCHER | Vouch from a link, withdraw | S3.6 | done |
 | GET `/verifier/applicants`, `/members`, `/people/{id}`; `/revoked`, `/flagged` | at least VERIFIER | Verifier screens | S3.7 (applicants, members, one person), S4.10a (revoked, flagged) | done |
-| POST `/verifier/people/{id}/admit`, `/decline`; `/reconfirm`, `/move`; PUT `.../status` | at least VERIFIER | Verifier screens | S3.7 (admit, decline), S4.10a (reconfirm, revoke, reinstate), S4.10c (move, revoke a leader) | admit, decline, reconfirm, revoke and reinstate done |
-| POST, GET, DELETE `/verifier/group-invitations` | at least VERIFIER | Share group link | S4.10 | not started |
+| POST `/verifier/people/{id}/admit`, `/decline`; `/reconfirm`, `/move`; PUT `.../status` | at least VERIFIER | Verifier screens | S3.7 (admit, decline), S4.10a (reconfirm, revoke, reinstate), S4.10c (move, revoke a VERIFIER) | done |
+| POST, GET, DELETE `/verifier/group-invitations` | at least VERIFIER | Share group link | S4.10c-2 | not started |
 | POST, GET `/group-requests`; POST `.../{id}/approve`, `/decline` | at least SEARCHER / ADMIN | Start a group, approve | S4.10b | done |
 | POST, GET `/move-requests`; POST `.../{id}/agree`, `/cancel` | admitted | Moves | S4.10b | done |
-| PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10 | not started |
+| PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10c (leader), S4.10d (close; the OWNER's `/churches/{id}/admin` is web only, decision D-11) | leader done |
 | GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done on the older rules (role -> status) |
 | GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | in progress: labels screen done |
 | GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | ratings received done; detail not started |

@@ -308,7 +308,7 @@ class PersonDetail {
     required String status,
     required IdName? homeGroup,
     required bool flagged,
-    required HistoryEntry entry,
+    HistoryEntry? entry,
   }) => _copy(
     status: status,
     requestedStatus: status == 'revoked' ? null : requestedStatus,
@@ -316,8 +316,8 @@ class PersonDetail {
     setHomeGroup: true,
     flagged: flagged,
     // The caller set this status, and the change is the newest line of the history.
-    statusSetByName: entry.changedByName,
-    history: [...history, entry],
+    statusSetByName: entry?.changedByName,
+    history: entry == null ? null : [...history, entry],
   );
 
   PersonDetail _copy({
