@@ -376,6 +376,25 @@ export type MoveRequest = {
   state: 'open' | 'completed' | 'cancelled'
   created_at: string
 }
+export type OwnerChurch = {
+  id: string
+  name: string
+  admin_name: string
+  open: boolean
+  groups: number
+  members: number
+  revoked: number
+  closed_at: string | null
+}
+export type ChurchInvitation = {
+  id: string
+  church_name: string
+  email: string
+  created_at: string
+  expires_at: string
+  expired: boolean
+}
+export type ChurchInvitationCreated = { id: string; token: string; expires_at: string }
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string
