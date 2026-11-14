@@ -29,6 +29,17 @@ def test_password_hash_is_argon2id_and_verifies() -> None:
     assert not verify_password("not-a-hash", password)
 
 
+def test_the_production_hasher_keeps_strong_parameters() -> None:
+    """The tests run with a cheap hasher (see conftest); the real one must not be weakened."""
+    from argon2 import Type
+
+    from tests.conftest import PRODUCTION_HASHER
+
+    assert PRODUCTION_HASHER.type is Type.ID
+    assert PRODUCTION_HASHER.memory_cost >= 19_456  # 19 MiB, the OWASP minimum for argon2id
+    assert PRODUCTION_HASHER.time_cost >= 2
+
+
 def test_access_token_round_trip() -> None:
     principal = Principal("freelancer", uuid.uuid4())
     token, expires_in = create_access_token(principal, secret=SECRET, lifetime_minutes=15)
