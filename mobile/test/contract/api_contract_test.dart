@@ -176,6 +176,7 @@ void main() {
       'GET /verifier/group-invitations': '200',
       'POST /verifier/group-invitations': '201',
       'DELETE /verifier/group-invitations/{invitation_id}': '204',
+      'POST /home-groups/{group_id}/close': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -614,6 +615,24 @@ void main() {
       });
       // The list never carries a token: it was shown once, when the link was made.
       expect(properties('GroupInvitationSummary'), isNot(contains('token')));
+    });
+
+    test('closing one\'s own group has the fields the app uses', () {
+      expect(properties('GroupClose'), {
+        'move_to_group_id',
+        'former_leader_status',
+      });
+      expect(
+        responseSchema('POST', '/home-groups/{group_id}/close', '200'),
+        'GroupClosed',
+      );
+      expect(properties('GroupClosed'), {
+        'closed_group',
+        'joined_group',
+        'status',
+      });
+      expect(refsOf('GroupClosed', 'closed_group'), {'IdName'});
+      expect(refsOf('GroupClosed', 'joined_group'), {'IdName'});
     });
 
     test('only the person page has a number', () {

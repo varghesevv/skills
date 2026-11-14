@@ -125,4 +125,23 @@ class GroupRepository {
   Future<void> revokeInvitation(String id) async {
     await _api.delete('/verifier/group-invitations/$id');
   }
+
+  /// The leader closes their own group, being its last member, by joining another one. [former]
+  /// is `provider` or `searcher` for a VERIFIER, `keep` for an ADMIN or the OWNER. Throws
+  /// `ApiException` (`group_not_empty`, `invalid_choice`, `state_changed`, `not_found`). Answers
+  /// the closed group's name and the joined group's name.
+  Future<(String closed, String joined)> closeGroup(
+    String groupId,
+    String moveToGroupId,
+    String former,
+  ) async => parseResponse(
+    await _api.post(
+      '/home-groups/$groupId/close',
+      body: {'move_to_group_id': moveToGroupId, 'former_leader_status': former},
+    ),
+    (json) => (
+      (json['closed_group'] as Map)['name'] as String,
+      (json['joined_group'] as Map)['name'] as String,
+    ),
+  );
 }
