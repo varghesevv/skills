@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.0](https://github.com/varghesevv/skills/compare/skills-v0.6.0...skills-v0.7.0) (2026-11-14)
+
+
+### Features
+
+* **mobile:** availability list with add, edit and delete ([8bd7d6b](https://github.com/varghesevv/skills/commit/8bd7d6b3bda34ce4d9deb3e6797190f34b0ae8c6))
+* **mobile:** availability list with add, edit and delete for freelancers ([6c0c371](https://github.com/varghesevv/skills/commit/6c0c37134edabaf6d2302310ab4c3074cb69b52f))
+* **mobile:** ratings received by a freelancer ([#100](https://github.com/varghesevv/skills/issues/100)) ([094424c](https://github.com/varghesevv/skills/commit/094424cea64579722c2a21276d4c6e593c6fbd2d))
+* **mobile:** skills and labels with levels for freelancers ([33032b3](https://github.com/varghesevv/skills/commit/33032b3f063eb132bc14d731be914229798112f0))
+
+
+### Bug Fixes
+
+* **backend:** update opentelemetry-api and dnspython for published vulnerabilities ([#151](https://github.com/varghesevv/skills/issues/151)) ([fefc43e](https://github.com/varghesevv/skills/commit/fefc43ea5fad3e81fb85580839b2ff2efc90f85e))
+* **mobile:** make delete safe after the screen closes and tidy imports, texts and status values ([d5a1c7b](https://github.com/varghesevv/skills/commit/d5a1c7bfd15143853cac9c1126a5e7063cb0dfa7))
+* **mobile:** show the spinner on retry, keep levels to skills and turn off automatic provider retry ([2ea267f](https://github.com/varghesevv/skills/commit/2ea267f3d3c101ac7419f333a482913cd717579b))
+
 ## [0.6.0](https://github.com/varghesevv/skills/compare/skills-v0.5.0...skills-v0.6.0) (2026-10-30)
 
 
