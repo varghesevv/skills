@@ -10,6 +10,7 @@ import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
 import 'provider_upgrade.dart';
+import 'leads.dart';
 import 'person_router_paths.dart';
 import 'vouch_paste_dialog.dart';
 
@@ -150,6 +151,14 @@ class _Member extends ConsumerWidget {
               title: Text(text('admin.nav.groups')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(adminGroups),
+            ),
+          if (leadsOwnGroup(person))
+            ListTile(
+              key: const Key('leader-group'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(text('myGroup.nav')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(leaderGroup),
             ),
           ListTile(
             key: const Key('leader-invitations'),
