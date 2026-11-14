@@ -304,6 +304,27 @@ export function cancelHandover(id: string) {
   return request<void>(`/owner/handover/${id}/cancel`, { method: 'POST' })
 }
 
+/** The OWNER replaces the ADMIN of another church with one of its members, in one step. */
+export function replaceAdmin(
+  churchId: string,
+  successorId: string,
+  formerAdminStatus: 'provider' | 'searcher',
+  groupSuccessorId?: string,
+) {
+  return request<{
+    church: { id: string; name: string }
+    admin: { id: string; name: string }
+    former_admin_keeps_leading: boolean
+  }>(`/churches/${churchId}/admin`, {
+    method: 'PUT',
+    body: {
+      successor_id: successorId,
+      former_admin_status: formerAdminStatus,
+      ...(groupSuccessorId ? { group_successor_id: groupSuccessorId } : {}),
+    },
+  })
+}
+
 export type FormerLeaderStatus = 'provider' | 'searcher' | 'keep'
 
 /** Replace the leader of a group, or hand on one's own, with a member of it. */

@@ -5,9 +5,11 @@ import { ApiError } from '../../../api/http'
 import {
   cancelChurchInvitation,
   closeChurch,
+  fetchMembers,
   fetchChurchInvitations,
   fetchOwnerChurches,
   inviteAdmin,
+  replaceAdmin,
   LEADER_PAGE_SIZE,
 } from '../../../api/person'
 import type { ChurchInvitation, ChurchInvitationCreated, OwnerChurch } from '../../../api/types'
@@ -16,7 +18,7 @@ import { t } from '../../../i18n'
 import { INVITE_LINK_PREFIX } from '../../../portals/config'
 import { formatDate } from '../../../shared/dates'
 import { errorMessage } from '../../../shared/errors'
-import { Alert, Pager, QueryBoundary, TextField } from '../../../shared/ui'
+import { Alert, Pager, QueryBoundary, SelectField, TextField } from '../../../shared/ui'
 import { usePageTitle } from '../../../shared/usePageTitle'
 
 /** The address an invited ADMIN opens. The token is the last part and travels only there. */
@@ -32,6 +34,9 @@ function problem(error: unknown): string {
     if (error.code === 'account_exists') return t('owner.error.account')
     if (error.code === 'owner_church') return t('owner.error.own')
     if (error.code === 'state_changed') return t('owner.error.changed')
+    if (error.code === 'successor_not_member') return t('owner.error.notMember')
+    if (error.code === 'invalid_choice') return t('owner.error.adminChoice')
+    if (error.code === 'status_not_allowed') return t('owner.error.notAllowed')
   }
   return errorMessage(error)
 }
@@ -286,9 +291,12 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
         </Alert>
       )}
       {church.open && !own && !confirming && (
-        <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
-          {t('owner.churches.close', { church: church.name })}
-        </button>
+        <div className="form-actions">
+          <ReplaceAdmin church={church} onDone={onDone} />
+          <button type="button" className="btn btn-quiet" onClick={() => setConfirming(true)}>
+            {t('owner.churches.close', { church: church.name })}
+          </button>
+        </div>
       )}
       {confirming && (
         <div role="group" aria-label={t('owner.churches.close', { church: church.name })}>
@@ -314,5 +322,142 @@ function ChurchRow({ church, onDone }: { church: OwnerChurch; onDone: (message: 
         </div>
       )}
     </div>
+  )
+}
+
+/** The OWNER replaces the ADMIN of another church with one of its members. */
+function ReplaceAdmin({
+  church,
+  onDone,
+}: {
+  church: OwnerChurch
+  onDone: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [successor, setSuccessor] = useState('')
+  const [groupSuccessor, setGroupSuccessor] = useState('')
+  const [former, setFormer] = useState<'provider' | 'searcher'>('provider')
+  const members = useQuery({
+    queryKey: ['members', 1, '', '', church.id],
+    queryFn: () => fetchMembers(1, undefined, undefined, church.id),
+    enabled: open,
+  })
+  const replace = useMutation({
+    mutationFn: () =>
+      replaceAdmin(church.id, successor, former, groupSuccessor ? groupSuccessor : undefined),
+    onSuccess: async (result) => {
+      setOpen(false)
+      setSuccessor('')
+      setGroupSuccessor('')
+      onDone(
+        t('owner.admin.done', { name: result.admin.name, church: result.church.name }) +
+          (result.former_admin_keeps_leading
+            ? ` ${t('owner.admin.keeps', { old: church.admin_name })}`
+            : ''),
+      )
+      await queryClient.invalidateQueries({ queryKey: ['owner-churches'] })
+      await queryClient.invalidateQueries({ queryKey: ['members'] })
+    },
+  })
+  // The old ADMIN is not a choice for the new one.
+  const others = (members.data?.items ?? []).filter((m) => m.id !== church.admin_id)
+  const options = (rows: typeof others, none?: string) => [
+    { value: '', label: none ?? t('owner.admin.choose') },
+    ...rows.map((m) => ({ value: m.id, label: `${m.full_name} · ${t(`status.${m.status}`)}` })),
+  ]
+  if (!open) {
+    return (
+      <button type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>
+        {t('owner.admin.replace', { church: church.name })}
+      </button>
+    )
+  }
+  return (
+    <form
+      className="form-grid span-2"
+      aria-label={t('owner.admin.replace', { church: church.name })}
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (successor) replace.mutate()
+      }}
+    >
+      {replace.error && (
+        <Alert kind="error" focus>
+          {problem(replace.error)}
+        </Alert>
+      )}
+      {members.isPending && (
+        <p role="status" className="muted span-2">
+          {t('loading')}
+        </p>
+      )}
+      {members.isError && (
+        <Alert kind="error">
+          <p>{errorMessage(members.error)}</p>
+          <button type="button" className="btn btn-quiet" onClick={() => void members.refetch()}>
+            {t('common.retry')}
+          </button>
+        </Alert>
+      )}
+      {members.isSuccess && others.length === 0 && (
+        <p className="muted span-2">{t('owner.admin.nobody')}</p>
+      )}
+      {members.isSuccess && others.length > 0 && (
+        <>
+          {members.data.total > members.data.items.length && (
+            <p className="hint span-2">
+              {t('owner.admin.more', {
+                count: members.data.items.length,
+                total: members.data.total,
+              })}
+            </p>
+          )}
+          <SelectField
+            label={t('owner.admin.successor')}
+            name={`successor-${church.id}`}
+            value={successor}
+            onChange={setSuccessor}
+            options={options(others)}
+          />
+          <SelectField
+            label={t('owner.admin.former')}
+            name={`former-${church.id}`}
+            value={former}
+            onChange={(value) => setFormer(value as 'provider' | 'searcher')}
+            options={[
+              { value: 'provider', label: t('admin.groups.former.provider') },
+              { value: 'searcher', label: t('admin.groups.former.searcher') },
+            ]}
+          />
+          <SelectField
+            label={t('owner.admin.group')}
+            name={`group-${church.id}`}
+            value={groupSuccessor}
+            onChange={setGroupSuccessor}
+            options={options(others, t('owner.admin.groupNone'))}
+          />
+          <div className="form-actions span-2">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={replace.isPending || !successor}
+            >
+              {t('owner.admin.submit')}
+            </button>
+            <button type="button" className="btn btn-quiet" onClick={() => setOpen(false)}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </>
+      )}
+      {(!members.isSuccess || others.length === 0) && (
+        <div className="form-actions span-2">
+          <button type="button" className="btn btn-quiet" onClick={() => setOpen(false)}>
+            {t('common.cancel')}
+          </button>
+        </div>
+      )}
+    </form>
   )
 }
