@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { applyForProvider } from '../../api/person'
 import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
-import { PERSON_GROUP_REQUESTS, PERSON_VOUCHES } from '../../portals/config'
+import { PERSON_GROUP_REQUESTS, PERSON_MOVES, PERSON_VOUCHES } from '../../portals/config'
 import { errorMessage } from '../../shared/errors'
 import { Alert } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
@@ -49,6 +49,9 @@ function MemberHome() {
         </p>
         <p>
           <Link to={PERSON_GROUP_REQUESTS}>{t('groupRequests.link')}</Link>
+        </p>
+        <p>
+          <Link to={PERSON_MOVES}>{t('moves.link')}</Link>
         </p>
         <p className="hint">{t('member.soon')}</p>
       </div>

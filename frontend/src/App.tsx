@@ -20,6 +20,7 @@ import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
 import Groups from './pages/person/leader/Groups'
 import Flagged from './pages/person/leader/Flagged'
+import Moves from './pages/person/Moves'
 import GroupRequests from './pages/person/GroupRequests'
 import Members from './pages/person/leader/Members'
 import PersonDetail from './pages/person/leader/PersonDetail'
@@ -39,6 +40,7 @@ import {
   LEADER_REVOKED,
   LEADER_PERSON,
   PERSON_GROUP_REQUESTS,
+  PERSON_MOVES,
   PERSON_HOME,
   PERSON_NOTIFICATIONS,
   PERSON_SIGN_IN,
@@ -83,6 +85,7 @@ export default function App() {
             <Route element={<PersonLayout />}>
               <Route path={PERSON_HOME.slice(1)} element={<PersonHome />} />
               <Route path={PERSON_GROUP_REQUESTS.slice(1)} element={<GroupRequests />} />
+              <Route path={PERSON_MOVES.slice(1)} element={<Moves />} />
               <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
               <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
               <Route path="vouch/:token" element={<VouchPage />} />

@@ -12,6 +12,7 @@ import {
   LEADER_MEMBERS,
   LEADER_REVOKED,
   PERSON_HOME,
+  PERSON_MOVES,
   PERSON_NOTIFICATIONS,
 } from '../portals/config'
 
@@ -45,6 +46,9 @@ export default function PersonLayout() {
             </Link>
             <Link className="btn btn-quiet" to={LEADER_MEMBERS}>
               {t('leader.nav.members')}
+            </Link>
+            <Link className="btn btn-quiet" to={PERSON_MOVES}>
+              {t('leader.nav.moves')}
             </Link>
             {admin && (
               <Link className="btn btn-quiet" to={ADMIN_GROUPS}>

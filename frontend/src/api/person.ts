@@ -10,6 +10,7 @@ import type {
   HomeGroupSummary,
   IdName,
   InvitationInfo,
+  MoveRequest,
   MemberRow,
   RevokedRow,
   StatusResult,
@@ -195,6 +196,26 @@ export function approveGroupRequest(id: string, successorId?: string) {
 
 export function declineGroupRequest(id: string) {
   return request<void>(`/group-requests/${id}/decline`, { method: 'POST' })
+}
+
+export function fetchMoves(page: number) {
+  return request<Paged<MoveRequest>>(`/move-requests?${paging(page)}`)
+}
+
+/** Asking is the member's own agreement; the leaders of both groups must agree too. */
+export function askToMove(homeGroupId: string) {
+  return request<MoveRequest>('/move-requests', {
+    method: 'POST',
+    body: { home_group_id: homeGroupId },
+  })
+}
+
+export function agreeToMove(id: string) {
+  return request<MoveRequest>(`/move-requests/${id}/agree`, { method: 'POST' })
+}
+
+export function cancelMove(id: string) {
+  return request<MoveRequest>(`/move-requests/${id}/cancel`, { method: 'POST' })
 }
 
 export type FormerLeaderStatus = 'provider' | 'searcher' | 'keep'

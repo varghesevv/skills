@@ -367,6 +367,15 @@ export type GroupRequest = {
   requester_group: IdName | null
 }
 export type GroupRequestCreated = { request: GroupRequest; group: IdName | null }
+export type MoveRequest = {
+  id: string
+  person: IdName
+  from_group: IdName
+  to_group: IdName
+  agreed: { person: boolean; from_leader: boolean; to_leader: boolean }
+  state: 'open' | 'completed' | 'cancelled'
+  created_at: string
+}
 export type Paged<T> = { items: T[]; total: number }
 export type HistoryEntry = {
   kind: string
