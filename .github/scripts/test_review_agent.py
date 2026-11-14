@@ -183,6 +183,8 @@ class ReviewAgentTest(unittest.TestCase):
         self.assertEqual(kept[0]["severity"], "blocker")
         self.assertEqual(kept[-1]["severity"], "should_fix")
         self.assertEqual(ra.cap_consider(None), [])
+        # On the last round no optional point is kept at all.
+        self.assertEqual([f["severity"] for f in ra.cap_consider(findings, 0)], ["blocker", "should_fix"])
 
 if __name__ == "__main__":
     unittest.main()

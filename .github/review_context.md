@@ -20,7 +20,7 @@ Statuses: revoked < pending < searcher < provider < verifier < admin < owner. An
 - Every status change is written to the append-only history with who made it. Accounts, groups and churches are closed (`closed_at`), never deleted.
 - Revoking a leader flags, but does not change, everyone whose current status they set.
 
-## 4. Project conventions: do not report these
+## 4. Project conventions (the first two are rules to enforce; the rest are not to be reported)
 - Role words (church, home group, provider ...) come from the server (`GET /api/v1/app/config`); API paths, stored values and report names never change with wording. A client that hard-codes a role word is a defect.
 - `datetime.now(UTC)` set explicitly on history rows is the convention of the trust services (rows of one transaction need an order); do not ask for `utc_now()`.
 - Services lock people by id first, then home groups, then churches, and re-check after the locks; a read before the lock that is checked again after it is the pattern, not a race.

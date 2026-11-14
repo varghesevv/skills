@@ -606,14 +606,14 @@ def fetch_file_heads(repo: str, token: str, sha: str, names: list[str]) -> str:
     return "\n".join(parts)
 
 
-def cap_consider(findings) -> list:
+def cap_consider(findings, limit: int = MAX_CONSIDER) -> list:
     """Keep every blocker and should_fix point and only the first few optional ones."""
     kept: list = []
     optional = 0
     for f in findings if isinstance(findings, list) else []:
         if isinstance(f, dict) and f.get("severity") not in ("blocker", "should_fix"):
             optional += 1
-            if optional > MAX_CONSIDER:
+            if optional > limit:
                 continue
         kept.append(f)
     return kept
@@ -649,7 +649,8 @@ def main() -> int:
         return 1
 
     max_rounds = int(os.environ.get("REVIEW_MAX_ROUNDS") or DEFAULT_MAX_ROUNDS)
-    if os.environ.get("REVIEW_FORCE", "").lower() == "true":
+    forced = os.environ.get("REVIEW_FORCE", "").lower() == "true"
+    if forced:
         max_rounds += 1
     try:
         done = rounds_done(find_summary(repo, pr_num, token)[1])
@@ -659,7 +660,8 @@ def main() -> int:
     if done >= max_rounds:
         message = (
             f"{PROVIDER_NAMES[PROVIDER]} already reviewed this pull request {done} time(s), the most it gets. "
-            "Answer the open threads and let the human reviewer decide; set `force` to review once more."
+            "Answer the open threads and let the human reviewer decide."
+            + ("" if forced else " Tick `force` to review once more.")
         )
         print(message)
         summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -799,7 +801,7 @@ def main() -> int:
     if failed:
         data["summary"] = f"{data.get('summary', '')} (No usable answer for: {', '.join(failed)}; run again to retry those.)"
 
-    data["findings"] = cap_consider(data.get("findings"))
+    data["findings"] = cap_consider(data.get("findings"), 0 if round_no >= max_rounds else MAX_CONSIDER)
     inline, general = clean_findings(data, valid)
     seen_fp = {t["fp"] for t in prior}
 

@@ -91,10 +91,10 @@ The Gemini workflow now has the same trigger as the Claude one: `workflow_dispat
 
 Experience on the trust-model pull requests: every extra round produced new low-value points (naming, "cannot confirm from this diff", layout of documents) while the real defects came in the first two rounds.
 
-- A pull request gets at most **two reviews from each reviewer**. The summary carries the count (`<!-- review-round:N -->`, "Review N of 2"); a third run does nothing but write a note to the job summary, unless the new `force` input is ticked.
+- A pull request gets at most **two reviews from each reviewer**. The summary carries the count (`<!-- review-round:N -->`, "Review N of 2"); a third run does nothing but write a note to the job summary, unless the new `force` input is ticked (one more review; a run after that is refused again). A run in which any request failed is not counted, so the retry it asks for is allowed. The marker sits on the second line of the summary and is read only there, so a cut-off or a forged marker cannot change the count.
 - The prompt knows the round. Round one is asked to be complete; the last round only checks that earlier points were fixed and reports defects that are still there or that the fixes introduced, with no optional points.
-- Severity is defined (blocker, a defect you can show with an input and a wrong result, optional), at most three optional points are kept, and points the model cannot confirm from the diff are not reported.
-- The common brief and the component briefs now describe the church trust model (invariants, lock order, history, tokens, phone numbers) and list the project conventions that must not be reported, so the same false positives do not return.
+- Severity is defined: `blocker` (a violated critical rule), `should_fix` (a defect you can show with an input and a wrong result) and `consider` (optional). At most three `consider` points are kept, none on the last round, and points the model cannot confirm from the diff are not reported.
+- The common brief and the component briefs now describe the church trust model (invariants, lock order, history, tokens, phone numbers) and list the project conventions that must not be reported, so the same false positives do not return. The common brief keeps the older organisation rules in a last section for pull requests on `main` until the cut-over.
 
 ## Alternatives considered
 
