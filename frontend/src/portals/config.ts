@@ -14,6 +14,7 @@ export const LEADER_MEMBERS = '/member/members'
 export const PERSON_MOVES = '/member/moves'
 export const PERSON_GROUP_REQUESTS = '/member/group-requests'
 export const LEADER_GROUP = '/member/group'
+export const LEADER_INVITATIONS = '/member/invitations'
 export const OWNER_HANDOVER = '/member/handover'
 export const OWNER_VIEWS = '/member/views'
 export const OWNER_CHURCHES = '/member/churches'
@@ -24,6 +25,8 @@ export const LEADER_PERSON = '/member/people'
 /** A vouch link opens here; the token is the last part of the address. */
 export const INVITE_LINK_PREFIX = '/invite/'
 export const VOUCH_LINK_PREFIX = '/vouch/'
+/** A link to a home group opens the sign-up here; the token is the last part. */
+export const JOIN_LINK_PREFIX = '/join/'
 
 export type NavItem = { to: string; labelKey: StringKey; end?: boolean }
 

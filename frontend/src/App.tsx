@@ -20,6 +20,7 @@ import NotFound from './pages/NotFound'
 import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
 import MyGroup from './pages/person/leader/MyGroup'
+import GroupInvitations from './pages/person/leader/GroupInvitations'
 import HandoverPage from './pages/person/owner/Handover'
 import Views from './pages/person/owner/Views'
 import Churches from './pages/person/owner/Churches'
@@ -45,6 +46,7 @@ import {
   OWNER_HANDOVER,
   OWNER_VIEWS,
   LEADER_GROUP,
+  LEADER_INVITATIONS,
   LEADER_FLAGGED,
   LEADER_MEMBERS,
   LEADER_REVOKED,
@@ -116,6 +118,7 @@ export default function App() {
                   <Route index element={<Churches />} />
                 </Route>
                 <Route path={LEADER_GROUP.slice(1)} element={<MyGroup />} />
+                <Route path={LEADER_INVITATIONS.slice(1)} element={<GroupInvitations />} />
                 <Route path={LEADER_FLAGGED.slice(1)} element={<Flagged />} />
                 <Route path={LEADER_REVOKED.slice(1)} element={<Revoked />} />
                 <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />

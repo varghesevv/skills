@@ -186,4 +186,19 @@ describe('close my group', () => {
       '/member/group',
     )
   })
+
+  it('tells an ADMIN who does not lead their group that they cannot close it', async () => {
+    signedInAs(makeMe(), {
+      ...quiet,
+      'GET /me': () =>
+        json(
+          200,
+          makePerson({ status: 'admin', full_name: 'Ada Admin', leader: { name: 'Lena Leader' } }),
+        ),
+      [GROUPS]: TWO,
+    })
+    renderApp('/member/group')
+    expect(await screen.findByText(/do not lead it/)).toBeVisible()
+    expect(screen.queryByRole('button', { name: /^Close / })).toBeNull()
+  })
 })

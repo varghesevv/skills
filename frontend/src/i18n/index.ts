@@ -142,6 +142,24 @@ const en = {
   'leader.nav.moves': 'Moves',
   'leader.nav.group': 'My {homegroup}',
   'leader.nav.flagged': 'To re-check',
+  'invitations.nav': 'Invite to my {homegroup}',
+  'invitations.title': 'Invite to my {homegroup}',
+  'invitations.lead':
+    'Make a link and send it to people who may join your {homegroup}. They sign up through it and wait for you to admit them. A link works for a while, and anyone who has it can use it.',
+  'invitations.once': 'This is the link. It is shown only now and cannot be shown again.',
+  'invitations.label': 'Invitation link',
+  'invitations.copy': 'Copy the link',
+  'invitations.copied': 'Copied',
+  'invitations.until': 'It works until {date}.',
+  'invitations.make': 'Make a link',
+  'invitations.again': 'Make another link',
+  'invitations.list': 'Links that work',
+  'invitations.none': 'No link works now.',
+  'invitations.row': 'Made {made}, works until {until}',
+  'invitations.revoke': 'End this link',
+  'invitations.revoked': 'The link no longer works.',
+  'invitations.error.noGroup':
+    'You do not lead a {homegroup} now, so there is nothing to invite people to.',
   'leader.applicants.title': 'Applicants',
   'leader.applicants.none': 'Nobody is waiting to be admitted.',
   'leader.applicants.lead':
@@ -208,6 +226,8 @@ const en = {
   'notifications.group_request_declined': '{name} declined your request to start a {homegroup}',
   'notifications.reinstated': '{name} brought you back',
   'myGroup.title': 'My {homegroup}',
+  'myGroup.notLeader':
+    'You belong to {group} but do not lead it, so you cannot close it. Its leader does that.',
   'myGroup.lead':
     'You lead {group}. A {homegroup} closes when its leader is its last member, who then joins another {homegroup}. If others are in it, an {admin} or the {owner} choose a new leader first.',
   'myGroup.close.title': 'Close {group}',

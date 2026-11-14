@@ -384,3 +384,20 @@ export function movePerson(id: string, homeGroupId: string) {
 export function applyForProvider() {
   return request<PersonMe>('/me/apply-provider', { method: 'POST' })
 }
+
+export type GroupInvitationCreated = { id: string; token: string; expires_at: string }
+export type GroupInvitationRow = { id: string; created_at: string; expires_at: string }
+
+/** The links of the leader's group that still work (never their tokens). */
+export function fetchGroupInvitations() {
+  return request<{ items: GroupInvitationRow[] }>('/verifier/group-invitations')
+}
+
+/** Makes a link; its token comes back once and is not kept anywhere. */
+export function makeGroupInvitation() {
+  return request<GroupInvitationCreated>('/verifier/group-invitations', { method: 'POST' })
+}
+
+export function endGroupInvitation(id: string) {
+  return request<void>(`/verifier/group-invitations/${id}`, { method: 'DELETE' })
+}
