@@ -76,6 +76,9 @@ def _conditions(filters: SearchFilters) -> list[ColumnElement[bool]]:
     # not needed, so newcomers are listed too (the rate filters simply do not match them).
     conditions: list[ColumnElement[bool]] = [
         Person.closed_at.is_(None),
+        # The schema ties a home group to every open, admitted account; say so here too, so the
+        # count and the page are the same rows even if that ever changed.
+        Person.home_group_id.is_not(None),
         Person.status.in_(
             [s for s, rank in STATUS_RANK.items() if rank >= STATUS_RANK["provider"]]
         ),
@@ -152,8 +155,15 @@ def search_freelancers(
         or 0
     )
 
-    query: Select[tuple[Person, Decimal | None, int, str, str]] = (
-        select(Person, stats.c.avg_rating, stats.c.rating_count, Church.name, HomeGroup.name)
+    query: Select[tuple[Person, Decimal | None, int, str, uuid.UUID, str]] = (
+        select(
+            Person,
+            stats.c.avg_rating,
+            stats.c.rating_count,
+            Church.name,
+            HomeGroup.id,
+            HomeGroup.name,
+        )
         .select_from(Person)
         .join(stats, true())
         .join(Church, Church.id == Person.church_id)
@@ -189,28 +199,28 @@ def search_freelancers(
             else:
                 others[person_id][label_type].append(name)
 
-    items = [
-        SearchResult(
-            id=person.id,
-            full_name=person.full_name,
-            church=IdName(id=person.church_id, name=church_name),
-            home_group=IdName(id=person.home_group_id, name=group_name),
-            nationality=person.nationality,
-            primary_language=person.primary_language,
-            whatsapp_availability=person.whatsapp_availability,
-            rate_per_hour=to_float(person.rate_per_hour),
-            rate_currency=person.rate_currency,
-            is_rate_negotiable=person.is_rate_negotiable,
-            average_rating=round(float(average), 2) if average is not None else None,
-            rating_count=int(count),
-            skills=skills[person.id],
-            languages=others[person.id]["language"],
-            timings=others[person.id]["timing"],
-            nativity=others[person.id]["nativity"],
+    items: list[SearchResult] = []
+    for person, average, count, church_name, group_id, group_name in rows:
+        items.append(
+            SearchResult(
+                id=person.id,
+                full_name=person.full_name,
+                church=IdName(id=person.church_id, name=church_name),
+                home_group=IdName(id=group_id, name=group_name),
+                nationality=person.nationality,
+                primary_language=person.primary_language,
+                whatsapp_availability=person.whatsapp_availability,
+                rate_per_hour=to_float(person.rate_per_hour),
+                rate_currency=person.rate_currency,
+                is_rate_negotiable=person.is_rate_negotiable,
+                average_rating=round(float(average), 2) if average is not None else None,
+                rating_count=int(count),
+                skills=skills[person.id],
+                languages=others[person.id]["language"],
+                timings=others[person.id]["timing"],
+                nativity=others[person.id]["nativity"],
+            )
         )
-        for person, average, count, church_name, group_name in rows
-        if person.home_group_id is not None
-    ]
     return Page[SearchResult](
         items=items, total=total, page=paging.page, page_size=paging.page_size
     )
