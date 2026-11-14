@@ -2,7 +2,15 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../../../testUtils'
+import {
+  apiError,
+  json,
+  makeMe,
+  makePerson,
+  mockApi,
+  renderApp,
+  signedInAs,
+} from '../../../testUtils'
 
 const GROUPS = 'GET /churches/church-1/home-groups'
 const quiet = {
@@ -51,6 +59,15 @@ describe('who sees the groups', () => {
   })
 })
 
+describe('signed out', () => {
+  it('sends a visitor to sign in without asking for the groups', async () => {
+    const api = mockApi({ [GROUPS]: TWO_GROUPS })
+    renderApp('/member/groups')
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeVisible()
+    expect(api.count(GROUPS)).toBe(0)
+  })
+})
+
 describe('change the leader of a group', () => {
   const MEMBERS = 'GET /verifier/members?limit=50&offset=0&home_group_id=g1'
 
@@ -88,6 +105,53 @@ describe('change the leader of a group', () => {
       successor_id: 'p3',
       former_leader_status: 'searcher',
     })
+  })
+
+  it('offers a member who has the leader’s name, but not the leader', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      ...as('admin'),
+      [GROUPS]: TWO_GROUPS,
+      [MEMBERS]: () =>
+        json(200, {
+          items: [row('p1', 'Lena Leader', 'verifier'), row('p5', 'Lena Leader', 'searcher')],
+          total: 2,
+        }),
+    })
+    renderApp('/member/groups')
+    await user.click(await screen.findByRole('button', { name: 'Change the leader of Riverside' }))
+    const options = await screen.findAllByRole('option', { name: /Lena Leader/ })
+    expect(options).toHaveLength(1)
+    expect(options[0]).toHaveValue('p5')
+  })
+
+  it('tells the ADMIN when only the first page of members is shown', async () => {
+    const user = userEvent.setup({ delay: null })
+    signedInAs(makeMe(), {
+      ...as('admin'),
+      [GROUPS]: TWO_GROUPS,
+      [MEMBERS]: () => json(200, { items: [row('p2', 'Sam Searcher', 'searcher')], total: 120 }),
+    })
+    renderApp('/member/groups')
+    await user.click(await screen.findByRole('button', { name: 'Change the leader of Riverside' }))
+    expect(await screen.findByText(/Only the first 1 members are shown/)).toBeVisible()
+  })
+
+  it('offers a retry when the members cannot be loaded', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    signedInAs(makeMe(), {
+      ...as('admin'),
+      [GROUPS]: TWO_GROUPS,
+      [MEMBERS]: () =>
+        ++attempts === 1
+          ? apiError(503, 'service_unavailable')
+          : json(200, { items: [row('p2', 'Sam Searcher', 'searcher')], total: 1 }),
+    })
+    renderApp('/member/groups')
+    await user.click(await screen.findByRole('button', { name: 'Change the leader of Riverside' }))
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('option', { name: /Sam Searcher/ })).toBeVisible()
   })
 
   it('says so when nobody else is in the group', async () => {
@@ -185,6 +249,19 @@ describe('move a member', () => {
       expect(screen.queryByRole('button', { name: /^Move Sam/ })).toBeNull()
       unmount()
     }
+  })
+
+  it('shows an error with a retry when the groups cannot be loaded', async () => {
+    const user = userEvent.setup({ delay: null })
+    let attempts = 0
+    signedInAs(makeMe(), {
+      ...as('admin'),
+      [GROUPS]: () => (++attempts === 1 ? apiError(503, 'service_unavailable') : TWO_GROUPS()),
+      'GET /verifier/people/p2': () => json(200, DETAIL),
+    })
+    renderApp('/member/people/p2')
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('option', { name: 'Harbour' })).toBeVisible()
   })
 
   it('says why a leader cannot be moved', async () => {

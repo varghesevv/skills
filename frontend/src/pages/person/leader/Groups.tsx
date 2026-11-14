@@ -93,8 +93,11 @@ function GroupRow({
       onDone(t('admin.groups.done', { leader: result.leader.name, group: result.group.name }))
     },
   })
-  // The leader is not a choice: only the other members of the group.
-  const candidates = (members.data?.items ?? []).filter((m) => m.full_name !== group.leader_name)
+  // The leader is not a choice. The public list gives only their name, so a leader is told apart
+  // from a namesake by their status; the server refuses anything else.
+  const leaderRow = (m: { full_name: string; status: string }) =>
+    m.full_name === group.leader_name && ['verifier', 'admin', 'owner'].includes(m.status)
+  const candidates = (members.data?.items ?? []).filter((m) => !leaderRow(m))
   return (
     <div>
       <h2>{group.name}</h2>
@@ -116,6 +119,23 @@ function GroupRow({
             <Alert kind="error" focus>
               {problem(change.error)}
             </Alert>
+          )}
+          {members.isError && (
+            <Alert kind="error">
+              <p>{errorMessage(members.error)}</p>
+              <button
+                type="button"
+                className="btn btn-quiet"
+                onClick={() => void members.refetch()}
+              >
+                {t('common.retry')}
+              </button>
+            </Alert>
+          )}
+          {members.data && members.data.total > members.data.items.length && (
+            <p className="hint span-2">
+              {t('admin.groups.more', { count: members.data.items.length })}
+            </p>
           )}
           {members.data && candidates.length === 0 ? (
             <p className="muted span-2">{t('admin.groups.nobody')}</p>

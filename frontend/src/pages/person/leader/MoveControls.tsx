@@ -35,6 +35,16 @@ export default function MoveControls({
     },
   })
   const others = (groups.data?.items ?? []).filter((g) => g.id !== person.home_group?.id)
+  if (groups.isError) {
+    return (
+      <Alert kind="error">
+        <p>{errorMessage(groups.error)}</p>
+        <button type="button" className="btn btn-quiet" onClick={() => void groups.refetch()}>
+          {t('common.retry')}
+        </button>
+      </Alert>
+    )
+  }
   if (others.length === 0) return null
   const failure = move.error
   const message =
