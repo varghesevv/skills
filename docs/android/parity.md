@@ -30,7 +30,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
 | Log out | `auth/AuthContext.tsx` | | done | `test/features/home/session_test.dart` |
 | Notifications list (mark read) | new | S3.6 | done: a bell with the unread count in the top bar, polled every minute, a list with mark one or all as read | `test/features/person/vouching_test.dart` |
-| Settings: about, privacy link, version, close account | new | S5.11, S4.10 | in progress: version and log out done | `test/features/home/session_test.dart` |
+| Settings: about, privacy link, version, close account | new | S5.11, S4.10 | in progress: version, log out and done; close account is on the member home for now and moves here with S5.11 (about and privacy remain) | `test/features/home/session_test.dart`, `test/features/person/leave_test.dart` |
 | Minimum-version / update-required screen | none on web | | done | `test/app/config_gate_test.dart` |
 | "This build is not configured" screen | none on web | | done | `test/core/env_test.dart` |
 | Downloads (update hint) | planned | S7.1 | not started | |
@@ -117,7 +117,7 @@ Status column: "at least X" means that status or higher.
 | POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
 | GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | done |
 | GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` (both shapes) and `PUT /me/application` done; `PUT /me` (name, mobile) comes with the profile screen (S5.10) |
-| DELETE `/me` | any | Close account | S2.8 (applicant), S4.10 (others) | done for the applicant home; the settings screen of admitted people later |
+| DELETE `/me` | any | Close account | S2.8 (applicant), S4.10 (others) | done: the applicant and every admitted member close the account from the home screen (password asked again; a leader or ADMIN is told to hand the role on first) |
 | POST `/me/apply-provider` | SEARCHER | Apply to provide | S3.9 | done (not yet run on a phone, S6.1); a notice for the leader (`provider_application`) and for the person when the leader declines (`provider_declined`) are in the notification list |
 | GET `/me/vouch-link`, POST `/me/vouch-link` (makes a new link and ends the one before; there is no `rotate` any more, decision D-25); GET `/me/vouches`, `/me/vouches-given` | PENDING, SEARCHER, any admitted | Share link (shown once), who vouched | S3.6 | done |
 | GET `/me/notifications`; POST `.../{id}/read`, `/read-all` | any except REVOKED | Notifications | S3.6 | done |

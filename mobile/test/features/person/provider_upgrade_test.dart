@@ -77,7 +77,9 @@ void main() {
       expect(find.textContaining('You have 0 vouches so far'), findsOneWidget);
       expect(find.byKey(const Key('apply-provider')), findsNothing);
       expect(find.byKey(const Key('make-vouch-link')), findsOneWidget);
-      // They are still a searcher, with the home of one.
+      // They are still a searcher, with the home of one (the page is longer now: scroll up).
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 2000));
+      await tester.pumpAndSettle();
       expect(find.text('Welcome, Sam Searcher'), findsOneWidget);
     });
 

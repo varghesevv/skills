@@ -11,6 +11,7 @@ import 'applicant_home.dart';
 import 'person_providers.dart';
 import 'provider_upgrade.dart';
 import 'leads.dart';
+import 'leave_account.dart';
 import 'person_router_paths.dart';
 import 'vouch_paste_dialog.dart';
 
@@ -211,6 +212,8 @@ class _Member extends ConsumerWidget {
           onTap: () => context.push(personVouches),
         ),
         ProviderUpgrade(person: person),
+        const SizedBox(height: 16),
+        const LeaveAccount(),
         const SizedBox(height: 8),
         Text(text('member.soon')),
       ],
