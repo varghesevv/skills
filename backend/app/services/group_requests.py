@@ -174,28 +174,23 @@ def _views(db: Session, requests: list[GroupRequest]) -> list[GroupRequestOut]:
             )
         )
     }
-    led = {
-        g.id
-        for g in groups.values()
-        if g.leader_id in people and people[g.leader_id].home_group_id == g.id
-    }
-    return [
-        GroupRequestOut(
-            id=r.id,
-            group_name=r.group_name,
-            church=IdName(id=r.church_id, name=churches[r.church_id].name),
-            requester=IdName(id=r.requester_id, name=people[r.requester_id].full_name or ""),
-            state=r.state,
-            created_at=r.created_at,
-            requester_leads_a_group=people[r.requester_id].home_group_id in led,
-            requester_group=(
-                IdName(id=g.id, name=g.name)
-                if (g := groups.get(people[r.requester_id].home_group_id)) is not None  # type: ignore[arg-type]
-                else None
-            ),
+    views = []
+    for r in requests:
+        requester = people[r.requester_id]
+        group = groups.get(requester.home_group_id) if requester.home_group_id else None
+        views.append(
+            GroupRequestOut(
+                id=r.id,
+                group_name=r.group_name,
+                church=IdName(id=r.church_id, name=churches[r.church_id].name),
+                requester=IdName(id=r.requester_id, name=requester.full_name or ""),
+                state=r.state,
+                created_at=r.created_at,
+                requester_leads_a_group=group is not None and group.leader_id == requester.id,
+                requester_group=IdName(id=group.id, name=group.name) if group else None,
+            )
         )
-        for r in requests
-    ]
+    return views
 
 
 def view(db: Session, request: GroupRequest) -> GroupRequestOut:

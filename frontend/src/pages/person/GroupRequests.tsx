@@ -85,7 +85,7 @@ function AskForm({ decides }: { decides: boolean }) {
   const [successor, setSuccessor] = useState('')
   const [done, setDone] = useState<string | null>(null)
   const leads = decides && person.home_group !== null
-  const candidates = useCandidates(leads)
+  const candidates = useCandidates(leads, person.home_group?.id)
   const ask = useMutation({
     mutationFn: () => askForGroup(name.trim(), leads && successor ? successor : undefined),
     onSuccess: async (result) => {
@@ -107,9 +107,9 @@ function AskForm({ decides }: { decides: boolean }) {
       }
     },
   })
-  const own = candidates.data?.filter(
-    (m) => m.id !== person.id && m.home_group?.id === person.home_group?.id,
-  )
+  const own = (candidates.data ?? []).filter((m) => m.id !== person.id)
+  // Someone must lead the group they leave, unless they are alone in it.
+  const needsChoice = leads && (candidates.isPending || own.length > 0)
   return (
     <form
       className="form-grid"
@@ -136,20 +136,20 @@ function AskForm({ decides }: { decides: boolean }) {
         onChange={setName}
         maxLength={200}
       />
-      {leads && own && own.length > 0 && (
+      {leads && own.length > 0 && (
         <SelectField
           label={t('groupRequests.successor')}
           name="successor"
           value={successor}
           onChange={setSuccessor}
-          options={candidateOptions(own, true)}
+          options={candidateOptions(own, false)}
         />
       )}
       <div className="form-actions span-2">
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={ask.isPending || name.trim().length < 2}
+          disabled={ask.isPending || name.trim().length < 2 || (needsChoice && !successor)}
         >
           {decides ? t('groupRequests.submitOwn') : t('groupRequests.submit')}
         </button>

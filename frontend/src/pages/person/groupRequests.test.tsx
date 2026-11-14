@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../../testUtils'
 
 const LIST = 'GET /group-requests?limit=50&offset=0'
-const MEMBERS = 'GET /verifier/members?limit=50&offset=0'
+const OWN_MEMBERS = 'GET /verifier/members?limit=50&offset=0&home_group_id=group-1'
 const GROUP_MEMBERS = 'GET /verifier/members?limit=50&offset=0&home_group_id=g1'
 const NOTES = 'GET /me/notifications?limit=50'
 const quiet = { [NOTES]: () => json(200, { items: [], total: 0, unread_count: 0 }) }
@@ -220,7 +220,7 @@ describe('an ADMIN decides', () => {
       ...quiet,
       'GET /me': () => json(200, me),
       [LIST]: () => json(200, { items: [], total: 0 }),
-      [MEMBERS]: () => json(200, { items: [], total: 0 }),
+      [OWN_MEMBERS]: () => json(200, { items: [], total: 0 }),
       'POST /group-requests': () => {
         me = makePerson({ status: 'admin', home_group: { id: 'g2', name: 'Harbour' } })
         return json(201, {
@@ -256,28 +256,28 @@ describe('more refusals and failures', () => {
     }
   })
 
-  it('offers the ADMIN’s own group members as successors and sends the choice', async () => {
+  it('offers the ADMIN’s own group members as successors, needs one, and sends the choice', async () => {
     const user = userEvent.setup({ delay: null })
     const api = signedInAs(makeMe(), {
       ...quiet,
       'GET /me': () => json(200, makePerson({ status: 'admin' })),
       [LIST]: () => json(200, { items: [], total: 0 }),
-      [MEMBERS]: () =>
+      [OWN_MEMBERS]: () =>
         json(200, {
           items: [
             {
-              id: 'p7',
-              full_name: 'Sam Searcher',
-              status: 'searcher',
+              id: '22222222-2222-2222-2222-222222222222',
+              full_name: 'Nadia Applicant',
+              status: 'admin',
               home_group: { id: 'group-1', name: 'Riverside' },
               status_set_by: null,
               flagged_for_recheck: false,
             },
             {
-              id: 'p8',
-              full_name: 'Other Group',
+              id: 'p7',
+              full_name: 'Sam Searcher',
               status: 'searcher',
-              home_group: { id: 'g5', name: 'Elsewhere' },
+              home_group: { id: 'group-1', name: 'Riverside' },
               status_set_by: null,
               flagged_for_recheck: false,
             },
@@ -293,9 +293,12 @@ describe('more refusals and failures', () => {
     renderApp('/member/group-requests')
     await user.type(await screen.findByLabelText(/^Name of the/), 'Harbour')
     await screen.findByRole('option', { name: /Sam Searcher/ })
-    expect(screen.queryByRole('option', { name: /Other Group/ })).toBeNull()
+    expect(screen.queryByRole('option', { name: /Nadia Applicant/ })).toBeNull()
+    expect(screen.queryByRole('option', { name: /Nobody/ })).toBeNull()
+    const start = screen.getByRole('button', { name: 'Start it' })
+    expect(start).toBeDisabled()
     await user.selectOptions(screen.getByLabelText(/Leads your current/), 'p7')
-    await user.click(screen.getByRole('button', { name: 'Start it' }))
+    await user.click(start)
     await screen.findByText(/Harbour was started/)
     expect(api.calls.find((c) => c.key === 'POST /group-requests')?.body).toEqual({
       group_name: 'Harbour',
@@ -313,6 +316,7 @@ describe('more refusals and failures', () => {
           ? apiError(503, 'service_unavailable')
           : json(200, makePerson({ status: 'admin', home_group: null })),
       [LIST]: () => json(200, { items: [], total: 0 }),
+      [OWN_MEMBERS]: () => json(200, { items: [], total: 0 }),
       'POST /group-requests': () => {
         started = true
         return json(201, {
