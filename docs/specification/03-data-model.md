@@ -160,7 +160,7 @@ id uuid PK, person_id FK, unavailable_from timestamptz, unavailable_to timestamp
 id uuid PK, rater_id FK people, provider_id FK people, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, updated_at timestamptz null (set when the rating is edited), UNIQUE (rater_id, provider_id) (Q5), CHECK (rater_id <> provider_id). Ratings stay when a person's account is closed; the rater is never shown to the provider.
 
 ### phone_reveals
-id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
+Built in S5.2b as `person_phone_reveals` (D-43), because the older `phone_reveals` is still read by the reports; S5.3 drops the older table and renames this one. id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10), CHECK (revealer_id <> provider_id). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
 
 ### login_history
 id uuid PK, person_id uuid null, login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so rows survive account closing; when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions; the column is nullable since migration `0010`).

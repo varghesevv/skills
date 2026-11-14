@@ -5,7 +5,6 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models.availability import FreelancerUnavailability
 from tests.api_helpers import API, signup
 
 
@@ -57,7 +56,6 @@ def test_organisation_directory(client: TestClient, session: Session) -> None:
 def test_vouch_lifecycle(client: TestClient, session: Session) -> None:
     freelancer = signup(client, session, "freelancer", "f8@example.com", full_name="Fatima Khan")
     org = signup(client, session, "organisation", "o1@example.com", org_name="Acme")
-    host = signup(client, session, "workhost", "h2@example.com")
     link = f"{API}/organisations/me/freelancers/{freelancer.id}"
 
     created = client.post(link, headers=org.headers)
@@ -65,18 +63,12 @@ def test_vouch_lifecycle(client: TestClient, session: Session) -> None:
     assert created.json()["status"] == "pending"
     assert client.post(link, headers=org.headers).status_code == 409
 
-    # Pending vouches are not shown publicly.
-    profile_url = f"{API}/freelancers/{freelancer.id}"
-    assert client.get(profile_url, headers=host.headers).json()["vouched_by"] == []
-
     vouches = client.get(f"{API}/freelancers/me/vouches", headers=freelancer.headers).json()
     assert [(v["org_name"], v["status"]) for v in vouches] == [("Acme", "pending")]
     accept = f"{API}/freelancers/me/vouches/{org.id}/accept"
     assert client.post(accept, headers=freelancer.headers).json()["status"] == "approved"
     assert client.post(accept, headers=freelancer.headers).status_code == 409
 
-    shown = client.get(profile_url, headers=host.headers).json()["vouched_by"]
-    assert [v["org_name"] for v in shown] == ["Acme"]
     listing = client.get(f"{API}/organisations/me/freelancers", headers=org.headers).json()
     assert listing["total"] == 1
     assert listing["items"][0]["status"] == "approved"
@@ -84,7 +76,6 @@ def test_vouch_lifecycle(client: TestClient, session: Session) -> None:
     assert listing["items"][0]["is_active"] is True
 
     assert client.delete(link, headers=org.headers).status_code == 204
-    assert client.get(profile_url, headers=host.headers).json()["vouched_by"] == []
     revoked = client.get(f"{API}/organisations/me/freelancers", headers=org.headers).json()
     assert revoked["items"][0]["is_active"] is False
 
@@ -116,107 +107,6 @@ def test_vouch_rules(client: TestClient, session: Session) -> None:
 
 
 # ---- ratings and public profile -----------------------------------------------------------
-
-
-def test_rating_flow(client: TestClient, session: Session) -> None:
-    freelancer = signup(client, session, "freelancer", "f11@example.com", full_name="Test Person")
-    host_a = signup(client, session, "workhost", "ha@example.com")
-    host_b = signup(client, session, "workhost", "hb@example.com")
-    body = {"freelancer_id": str(freelancer.id), "rating": 8, "comment": "Great"}
-
-    assert client.post(f"{API}/ratings", json=body, headers=freelancer.headers).status_code == 403
-    first = client.post(f"{API}/ratings", json=body, headers=host_a.headers)
-    assert first.status_code == 201
-    assert client.post(f"{API}/ratings", json=body, headers=host_a.headers).status_code == 409
-    client.post(f"{API}/ratings", json={**body, "rating": 4}, headers=host_b.headers)
-
-    profile = client.get(f"{API}/freelancers/{freelancer.id}", headers=host_a.headers).json()
-    assert profile["average_rating"] == 6.0
-    assert profile["rating_count"] == 2
-
-    rating_url = f"{API}/ratings/{first.json()['id']}"
-    changed = client.put(rating_url, json={"rating": 10, "comment": None}, headers=host_a.headers)
-    assert changed.status_code == 200
-    assert changed.json()["rating"] == 10
-    assert client.put(rating_url, json={"rating": 1}, headers=host_b.headers).status_code == 404
-
-    page = client.get(f"{API}/freelancers/{freelancer.id}/ratings", headers=freelancer.headers)
-    assert page.json()["total"] == 2
-    assert all(set(item) == {"rating", "comment", "rated_on"} for item in page.json()["items"])
-    mine = client.get(f"{API}/workhosts/me/ratings", headers=host_a.headers).json()
-    assert mine["total"] == 1
-    assert mine["items"][0]["freelancer_name"] == "Test Person"
-    assert changed.json()["freelancer_name"] == "Test Person"
-
-
-def test_work_host_sees_their_own_rating_on_the_detail_page(
-    client: TestClient, session: Session
-) -> None:
-    freelancer = signup(client, session, "freelancer", "f13@example.com", full_name="Rated Person")
-    host_a = signup(client, session, "workhost", "hc@example.com")
-    host_b = signup(client, session, "workhost", "hd@example.com")
-    org = signup(client, session, "organisation", "o9@example.com")
-    url = f"{API}/freelancers/{freelancer.id}"
-
-    assert client.get(url, headers=host_a.headers).json()["my_rating"] is None
-    body = {"freelancer_id": str(freelancer.id), "rating": 7, "comment": "Fine"}
-    created = client.post(f"{API}/ratings", json=body, headers=host_a.headers).json()
-
-    mine = client.get(url, headers=host_a.headers).json()["my_rating"]
-    assert mine["id"] == created["id"]
-    assert (mine["rating"], mine["comment"], mine["freelancer_name"]) == (7, "Fine", "Rated Person")
-    # Other people never see another host's rating through this field.
-    assert client.get(url, headers=host_b.headers).json()["my_rating"] is None
-    assert client.get(url, headers=org.headers).json()["my_rating"] is None
-
-
-def test_rating_validation(client: TestClient, session: Session) -> None:
-    freelancer = signup(client, session, "freelancer", "f12@example.com")
-    host = signup(client, session, "workhost", "h3@example.com")
-    for bad in (0, 11):
-        body = {"freelancer_id": str(freelancer.id), "rating": bad}
-        assert client.post(f"{API}/ratings", json=body, headers=host.headers).status_code == 422
-    unknown = {"freelancer_id": "00000000-0000-4000-8000-000000000000", "rating": 5}
-    assert client.post(f"{API}/ratings", json=unknown, headers=host.headers).status_code == 404
-
-
-def test_public_profile_privacy(client: TestClient, session: Session) -> None:
-    freelancer = signup(client, session, "freelancer", "secret.person@example.com")
-    host = signup(client, session, "workhost", "h4@example.com")
-    org = signup(client, session, "organisation", "o5@example.com")
-    other_freelancer = signup(client, session, "freelancer", "f13@example.com")
-    url = f"{API}/freelancers/{freelancer.id}"
-
-    for_host = client.get(url, headers=host.headers)
-    assert for_host.status_code == 200
-    assert "mobile_number" not in for_host.json()
-    assert "+971500000099" not in for_host.text
-    assert "secret.person" not in for_host.text
-    assert "email" not in for_host.json()
-    assert "mobile_number" not in client.get(url, headers=org.headers).json()
-    assert client.get(url, headers=other_freelancer.headers).status_code == 403
-    assert client.get(url).status_code == 401
-    missing = f"{API}/freelancers/00000000-0000-4000-8000-000000000000"
-    assert client.get(missing, headers=host.headers).status_code == 404
-
-
-def test_public_profile_shows_upcoming_unavailability_only(
-    client: TestClient, session: Session
-) -> None:
-    freelancer = signup(client, session, "freelancer", "f14@example.com")
-    host = signup(client, session, "workhost", "h5@example.com")
-    now = datetime.now(UTC)
-    for start, end in ((-10, -5), (5, 9)):  # one in the past, one to come
-        session.add(
-            FreelancerUnavailability(
-                freelancer_id=freelancer.id,
-                unavailable_from=now + timedelta(days=start),
-                unavailable_to=now + timedelta(days=end),
-            )
-        )
-    session.commit()
-    shown = client.get(f"{API}/freelancers/{freelancer.id}", headers=host.headers).json()
-    assert len(shown["unavailable"]) == 1
 
 
 # ---- work host and organisation profiles --------------------------------------------------

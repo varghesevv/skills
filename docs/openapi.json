@@ -1020,7 +1020,7 @@
         "type": "object"
       },
       "FreelancerPublic": {
-        "description": "What work hosts, organisations and admins see. Never the email.",
+        "description": "What a SEARCHER or above sees of a provider. Never the email or the mobile number.",
         "properties": {
           "average_rating": {
             "anyOf": [
@@ -1033,6 +1033,9 @@
             ],
             "title": "Average Rating"
           },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
           "full_name": {
             "anyOf": [
               {
@@ -1043,6 +1046,9 @@
               }
             ],
             "title": "Full Name"
+          },
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
           },
           "id": {
             "format": "uuid",
@@ -1125,13 +1131,6 @@
             "title": "Unavailable",
             "type": "array"
           },
-          "vouched_by": {
-            "items": {
-              "$ref": "#/components/schemas/VouchingOrg"
-            },
-            "title": "Vouched By",
-            "type": "array"
-          },
           "whatsapp_availability": {
             "title": "Whatsapp Availability",
             "type": "boolean"
@@ -1149,7 +1148,8 @@
           "labels",
           "average_rating",
           "rating_count",
-          "vouched_by",
+          "church",
+          "home_group",
           "unavailable"
         ],
         "title": "FreelancerPublic",
@@ -1307,7 +1307,7 @@
         "type": "object"
       },
       "GivenRating": {
-        "description": "A rating a work host gave, with the freelancer's name so the host can recognise it.",
+        "description": "A rating a person gave, with the provider's name so they can recognise it.",
         "properties": {
           "comment": {
             "anyOf": [
@@ -1320,12 +1320,17 @@
             ],
             "title": "Comment"
           },
-          "freelancer_id": {
+          "id": {
             "format": "uuid",
-            "title": "Freelancer Id",
+            "title": "Id",
             "type": "string"
           },
-          "freelancer_name": {
+          "provider_id": {
+            "format": "uuid",
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "provider_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -1334,12 +1339,7 @@
                 "type": "null"
               }
             ],
-            "title": "Freelancer Name"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Provider Name"
           },
           "rated_on": {
             "format": "date-time",
@@ -1365,8 +1365,8 @@
         },
         "required": [
           "id",
-          "freelancer_id",
-          "freelancer_name",
+          "provider_id",
+          "provider_name",
           "rating",
           "comment",
           "rated_on",
@@ -3080,7 +3080,7 @@
         "type": "object"
       },
       "PublicRating": {
-        "description": "A rating as others see it. The work host's identity is not shown.",
+        "description": "A rating as others see it. The rater is not shown.",
         "properties": {
           "comment": {
             "anyOf": [
@@ -3125,9 +3125,9 @@
             ],
             "title": "Comment"
           },
-          "freelancer_id": {
+          "provider_id": {
             "format": "uuid",
-            "title": "Freelancer Id",
+            "title": "Provider Id",
             "type": "string"
           },
           "rating": {
@@ -3138,7 +3138,7 @@
           }
         },
         "required": [
-          "freelancer_id",
+          "provider_id",
           "rating"
         ],
         "title": "RatingCreate",
@@ -4408,25 +4408,6 @@
           "live"
         ],
         "title": "Voucher",
-        "type": "object"
-      },
-      "VouchingOrg": {
-        "properties": {
-          "org_id": {
-            "format": "uuid",
-            "title": "Org Id",
-            "type": "string"
-          },
-          "org_name": {
-            "title": "Org Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "org_id",
-          "org_name"
-        ],
-        "title": "VouchingOrg",
         "type": "object"
       },
       "WorkHostMe": {
@@ -5950,7 +5931,7 @@
     },
     "/api/v1/freelancers/{freelancer_id}/reveal-mobile": {
       "post": {
-        "description": "The only place a freelancer's mobile number is returned to anyone else.\n\nEvery call is recorded, and each work host has an hourly and a daily limit.",
+        "description": "The only place a provider's mobile number is returned to a member (the leaders' own\nscreens are the other, and are logged).\n\nEvery call is recorded, and each person has an hourly and a daily limit.",
         "operationId": "reveal_mobile_api_v1_freelancers__freelancer_id__reveal_mobile_post",
         "parameters": [
           {
@@ -7968,7 +7949,7 @@
     },
     "/api/v1/ratings": {
       "post": {
-        "description": "Rate a freelancer 1 to 10. One rating per work host and freelancer; use PUT to change it.",
+        "description": "Rate a provider 1 to 10. One rating per person and provider; use PUT to change it.",
         "operationId": "create_rating_api_v1_ratings_post",
         "requestBody": {
           "content": {
@@ -9850,6 +9831,7 @@
     },
     "/api/v1/workhosts/me/ratings": {
       "get": {
+        "description": "The ratings the caller gave (a SEARCHER or above). The path keeps its older name.",
         "operationId": "my_ratings_api_v1_workhosts_me_ratings_get",
         "parameters": [
           {
