@@ -195,6 +195,21 @@ describe('the OWNER proposes', () => {
     })
   })
 
+  it('tells the OWNER when only the first page of churches is shown', async () => {
+    signedInAs(
+      makeMe(),
+      owner({
+        [CHURCHES]: () =>
+          json(200, {
+            items: [church('church-2', 'Hope Church', 'ada', 'Ada Admin')],
+            total: 120,
+          }),
+      }),
+    )
+    renderApp('/member/handover')
+    expect(await screen.findByText('Only the first 1 of 120 are shown.')).toBeVisible()
+  })
+
   it('says when there is no other church to hand over to', async () => {
     signedInAs(
       makeMe(),
@@ -243,7 +258,7 @@ describe('the OWNER proposes', () => {
     )
     renderApp('/member/handover')
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
-    expect(await screen.findByText('Only the first 1 of 90 members are shown.')).toBeVisible()
+    expect(await screen.findByText('Only the first 1 of 90 are shown.')).toBeVisible()
   })
 })
 
@@ -265,6 +280,26 @@ describe('a handover that is waiting', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel the handover' }))
     expect(await screen.findByText('The handover was cancelled.')).toBeVisible()
     expect(api.count('POST /owner/handover/h1/cancel')).toBe(1)
+  })
+
+  it('keeps the confirmation of a cancel after the page shows the form again', async () => {
+    const user = userEvent.setup({ delay: null })
+    let cancelled = false
+    signedInAs(
+      makeMe(),
+      owner({
+        [CURRENT]: () => json(200, { request: cancelled ? null : WAITING }),
+        'POST /owner/handover/h1/cancel': () => {
+          cancelled = true
+          return json(204)
+        },
+      }),
+    )
+    renderApp('/member/handover')
+    await user.click(await screen.findByRole('button', { name: 'Cancel the handover' }))
+    // The refetch brings back no request, so the form replaces the waiting handover.
+    expect(await screen.findByLabelText(/^New owner$/i)).toBeVisible()
+    expect(screen.getByText('The handover was cancelled.')).toBeVisible()
   })
 
   it('lets the chosen ADMIN accept after a question, and shows the outcome on their home as OWNER', async () => {
@@ -290,7 +325,7 @@ describe('a handover that is waiting', () => {
     expect(api.count('POST /owner/handover/h1/accept')).toBe(0)
     expect(screen.getByText(/This cannot be undone by you/)).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Yes, accept' }))
-    expect(await screen.findByText(/You are the .* now. Olive Owner is provider/)).toBeVisible()
+    expect(await screen.findByText(/You are the .* now. Olive Owner is Freelancer/)).toBeVisible()
     expect(screen.getByText(/^Welcome/)).toBeVisible()
   })
 

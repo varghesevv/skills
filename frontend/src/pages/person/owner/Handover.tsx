@@ -22,6 +22,9 @@ import { Alert, QueryBoundary, SelectField } from '../../../shared/ui'
 import { usePageTitle } from '../../../shared/usePageTitle'
 import { leadsOwnGroup } from '../leads'
 
+/** The role word of the status the outgoing OWNER becomes (provider or searcher). */
+const statusWord = (status: string): string => t(`status.${status as 'provider'}`)
+
 /** What a refused handover action means. The server's code decides the words. */
 function problem(error: unknown): string {
   if (error instanceof ApiError) {
@@ -42,17 +45,24 @@ export default function HandoverPage() {
   usePageTitle(t('handover.title'))
   const current = useQuery({ queryKey: ['handover'], queryFn: fetchHandover })
   const isOwner = person.status === 'owner'
+  // The outcome of an action stays here, outside the parts that give way to each other.
+  const [notice, setNotice] = useState<string | null>(null)
   return (
     <div className="container">
       <div className="card">
         <h1>{t('handover.title')}</h1>
         <p className="lead">{isOwner ? t('handover.leadOwner') : t('handover.leadAdmin')}</p>
+        {notice && (
+          <Alert kind="success" focus>
+            {notice}
+          </Alert>
+        )}
         <QueryBoundary query={current}>
           {(data) =>
             data.request ? (
-              <Waiting request={data.request} />
+              <Waiting request={data.request} onNotice={setNotice} />
             ) : isOwner ? (
-              <Propose />
+              <Propose onNotice={setNotice} />
             ) : (
               <p className="muted">{t('handover.none')}</p>
             )
@@ -63,19 +73,24 @@ export default function HandoverPage() {
   )
 }
 
-function Waiting({ request }: { request: Handover }) {
+function Waiting({
+  request,
+  onNotice,
+}: {
+  request: Handover
+  onNotice: (message: string) => void
+}) {
   const person = usePerson()
   const { setPerson } = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
-  const [done, setDone] = useState<string | null>(null)
   const mine = request.owner.id === person.id
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['handover'] })
   const cancel = useMutation({
     mutationFn: () => cancelHandover(request.id),
     onSuccess: async () => {
-      setDone(mine ? t('handover.cancelled') : t('handover.declined'))
+      onNotice(mine ? t('handover.cancelled') : t('handover.declined'))
       await refresh()
     },
   })
@@ -87,7 +102,7 @@ function Waiting({ request }: { request: Handover }) {
       setFlash(
         t('handover.accepted', {
           name: result.former_owner.name,
-          status: result.former_owner_status,
+          status: statusWord(result.former_owner_status),
         }),
       )
       let me = null
@@ -104,13 +119,6 @@ function Waiting({ request }: { request: Handover }) {
   const busy = cancel.isPending || accept.isPending
   const failure = cancel.error ?? accept.error
   const nobody = t('handover.waiting.nobody')
-  if (done) {
-    return (
-      <Alert kind="success" focus>
-        {done}
-      </Alert>
-    )
-  }
   return (
     <div>
       <h2>{t('handover.waiting')}</h2>
@@ -135,7 +143,7 @@ function Waiting({ request }: { request: Handover }) {
         <li>
           {t('handover.waiting.former', {
             name: request.owner.name,
-            status: request.former_owner_status,
+            status: statusWord(request.former_owner_status),
           })}
         </li>
       </ul>
@@ -192,14 +200,13 @@ function Waiting({ request }: { request: Handover }) {
   )
 }
 
-function Propose() {
+function Propose({ onNotice }: { onNotice: (message: string) => void }) {
   const person = usePerson()
   const queryClient = useQueryClient()
   const [newOwner, setNewOwner] = useState('')
   const [admin, setAdmin] = useState('')
   const [leader, setLeader] = useState('')
   const [former, setFormer] = useState<'provider' | 'searcher'>('provider')
-  const [sent, setSent] = useState<string | null>(null)
   const leads = leadsOwnGroup(person)
   const churches = useQuery({
     queryKey: ['owner-churches', 1],
@@ -224,7 +231,7 @@ function Propose() {
       }),
     onSuccess: async () => {
       const chosen = candidates.find((c) => c.admin_id === newOwner)
-      setSent(t('handover.sent', { name: chosen?.admin_name ?? '' }))
+      onNotice(t('handover.sent', { name: chosen?.admin_name ?? '' }))
       await queryClient.invalidateQueries({ queryKey: ['handover'] })
     },
   })
@@ -244,13 +251,6 @@ function Propose() {
     ...rows.map((m) => ({ value: m.id, label: `${m.full_name} · ${t(`status.${m.status}`)}` })),
   ]
 
-  if (sent) {
-    return (
-      <Alert kind="success" focus>
-        {sent}
-      </Alert>
-    )
-  }
   if (loading) {
     return (
       <p role="status" className="muted">
@@ -310,6 +310,7 @@ function Propose() {
           })),
         ]}
       />
+      {cut(churches.data)}
       {needsAdmin ? (
         <SelectField
           label={t('handover.newAdmin')}

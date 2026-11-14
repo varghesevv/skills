@@ -310,7 +310,7 @@ const en = {
     'You become the {owner}, and stay the {admin} of your {organisation}. This cannot be undone by you.',
   'handover.acceptConfirm': 'Yes, accept',
   'handover.accepted': 'You are the {owner} now. {name} is {status}.',
-  'handover.more': 'Only the first {count} of {total} members are shown.',
+  'handover.more': 'Only the first {count} of {total} are shown.',
   'handover.error.open': 'A handover is proposed already: cancel it first.',
   'handover.error.choice':
     'That choice does not fit. Choose the {admin} of another open {organisation}, and members of yours.',
