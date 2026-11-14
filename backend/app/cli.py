@@ -6,6 +6,7 @@
         [--group-leader ...] [--revoke-old-owner]
     python -m app.cli create-admin --email you@example.com --mobile +971500000000
     python -m app.cli purge-notifications [--months 12]
+    python -m app.cli purge-contact-views [--months 12]
     python -m app.cli seed-demo
     python -m app.cli generate-demo-data --csv logins.csv [--reset]
 
@@ -37,7 +38,7 @@ from app.schemas.auth import (
     PersonName,
     check_mobile,
 )
-from app.services import notifications
+from app.services import contact_views, notifications
 from app.services.accounts import create_account, get_by_email
 from app.services.operators import SetupError, change_owner, create_first_owner
 
@@ -311,6 +312,15 @@ def purge_notifications(months: int) -> int:
     return 0
 
 
+def purge_contact_views(months: int) -> int:
+    """Delete the log of phone number views older than the retention (decision O-03)."""
+    cutoff = notifications.months_before(datetime.now(UTC), months)
+    with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
+        deleted = contact_views.purge_older_than(db, cutoff)
+    print(f"Deleted {deleted} phone number views older than {months} months.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -349,6 +359,12 @@ def main(argv: list[str] | None = None) -> int:
         "purge-notifications", help="delete in-app notifications older than the retention"
     )
     purge.add_argument("--months", type=int, default=12, choices=range(1, 121), metavar="1-120")
+    purge_views = sub.add_parser(
+        "purge-contact-views", help="delete the log of phone number views older than the retention"
+    )
+    purge_views.add_argument(
+        "--months", type=int, default=12, choices=range(1, 121), metavar="1-120"
+    )
     sub.add_parser("seed-demo", help="create fake demo users (not allowed in prod)")
     gen = sub.add_parser(
         "generate-demo-data",
@@ -372,6 +388,8 @@ def main(argv: list[str] | None = None) -> int:
             args.group_leader,
             args.revoke_old_owner,
         )
+    if args.command == "purge-contact-views":
+        return purge_contact_views(args.months)
     if args.command == "purge-notifications":
         return purge_notifications(args.months)
     if args.command == "generate-demo-data":

@@ -135,7 +135,7 @@ id, person_id FK people, from_group_id FK, to_group_id FK (same church, CHECK in
 id, person_id FK people, kind text, subject_id uuid null (the person or group the event is about), created_at, read_at null. No names or numbers are stored; clients load details through the normal endpoints. Index `(person_id, read_at, created_at)`. Retention is open detail O-02.
 
 ### contact_views
-id, viewer_id FK people, person_id FK people, screen text, viewed_at. One row each time a verifier screen shows a mobile number (decision D-07). The number itself is never stored. Retention is open detail O-03.
+id, viewer_id FK people, person_id FK people, screen text, viewed_at. One row each time a verifier screen shows a mobile number (decision D-07). The number itself is never stored. The OWNER reads the log; rows are kept 12 calendar months and deleted by the command `purge-contact-views` (decisions O-03 and D-40).
 
 ### labels
 | Column | Type | Notes |

@@ -15,13 +15,14 @@ from app.schemas.church_invitations import (
     ChurchInvite,
     ChurchListOwner,
 )
+from app.schemas.contact_views import ContactViewList
 from app.schemas.handover import (
     HandoverAccepted,
     HandoverCurrent,
     HandoverOut,
     HandoverPropose,
 )
-from app.services import church_invitations, closing, directory, handover
+from app.services import church_invitations, closing, contact_views, directory, handover
 
 router = APIRouter(prefix="/owner", tags=["owner"])
 
@@ -89,6 +90,24 @@ def close_church(
     return ChurchClosed(
         id=church.id, name=church.name, closed_groups=groups, closed_accounts=accounts
     )
+
+
+@router.get("/contact-views")
+def contact_views_list(
+    owner: Owner,
+    db: Annotated[Session, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    viewer_id: uuid.UUID | None = None,
+    person_id: uuid.UUID | None = None,
+) -> ContactViewList:
+    """Who looked at whose mobile number on a leader's screen, and when, newest first (never the
+    number). Paged: `limit` (1 to 100, default 50), `offset`; filter by `viewer_id` or
+    `person_id`. Rows older than the retention (12 months) are deleted by `purge-contact-views`."""
+    items, total = contact_views.listing(
+        db, limit=limit, offset=offset, viewer_id=viewer_id, person_id=person_id
+    )
+    return ContactViewList(items=items, total=total)
 
 
 Admin = Annotated[Person, Depends(current_person("admin"))]
