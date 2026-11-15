@@ -624,5 +624,11 @@ const stringsEn = <String, String>{
       'Join with your {organisation}, or sign in to follow your application.',
   'settings.title': 'Settings',
   'settings.version': 'App version',
+  'settings.updateAvailable': 'A newer version is available',
+  'settings.updateHint':
+      'Install the latest version from where you got this app.',
+  'settings.privacy': 'Privacy statement',
+  'settings.privacyFailed':
+      'The privacy statement could not be opened. Try again later.',
   'settings.logOutHint': 'You will need to log in again on this phone.',
 };

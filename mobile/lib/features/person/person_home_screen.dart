@@ -266,6 +266,13 @@ class _Member extends ConsumerWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push(personAccount),
         ),
+        ListTile(
+          key: const Key('settings'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(text('settings.title')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(personSettings),
+        ),
         const LeaveAccount(),
         const SizedBox(height: 8),
         Text(text('member.soon')),

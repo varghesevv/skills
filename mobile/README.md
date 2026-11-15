@@ -19,6 +19,7 @@ The server address is a build setting, not a secret. No password, token, signing
 | Setting (`--dart-define=...`) | Needed | Meaning |
 |---|---|---|
 | `API_BASE_URL` | release builds | Server address including `/api/v1`. Not a secret. |
+| `PRIVACY_URL` | no | `https://` address of the privacy statement. The Privacy row in the settings shows only when it is set. |
 | `APP_VERSION` | release builds | `X.Y.Z` or `X.Y.Z+N`. Sent as `X-App-Version` and compared with the server's minimum version for the "please update" screen. |
 
-A **release** build made without them (or with a malformed version) shows a "this build is not configured" screen that names the missing settings, instead of running with the update check silently off. Debug builds and tests may leave them out. The release workflow passes both from the app version in `pubspec.yaml`.
+A **release** build made without them (or with a malformed version) shows a "this build is not configured" screen that names the missing settings, instead of running with the update check silently off. Debug builds and tests may leave them out. The release workflow passes `APP_VERSION` from the app version in `pubspec.yaml`. `PRIVACY_URL` is optional, but a value that does not start with `https://` is reported as a problem like the others.

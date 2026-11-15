@@ -16,6 +16,7 @@ import '../features/freelancer/labels/labels_screen.dart';
 import '../features/freelancer/profile/profile_screen.dart';
 import '../features/freelancer/ratings/ratings_screen.dart';
 import '../features/person/account_screen.dart';
+import '../features/person/person_settings_screen.dart';
 import '../features/search/provider_screen.dart';
 import '../features/search/ratings_given_screen.dart';
 import '../features/search/search_screen.dart';
@@ -169,6 +170,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'ratings-given',
             builder: (context, state) => const RatingsGivenScreen(),
+          ),
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) => const PersonSettingsScreen(),
           ),
           GoRoute(
             path: 'account',

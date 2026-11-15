@@ -27,6 +27,24 @@ void main() {
       ]);
     });
 
+    test('a privacy address must be https, and may be left out', () {
+      const ok = 'https://api.test/api/v1';
+      expect(Env.problems(apiBase: ok, version: '1.2.3', privacy: ''), isEmpty);
+      expect(
+        Env.problems(
+          apiBase: ok,
+          version: '1.2.3',
+          privacy: 'https://example.test/privacy',
+        ),
+        isEmpty,
+      );
+      for (final bad in ['http://example.test', 'example.test', 'https://']) {
+        expect(Env.problems(apiBase: ok, version: '1.2.3', privacy: bad), [
+          'PRIVACY_URL',
+        ], reason: bad);
+      }
+    });
+
     test('a version that is not X.Y.Z is a problem', () {
       expect(
         Env.problems(apiBase: 'https://api.test/api/v1', version: 'latest'),

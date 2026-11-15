@@ -149,6 +149,10 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 - **Several API instances:** the hourly counter lives in each process's memory, so each instance allows its own share. Before running more than one API task (ECS, ADR-0012), replace it with a shared counter (for example a database table, like the reveal limits).
 - **Install on a phone:** the web **Downloads page is not built yet** (it is a separate change), and the API needs the bearer token, so a phone browser cannot fetch the APK on its own. Until the page exists, the operator gives testers the file directly (for example `adb install`, or a file transfer) and testers compare the SHA-256 from the list. After the page ships: log in, open Downloads, install, allow "install from this source" once.
 
+### Privacy statement in the mobile app
+
+The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement itself is written by the owner.
+
 ## 8. Security headers and limits
 
 - Caddy adds HSTS, `nosniff`, a strict Content-Security-Policy (everything from the site's own origin), `X-Frame-Options: DENY`, a Permissions-Policy and removes the `Server` header. A page that suddenly breaks after a change may be blocked by the policy: open the browser developer console and look for "Content Security Policy" messages, then fix the page rather than loosening the policy.
