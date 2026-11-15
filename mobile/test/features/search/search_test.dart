@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/router.dart';
 import 'package:skills_app/core/auth/person_me.dart';
+import 'package:skills_app/features/search/search_models.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
@@ -94,6 +95,15 @@ Future<TestApp> _open(
             ],
           }),
         )
+        ..reply(
+          'GET',
+          '/churches/church-1/home-groups',
+          FakeReply(200, {
+            'items': [
+              {'id': 'group-1', 'name': 'Riverside', 'leader_name': 'Lena'},
+            ],
+          }),
+        )
         ..reply('GET', _path, first ?? FakeReply(200, _page(1, 2, total: 2)));
       arrange?.call(adapter);
     },
@@ -106,6 +116,24 @@ SeenRequest _last(TestApp app) =>
     app.adapter.seen.lastWhere((r) => r.path == _path);
 
 void main() {
+  test(
+    'the last day of a date range counts: the end is the start of the next day',
+    () {
+      final query = SearchFilters(
+        availableFrom: DateTime(2026, 5, 10),
+        availableTo: DateTime(2026, 5, 10),
+      ).toQuery();
+      expect(
+        DateTime.parse(query['available_from']! as String).toLocal(),
+        DateTime(2026, 5, 10),
+      );
+      expect(
+        DateTime.parse(query['available_to']! as String).toLocal(),
+        DateTime(2026, 5, 11),
+      );
+    },
+  );
+
   group('who may search', () {
     for (final status in [
       'searcher',
@@ -329,6 +357,77 @@ void main() {
       expect(query['church_id'], 'church-2');
       expect(query['home_group_id'], 'group-9');
     });
+
+    testWidgets(
+      'the last day counts, and an end before the start is explained',
+      (tester) async {
+        final app = await _open(tester);
+        final before = app.adapter.count('GET', _path);
+        await tapKey(tester, 'open-filters');
+        await tester.dragUntilVisible(
+          find.byKey(const Key('available-from')),
+          find.byType(ListView).last,
+          const Offset(0, -200),
+        );
+        // Next month, so that the days are never in the past whatever day the test runs.
+        await tapKey(tester, 'available-from');
+        await tester.tap(find.byTooltip('Next month'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('20'));
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        await tapKey(tester, 'available-to');
+        await tester.tap(find.byTooltip('Next month'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('10'));
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        await tester.dragUntilVisible(
+          find.byKey(const Key('apply-filters')),
+          find.byType(ListView).last,
+          const Offset(0, -200),
+        );
+        await tapKey(tester, 'apply-filters');
+        expect(find.text('The end must be after the start.'), findsOneWidget);
+        expect(app.adapter.count('GET', _path), before);
+      },
+    );
+
+    testWidgets(
+      'changing the church forgets the group and does not break the sheet',
+      (tester) async {
+        final app = await _open(tester);
+        await tapKey(tester, 'open-filters');
+        Future<void> choose(String key, String name) async {
+          await tester.dragUntilVisible(
+            find.byKey(Key(key)),
+            find.byType(ListView).last,
+            const Offset(0, -200),
+          );
+          await tester.tap(find.byKey(Key(key)));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(name).last);
+          await tester.pumpAndSettle();
+        }
+
+        await choose('church', 'Hope Church');
+        await choose('group', 'Harbour');
+        await choose(
+          'church',
+          'Grace Church',
+        ); // another church, with its own groups
+        expect(tester.takeException(), isNull);
+        await tester.dragUntilVisible(
+          find.byKey(const Key('apply-filters')),
+          find.byType(ListView).last,
+          const Offset(0, -200),
+        );
+        await tapKey(tester, 'apply-filters');
+        final query = _last(app).query;
+        expect(query['church_id'], 'church-1');
+        expect(query.containsKey('home_group_id'), isFalse);
+      },
+    );
 
     testWidgets('the sort goes to the API', (tester) async {
       final app = await _open(tester);

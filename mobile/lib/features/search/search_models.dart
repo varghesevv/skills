@@ -119,8 +119,17 @@ class SearchFilters {
     if (currency.trim().isNotEmpty) 'currency': currency.trim().toUpperCase(),
     if (negotiable) 'negotiable': 'true',
     if (availableFrom != null && availableTo != null) ...{
-      'available_from': availableFrom!.toUtc().toIso8601String(),
-      'available_to': availableTo!.toUtc().toIso8601String(),
+      // Whole days: from the start of the first to the end of the last (the start of the next).
+      'available_from': DateTime(
+        availableFrom!.year,
+        availableFrom!.month,
+        availableFrom!.day,
+      ).toUtc().toIso8601String(),
+      'available_to': DateTime(
+        availableTo!.year,
+        availableTo!.month,
+        availableTo!.day + 1,
+      ).toUtc().toIso8601String(),
     },
     if (minRating.isNotEmpty) 'min_rating': minRating,
     if (churchId.isNotEmpty) 'church_id': churchId,

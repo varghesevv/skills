@@ -25,6 +25,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   late final _currency = TextEditingController(text: widget.initial.currency);
   String? _rateError;
   String? _currencyError;
+  String? _dateError;
 
   @override
   void dispose() {
@@ -51,25 +52,36 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     } else if (rate.isNotEmpty && currency.isEmpty && rateError == null) {
       currencyError = text('search.needCurrency');
     }
+    final from = _filters.availableFrom;
+    final to = _filters.availableTo;
+    // Both dates or none; the last day counts, so the same day for both is a one-day window.
+    String? dateError;
+    if ((from == null) != (to == null)) {
+      dateError = text('search.needBothDates');
+    } else if (from != null && to != null && to.isBefore(from)) {
+      dateError = text('validation.periodOrder');
+    }
     setState(() {
       _rateError = rateError;
       _currencyError = currencyError;
+      _dateError = dateError;
     });
-    if (rateError != null || currencyError != null) return;
-    if ((_filters.availableFrom == null) != (_filters.availableTo == null)) {
-      return;
-    }
+    if (rateError != null || currencyError != null || dateError != null) return;
     Navigator.of(context)
         .pop(_filters.copyWith(maxRate: rate, currency: currency));
   }
 
   Future<void> _pickDate(bool from) async {
     final now = DateTime.now();
+    final existing = from ? _filters.availableFrom : _filters.availableTo;
+    final earliest = now.subtract(const Duration(days: 1));
     final chosen = await showDatePicker(
       context: context,
-      initialDate:
-          (from ? _filters.availableFrom : _filters.availableTo) ?? now,
-      firstDate: now.subtract(const Duration(days: 1)),
+      initialDate: existing ?? now,
+      // A date chosen on an earlier day stays a valid starting point when the sheet is reopened.
+      firstDate: existing != null && existing.isBefore(earliest)
+          ? existing
+          : earliest,
       lastDate: now.add(const Duration(days: 365 * 2)),
     );
     if (chosen == null || !mounted) return;
@@ -291,9 +303,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                   ),
               ],
             ),
-            if ((_filters.availableFrom == null) !=
-                (_filters.availableTo == null))
-              Text(text('search.needBothDates')),
+            if (_dateError != null)
+              Text(
+                _dateError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             if (churches.value != null && churches.value!.isNotEmpty) ...[
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
@@ -318,21 +332,25 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
               ),
             ],
             if (groups?.value != null && groups!.value!.isNotEmpty)
-              DropdownButtonFormField<String>(
-                key: const Key('group'),
-                isExpanded: true,
-                initialValue: _filters.homeGroupId,
-                decoration: InputDecoration(labelText: text('search.group')),
-                items: [
-                  DropdownMenuItem(
-                    value: '',
-                    child: Text(text('search.anyGroup')),
+              // A new state for each church: the old group is not among the new church's groups.
+              KeyedSubtree(
+                key: ValueKey(_filters.churchId),
+                child: DropdownButtonFormField<String>(
+                  key: const Key('group'),
+                  isExpanded: true,
+                  initialValue: _filters.homeGroupId,
+                  decoration: InputDecoration(labelText: text('search.group')),
+                  items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(text('search.anyGroup')),
+                    ),
+                    for (final g in groups.value!)
+                      DropdownMenuItem(value: g.id, child: Text(g.name)),
+                  ],
+                  onChanged: (v) => setState(
+                    () => _filters = _filters.copyWith(homeGroupId: v ?? ''),
                   ),
-                  for (final g in groups.value!)
-                    DropdownMenuItem(value: g.id, child: Text(g.name)),
-                ],
-                onChanged: (v) => setState(
-                  () => _filters = _filters.copyWith(homeGroupId: v ?? ''),
                 ),
               ),
             const SizedBox(height: 16),
