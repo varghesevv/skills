@@ -20,8 +20,57 @@ Map<String, Object?> _page(List<Object?> items) => {
   'page_size': 10,
 };
 
-({String status, String path}) _s(String status, String path) =>
-    (status: status, path: path);
+typedef _Screen = ({
+  String status,
+  String path,
+  Object? extra,
+  void Function(FakeAdapter adapter)? arrange,
+});
+
+_Screen _s(
+  String status,
+  String path, {
+  Object? extra,
+  void Function(FakeAdapter adapter)? arrange,
+}) => (status: status, path: path, extra: extra, arrange: arrange);
+
+/// The answers of the screens that take an id or a token.
+Map<String, Object?> _provider() => {
+  'id': 'p1',
+  'full_name': 'Anita Provider',
+  'whatsapp_availability': true,
+  'nationality': 'Examplean',
+  'primary_language': 'English',
+  'rate_per_hour': 45.5,
+  'rate_currency': 'AED',
+  'is_rate_negotiable': true,
+  'labels': <Object?>[],
+  'average_rating': 8.5,
+  'rating_count': 4,
+  'church': {'id': 'church-1', 'name': 'Grace Church'},
+  'home_group': {'id': 'group-1', 'name': 'Riverside'},
+  'unavailable': <Object?>[],
+  'my_rating': null,
+};
+
+Map<String, Object?> _detail() => {
+  'id': 'a1',
+  'full_name': 'Nadia Applicant',
+  'mobile_number': '+971 50 123 4567',
+  'status': 'pending',
+  'requested_status': 'provider',
+  'church': {'id': 'church-1', 'name': 'Grace Church'},
+  'home_group': {'id': 'group-1', 'name': 'Riverside'},
+  'status_set_by': null,
+  'flagged_for_recheck': false,
+  'applied_at': '2026-11-10T08:00:00Z',
+  'history': <Object?>[],
+  'chain_of_trust': [
+    {'id': 'p9', 'full_name': 'Lena Leader', 'status': 'verifier'},
+  ],
+  'vouches': <Object?>[],
+  'can_admit_as_provider': true,
+};
 
 final _screens = [
   _s('searcher', personHome),
@@ -48,11 +97,40 @@ final _screens = [
   _s('verifier', leaderInvitations),
   _s('verifier', leaderGroup),
   _s('admin', adminGroups),
+  _s(
+    'searcher',
+    '$personProviders/p1',
+    arrange: (a) => a
+      ..reply('GET', '/freelancers/p1', FakeReply(200, _provider()))
+      ..reply('GET', '/freelancers/p1/ratings', FakeReply(200, _page([]))),
+  ),
+  _s(
+    'verifier',
+    '$leaderPeople/a1',
+    arrange: (a) =>
+        a.reply('GET', '/verifier/people/a1', FakeReply(200, _detail())),
+  ),
+  _s(
+    'searcher',
+    vouchLinkPath,
+    extra: 'a-vouch-token-of-enough-length-1234567890',
+    arrange: (a) => a.reply(
+      'POST',
+      '/vouch-links/lookup',
+      FakeReply(200, {
+        'applicant_name': 'Nadia Applicant',
+        'church_name': 'Grace Church',
+        'home_group_name': 'Riverside',
+        'requested_status': 'provider',
+        'already_vouched': false,
+      }),
+    ),
+  ),
 ];
 
 Future<void> _open(
   WidgetTester tester,
-  ({String status, String path}) screen, {
+  _Screen screen, {
   required Size size,
   double textScale = 1.0,
 }) async {
@@ -70,13 +148,20 @@ Future<void> _open(
         ..reply('GET', '/me/notifications', FakeReply(200, _noNotes))
         ..reply('GET', '/workhosts/me/ratings', FakeReply(200, _page([])))
         ..reply('GET', '/me/vouches', FakeReply(200, _page([])));
+      screen.arrange?.call(adapter);
     },
   );
   if (screen.path != personHome) {
-    ProviderScope.containerOf(tester.element(find.byType(MaterialApp)))
-        .read(routerProvider)
-        .go(screen.path);
+    final router = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    ).read(routerProvider);
+    router.go(screen.path, extra: screen.extra);
     await tester.pumpAndSettle();
+    // The screen is the one on show, not the home the router sends a person to otherwise.
+    expect(
+      router.routerDelegate.currentConfiguration.last.matchedLocation,
+      screen.path,
+    );
   }
 }
 
