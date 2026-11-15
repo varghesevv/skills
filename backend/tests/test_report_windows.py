@@ -53,3 +53,26 @@ def test_default_window_is_the_last_complete_days() -> None:
     start, end = default_window(utc(2026, 10, 22, 10), DUBAI, days=30)
     assert end == utc(2026, 10, 21, 20)
     assert (end - start).days == 30
+
+
+@pytest.mark.parametrize("name", ["../etc", "a/b", "", "Upper", "x" * 80, "ok name"])
+def test_a_report_name_that_is_not_a_plain_name_never_becomes_a_path(name: str) -> None:
+    from pathlib import Path
+
+    from app.reports.runner import output_paths
+
+    now = datetime(2026, 10, 1, tzinfo=UTC)
+    with pytest.raises(ValueError):
+        output_paths(Path("/data/reports"), name, now, now)
+
+
+def test_a_registered_report_name_gives_a_path_below_the_folder() -> None:
+    from pathlib import Path
+
+    from app.reports.definitions import REGISTRY
+    from app.reports.runner import output_paths
+
+    now = datetime(2026, 10, 1, tzinfo=UTC)
+    for name in REGISTRY:
+        csv_path, _ = output_paths(Path("/data/reports"), name, now, now)
+        assert csv_path.is_relative_to(Path("/data/reports") / name)

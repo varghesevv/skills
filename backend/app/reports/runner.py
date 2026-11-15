@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -29,7 +30,13 @@ def build_report(db: Session, name: str, params: ReportParams) -> ReportResult:
     return ReportResult(get_definition(name).build(db, params))
 
 
+_REPORT_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
+
+
 def output_paths(output_dir: Path, name: str, start: datetime, end: datetime) -> tuple[Path, Path]:
+    # Report names come from the registry, but they become folder names: never trust a name.
+    if not _REPORT_NAME.fullmatch(name):
+        raise ValueError("not a report name")
     stem = f"{start:%Y%m%dT%H%M}_{end:%Y%m%dT%H%M}"
     folder = output_dir / name
     return folder / f"{stem}.csv", folder / f"{stem}.html"

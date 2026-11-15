@@ -8,7 +8,7 @@ import App from './App'
 import { setTokens } from './auth/tokenStore'
 
 // Passwords used in tests are generated, never written into the source.
-export const PASSWORD = `pw-${Math.random().toString(36).slice(2).padEnd(12, 'x')}`
+export const PASSWORD = `pw-${Array.from(crypto.getRandomValues(new Uint8Array(9)), (b) => b.toString(36).padStart(2, '0')).join('')}`
 
 export type ApiRequest = { body: unknown; headers: Headers }
 export type Handler = (request: ApiRequest) => Response | Promise<Response>
