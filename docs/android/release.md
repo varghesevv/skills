@@ -23,7 +23,7 @@ All of these go in the GitHub **Environment `demo`** (Settings > Environments > 
 | Secret | `ANDROID_KEY_ALIAS` | The key's alias in the keystore |
 | Secret | `ANDROID_KEY_PASSWORD` | The key's password |
 | Variable | `ANDROID_CERT_SHA256` | The SHA-256 fingerprint of the release certificate (see below); the run fails when the APK is signed with anything else |
-| Variable | `APP_MIN_VERSION`, `APP_LATEST_VERSION` | `1.2.3`; the minimum the server accepts and the newest it offers. `deploy-demo` writes them once S7.2a (pull request 205) is merged; default `0.0.0` |
+| Variable | `APP_MIN_VERSION`, `APP_LATEST_VERSION` | `1.2.3`; the minimum the server accepts and the newest it offers. `deploy-demo` writes them (S7.2a); default `0.0.0` |
 | Existing | `DEPLOY_SSH_PRIVATE_KEY`, `AWS_DEPLOY_ROLE_ARN`, `SERVER_HOST`, `SITE_ADDRESS`, `TF_SSH_ALLOWED_CIDRS` | Used to reach the server |
 
 ### Make the key
@@ -62,7 +62,7 @@ gh secret set ANDROID_KEY_PASSWORD --env demo
 1. Set `version:` in `mobile/pubspec.yaml` and merge that change.
 2. Actions > mobile-release > Run workflow. Optionally give release notes (shown on the Android app page) and a release tag.
 3. When it is green, open the Android app page of the web app, or ask the API: the new version is listed with its SHA-256. A tester can check it with `sha256sum`.
-4. To make older builds ask people to update (needs S7.2a), set `APP_MIN_VERSION` and `APP_LATEST_VERSION` in the Environment and run `deploy-demo` again.
+4. To make older builds ask people to update, set `APP_MIN_VERSION` and `APP_LATEST_VERSION` in the Environment and run `deploy-demo` again.
 
 ## How this follows ADR-0011 (secrets from the environment only)
 
