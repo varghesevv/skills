@@ -9,3 +9,9 @@ const personNotifications = '/member/notifications';
 const vouchLinkPath = '/vouch';
 const personGroupRequests = '/member/group-requests';
 const personMoves = '/member/moves';
+
+/// A provider's own pages (a PROVIDER or above); they keep the older screens and paths of the API.
+const personProfile = '/member/profile';
+const personSkills = '/member/skills';
+const personAvailability = '/member/availability';
+const personRatings = '/member/ratings';

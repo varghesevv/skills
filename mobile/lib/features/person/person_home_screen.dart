@@ -183,6 +183,36 @@ class _Member extends ConsumerWidget {
             onTap: () => context.push(leaderRevoked),
           ),
         ],
+        if (person.status.isProvider) ...[
+          ListTile(
+            key: const Key('provider-profile'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('nav.profile')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(personProfile),
+          ),
+          ListTile(
+            key: const Key('provider-skills'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('nav.labels')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(personSkills),
+          ),
+          ListTile(
+            key: const Key('provider-availability'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('nav.availability')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(personAvailability),
+          ),
+          ListTile(
+            key: const Key('provider-ratings'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('nav.ratings')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(personRatings),
+          ),
+        ],
         ListTile(
           key: const Key('group-requests'),
           contentPadding: EdgeInsets.zero,

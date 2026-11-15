@@ -11,6 +11,12 @@ enum PersonStatus {
   admin,
   owner;
 
+  /// A provider: PROVIDER or higher. They have a profile, labels, availability and ratings.
+  bool get isProvider => index >= PersonStatus.provider.index;
+
+  /// A searcher: SEARCHER or higher. They can look for providers.
+  bool get isSearcher => index >= PersonStatus.searcher.index;
+
   /// A leader: VERIFIER or higher. They see the applicants and members of their scope.
   bool get isLeader => index >= PersonStatus.verifier.index;
 
