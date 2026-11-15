@@ -183,6 +183,14 @@ class _Member extends ConsumerWidget {
             onTap: () => context.push(leaderRevoked),
           ),
         ],
+        if (person.status.isSearcher)
+          ListTile(
+            key: const Key('provider-search'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('search.title')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(personSearch),
+          ),
         if (person.status.isProvider) ...[
           ListTile(
             key: const Key('provider-profile'),

@@ -15,3 +15,6 @@ const personProfile = '/member/profile';
 const personSkills = '/member/skills';
 const personAvailability = '/member/availability';
 const personRatings = '/member/ratings';
+
+/// Finding providers, for a SEARCHER or above.
+const personSearch = '/member/search';
