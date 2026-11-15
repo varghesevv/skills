@@ -51,8 +51,8 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
 | Search with filters, name search, sort, chips, paging | `SearchPage.tsx` | S5.8 | done at `/member/search` for a SEARCHER or above: skills (any or all), level, languages, times, nativity, rate and currency, negotiable, minimum rating, dates, church and home group in a bottom sheet; name search; a chip per filter; sort; twelve at a time; results never carry a number | `test/features/search/search_test.dart`, `test/contract/api_contract_test.dart` |
-| Provider detail (labels, rate, ratings, church and home group, availability, my rating, rate form) | `FreelancerDetailPage.tsx` | S5.9 | not started | |
-| Reveal: greyed placeholder, Reveal, `tel:` (number only in memory) | `RevealMobile.tsx`, FR-M-05 to FR-M-07 | S5.9 | not started | |
+| Provider detail (labels, rate, ratings, church and home group, availability, my rating, rate form) | `FreelancerDetailPage.tsx` | S5.9 | done at `/member/providers/<id>` from a result: facts, labels, time off, the ratings, the caller's own rating to give or change (a score and a comment), and no rating form or Reveal on one's own page | `test/features/search/provider_page_test.dart`, `test/contract/api_contract_test.dart` |
+| Reveal: greyed placeholder, Reveal, `tel:` (number only in memory) | `RevealMobile.tsx`, FR-M-05 to FR-M-07 | S5.9 | done: asked for only when the button is pressed, kept in the page's state alone, the dialler opens with it; the limit is explained | `test/features/search/provider_page_test.dart` |
 | Ratings given (edit) | `GivenRatingsPage.tsx` | S5.10 | not started | |
 | Profile (name, mobile) | `/me` | S5.10 | not started | |
 | Vouch from a received link (shows who asks) | new | S3.6 | done: paste the link, see who asks, vouch; tapping a link in another app needs app links (release setup) | `test/features/person/vouching_test.dart` |
@@ -130,9 +130,9 @@ Status column: "at least X" means that status or higher.
 | PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10c (leader), S4.10d-1 (close; the OWNER's `/churches/{id}/admin` is web only, decision D-11) | done |
 | GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done: a PROVIDER or above opens them from the member home |
 | GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | done: labels screen and filter sheet |
-| GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | ratings received done; detail not started |
-| POST `/freelancers/{id}/reveal-mobile` | at least SEARCHER | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 and 6 | S5.9 | not started |
-| GET `/workhosts/me/ratings`; POST `/ratings`; PUT `/ratings/{id}` | at least SEARCHER | Ratings given, rate | S5.9, S5.10 | not started |
+| GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | done |
+| POST `/freelancers/{id}/reveal-mobile` | at least SEARCHER | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 and 6 | S5.9 | done |
+| GET `/workhosts/me/ratings`; POST `/ratings`; PUT `/ratings/{id}` | at least SEARCHER | Ratings given, rate | S5.9, S5.10 | rate and change done (S5.9); ratings given are S5.10 |
 | GET `/search/freelancers` | at least SEARCHER | Search | S5.8 | done |
 | GET `/reports`, `/reports/{name}` | ADMIN (church) | Church reports | after S5 | not started |
 | Reports runs, schedules, run; labels management; owner endpoints; handover; admin invitations | OWNER | none | | n/a |

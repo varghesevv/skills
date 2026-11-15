@@ -131,6 +131,10 @@ void main() {
       'GET /labels': '200',
       'GET /freelancers/{freelancer_id}/ratings': '200',
       'GET /search/freelancers': '200',
+      'GET /freelancers/{freelancer_id}': '200',
+      'POST /freelancers/{freelancer_id}/reveal-mobile': '200',
+      'POST /ratings': '201',
+      'PUT /ratings/{rating_id}': '200',
       'PUT /freelancers/me/labels': '200',
       'GET /freelancers/me/unavailability': '200',
       'POST /freelancers/me/unavailability': '201',
@@ -981,6 +985,92 @@ void main() {
       expect(properties('SearchResult'), isNot(contains('mobile_number')));
       expect(properties('SearchResult'), isNot(contains('email')));
     });
+  });
+
+  group('a provider, rating and Reveal', () {
+    test('the page has the fields the app reads, and no way to a number', () {
+      expect(
+        properties('FreelancerPublic'),
+        containsAll([
+          'id',
+          'full_name',
+          'whatsapp_availability',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+          'labels',
+          'average_rating',
+          'rating_count',
+          'church',
+          'home_group',
+          'unavailable',
+          'my_rating',
+        ]),
+      );
+      expect(properties('FreelancerPublic'), isNot(contains('mobile_number')));
+      expect(properties('FreelancerPublic'), isNot(contains('email')));
+    });
+
+    test('a rating is sent and answered with the fields the app uses', () {
+      expect(requestSchema('POST', '/ratings'), 'RatingCreate');
+      expect(
+        properties('RatingCreate'),
+        containsAll(['provider_id', 'rating', 'comment']),
+      );
+      expect(responseSchema('POST', '/ratings', '201'), 'GivenRating');
+      expect(
+        properties('GivenRating'),
+        containsAll([
+          'id',
+          'provider_id',
+          'provider_name',
+          'rating',
+          'comment',
+          'rated_on',
+        ]),
+      );
+    });
+
+    test(
+      'changing a rating sends the score and comment and gets the rating back',
+      () {
+        expect(requestSchema('PUT', '/ratings/{rating_id}'), 'RatingUpdate');
+        expect(properties('RatingUpdate'), containsAll(['rating', 'comment']));
+        expect(
+          responseSchema('PUT', '/ratings/{rating_id}', '200'),
+          'GivenRating',
+        );
+        expect(
+          responseSchema('GET', '/freelancers/{freelancer_id}', '200'),
+          'FreelancerPublic',
+        );
+        expect(
+          responseSchema(
+            'POST',
+            '/freelancers/{freelancer_id}/reveal-mobile',
+            '200',
+          ),
+          'RevealedMobile',
+        );
+      },
+    );
+
+    test(
+      'Reveal takes the channel and source, and answers with the number only',
+      () {
+        expect(
+          requestSchema('POST', '/freelancers/{freelancer_id}/reveal-mobile'),
+          'RevealRequest',
+        );
+        expect(
+          properties('RevealRequest'),
+          containsAll(['channel', 'source', 'searched_skills']),
+        );
+        expect(properties('RevealedMobile'), {'mobile_number'});
+      },
+    );
   });
 
   group('ratings received', () {

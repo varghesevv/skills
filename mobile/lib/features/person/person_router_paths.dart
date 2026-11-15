@@ -18,3 +18,6 @@ const personRatings = '/member/ratings';
 
 /// Finding providers, for a SEARCHER or above.
 const personSearch = '/member/search';
+
+/// One provider's page: `/member/providers/<id>`.
+const personProviders = '/member/providers';
