@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../auth/AuthContext'
 import { t } from '../../i18n'
-import { homePath, PERSON_HOME, PERSON_SIGN_UP, VOUCH_LINK_PREFIX } from '../../portals/config'
+import { PERSON_HOME, PERSON_SIGN_UP, VOUCH_LINK_PREFIX } from '../../portals/config'
 import { errorMessage } from '../../shared/errors'
 import { Alert, PasswordField, TextField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
@@ -24,7 +24,7 @@ export default function PersonSignIn() {
   const [busy, setBusy] = useState(false)
 
   if (user) {
-    return <Navigate to={user.user_type === 'person' ? back : homePath(user.user_type)} replace />
+    return <Navigate to={back} replace />
   }
 
   async function onSubmit(event: FormEvent) {

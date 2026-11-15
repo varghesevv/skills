@@ -84,16 +84,6 @@ export const freelancerProfileSchema = z
     }
   })
 
-export const hostProfileSchema = z.object({
-  full_name: fullName,
-  mobile_number: mobile,
-})
-
-export const orgProfileSchema = z.object({
-  org_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
-  mobile_number: mobile,
-})
-
 export const labelNameSchema = z.object({
   label_name: z.string().trim().min(1, 'validation.required').max(100, 'validation.tooLong'),
 })
@@ -108,7 +98,7 @@ export const ratingSchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   email,
-  user_type: z.enum(['freelancer', 'workhost', 'organisation', 'admin', 'person']),
+  user_type: z.literal('person'),
 })
 
 /** The login of the church trust model: no account type. */

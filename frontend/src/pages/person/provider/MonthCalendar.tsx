@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-import { t } from '../../i18n'
-import { monthWeeks, periodCoversDay, type PeriodLike } from '../../shared/dates'
+import { t } from '../../../i18n'
+import { monthWeeks, periodCoversDay, type PeriodLike } from '../../../shared/dates'
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6].map((offset) =>
   // 2026-11-01 is a Sunday.

@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { getProfile, listLabels, replaceLabels } from '../../api/freelancer'
-import type { FreelancerProfile, LabelOut, LabelType } from '../../api/types'
-import { t, type StringKey } from '../../i18n'
-import { errorMessage } from '../../shared/errors'
-import { Alert, QueryBoundary } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
+import { getProfile, listLabels, replaceLabels } from '../../../api/freelancer'
+import type { FreelancerProfile, LabelOut, LabelType } from '../../../api/types'
+import { t, type StringKey } from '../../../i18n'
+import { errorMessage } from '../../../shared/errors'
+import { Alert, QueryBoundary } from '../../../shared/ui'
+import { usePageTitle } from '../../../shared/usePageTitle'
 import { PROFILE_KEY } from './ProfilePage'
 
 const LABELS_KEY = ['labels'] as const

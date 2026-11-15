@@ -1,24 +1,5 @@
 import { request } from './http'
-import type {
-  AnyMe,
-  AuthUserType,
-  RegisterResponse,
-  RegisterType,
-  TokenResponse,
-  UserType,
-} from './types'
-
-export function loginRequest(body: { email: string; password: string; user_type: UserType }) {
-  return request<TokenResponse>('/auth/login', { method: 'POST', body, auth: false })
-}
-
-export function registerRequest(type: RegisterType, body: Record<string, unknown>) {
-  return request<RegisterResponse>(`/auth/register/${type}`, {
-    method: 'POST',
-    body,
-    auth: false,
-  })
-}
+import type { AnyMe } from './types'
 
 export function logoutRequest(refreshToken: string) {
   return request<void>('/auth/logout', {
@@ -28,7 +9,7 @@ export function logoutRequest(refreshToken: string) {
   })
 }
 
-export function forgotPasswordRequest(body: { email: string; user_type: AuthUserType }) {
+export function forgotPasswordRequest(body: { email: string; user_type: 'person' }) {
   return request<{ status: string }>('/auth/forgot-password', {
     method: 'POST',
     body,

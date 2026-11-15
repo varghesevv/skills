@@ -1,4 +1,4 @@
-import type { FreelancerProfile, LabelOut } from '../../api/types'
+import type { FreelancerProfile, LabelOut } from '../../../api/types'
 
 export const ME_ID = '11111111-1111-1111-1111-111111111111'
 

@@ -9,7 +9,7 @@ import {
   renderApp,
   signedInAs,
 } from '../../../testUtils'
-import { ALL_LABELS, label } from '../../../portals/freelancer/testData'
+import { ALL_LABELS, label } from '../provider/testData'
 import { PERSON_ID, makePerson, makeResult, page } from './testData'
 
 const ui = () => userEvent.setup({ delay: null })

@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
-import { getProfile, updateProfile } from '../../api/freelancer'
-import type { FreelancerProfile } from '../../api/types'
-import { t } from '../../i18n'
-import { errorMessage, serverFieldErrors } from '../../shared/errors'
-import { Alert, CheckboxField, QueryBoundary, TextField } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
-import { freelancerProfileSchema, validate, type FieldErrors } from '../../shared/validation'
+import { getProfile, updateProfile } from '../../../api/freelancer'
+import type { FreelancerProfile } from '../../../api/types'
+import { t } from '../../../i18n'
+import { errorMessage, serverFieldErrors } from '../../../shared/errors'
+import { Alert, CheckboxField, QueryBoundary, TextField } from '../../../shared/ui'
+import { usePageTitle } from '../../../shared/usePageTitle'
+import { freelancerProfileSchema, validate, type FieldErrors } from '../../../shared/validation'
 
 export const PROFILE_KEY = ['freelancer', 'profile'] as const
 

@@ -2,38 +2,26 @@ import type { Page, Route } from '@playwright/test'
 
 // A tiny fake of the API, so the layout checks need no backend or database.
 
-export type Role = 'freelancer' | 'workhost' | 'organisation' | 'admin' | 'searcher' | 'owner'
+export type Role = 'searcher' | 'provider' | 'owner'
 
 const ID = '11111111-1111-1111-1111-111111111111'
 
 function me(role: Role) {
-  if (role === 'searcher' || role === 'owner') {
-    // A person of the church trust model (the member pages), not an older account.
-    return {
-      user_type: 'person',
-      id: ID,
-      full_name: 'Fatima Alexandrina Khan-Smithsonian',
-      email: 'person@example.com',
-      mobile_number: '+971500000001',
-      status: role,
-      requested_status: null,
-      church: { id: 'church-1', name: 'Grace Community Church of the Valley' },
-      home_group: { id: 'group-1', name: 'Riverside' },
-      leader: { name: 'Lena Leader' },
-      status_set_by: { name: 'Lena Leader' },
-      flagged_for_recheck: false,
-      vouch_count: 0,
-    }
-  }
+  // A person of the church trust model (the member pages).
   return {
+    user_type: 'person',
     id: ID,
-    user_type: role,
+    full_name: 'Fatima Alexandrina Khan-Smithsonian',
     email: 'person@example.com',
     mobile_number: '+971500000001',
-    full_name: role === 'organisation' ? null : 'Fatima Alexandrina Khan-Smithsonian',
-    org_name: role === 'organisation' ? 'Acme Training and Development Services' : null,
-    approval_status: role === 'organisation' ? 'approved' : null,
-    created_at: '2026-10-01T10:00:00Z',
+    status: role,
+    requested_status: null,
+    church: { id: 'church-1', name: 'Grace Community Church of the Valley' },
+    home_group: { id: 'group-1', name: 'Riverside' },
+    leader: { name: 'Lena Leader' },
+    status_set_by: { name: 'Lena Leader' },
+    flagged_for_recheck: false,
+    vouch_count: 0,
   }
 }
 
@@ -183,9 +171,6 @@ export async function mockApi(page: Page, role: Role | null) {
       return body(route, 200, {
         items: [{ id: 'church-1', name: 'Grace Community Church of the Valley' }],
       })
-    }
-    if (path === '/organisations') {
-      return body(route, 200, [{ id: 'org-1', org_name: 'Acme Training and Development' }])
     }
     if (path === '/search/freelancers') {
       return body(route, 200, { items: RESULTS, total: 40, page: 1, page_size: 12 })

@@ -6,7 +6,7 @@ import type { IdName, LabelOut } from '../../../api/types'
 import { t, type StringKey } from '../../../i18n'
 import { SelectField, TextField } from '../../../shared/ui'
 import type { FieldErrors } from '../../../shared/validation'
-import { sortLevels } from '../../../portals/freelancer/LabelsPage'
+import { sortLevels } from '../provider/LabelsPage'
 import { EMPTY_FILTERS, validateFilters, type FilterValues } from './searchParams'
 
 function CheckGroup({

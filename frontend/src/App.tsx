@@ -7,28 +7,20 @@ import {
   RequireLeader,
   RequireOpenAccount,
   RequireOwner,
-  RequireOlderAccount,
-  RequirePerson,
   RequireProvider,
-  RequireRole,
   RequireSearcher,
 } from './auth/guards'
 import ForgotPassword from './pages/ForgotPassword'
-import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
-import Login from './pages/Login'
-import AdminLogin from './pages/login/AdminLogin'
-import OrganisationLogin from './pages/login/OrganisationLogin'
 import NotFound from './pages/NotFound'
-import Register, { RegisterChoice } from './pages/Register'
 import Applicants from './pages/person/leader/Applicants'
 import MyGroup from './pages/person/leader/MyGroup'
-import AdminLabelsPage from './portals/admin/AdminLabelsPage'
-import AvailabilityPage from './portals/freelancer/AvailabilityPage'
-import LabelsPage from './portals/freelancer/LabelsPage'
-import ProfilePage from './portals/freelancer/ProfilePage'
 import Account from './pages/person/Account'
+import AdminLabelsPage from './pages/person/owner/Labels'
+import AvailabilityPage from './pages/person/provider/AvailabilityPage'
 import Frame from './pages/person/provider/Frame'
+import LabelsPage from './pages/person/provider/LabelsPage'
+import ProfilePage from './pages/person/provider/ProfilePage'
 import ProviderPage from './pages/person/search/ProviderPage'
 import RatingsGiven from './pages/person/search/RatingsGiven'
 import SearchPage from './pages/person/search/SearchPage'
@@ -86,14 +78,7 @@ import {
   PERSON_SIGN_IN,
   PERSON_SIGN_UP,
   PERSON_VOUCHES,
-  PORTALS,
 } from './portals/config'
-import { freelancerRoutes } from './portals/freelancer/routes'
-import { adminRoutes } from './portals/admin/routes'
-import { organisationRoutes } from './portals/organisation/routes'
-import { workhostRoutes } from './portals/workhost/routes'
-import { slugOf } from './terminology/terms'
-import AppShell from './shell/AppShell'
 import PersonLayout from './shell/PersonLayout'
 import PublicLayout from './shell/PublicLayout'
 
@@ -103,16 +88,8 @@ export default function App() {
       <Routes>
         <Route element={<PublicLayout />}>
           <Route index element={<Landing />} />
-          <Route path="login" element={<Login />} />
-          <Route
-            path={`login/${slugOf('freelancer')}`}
-            element={<Navigate to="/login" replace />}
-          />
-          <Route path={`login/${slugOf('workhost')}`} element={<Login userType="workhost" />} />
-          <Route path={`login/${slugOf('organisation')}`} element={<OrganisationLogin />} />
-          <Route path="login/admin" element={<AdminLogin />} />
-          <Route path="register" element={<RegisterChoice />} />
-          <Route path="register/:type" element={<Register />} />
+          <Route path="login/*" element={<Navigate to={PERSON_SIGN_IN} replace />} />
+          <Route path="register/*" element={<Navigate to={PERSON_SIGN_UP} replace />} />
           <Route path={PERSON_SIGN_IN.slice(1)} element={<PersonSignIn />} />
           <Route path={PERSON_SIGN_UP.slice(1)} element={<SignUp />} />
           <Route path="join/:token" element={<SignUp />} />
@@ -122,101 +99,82 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route element={<RequireAuth />}>
-          <Route element={<RequirePerson />}>
-            <Route element={<PersonLayout />}>
-              <Route path={PERSON_HOME.slice(1)} element={<PersonHome />} />
-              <Route path={PERSON_GROUP_REQUESTS.slice(1)} element={<GroupRequests />} />
-              <Route path={PERSON_MOVES.slice(1)} element={<Moves />} />
-              <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
-              <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
-              <Route path="vouch/:token" element={<VouchPage />} />
-              <Route element={<RequireOpenAccount />}>
-                <Route path={PERSON_ACCOUNT.slice(1)} element={<Account />} />
-              </Route>
-              <Route element={<RequireSearcher />}>
-                <Route path={PERSON_SEARCH.slice(1)} element={<SearchPage />} />
-                <Route path={`${PERSON_PROVIDERS.slice(1)}/:id`} element={<ProviderPage />} />
-                <Route path={PERSON_RATINGS_GIVEN.slice(1)} element={<RatingsGiven />} />
-              </Route>
-              <Route element={<RequireProvider />}>
-                <Route element={<Frame />}>
-                  <Route path={PERSON_PROFILE.slice(1)} element={<ProfilePage />} />
-                  <Route path={PERSON_SKILLS.slice(1)} element={<LabelsPage />} />
-                  <Route path={PERSON_AVAILABILITY.slice(1)} element={<AvailabilityPage />} />
-                </Route>
-                <Route path={PERSON_RATINGS.slice(1)} element={<MyRatings />} />
-              </Route>
-              <Route element={<RequireLeader />}>
-                <Route path={OWNER_LABELS.slice(1)} element={<RequireOwner />}>
-                  <Route
-                    index
-                    element={
-                      <Frame>
-                        <AdminLabelsPage />
-                      </Frame>
-                    }
-                  />
-                </Route>
-                <Route path={LEADER_APPLICANTS.slice(1)} element={<Applicants />} />
-                <Route path={LEADER_MEMBERS.slice(1)} element={<Members />} />
-                <Route path={ADMIN_GROUPS.slice(1)} element={<RequireAdmin />}>
-                  <Route index element={<Groups />} />
-                </Route>
-                <Route path={OWNER_HANDOVER.slice(1)} element={<RequireAdmin />}>
-                  <Route index element={<HandoverPage />} />
-                </Route>
-                <Route path={ADMIN_REPORTS.slice(1)} element={<RequireAdmin />}>
-                  <Route index element={<Reports />} />
-                </Route>
-                <Route path={OWNER_REPORT_HISTORY.slice(1)} element={<RequireOwner />}>
-                  <Route
-                    index
-                    element={
-                      <Frame>
-                        <RunsPage />
-                      </Frame>
-                    }
-                  />
-                </Route>
-                <Route path={OWNER_REPORT_SCHEDULES.slice(1)} element={<RequireOwner />}>
-                  <Route
-                    index
-                    element={
-                      <Frame>
-                        <SchedulesPage />
-                      </Frame>
-                    }
-                  />
-                </Route>
-                <Route path={OWNER_VIEWS.slice(1)} element={<RequireOwner />}>
-                  <Route index element={<Views />} />
-                </Route>
-                <Route path={OWNER_CHURCHES.slice(1)} element={<RequireOwner />}>
-                  <Route index element={<Churches />} />
-                </Route>
-                <Route path={LEADER_GROUP.slice(1)} element={<MyGroup />} />
-                <Route path={LEADER_INVITATIONS.slice(1)} element={<GroupInvitations />} />
-                <Route path={LEADER_FLAGGED.slice(1)} element={<Flagged />} />
-                <Route path={LEADER_REVOKED.slice(1)} element={<Revoked />} />
-                <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />
-              </Route>
+          <Route element={<PersonLayout />}>
+            <Route path={PERSON_HOME.slice(1)} element={<PersonHome />} />
+            <Route path={PERSON_GROUP_REQUESTS.slice(1)} element={<GroupRequests />} />
+            <Route path={PERSON_MOVES.slice(1)} element={<Moves />} />
+            <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
+            <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
+            <Route path="vouch/:token" element={<VouchPage />} />
+            <Route element={<RequireOpenAccount />}>
+              <Route path={PERSON_ACCOUNT.slice(1)} element={<Account />} />
             </Route>
-          </Route>
-          <Route element={<RequireOlderAccount />}>
-            <Route element={<AppShell />}>
-              {PORTALS.map((portal) => (
+            <Route element={<RequireSearcher />}>
+              <Route path={PERSON_SEARCH.slice(1)} element={<SearchPage />} />
+              <Route path={`${PERSON_PROVIDERS.slice(1)}/:id`} element={<ProviderPage />} />
+              <Route path={PERSON_RATINGS_GIVEN.slice(1)} element={<RatingsGiven />} />
+            </Route>
+            <Route element={<RequireProvider />}>
+              <Route element={<Frame />}>
+                <Route path={PERSON_PROFILE.slice(1)} element={<ProfilePage />} />
+                <Route path={PERSON_SKILLS.slice(1)} element={<LabelsPage />} />
+                <Route path={PERSON_AVAILABILITY.slice(1)} element={<AvailabilityPage />} />
+              </Route>
+              <Route path={PERSON_RATINGS.slice(1)} element={<MyRatings />} />
+            </Route>
+            <Route element={<RequireLeader />}>
+              <Route path={OWNER_LABELS.slice(1)} element={<RequireOwner />}>
                 <Route
-                  key={portal.path}
-                  path={portal.path}
-                  element={<RequireRole role={portal.userType} />}
-                >
-                  <Route index element={<Dashboard />} />
-                  {portal.userType === 'freelancer' && freelancerRoutes}
-                  {portal.userType === 'workhost' && workhostRoutes}
-                  {portal.userType === 'organisation' && organisationRoutes}
-                  {portal.userType === 'admin' && adminRoutes}
-                </Route>
-              ))}
+                  index
+                  element={
+                    <Frame>
+                      <AdminLabelsPage />
+                    </Frame>
+                  }
+                />
+              </Route>
+              <Route path={LEADER_APPLICANTS.slice(1)} element={<Applicants />} />
+              <Route path={LEADER_MEMBERS.slice(1)} element={<Members />} />
+              <Route path={ADMIN_GROUPS.slice(1)} element={<RequireAdmin />}>
+                <Route index element={<Groups />} />
+              </Route>
+              <Route path={OWNER_HANDOVER.slice(1)} element={<RequireAdmin />}>
+                <Route index element={<HandoverPage />} />
+              </Route>
+              <Route path={ADMIN_REPORTS.slice(1)} element={<RequireAdmin />}>
+                <Route index element={<Reports />} />
+              </Route>
+              <Route path={OWNER_REPORT_HISTORY.slice(1)} element={<RequireOwner />}>
+                <Route
+                  index
+                  element={
+                    <Frame>
+                      <RunsPage />
+                    </Frame>
+                  }
+                />
+              </Route>
+              <Route path={OWNER_REPORT_SCHEDULES.slice(1)} element={<RequireOwner />}>
+                <Route
+                  index
+                  element={
+                    <Frame>
+                      <SchedulesPage />
+                    </Frame>
+                  }
+                />
+              </Route>
+              <Route path={OWNER_VIEWS.slice(1)} element={<RequireOwner />}>
+                <Route index element={<Views />} />
+              </Route>
+              <Route path={OWNER_CHURCHES.slice(1)} element={<RequireOwner />}>
+                <Route index element={<Churches />} />
+              </Route>
+              <Route path={LEADER_GROUP.slice(1)} element={<MyGroup />} />
+              <Route path={LEADER_INVITATIONS.slice(1)} element={<GroupInvitations />} />
+              <Route path={LEADER_FLAGGED.slice(1)} element={<Flagged />} />
+              <Route path={LEADER_REVOKED.slice(1)} element={<Revoked />} />
+              <Route path={`${LEADER_PERSON.slice(1)}/:id`} element={<PersonDetail />} />
             </Route>
           </Route>
         </Route>
