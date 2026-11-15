@@ -13,6 +13,7 @@ import {
   ADMIN_REPORTS,
   OWNER_LABELS,
   PERSON_ACCOUNT,
+  PRIVACY,
   PERSON_DOWNLOADS,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
@@ -153,6 +154,9 @@ export default function PersonLayout() {
               {t('account.link')}
             </Link>
           )}
+          <Link className="btn btn-quiet" to={PRIVACY}>
+            {t('privacy.link')}
+          </Link>
           {person.status !== 'revoked' && (
             <Link className="btn btn-quiet" to={PERSON_DOWNLOADS}>
               {t('downloads.link')}
