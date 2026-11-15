@@ -9,10 +9,6 @@ import { errorMessage } from '../../shared/errors'
 import { Alert, QueryBoundary } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 
-function megabytes(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 /** The test builds of the Android app, for any signed-in person who is not revoked. */
 export default function Downloads() {
   usePageTitle(t('downloads.title'))
@@ -43,7 +39,7 @@ export default function Downloads() {
                     <p className="muted">
                       <time dateTime={item.released_at}>{formatDateTime(item.released_at)}</time>
                       {' · '}
-                      {megabytes(item.size_bytes)}
+                      {t('downloads.size', { size: (item.size_bytes / (1024 * 1024)).toFixed(1) })}
                     </p>
                     {item.notes && <p>{item.notes}</p>}
                     <p className="muted">

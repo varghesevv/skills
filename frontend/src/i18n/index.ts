@@ -74,6 +74,7 @@ const en = {
     'Test builds of the Android app. Download one, check the SHA-256 if you like, and install it on your phone (you may need to allow installing from this source).',
   'downloads.none': 'No build has been published yet.',
   'downloads.version': 'Version {version} (build {build})',
+  'downloads.size': '{size} MB',
   'downloads.sha256': 'SHA-256',
   'downloads.download': 'Download version {version}',
   'account.link': 'My account',

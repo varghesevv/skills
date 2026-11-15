@@ -2,7 +2,8 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { json, makeMe, makePerson, renderApp, signedInAs } from '../../testUtils'
+import type { Handler } from '../../testUtils'
+import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../../testUtils'
 
 const build = {
   platform: 'android',
@@ -17,7 +18,7 @@ const build = {
 const quiet = {
   'GET /me/notifications?limit=50': () => json(200, { items: [], total: 0, unread_count: 0 }),
 }
-const as = (status: string, routes: Record<string, () => Response> = {}) =>
+const as = (status: string, routes: Record<string, Handler> = {}) =>
   signedInAs(makeMe(), {
     ...quiet,
     'GET /me': () => json(200, makePerson({ status: status as 'provider' })),
@@ -52,12 +53,12 @@ describe('the Android app page', () => {
     expect(await screen.findByText('No build has been published yet.')).toBeVisible()
   })
 
-  it('fetches the file with the token and hands it to the browser', async () => {
+  it('fetches the file with the bearer token and hands it to the browser', async () => {
     const urls: string[] = []
     as('provider', {
       'GET /app/downloads': () => json(200, { items: [build] }),
-      'GET /app/downloads/android/1.2.0': () => {
-        urls.push('file')
+      'GET /app/downloads/android/1.2.0': ({ headers }) => {
+        urls.push(headers.get('Authorization') ?? '')
         return new Response('apk-bytes', {
           headers: { 'Content-Disposition': 'attachment; filename="skills-demo-1.2.0.apk"' },
         })
@@ -71,8 +72,36 @@ describe('the Android app page', () => {
       .setup()
       .click(await screen.findByRole('button', { name: 'Download version 1.2.0' }))
     await waitFor(() => expect(click).toHaveBeenCalled())
-    expect(urls).toEqual(['file'])
+    expect(urls).toHaveLength(1)
+    expect(urls[0]).toMatch(/^Bearer .+/)
     expect(create).toHaveBeenCalled()
+  })
+
+  it('shows the loading state, then an error with a way to try again', async () => {
+    let calls = 0
+    as('searcher', {
+      'GET /app/downloads': () => {
+        calls += 1
+        return calls === 1 ? apiError(503, 'service_unavailable') : json(200, { items: [build] })
+      },
+    })
+    renderApp('/member/downloads')
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    await userEvent.setup().click(retry)
+    expect(await screen.findByText('Version 1.2.0 (build 7)')).toBeVisible()
+    expect(calls).toBe(2)
+  })
+
+  it('tells the person when the file cannot be fetched', async () => {
+    as('searcher', {
+      'GET /app/downloads': () => json(200, { items: [build] }),
+      'GET /app/downloads/android/1.2.0': () => apiError(404, 'not_found'),
+    })
+    renderApp('/member/downloads')
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Download version 1.2.0' }))
+    expect(await screen.findByRole('alert')).toBeVisible()
   })
 
   it('is closed to a revoked person, who is sent home', async () => {

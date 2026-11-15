@@ -16,4 +16,4 @@ export const listDownloads = () => request<{ items: DownloadItem[] }>('/app/down
 
 /** One build, fetched with the bearer token: there is no public address for a file. */
 export const fetchBuild = (item: DownloadItem) =>
-  requestFile(`/app/downloads/android/${item.version}`, item.filename)
+  requestFile(`/app/downloads/android/${encodeURIComponent(item.version)}`, item.filename)
