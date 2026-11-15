@@ -45,8 +45,8 @@ Contents
 
 | Part | What it is | Where the code is |
 |---|---|---|
-| **web** | The site you click around in. Four areas (portals): freelancer, work host, organisation, admin. | `frontend/` |
-| **api** | The server that holds the rules. The web site (and later a mobile app) only talk to it over HTTP. | `backend/` |
+| **web** | The site you click around in. One login; the pages you see depend on your status (applicant, searcher, provider, group leader, church admin, owner). | `frontend/` |
+| **api** | The server that holds the rules. The web site and the Android app only talk to it over HTTP. | `backend/` |
 | **worker** | A small program that runs reports on a schedule (for example every morning). | `backend/app/worker` |
 | **db** | PostgreSQL, the only place data is stored. | started from `docker-compose.yml` |
 
@@ -270,16 +270,15 @@ It asks for a password twice (you will not see what you type). In `local` the pa
 
 ### 5.4 Log in
 
-1. Open <http://localhost:5173>. There are three login pages:
-   - **Log in** (`/login`) for freelancers and work hosts. Switch between the two with the links **Freelancer** and **Work host** at the top of the form.
-   - **Organisation log in** (`/login/organisation`), only for organisations. Open it by address; the main login page does not link to it.
-   - **Admin log in** (`/login/admin`), only for administrators. Open it by address; no page links to it.
-2. Enter the email and password of that kind of account. An account of another kind is rejected on the wrong page.
-3. Try each type to see its area:
-   - **Freelancer**: profile, skills and labels, availability calendar, vouches, ratings.
-   - **Work host**: search freelancers, rate them.
-   - **Organisation**: vouch for freelancers. A new organisation cannot log in until an admin approves it.
-   - **Admin**: approve organisations, manage labels, run and download reports, schedules.
+1. Open <http://localhost:5173> and choose **Sign in** (`/sign-in`). There is one sign-in page for everyone; **Join** (`/sign-up`) is for a new person.
+2. Enter the email and password of one of the people from 5.1 or 5.2 (or your own OWNER from 5.3). The page you land on (`/member`) and its menu depend on that person's status.
+3. Try each status to see its pages (a higher status sees what the lower ones see):
+   - **Applicant** (`ann.applicant@...`): the application, the vouches received, a vouch link to share, change or leave.
+   - **Searcher** (`sam.searcher@...`): find providers, a provider's page, rate, Reveal a number, ratings I gave, vouch for others.
+   - **Provider** (`priya.provider@...`): profile and rate, skills and labels, time off, ratings received.
+   - **Group leader** (`lena.leader@...`): applicants (admit or decline), members, people to re-check, revoked, invite to the group, moves.
+   - **Church admin** (`ada.admin@...`): the whole church: groups and their leaders, group requests, church reports.
+   - **Owner** (`olive.owner@...`): all churches and invitations, labels, all reports with history and schedules, handover.
 
 "Forgot password" does not send email locally. The reset link is written to the API log:
 
@@ -322,7 +321,7 @@ Where things live:
 
 | I want to change... | Look in |
 |---|---|
-| a page or a form | `frontend/src/pages/`, `frontend/src/portals/<portal>/` |
+| a page or a form | `frontend/src/pages/person/` (and `provider/`, `search/`, `leader/`, `owner/` below it) |
 | text on screen | `frontend/src/i18n/index.ts` |
 | colours, spacing, layout | `frontend/src/styles/global.css` |
 | an API endpoint | `backend/app/api/v1/` |
@@ -449,8 +448,8 @@ Files are written to the reports folder inside the container. The `worker` conta
 | Browser shows nothing at port 5173 | The web container is still running `npm install`. Watch `docker compose logs -f web` until it says `ready`. |
 | `DEMO_USER_PASSWORD is not set` | The value is empty in `.env`. Run `make env` (it fills empty secrets), then retry. Remember the `-e DEMO_USER_PASSWORD=...` part of the command. |
 | `In demo, DEMO_USER_PASSWORD must be strong...` | `ENVIRONMENT` in `.env` is `demo`. Local development uses `ENVIRONMENT=local`. |
-| `An admin with this email already exists` | It is already created. Log in, or use another email. |
-| Login says the account is not approved | An organisation needs admin approval. Log in as admin → Organisations → approve it. |
+| `An OWNER already exists` | Only one OWNER can exist. Log in as that OWNER, or start over with `make reset-db` (this deletes all local data). |
+| A person cannot reach a page | Their status does not allow it: they are sent to their home. A leader admits people (Applicants); the OWNER and the admins see more. |
 | Error "Too many failed attempts" (HTTP 429) | Five wrong passwords for the same email lock that login for 15 minutes, by design. Wait, or use another account. |
 | `demo-logins.csv` is empty | The command failed before writing. Run it without `> demo-logins.csv` to read the error message. |
 | Changes in `backend/` are not picked up | Check `docker compose logs api` for a syntax error. The API reloads only when the file is valid. |
@@ -473,9 +472,9 @@ Still stuck? Copy the error text (never the contents of `.env`), look in `docker
 | **Docker Compose** | The tool that starts all containers together from `docker-compose.yml`. |
 | **Migration** | A versioned script that changes the database structure (Alembic). |
 | **Seed** | Creating starting or demo data. |
-| **Label** | A choice such as a skill, language, timing, nativity or skill level that describes a freelancer. |
-| **Vouch** | An approved organisation saying "we stand behind this freelancer". |
-| **Portal** | One role's area of the site (freelancer, work host, organisation, admin). |
+| **Label** | A choice such as a skill, language, timing, nativity or skill level that describes a provider. |
+| **Vouch** | A member of a church saying "I know this person", for someone who has applied (an applicant, or a searcher who asks to become a provider). |
+| **Status** | What a person may do: applicant (pending), searcher, provider, group leader (verifier), church admin or owner. Applicants and members are admitted, revoked or reinstated by their group leader; leaders are appointed by their church admin, and church admins by the owner ([verification rules](verification.md)). The status is read from the database on every request. |
 | **Token** | The proof of login the site sends with every request. The API is stateless: no server-side sessions. |
 | **Worker** | A background program that does scheduled jobs, here the reports. |
 | **ADR** | Architecture Decision Record: a short note explaining why a technical choice was made. |

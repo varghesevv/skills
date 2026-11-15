@@ -1,6 +1,6 @@
 # Skills
 
-Skills is a trusted marketplace for finding skilled people within a church organisation. Three kinds of people take part:
+Skills is a trusted marketplace for finding skilled people within a church organisation. Three kinds of people take part, and an **owner** who looks after the installation:
 
 | Entity | Role |
 |---|---|
@@ -8,7 +8,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 | **Searchers** | Who seek a particular set of providers for a job they require doing. |
 | **[Verifiers](docs/verification.md)** | Admit searchers and providers within their church. |
 
-**Status:** the application is built (API, web portals, reports) and runs as a demo on AWS. Start with the specification, or jump to [running it on your computer](docs/local-development.md).
+**Status:** the application is built (API, web app, Android app, reports) and runs as a demo on AWS. The church trust model is being moved onto the demo from an integration branch (see the [roadmap](docs/roadmap-verification-model.md)). Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
 ## Documentation
 
@@ -41,25 +41,23 @@ docker compose up --build      # db, api (http://localhost:8000/docs), worker, w
 
 Backend and frontend details: [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md).
 
-## Login pages
+## Signing in and joining
 
-There are three separate login pages. Each one is for one kind of account, so the page decides which account is used:
+There is one way in, for everyone:
 
 | Page | Address | For |
 |---|---|---|
-| Log in | `/login` and `/login/workhost` | Freelancers and work hosts. Two links at the top of the form (**Freelancer**, **Work host**) switch between them. |
-| Organisation log in | `/login/organisation` | Organisations only. A new organisation can log in once an admin has approved it. Share this address directly; the main login page does not link to it. |
-| Admin log in | `/login/admin` | Administrators only. There is no sign-up; operators create admins. Share this address directly; no page links to it. |
+| Sign in | `/sign-in` | Every person: applicant, searcher, provider, group leader, church admin and the owner. |
+| Join | `/sign-up` | A new person: details, a church, a home group (each with its leader's name), and whether to apply as a searcher or a provider. A group's invitation link (`/join/<token>`) skips the church and group steps. |
+| Invitation of a church admin | `/invite/<token>` | The person the owner invited to start a church. |
 
-Opening a protected address while logged out leads to the matching login page. Old `/login?type=...` links are redirected. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
+After signing in the app reads who the person is and shows what their **status** allows, under `/member`. Members are admitted by their group leader; leaders are appointed by their church admin and church admins by the owner. The owner, one admin per church and one leader per home group form the chain of trust ([verification rules](docs/verification.md)). The older addresses `/login...` and `/register...` lead to the sign-in and the join pages. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
 
-## Wording and web addresses per installation
+## Wording per installation
 
-The words for the three kinds of people (Organisation, Work host, Freelancer) and the matching web
-addresses are not fixed. Each installation picks a profile from
+The words for the three kinds of people (Organisation, Work host, Freelancer) and for the church structure are not fixed. Each installation picks a profile from
 [`frontend/src/terminology/profiles.json`](frontend/src/terminology/profiles.json), a plain file of
-key/value pairs. `default` keeps today's words; `church` shows Church / Searcher / Provider and
-uses `/church`, `/login/church`, `/searcher`, `/provider` and so on.
+key/value pairs. `default` keeps today's words; `church` shows Church / Searcher / Provider / Group leader / Church admin / Owner and so on.
 
 - Demo/production: set the Environment variable `TERMINOLOGY_PROFILE` (for example `church`) and deploy.
   The web container hands it to the browser as `/config.json`; no rebuild is needed.
@@ -67,7 +65,7 @@ uses `/church`, `/login/church`, `/searcher`, `/provider` and so on.
 - To add a profile, copy a block in `profiles.json` and change the values; a test checks that every
   profile has the same keys.
 
-Only what people see changes. API paths, stored `user_type` values, report file names and emails keep
+Only what people see changes. Web addresses (`/sign-in`, `/member/...`), API paths, status values, report file names and emails keep
 the original words.
 
 ## Stack
@@ -78,7 +76,8 @@ Python (FastAPI, SQLAlchemy, Alembic), PostgreSQL (only), React + TypeScript, RE
 
 ```
 backend/     Python REST API, migrations, scheduled report worker
-frontend/    React web app (freelancer, work host, organisation, admin portals)
+mobile/      Flutter app for Android (the same login and statuses as the web)
+frontend/    React web app (one login; the pages shown depend on the person's status)
 infra/       Terraform, server Docker Compose, deploy and backup scripts
 .github/     GitHub Actions workflows, Dependabot, CODEOWNERS
 docs/        Specification and ADRs
@@ -87,4 +86,4 @@ docs/        Specification and ADRs
 
 ## Mobile
 
-A mobile app is planned later and is **out of scope now**. The API is designed so it can be reused without change ([ADR-0004](docs/adr/0004-stateless-token-auth-for-web-and-mobile.md)).
+The Android app lives in [mobile/](mobile/README.md): the same sign-in and the same statuses as the web, with search, provider pages, rating, Reveal, and the leader screens (applicants, members, group requests, moves). It uses the same REST API ([ADR-0004](docs/adr/0004-stateless-token-auth-for-web-and-mobile.md)); the plan is in [docs/mobile-app-plan.md](docs/mobile-app-plan.md) and the screen-by-screen state in the [parity table](docs/android/parity.md).
