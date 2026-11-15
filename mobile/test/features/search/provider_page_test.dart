@@ -117,16 +117,20 @@ Future<TestApp> _open(
   void Function(FakeAdapter adapter)? arrange,
   List<String>? dialled,
   bool failDialler = false,
+  Future<bool> Function(String number)? dialerBehaviour,
 }) async {
   final app = await pumpApp(
     tester,
     size: const Size(400, 3000),
     overrides: [
-      dialerProvider.overrideWithValue((number) async {
-        if (failDialler) throw StateError('no dialler');
-        dialled?.add(number);
-        return true;
-      }),
+      dialerProvider.overrideWithValue(
+        dialerBehaviour ??
+            (number) async {
+              if (failDialler) throw StateError('no dialler');
+              dialled?.add(number);
+              return true;
+            },
+      ),
     ],
     arrange: (adapter, store) {
       signedInAsPerson(
@@ -312,6 +316,61 @@ void main() {
           ),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets('the Call button says so too when the dialler cannot open', (
+      tester,
+    ) async {
+      var attempts = 0;
+      await _open(
+        tester,
+        dialerBehaviour: (number) async {
+          attempts++;
+          if (attempts > 1) throw StateError('no dialler');
+          return true;
+        },
+        arrange: (a) => a.reply(
+          'POST',
+          '/freelancers/$_id/reveal-mobile',
+          FakeReply(200, {'mobile_number': _number}),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('reveal')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('could not open the dialler'), findsNothing);
+      await tester.tap(find.byKey(const Key('call')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(
+          'The phone could not open the dialler. The number is shown below.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'a dialler that answers false is explained like one that throws',
+      (tester) async {
+        await _open(
+          tester,
+          dialerBehaviour: (number) async => false,
+          arrange: (a) => a.reply(
+            'POST',
+            '/freelancers/$_id/reveal-mobile',
+            FakeReply(200, {'mobile_number': _number}),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('reveal')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            'The phone could not open the dialler. The number is shown below.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('revealed-number')), findsOneWidget);
       },
     );
 
