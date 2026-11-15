@@ -222,6 +222,44 @@ void main() {
     expect(find.byKey(const Key('show-more')), findsOneWidget);
   });
 
+  testWidgets('coming back from a provider asks for the list again', (
+    tester,
+  ) async {
+    final app = await _open(
+      tester,
+      'searcher',
+      arrange: (a) {
+        a.reply(
+          'GET',
+          '/workhosts/me/ratings',
+          FakeReply(200, _page([1], 1, 1)),
+        );
+        a.reply(
+          'GET',
+          '/workhosts/me/ratings',
+          FakeReply(200, {
+            'items': [
+              {..._given(1), 'rating': 3, 'comment': 'Changed'},
+            ],
+            'total': 1,
+            'page': 1,
+            'page_size': 10,
+          }),
+        );
+      },
+    );
+    await tapKey(tester, 'ratings-given');
+    expect(find.text('Comment 1'), findsOneWidget);
+    // The provider's page is not served by the fake; going back is all that matters here.
+    await tester.tap(find.byKey(const Key('given-0')));
+    await tester.pumpAndSettle();
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).last);
+    navigator.pop();
+    await tester.pumpAndSettle();
+    expect(app.adapter.count('GET', '/workhosts/me/ratings'), 2);
+    expect(find.text('Changed'), findsOneWidget);
+  });
+
   for (final key in ['ratings-given', 'account']) {
     testWidgets('$key fits at double text size', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;

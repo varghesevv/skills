@@ -113,8 +113,15 @@ class RatingsGivenScreen extends ConsumerWidget {
                     Card(
                       key: Key('given-$index'),
                       child: InkWell(
-                        onTap: () =>
-                            context.push('$personProviders/${r.providerId}'),
+                        onTap: () async {
+                          await context.push(
+                            '$personProviders/${r.providerId}',
+                          );
+                          // The rating may have been changed there: ask again.
+                          if (context.mounted) {
+                            ref.invalidate(givenControllerProvider);
+                          }
+                        },
                         child: MergeSemantics(
                           child: Padding(
                             padding: const EdgeInsets.all(16),
