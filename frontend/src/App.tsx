@@ -34,6 +34,9 @@ import RatingsGiven from './pages/person/search/RatingsGiven'
 import SearchPage from './pages/person/search/SearchPage'
 import MyRatings from './pages/person/provider/MyRatings'
 import GroupInvitations from './pages/person/leader/GroupInvitations'
+import Reports from './pages/person/owner/reports/Reports'
+import RunsPage from './pages/person/owner/reports/RunsPage'
+import SchedulesPage from './pages/person/owner/reports/SchedulesPage'
 import HandoverPage from './pages/person/owner/Handover'
 import Views from './pages/person/owner/Views'
 import Churches from './pages/person/owner/Churches'
@@ -60,7 +63,10 @@ import {
   OWNER_VIEWS,
   LEADER_GROUP,
   LEADER_INVITATIONS,
+  ADMIN_REPORTS,
   OWNER_LABELS,
+  OWNER_REPORT_HISTORY,
+  OWNER_REPORT_SCHEDULES,
   PERSON_ACCOUNT,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
@@ -158,6 +164,29 @@ export default function App() {
                 </Route>
                 <Route path={OWNER_HANDOVER.slice(1)} element={<RequireAdmin />}>
                   <Route index element={<HandoverPage />} />
+                </Route>
+                <Route path={ADMIN_REPORTS.slice(1)} element={<RequireAdmin />}>
+                  <Route index element={<Reports />} />
+                </Route>
+                <Route path={OWNER_REPORT_HISTORY.slice(1)} element={<RequireOwner />}>
+                  <Route
+                    index
+                    element={
+                      <Frame>
+                        <RunsPage />
+                      </Frame>
+                    }
+                  />
+                </Route>
+                <Route path={OWNER_REPORT_SCHEDULES.slice(1)} element={<RequireOwner />}>
+                  <Route
+                    index
+                    element={
+                      <Frame>
+                        <SchedulesPage />
+                      </Frame>
+                    }
+                  />
                 </Route>
                 <Route path={OWNER_VIEWS.slice(1)} element={<RequireOwner />}>
                   <Route index element={<Views />} />

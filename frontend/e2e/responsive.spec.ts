@@ -110,8 +110,8 @@ const SCENARIOS: Scenario[] = [
   },
   {
     name: 'report page',
-    role: 'admin',
-    path: '/admin/reports',
+    role: 'owner',
+    path: '/member/reports',
     ready: async (page) => {
       await page.getByRole('button', { name: 'Run report' }).first().click()
       await expect(page.getByRole('table')).toBeVisible()
@@ -182,7 +182,9 @@ for (const scenario of SCENARIOS) {
     // The member pages show their menus in the top bar all the time (there is no menu button), so
     // the overflow and target-size checks above already cover them; only the older portals keep
     // the main navigation behind a menu button.
-    if (scenario.role && scenario.role !== 'searcher') await checkNavigation(page)
+    if (scenario.role && scenario.role !== 'searcher' && scenario.role !== 'owner') {
+      await checkNavigation(page)
+    }
     await keepScreenshot(page, testInfo, scenario.name)
   })
 }

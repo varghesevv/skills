@@ -28,6 +28,9 @@ export const PERSON_SKILLS = '/member/skills'
 export const PERSON_AVAILABILITY = '/member/availability'
 export const PERSON_RATINGS = '/member/ratings'
 export const OWNER_LABELS = '/member/labels'
+export const ADMIN_REPORTS = '/member/reports'
+export const OWNER_REPORT_HISTORY = '/member/report-history'
+export const OWNER_REPORT_SCHEDULES = '/member/report-schedules'
 export const LEADER_REVOKED = '/member/revoked'
 export const LEADER_FLAGGED = '/member/flagged'
 export const LEADER_PERSON = '/member/people'
@@ -93,9 +96,6 @@ export const PORTALS: readonly Portal[] = [
     nav: [
       { to: '/admin', labelKey: 'nav.dashboard', end: true },
       { to: `/admin/${term('organisations_path')}`, labelKey: 'nav.orgs' },
-      { to: '/admin/reports', labelKey: 'nav.reports' },
-      { to: '/admin/report-history', labelKey: 'nav.runs' },
-      { to: '/admin/report-schedules', labelKey: 'nav.schedules' },
       { to: '/admin/labels', labelKey: 'nav.adminLabels' },
     ],
   },

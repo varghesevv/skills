@@ -2,12 +2,12 @@ import type { Page, Route } from '@playwright/test'
 
 // A tiny fake of the API, so the layout checks need no backend or database.
 
-export type Role = 'freelancer' | 'workhost' | 'organisation' | 'admin' | 'searcher'
+export type Role = 'freelancer' | 'workhost' | 'organisation' | 'admin' | 'searcher' | 'owner'
 
 const ID = '11111111-1111-1111-1111-111111111111'
 
 function me(role: Role) {
-  if (role === 'searcher') {
+  if (role === 'searcher' || role === 'owner') {
     // A person of the church trust model (the member pages), not an older account.
     return {
       user_type: 'person',
@@ -15,7 +15,7 @@ function me(role: Role) {
       full_name: 'Fatima Alexandrina Khan-Smithsonian',
       email: 'person@example.com',
       mobile_number: '+971500000001',
-      status: 'searcher',
+      status: role,
       requested_status: null,
       church: { id: 'church-1', name: 'Grace Community Church of the Valley' },
       home_group: { id: 'group-1', name: 'Riverside' },
@@ -93,7 +93,7 @@ const REPORTS = [
     code: 'RP-02',
     title: 'Active users and logins',
     description: 'Users who logged in, and successful and failed logins.',
-    filters: ['user_type'],
+    filters: ['status'],
   },
 ]
 

@@ -206,7 +206,7 @@ describe('protected pages', () => {
 
   it('sends a visitor of the admin area to the admin login', async () => {
     mockApi({})
-    renderApp('/admin/reports')
+    renderApp('/admin/labels')
     expect(await screen.findByRole('heading', { name: 'Admin log in' })).toBeInTheDocument()
   })
 

@@ -2,10 +2,25 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { apiError, json, makeMe, renderApp, signedInAs } from '../../testUtils'
+import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../../../../testUtils'
 
 const ui = () => userEvent.setup({ delay: null })
-const admin = makeMe({ user_type: 'admin', full_name: 'Site Admin', email: 'a@example.com' })
+const quiet = {
+  'GET /me/notifications?limit=50': () => json(200, { items: [], total: 0, unread_count: 0 }),
+  'GET /churches': () =>
+    json(200, {
+      items: [
+        { id: 'church-1', name: 'Grace Church' },
+        { id: 'church-2', name: 'Hope Church' },
+      ],
+    }),
+}
+const persona = (status: string) =>
+  makePerson({ status: status as 'owner', full_name: 'Olive Owner' })
+/** The OWNER, who runs every report and has the history and the schedules. */
+const admin = makeMe()
+const signedIn = (routes: Record<string, () => Response>, status = 'owner') =>
+  signedInAs(admin, { ...quiet, 'GET /me': () => json(200, persona(status)), ...routes })
 
 const info = (name: string, title: string, filters: string[] = []) => ({
   name,
@@ -16,8 +31,8 @@ const info = (name: string, title: string, filters: string[] = []) => ({
 })
 const REPORTS = [
   info('registrations_per_day', 'Registrations per day'),
-  info('active_users', 'Active users and logins', ['user_type']),
-  info('top_rated', 'Top rated freelancers', ['min_ratings']),
+  info('active_users', 'Active users and logins', ['status']),
+  info('top_rated', 'Top rated providers', ['min_ratings']),
   info('availability_overview', 'Availability overview'),
 ]
 const LIST = 'GET /reports'
@@ -36,7 +51,7 @@ function card(title: string) {
 describe('report pages', () => {
   it('runs a report for the default dates and shows the table', async () => {
     const user = ui()
-    signedInAs(admin, {
+    signedIn({
       [LIST]: () => json(200, REPORTS),
       'GET /reports/registrations_per_day?format=json': () =>
         json(200, {
@@ -45,7 +60,7 @@ describe('report pages', () => {
           sections: [{ title: 'Per day', columns: ['day', 'count'], rows: [['2026-10-01', 4]] }],
         }),
     })
-    renderApp('/admin/reports')
+    renderApp('/member/reports')
     await screen.findByRole('region', { name: 'Registrations per day' })
     await user.click(card('Registrations per day').getByRole('button', { name: 'Run report' }))
     expect(await screen.findByRole('cell', { name: '2026-10-01' })).toBeVisible()
@@ -54,17 +69,18 @@ describe('report pages', () => {
   it('sends the dates and the report filters', async () => {
     const user = ui()
     const url =
-      'GET /reports/active_users?from=2026-10-01&to=2026-10-31&user_type=workhost&format=json'
-    const api = signedInAs(admin, {
+      'GET /reports/active_users?from=2026-10-01&to=2026-10-31&status=provider&church_id=church-2&format=json'
+    const api = signedIn({
       [LIST]: () => json(200, REPORTS),
       [url]: () => json(200, empty('active_users')),
     })
-    renderApp('/admin/reports')
+    renderApp('/member/reports')
     await screen.findByRole('region', { name: 'Active users and logins' })
     const users = card('Active users and logins')
     await user.type(users.getByLabelText('From'), '2026-10-01')
     await user.type(users.getByLabelText('To'), '2026-10-31')
-    await user.selectOptions(users.getByLabelText('User type'), 'Work host')
+    await user.selectOptions(users.getByLabelText('Status'), 'Freelancer')
+    await user.selectOptions(await users.findByLabelText('Organisation'), 'Hope Church')
     await user.click(users.getByRole('button', { name: 'Run report' }))
     expect(await users.findByText('Nothing to show yet.')).toBeVisible()
     expect(api.count(url)).toBe(1)
@@ -72,10 +88,10 @@ describe('report pages', () => {
 
   it('checks the rating count before calling the API', async () => {
     const user = ui()
-    const api = signedInAs(admin, { [LIST]: () => json(200, REPORTS) })
-    renderApp('/admin/reports')
-    await screen.findByRole('region', { name: 'Top rated freelancers' })
-    const top = card('Top rated freelancers')
+    const api = signedIn({ [LIST]: () => json(200, REPORTS) })
+    renderApp('/member/reports')
+    await screen.findByRole('region', { name: 'Top rated providers' })
+    const top = card('Top rated providers')
     await user.type(top.getByLabelText('At least this many ratings'), '0')
     await user.click(top.getByRole('button', { name: 'Run report' }))
     expect(await top.findByText('Enter a whole number from 1 to 1000.')).toBeVisible()
@@ -84,8 +100,8 @@ describe('report pages', () => {
 
   it('keeps the availability report to 93 days', async () => {
     const user = ui()
-    const api = signedInAs(admin, { [LIST]: () => json(200, REPORTS) })
-    renderApp('/admin/reports')
+    const api = signedIn({ [LIST]: () => json(200, REPORTS) })
+    renderApp('/member/reports')
     await screen.findByRole('region', { name: 'Availability overview' })
     const overview = card('Availability overview')
     await user.type(overview.getByLabelText('From'), '2026-01-01')
@@ -122,7 +138,7 @@ describe('report history', () => {
 
   it('lists runs and downloads a file', async () => {
     const user = ui()
-    const api = signedInAs(admin, {
+    const api = signedIn({
       [LIST]: () => json(200, REPORTS),
       [RUNS]: () =>
         json(
@@ -138,8 +154,8 @@ describe('report history', () => {
           headers: { 'Content-Disposition': 'attachment; filename="top_rated.csv"' },
         }),
     })
-    renderApp('/admin/report-history')
-    await user.click(await screen.findByRole('button', { name: 'CSV: Top rated freelancers' }))
+    renderApp('/member/report-history')
+    await user.click(await screen.findByRole('button', { name: 'CSV: Top rated providers' }))
     await waitFor(() => expect(api.count('GET /reports/runs/run-1/download?format=csv')).toBe(1))
     await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled())
     expect(screen.getByText('boom')).toBeVisible()
@@ -148,17 +164,17 @@ describe('report history', () => {
 
   it('runs and keeps a report for the chosen dates', async () => {
     const user = ui()
-    const api = signedInAs(admin, {
+    const api = signedIn({
       [LIST]: () => json(200, REPORTS),
       [RUNS]: () => json(200, runPage([])),
       'POST /reports/top_rated/run': () => json(201, run()),
     })
-    renderApp('/admin/report-history')
+    renderApp('/member/report-history')
     // The report list loads after the form appears, so wait for its options.
-    await screen.findAllByRole('option', { name: 'Top rated freelancers' })
+    await screen.findAllByRole('option', { name: 'Top rated providers' })
     await user.selectOptions(
       screen.getByLabelText('Report', { selector: 'select[name="keep_report"]' }),
-      'Top rated freelancers',
+      'Top rated providers',
     )
     await user.type(screen.getByLabelText('From'), '2026-10-01')
     await user.type(screen.getByLabelText('To'), '2026-10-07')
@@ -172,11 +188,11 @@ describe('report history', () => {
 
   it('asks for a report and dates first', async () => {
     const user = ui()
-    const api = signedInAs(admin, {
+    const api = signedIn({
       [LIST]: () => json(200, REPORTS),
       [RUNS]: () => json(200, runPage([])),
     })
-    renderApp('/admin/report-history')
+    renderApp('/member/report-history')
     await user.click(await screen.findByRole('button', { name: 'Run and keep' }))
     expect(await screen.findByText('Choose a report', { selector: '[id$="-error"]' })).toBeVisible()
     expect(api.calls.filter((call) => call.key.startsWith('POST /reports'))).toHaveLength(0)
@@ -196,12 +212,12 @@ describe('schedules', () => {
 
   it('saves a changed schedule', async () => {
     const user = ui()
-    const api = signedInAs(admin, {
+    const api = signedIn({
       [SCHEDULES]: () => json(200, [schedule]),
       [LIST]: () => json(200, reports),
       [PUT]: () => json(200, { ...schedule, cron_expression: '10 1 * * *', is_enabled: false }),
     })
-    renderApp('/admin/report-schedules')
+    renderApp('/member/report-schedules')
     const cron = await screen.findByLabelText('When (cron)')
     await user.clear(cron)
     await user.type(cron, '10 1 * * *')
@@ -217,11 +233,11 @@ describe('schedules', () => {
 
   it('does not send a cron expression with the wrong number of fields', async () => {
     const user = ui()
-    const api = signedInAs(admin, {
+    const api = signedIn({
       [SCHEDULES]: () => json(200, [schedule]),
       [LIST]: () => json(200, reports),
     })
-    renderApp('/admin/report-schedules')
+    renderApp('/member/report-schedules')
     const cron = await screen.findByLabelText('When (cron)')
     await user.clear(cron)
     await user.type(cron, 'every day')
@@ -234,13 +250,59 @@ describe('schedules', () => {
 
   it('shows the server message when the schedule is rejected', async () => {
     const user = ui()
-    signedInAs(admin, {
+    signedIn({
       [SCHEDULES]: () => json(200, [schedule]),
       [LIST]: () => json(200, reports),
       [PUT]: () => apiError(422, 'invalid_schedule'),
     })
-    renderApp('/admin/report-schedules')
+    renderApp('/member/report-schedules')
     await user.click(await screen.findByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('not valid')
   })
+})
+
+describe('who sees the reports', () => {
+  it('shows an ADMIN the reports without the church, the history or the schedules', async () => {
+    const api = signedIn({ [LIST]: () => json(200, REPORTS) }, 'admin')
+    renderApp('/member/reports')
+    await screen.findByRole('region', { name: 'Registrations per day' })
+    expect(screen.queryByLabelText('Organisation')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Report history' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Schedules' })).toBeNull()
+    expect(api.count('GET /churches')).toBe(0)
+  })
+
+  it('shows the OWNER the history and the schedules too', async () => {
+    signedIn({ [LIST]: () => json(200, REPORTS) })
+    renderApp('/member/reports')
+    expect(await screen.findByRole('link', { name: 'Report history' })).toHaveAttribute(
+      'href',
+      '/member/report-history',
+    )
+    expect(screen.getByRole('link', { name: 'Schedules' })).toHaveAttribute(
+      'href',
+      '/member/report-schedules',
+    )
+  })
+
+  it.each(['/member/report-history', '/member/report-schedules'])(
+    'sends an ADMIN from %s to their home',
+    async (path) => {
+      const api = signedIn({}, 'admin')
+      renderApp(path)
+      expect(await screen.findByText(/^Welcome/)).toBeVisible()
+      expect(api.calls.some((call) => call.key.startsWith('GET /reports'))).toBe(false)
+    },
+  )
+
+  it.each(['pending', 'searcher', 'provider', 'verifier'])(
+    'sends a %s away from the reports',
+    async (status) => {
+      const api = signedIn({}, status)
+      renderApp('/member/reports')
+      await screen.findByRole('link', { name: /Notifications/ })
+      expect(screen.queryByRole('heading', { name: 'Reports' })).toBeNull()
+      expect(api.calls.some((call) => call.key.startsWith('GET /reports'))).toBe(false)
+    },
+  )
 })
