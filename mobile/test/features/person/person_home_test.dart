@@ -367,4 +367,44 @@ void main() {
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     });
   });
+
+  testWidgets(
+    'a person revoked while using the app is shown the notice on their next call',
+    (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          signedInAsPerson(
+            adapter,
+            store,
+            personJson(status: 'searcher', requested: null),
+          );
+          adapter
+            ..reply(
+              'GET',
+              '/me/notifications',
+              FakeReply(200, {'items': [], 'total': 0, 'unread_count': 0}),
+            )
+            ..reply(
+              'GET',
+              '/workhosts/me/ratings',
+              FakeReply(403, apiError('account_revoked')),
+            )
+            // The second answer to `GET /me`: the status changed in the meantime.
+            ..reply(
+              'GET',
+              '/me',
+              FakeReply(
+                200,
+                personJson(status: 'revoked', group: null, leader: null),
+              ),
+            );
+        },
+      );
+      await tapKey(tester, 'ratings-given');
+      expect(app.adapter.count('GET', '/me'), 2);
+      expect(find.text('No access'), findsWidgets);
+      expect(find.byKey(const Key('ratings-given')), findsNothing);
+    },
+  );
 }

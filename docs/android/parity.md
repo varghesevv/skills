@@ -34,7 +34,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Minimum-version / update-required screen | none on web | | done | `test/app/config_gate_test.dart` |
 | "This build is not configured" screen | none on web | | done | `test/core/env_test.dart` |
 | Downloads (update hint) | planned | S7.1 | not started | |
-| Not found | `pages/NotFound.tsx` | | not started | |
+| Not found | `pages/NotFound.tsx` | S5.12 | n/a: the router sends an address that is not a page to the home (signed in) or the welcome screen (signed out), so there is nothing to show | |
 
 ### Provider screens (PROVIDER and above)
 
@@ -92,10 +92,10 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Validation rules and tests ported | `shared/validation.ts` | in progress: login, forgot password, provider profile and rate (`core/validation`); the sign-up wizard and other forms with their slices |
 | Date / timezone handling (aware timestamps, local input) | `shared/dates.ts` | not started |
 | Silent refresh on `401`, logout on refresh failure | `api/http.ts` | done (`core/api/api_client.dart`) |
-| Status read from `GET /me` on start and after every `403` | `auth/AuthContext.tsx` | not started (S2.8) |
+| Status read from `GET /me` on start and after a `403` for the status | `auth/AuthContext.tsx` | done (S5.12): at start, on a new notification, and when a call is refused with `not_admitted` or `account_revoked`; a page that the new status does not allow is closed and the person goes home | `test/features/person/person_home_test.dart`, `test/core/api/api_client_test.dart` |
 | Terminology tokens and profiles | `terminology/terms.ts` | done; the new keys (searcher, provider, verifier, admin, owner, church, home group) arrive in S2.9 |
-| Loading, empty and error states on every list | spec 06 | not started |
-| Accessibility: 48 dp targets, labels, 2.0 text scale, dark mode | plan section 1 | not started (S5.12) |
+| Loading, empty and error states on every list | spec 06 | done (S5.12): each list screen has its own tests; the sweep below opens every member screen in its error state too | `test/accessibility/member_screens_test.dart` |
+| Accessibility: 48 dp targets, labels, 2.0 text scale, dark mode | plan section 1 | done (S5.12): every member screen is opened and checked for tap targets, labels, no overflow at 2.0 text on a 320 dp phone, and text contrast in light and dark | `test/accessibility/member_screens_test.dart` |
 
 ### Known differences from the web (on purpose)
 

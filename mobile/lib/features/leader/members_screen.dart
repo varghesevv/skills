@@ -74,6 +74,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
             children: [
               DropdownButtonFormField<String>(
                 key: const Key('members-filter'),
+                isExpanded: true,
                 initialValue: _status,
                 decoration: InputDecoration(
                   labelText: text('leader.members.filter'),

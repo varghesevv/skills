@@ -93,7 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final listenable = _SessionListenable(ref);
   ref.onDispose(listenable.dispose);
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/home',
     refreshListenable: listenable,
     redirect: (context, state) {
@@ -233,4 +233,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  // The redirect above sees the address the router started from, not a page pushed on top of it.
+  // When the status changes (a leader revokes someone who has a page open) the page on top is
+  // checked here, and the person goes home if their new status does not allow it.
+  ref.listen(personProvider, (previous, next) {
+    if (next == null || previous?.status == next.status) return;
+    final matches = router.routerDelegate.currentConfiguration.matches;
+    if (matches.isEmpty) return;
+    if (!personMayVisit(next, matches.last.matchedLocation)) {
+      router.go(personHome);
+    }
+  });
+
+  return router;
 });
