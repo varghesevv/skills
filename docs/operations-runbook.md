@@ -220,7 +220,7 @@ Merging to `main` builds the images and deploys the demo on its own, and the dep
 
 Before: all required checks green on the pull request; a backup is taken by the deploy itself (`deploy.sh` runs `backup.sh` first), and you may take one by hand (section 6). The demo holds no real users (decision 2 of the roadmap).
 
-After the deploy the database is new: **there is no OWNER and nobody can sign in** until an operator creates one on the server:
+After the deploy the people and everything about them are gone (the labels and the report schedules are kept): **there is no OWNER and nobody can sign in** until an operator creates one on the server:
 
 1. `dc run --rm tools python -m app.cli create-owner ...` (the command in "Set up Skills: the first OWNER" below).
 2. Optional: `umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv`.
