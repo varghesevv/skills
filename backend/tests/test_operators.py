@@ -211,3 +211,12 @@ def test_create_admin_is_gone(command: Any, capsys: pytest.CaptureFixture[str]) 
             password=secrets.token_urlsafe(16),
         )
     assert "invalid choice" in capsys.readouterr().err
+
+
+def test_the_length_message_matches_the_limits() -> None:
+    from app.cli import _LENGTH_PROBLEM
+    from app.schemas.auth import MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH
+
+    assert (
+        f"Password must be {MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters long"
+    ) == _LENGTH_PROBLEM
