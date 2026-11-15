@@ -4,11 +4,11 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 
 | Entity | Role |
 |---|---|
-| **Providers** | These list theirs skills, availability and hourly rate. |
-| **Searchers** | Who seek a particular set of providers for a job they require doing. |
-| **[Verifiers](docs/verification.md)** | Admit searchers and providers within their church. |
+| **Providers** | List their skills, availability and hourly rate. |
+| **Searchers** | Look for providers for a job they need done. |
+| **[Verifiers](docs/verification.md)** (group leaders) | Admit searchers and providers into their home group. Above them a church admin looks after each church, and the owner after the whole installation. |
 
-**Status:** the application is built (API, web app, Android app, reports) and runs as a demo on AWS. The church trust model is being moved onto the demo from an integration branch (see the [roadmap](docs/roadmap-verification-model.md)). Start with the specification, or jump to [running it on your computer](docs/local-development.md).
+**Status:** the application is built (API, web app, Android app, reports) and runs as a demo on AWS. The church trust model is live on the demo (since 2026-11-15); what was built and what is next is in the [roadmap](docs/roadmap-verification-model.md). Start with the specification, or jump to [running it on your computer](docs/local-development.md).
 
 ## Documentation
 
@@ -16,6 +16,7 @@ Skills is a trusted marketplace for finding skilled people within a church organ
 |---|---|
 | [docs/local-development.md](docs/local-development.md) | **Run Skills on your computer**: step-by-step guide for beginners (tools to install, start, demo data, tests, troubleshooting) |
 | [docs/releasing.md](docs/releasing.md) | Versions, tags and releases: Conventional Commits, release PR, image tags |
+| [docs/android/release.md](docs/android/release.md) | Releasing the Android app: signing key, the `mobile-release` workflow, the downloads page |
 | [docs/operations-runbook.md](docs/operations-runbook.md) | Running the demo: deploy, roll back, secrets, backup and restore drill, monitoring |
 | [docs/specification/](docs/specification/README.md) | What we are building: requirements, data model, API, reports, frontend, non-functional requirements |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records: why we chose what we chose |

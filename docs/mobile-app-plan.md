@@ -4,9 +4,11 @@
 > plan (phases, backend additions, chat, device and CI details), `docs/android/` wins for Android. This
 > file stays the reference for the iPhone and the store rules.
 
+> **Built 2026-11-15.** The app follows the church model and is live on the demo (parity: [docs/android/parity.md](android/parity.md); signed builds: [docs/android/release.md](android/release.md)). The text below is the original plan; where it differs, the roadmap and the parity table are right. iOS, store releases and chat are not started.
+>
 > **Roles changed 2026-11-12.** The scope table below (freelancer, work host, organisation) predates the church trust model ([ADR-0016](adr/0016-church-trust-hierarchy-verification-model.md)). The app follows [roadmap-verification-model.md](roadmap-verification-model.md): one login, a member's status decides the screens, and the organisation role is dropped.
 
-Status: proposal for discussion. Nothing here is built yet. Versions of tools and packages are not pinned in this plan; pin them when the project starts and re-check store rules then, because they change.
+Original status (before 2026-11-15): proposal for discussion. Nothing here was built yet; see the note at the top for what is built now. Versions of tools and packages are not pinned in this plan; pin them when the project starts and re-check store rules then, because they change.
 
 ## 1. Goals
 

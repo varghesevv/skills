@@ -95,19 +95,20 @@ After this, pull requests that touch `infra/` get a plan as a comment, and `terr
 
 ## Larger demo data set
 
-`python -m app.cli generate-demo-data --csv <file> [--reset]` creates about 10 organisations
-(8 approved, 1 pending, 1 rejected), 50 work hosts and 200 freelancers with varied skills,
-skill levels, timings, languages and nativity, plus vouches, ratings and planned time off. All
-accounts use the `DEMO_USER_PASSWORD` from the server's `.env`. The CSV (user_type, email,
-password, name, status) is written owner-only; use `--csv -` to write to standard output and
-redirect it into a file on the server:
+`python -m app.cli generate-demo-data --csv <file>` creates a church model of about 200 people: churches
+(each with an ADMIN), home groups (each with a leader), the OWNER (or adds to an OWNER who exists), and people of every
+status with skills, skill levels, timings, languages and nativity, plus vouches, ratings, number reveals and planned
+time off. All accounts use the `DEMO_USER_PASSWORD` from the server's `.env`. The CSV (status, email, password, name,
+church, home_group) is written owner-only; use `--csv -` to write to standard output and redirect it into a file on the
+server:
 
     cd /opt/skills && umask 077
     docker compose --env-file .env -f compose.demo.yml run --rm -T tools \
       python -m app.cli generate-demo-data --csv - > demo-logins.csv
 
-Copy it with `scp`, then delete it from the server. Never commit it. `--reset` removes the
-earlier generated accounts (emails ending `@demo.example.com`) and creates them again.
+Copy it with `scp`, then delete it from the server. Never commit it. The data is made once: the command refuses when
+demo people already exist, because the history of people is append-only. To start over, follow "Reset the demo" in the
+[operations runbook](../docs/operations-runbook.md) (it deletes the whole demo database).
 
 ### Fix for a server bootstrapped before the reports folder was group-readable
 
