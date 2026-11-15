@@ -30,7 +30,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 | Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
 | Log out | `auth/AuthContext.tsx` | | done | `test/features/home/session_test.dart` |
 | Notifications list (mark read) | new | S3.6 | done: a bell with the unread count in the top bar, polled every minute, a list with mark one or all as read | `test/features/person/vouching_test.dart` |
-| Settings: about, privacy link, version, close account | new | S5.11, S4.10 | in progress: version, log out and done; close account is on the member home for now and moves here with S5.11 (about and privacy remain) | `test/features/home/session_test.dart`, `test/features/person/leave_test.dart` |
+| Settings: about, privacy link, version, close account | new | S5.11, S4.10 | done for members at `/member/settings` (not for applicants, who have log out on their page): version, a hint when the server knows a newer version, the privacy statement (only when the build has `PRIVACY_URL`; the statement itself is the owner's to write), log out; closing the account stays on the member home | `test/features/person/person_settings_test.dart`, `test/features/person/leave_test.dart` |
 | Minimum-version / update-required screen | none on web | | done | `test/app/config_gate_test.dart` |
 | "This build is not configured" screen | none on web | | done | `test/core/env_test.dart` |
 | Downloads (update hint) | planned | S7.1 | not started | |

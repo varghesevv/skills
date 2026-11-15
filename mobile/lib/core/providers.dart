@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api/api_client.dart';
 import 'auth/auth_repository.dart';
@@ -27,6 +28,19 @@ final sessionExpiredProvider = NotifierProvider<SessionExpiry, int>(
 
 /// The running app's version (`X.Y.Z`); empty in debug and test runs. Overridden in tests.
 final appVersionProvider = Provider<String>((ref) => Env.appVersion);
+
+/// The address of the privacy statement, or empty when the build has none. A provider so tests
+/// can set it.
+final privacyUrlProvider = Provider<String>((ref) {
+  final url = Env.privacyUrl;
+  return url.startsWith('https://') ? url : '';
+});
+
+/// Opens a web address in the phone's browser; false when nothing could open it. A provider so
+/// tests can replace it.
+final webLauncherProvider = Provider<Future<bool> Function(Uri address)>((ref) {
+  return (address) => launchUrl(address, mode: LaunchMode.externalApplication);
+});
 
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 

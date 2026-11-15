@@ -10,6 +10,10 @@ class Env {
   /// builds: without it the "please update" check could never run.
   static const appVersion = String.fromEnvironment('APP_VERSION');
 
+  /// The address of the privacy statement (`https://...`). Optional: the Privacy row in the
+  /// settings only shows when it is set. Never a secret.
+  static const privacyUrl = String.fromEnvironment('PRIVACY_URL');
+
   /// `demo` or `prod`; matches the Gradle product flavor.
   static const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'demo');
 

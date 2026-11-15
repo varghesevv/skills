@@ -26,3 +26,6 @@ const personProviders = '/member/providers';
 /// the revoked).
 const personRatingsGiven = '/member/ratings-given';
 const personAccount = '/member/account';
+
+/// Version, update hint, privacy and log out, for everyone but the revoked.
+const personSettings = '/member/settings';
