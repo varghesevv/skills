@@ -46,11 +46,11 @@ _EMAIL: TypeAdapter[str] = TypeAdapter(Email)
 _PERSON_NAME: TypeAdapter[str] = TypeAdapter(PersonName)
 
 
-def _check_password(password: str) -> str | None:
-    """Return a problem description, or None. Never includes the password."""
-    if not MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH:
-        return f"Password must be {MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters long"
-    return None
+_LENGTH_PROBLEM = f"Password must be {MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters long"
+
+
+def _length_ok(password: str) -> bool:
+    return MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH
 
 
 def _ask_password(use_stdin: bool) -> str | None:
@@ -63,12 +63,16 @@ def _ask_password(use_stdin: bool) -> str | None:
         if password != getpass.getpass("Repeat password: "):
             print("The passwords do not match.", file=sys.stderr)
             return None
-    problem = _check_password(password)
     weak = password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH
-    if problem is None and settings.environment in ("demo", "prod") and weak:
-        problem = f"In {settings.environment} the password must be strong and long enough"
-    if problem:
-        print(problem, file=sys.stderr)
+    # The messages are fixed texts: nothing the person typed is ever printed.
+    if not _length_ok(password):
+        print(_LENGTH_PROBLEM, file=sys.stderr)
+        return None
+    if settings.environment in ("demo", "prod") and weak:
+        print(
+            f"In {settings.environment} the password must be strong and long enough",
+            file=sys.stderr,
+        )
         return None
     return password
 
@@ -125,12 +129,12 @@ def _demo_password() -> str | None:
         print("DEMO_USER_PASSWORD is not set (run `make env`).", file=sys.stderr)
         return None
     password = settings.demo_user_password.get_secret_value()
-    problem = _check_password(password)
     weak = password.lower() in WEAK_SECRETS or len(password) < MIN_STRICT_SECRET_LENGTH
-    if problem is None and settings.environment == "demo" and weak:
-        problem = "In demo, DEMO_USER_PASSWORD must be strong and long enough"
-    if problem:
-        print(problem, file=sys.stderr)
+    if not _length_ok(password):
+        print(_LENGTH_PROBLEM, file=sys.stderr)
+        return None
+    if settings.environment == "demo" and weak:
+        print("In demo, DEMO_USER_PASSWORD must be strong and long enough", file=sys.stderr)
         return None
     return password
 
