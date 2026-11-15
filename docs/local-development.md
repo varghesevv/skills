@@ -474,7 +474,7 @@ Still stuck? Copy the error text (never the contents of `.env`), look in `docker
 | **Seed** | Creating starting or demo data. |
 | **Label** | A choice such as a skill, language, timing, nativity or skill level that describes a provider. |
 | **Vouch** | A member of a church saying "I know this person", for someone who has applied (an applicant, or a searcher who asks to become a provider). |
-| **Status** | What a person may do: applicant (pending), searcher, provider, group leader (verifier), church admin or owner. Their group leader sets it; it is read from the database on every request. |
+| **Status** | What a person may do: applicant (pending), searcher, provider, group leader (verifier), church admin or owner. Applicants and members are admitted, revoked or reinstated by their group leader; leaders are appointed by their church admin, and church admins by the owner ([verification rules](verification.md)). The status is read from the database on every request. |
 | **Token** | The proof of login the site sends with every request. The API is stateless: no server-side sessions. |
 | **Worker** | A background program that does scheduled jobs, here the reports. |
 | **ADR** | Architecture Decision Record: a short note explaining why a technical choice was made. |

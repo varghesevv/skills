@@ -121,7 +121,7 @@ pi-migrate: ## Apply database migrations to the dev database on the Pi
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head'
 pi-seed-demo: ## Create fake demo users in the Pi dev database (password: DEMO_USER_PASSWORD in the Pi's .env)
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli seed-demo'
-pi-create-owner: ## Create the OWNER on the Pi: make pi-create-owner NAME="Your Name" EMAIL=you@example.com MOBILE=+971500000000 CHURCH="Your church" GROUP="Your home group" (asks for the password)
+pi-create-owner: ## Create the OWNER on the Pi: make pi-create-owner NAME="Your Name" EMAIL=you@example.com MOBILE=<number> CHURCH="Your church" GROUP="Your home group" (asks for the password; no quotes, $ or backticks inside a value)
 	ssh -t $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli create-owner --name "$(NAME)" --email "$(EMAIL)" --mobile "$(MOBILE)" --church "$(CHURCH)" --group "$(GROUP)"'
 pi-shell: ## Open a shell in the project folder on the Pi
 	ssh -t $(PI_HOST) 'cd $(PI_DIR) && exec $$SHELL -l'

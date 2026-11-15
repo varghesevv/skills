@@ -197,10 +197,10 @@ dc exec -T db psql -U skills -d postgres \
   -c 'CREATE DATABASE skills OWNER skills'    # 3. an empty database
 dc run --rm api alembic upgrade head          # 4. the schema (also the labels the app needs)
 dc run --rm tools python -m app.cli create-owner --name "Your Name" --email you@example.com \
-  --mobile +971500000000 --church "Your church" --group "Your home group"   # 5. asks for the password twice
+  --mobile "<+country-code-number>" --church "Your church" --group "Your home group"   # 5. asks for the password twice
 umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # 6. optional: the 200 demo people
 dc up -d                                      # 7. start everything again
-curl -fsS https://skills-demo.privatedir.in/health/ready   # 8. it answers ok
+curl -fsS https://<demo-domain>/health/ready   # 8. it answers ok (the domain is in the quick reference above)
 ```
 
 Check: sign in as the OWNER from step 5 and open the churches page. `demo-logins.csv` contains the demo password: keep it on the server, never share it, and delete it when done. To go back, restore the backup of step 1 (section 6, disaster recovery) and start the stack again.

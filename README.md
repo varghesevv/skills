@@ -51,7 +51,7 @@ There is one way in, for everyone:
 | Join | `/sign-up` | A new person: details, a church, a home group (each with its leader's name), and whether to apply as a searcher or a provider. A group's invitation link (`/join/<token>`) skips the church and group steps. |
 | Invitation of a church admin | `/invite/<token>` | The person the owner invited to start a church. |
 
-After signing in the app reads who the person is and shows what their **status** allows, under `/member`. A person's status is set by their group leader; the owner, one admin per church and one leader per home group form the chain of trust ([verification rules](docs/verification.md)). The older addresses `/login...` and `/register...` lead to the sign-in and the join pages. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
+After signing in the app reads who the person is and shows what their **status** allows, under `/member`. Members are admitted by their group leader; leaders are appointed by their church admin and church admins by the owner. The owner, one admin per church and one leader per home group form the chain of trust ([verification rules](docs/verification.md)). The older addresses `/login...` and `/register...` lead to the sign-in and the join pages. Details: [frontend specification](docs/specification/06-frontend.md) and the [local development guide](docs/local-development.md#5-create-demo-data-and-log-in).
 
 ## Wording per installation
 
