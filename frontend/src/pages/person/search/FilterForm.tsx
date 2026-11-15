@@ -1,10 +1,12 @@
+import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
-import type { LabelOut, OrgBrief } from '../../api/types'
-import { t, type StringKey } from '../../i18n'
-import { SelectField, TextField } from '../../shared/ui'
-import type { FieldErrors } from '../../shared/validation'
-import { sortLevels } from '../freelancer/LabelsPage'
+import { fetchHomeGroups } from '../../../api/person'
+import type { IdName, LabelOut } from '../../../api/types'
+import { t, type StringKey } from '../../../i18n'
+import { SelectField, TextField } from '../../../shared/ui'
+import type { FieldErrors } from '../../../shared/validation'
+import { sortLevels } from '../../../portals/freelancer/LabelsPage'
 import { EMPTY_FILTERS, validateFilters, type FilterValues } from './searchParams'
 
 function CheckGroup({
@@ -79,17 +81,23 @@ export const SORT_OPTIONS = SORT_KEYS.map((item) => ({ value: item.value, label:
 
 export default function FilterForm({
   labels,
-  organisations,
+  churches,
   initial,
   onApply,
 }: {
   labels: LabelOut[]
-  organisations: OrgBrief[]
+  churches: IdName[]
   initial: FilterValues
   onApply: (values: FilterValues) => void
 }) {
   const [values, setValues] = useState(initial)
   const [errors, setErrors] = useState<FieldErrors>({})
+  // The groups of the chosen church; the filter is optional, so a failed load only hides it.
+  const groups = useQuery({
+    queryKey: ['church-groups', values.churchId],
+    queryFn: () => fetchHomeGroups(values.churchId),
+    enabled: values.churchId !== '',
+  })
 
   const names = (type: LabelOut['label_type']) =>
     labels.filter((label) => label.label_type === type).map((label) => label.label_name)
@@ -226,15 +234,29 @@ export default function FilterForm({
         onChange={(value) => set('minRating', value)}
         options={RATING_OPTIONS}
       />
-      {organisations.length > 0 && (
+      {churches.length > 0 && (
         <SelectField
-          label={t('search.vouchedBy')}
-          name="org_id"
-          value={values.orgId}
-          onChange={(value) => set('orgId', value)}
+          label={t('search.church')}
+          name="church_id"
+          value={values.churchId}
+          onChange={(value) =>
+            setValues((current) => ({ ...current, churchId: value, homeGroupId: '' }))
+          }
           options={[
-            { value: '', label: t('search.anyOrg') },
-            ...organisations.map((item) => ({ value: item.id, label: item.org_name })),
+            { value: '', label: t('search.anyChurch') },
+            ...churches.map((item) => ({ value: item.id, label: item.name })),
+          ]}
+        />
+      )}
+      {values.churchId && groups.data && groups.data.items.length > 0 && (
+        <SelectField
+          label={t('search.group')}
+          name="home_group_id"
+          value={values.homeGroupId}
+          onChange={(value) => set('homeGroupId', value)}
+          options={[
+            { value: '', label: t('search.anyGroup') },
+            ...groups.data.items.map((item) => ({ value: item.id, label: item.name })),
           ]}
         />
       )}

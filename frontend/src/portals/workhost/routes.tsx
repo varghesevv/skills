@@ -1,19 +1,7 @@
 import { Route } from 'react-router-dom'
 
-import { term } from '../../terminology/terms'
-import FreelancerDetailPage from './FreelancerDetailPage'
-import GivenRatingsPage from './GivenRatingsPage'
 import HostProfilePage from './HostProfilePage'
-import SearchPage from './SearchPage'
 
-// Child routes of /workhost (the index route is the shared dashboard).
-export const workhostRoutes = [
-  <Route key="search" path="search" element={<SearchPage portal="workhost" />} />,
-  <Route
-    key="detail"
-    path={`${term('freelancers_path')}/:id`}
-    element={<FreelancerDetailPage portal="workhost" />}
-  />,
-  <Route key="given" path="ratings" element={<GivenRatingsPage />} />,
-  <Route key="profile" path="profile" element={<HostProfilePage />} />,
-]
+// Child routes of /workhost (the index route is the shared dashboard). The search, the pages of
+// a provider and the ratings given moved to the member pages in S5.5; this portal goes in S5.6.
+export const workhostRoutes = [<Route key="profile" path="profile" element={<HostProfilePage />} />]

@@ -1,6 +1,6 @@
-import type { OrgBrief } from '../../api/types'
-import { t } from '../../i18n'
-import { formatDateTime, fromLocalInput } from '../../shared/dates'
+import type { IdName } from '../../../api/types'
+import { t } from '../../../i18n'
+import { formatDateTime, fromLocalInput } from '../../../shared/dates'
 import { EMPTY_FILTERS, type FilterValues } from './searchParams'
 
 export type FilterChip = {
@@ -16,7 +16,10 @@ function dateText(local: string): string {
 }
 
 /** One chip per applied filter, so a single filter can be removed without opening the panel. */
-export function activeChips(values: FilterValues, organisations: OrgBrief[]): FilterChip[] {
+export function activeChips(
+  values: FilterValues,
+  places: { churches: IdName[]; groups: IdName[] },
+): FilterChip[] {
   const chips: FilterChip[] = []
   const drop =
     (name: 'skills' | 'languages' | 'timings' | 'nativity', value: string) =>
@@ -90,12 +93,21 @@ export function activeChips(values: FilterValues, organisations: OrgBrief[]): Fi
       without: (current) => ({ ...current, minRating: '' }),
     })
   }
-  if (values.orgId) {
-    const org = organisations.find((item) => item.id === values.orgId)
+  if (values.churchId) {
+    const church = places.churches.find((item) => item.id === values.churchId)
     chips.push({
-      key: 'org',
-      label: org ? t('search.chip.org', { name: org.org_name }) : t('search.chip.vouchedUnknown'),
-      without: (current) => ({ ...current, orgId: '' }),
+      key: 'church',
+      label: t('search.chip.church', { name: church?.name ?? t('search.chip.placeUnknown') }),
+      // The home group belongs to the church, so it goes with it.
+      without: (current) => ({ ...current, churchId: '', homeGroupId: '' }),
+    })
+  }
+  if (values.homeGroupId) {
+    const group = places.groups.find((item) => item.id === values.homeGroupId)
+    chips.push({
+      key: 'group',
+      label: t('search.chip.group', { name: group?.name ?? t('search.chip.placeUnknown') }),
+      without: (current) => ({ ...current, homeGroupId: '' }),
     })
   }
   return chips

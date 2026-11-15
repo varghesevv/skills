@@ -1,9 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 
-import { revealMobile } from '../../api/workhost'
-import { t } from '../../i18n'
-import { errorMessage } from '../../shared/errors'
+import { revealMobile } from '../../../api/providers'
+import { t } from '../../../i18n'
+import { errorMessage } from '../../../shared/errors'
 
 /** Shown instead of the number until the work host asks for it. It is not the real number. */
 const MASK = '+•• ••• ••• ••••'

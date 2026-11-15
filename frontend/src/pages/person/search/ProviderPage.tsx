@@ -2,22 +2,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 
-import type { FreelancerPublic, LabelType } from '../../api/types'
-import { vouchFor } from '../../api/organisation'
-import { createRating, getFreelancer, updateRating } from '../../api/workhost'
-import { useUser } from '../../auth/AuthContext'
-import { t, type StringKey } from '../../i18n'
-import { portalPath } from '../config'
-import { term } from '../../terminology/terms'
-import { formatDateTime } from '../../shared/dates'
-import { errorMessage } from '../../shared/errors'
-import RatingsList from '../../shared/RatingsList'
-import { Alert, Badge, QueryBoundary, SelectField, TextAreaField } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
-import { ratingSchema, validate, type FieldErrors } from '../../shared/validation'
-import { VOUCHED_KEY } from '../organisation/keys'
-import { GIVEN_KEY } from './GivenRatingsPage'
-import type { Portal } from './SearchPage'
+import type { FreelancerPublic, LabelType } from '../../../api/types'
+import { createRating, getProvider, updateRating } from '../../../api/providers'
+import { usePerson } from '../../../auth/AuthContext'
+import { t, type StringKey } from '../../../i18n'
+import { PERSON_SEARCH } from '../../../portals/config'
+import { formatDateTime } from '../../../shared/dates'
+import { errorMessage } from '../../../shared/errors'
+import RatingsList from '../../../shared/RatingsList'
+import { Alert, Badge, QueryBoundary, SelectField, TextAreaField } from '../../../shared/ui'
+import { usePageTitle } from '../../../shared/usePageTitle'
+import { ratingSchema, validate, type FieldErrors } from '../../../shared/validation'
+import { GIVEN_KEY } from './RatingsGiven'
 import { formatRate } from './format'
 import RevealMobile from './RevealMobile'
 
@@ -112,7 +108,7 @@ function RatingForm({ person }: { person: FreelancerPublic }) {
   )
 }
 
-function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal }) {
+function Profile({ person, own }: { person: FreelancerPublic; own: boolean }) {
   const skills = person.labels.filter((item) => item.label.label_type === 'skill')
   return (
     <div className="stack">
@@ -138,6 +134,12 @@ function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal 
             </dd>
           </div>
           <div>
+            <dt>{t('detail.church')}</dt>
+            <dd>
+              {person.church.name} · {person.home_group.name}
+            </dd>
+          </div>
+          <div>
             <dt>{t('detail.nationality')}</dt>
             <dd>{person.nationality ?? t('common.none')}</dd>
           </div>
@@ -148,7 +150,7 @@ function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal 
         </dl>
       </section>
 
-      {portal === 'workhost' && (
+      {!own && (
         <section className="card" aria-labelledby="contact-heading">
           <h2 id="contact-heading">{t('detail.contact')}</h2>
           <dl className="facts">
@@ -206,21 +208,6 @@ function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal 
         })}
       </section>
 
-      <section className="card" aria-labelledby="vouch-heading">
-        <h2 id="vouch-heading">{t('detail.vouchedBy')}</h2>
-        {person.vouched_by.length === 0 ? (
-          <p className="muted">{t('detail.noVouches')}</p>
-        ) : (
-          <ul className="chips plain-list">
-            {person.vouched_by.map((org) => (
-              <li key={org.org_id} className="chip">
-                {org.org_name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <section className="card" aria-labelledby="unavailable-heading">
         <h2 id="unavailable-heading">{t('detail.unavailable')}</h2>
         {person.unavailable.length === 0 ? (
@@ -239,81 +226,28 @@ function Profile({ person, portal }: { person: FreelancerPublic; portal: Portal 
   )
 }
 
-function VouchPanel({ person }: { person: FreelancerPublic }) {
-  const user = useUser()
-  const queryClient = useQueryClient()
-  const approved = user.approval_status === 'approved'
-  const alreadyShown = person.vouched_by.some((org) => org.org_id === user.id)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const vouch = useMutation({
-    mutationFn: () => vouchFor(person.id),
-    onSuccess: async () => {
-      setSent(true)
-      await queryClient.invalidateQueries({ queryKey: VOUCHED_KEY })
-    },
-    onError: (failure) => setError(errorMessage(failure)),
-  })
-
-  return (
-    <section className="card form-grid" aria-labelledby="vouch-action-heading">
-      <h2 id="vouch-action-heading">{t('vouch.heading')}</h2>
-      {error && (
-        <Alert kind="error" focus>
-          {error}
-        </Alert>
-      )}
-      {sent && <Alert kind="success">{t('vouch.sent')}</Alert>}
-      {!approved && <Alert kind="info">{t('vouch.notApproved')}</Alert>}
-      {alreadyShown ? (
-        <p>{t('vouch.already')}</p>
-      ) : (
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={!approved || vouch.isPending || sent}
-          onClick={() => {
-            setError(null)
-            vouch.mutate()
-          }}
-        >
-          {vouch.isPending ? t('common.saving') : t('vouch.action')}
-        </button>
-      )}
-      <p>
-        <Link to={portalPath('organisation', term('freelancers_path'))}>{t('vouch.viewList')}</Link>
-      </p>
-    </section>
-  )
-}
-
-export default function FreelancerDetailPage({ portal }: { portal: Portal }) {
+/** A provider, as a SEARCHER or above sees them: facts, labels, ratings, rating and Reveal. */
+export default function ProviderPage() {
+  const me = usePerson()
   const { id = '' } = useParams()
   const location = useLocation()
   const search = (location.state as { search?: string } | null)?.search ?? ''
-  const query = useQuery({ queryKey: detailKey(id), queryFn: () => getFreelancer(id) })
+  const query = useQuery({ queryKey: detailKey(id), queryFn: () => getProvider(id) })
   usePageTitle(query.data?.full_name ?? t('search.noName'))
 
   return (
-    <>
+    <div className="container">
       <p>
-        <Link to={`${portalPath(portal, 'search')}${search ? `?${search}` : ''}`}>
-          ← {t('detail.back')}
-        </Link>
+        <Link to={`${PERSON_SEARCH}${search ? `?${search}` : ''}`}>← {t('detail.back')}</Link>
       </p>
       <QueryBoundary query={query}>
         {(person) => (
           <>
             <h1>{person.full_name ?? t('search.noName')}</h1>
             <div className="detail-layout">
-              <Profile person={person} portal={portal} />
+              <Profile person={person} own={person.id === me.id} />
               <div className="stack">
-                {portal === 'workhost' ? (
-                  <RatingForm key={person.id} person={person} />
-                ) : (
-                  <VouchPanel key={person.id} person={person} />
-                )}
+                {person.id !== me.id && <RatingForm key={person.id} person={person} />}
                 <h2>{t('detail.ratings')}</h2>
                 <RatingsList freelancerId={person.id} />
               </div>
@@ -321,6 +255,6 @@ export default function FreelancerDetailPage({ portal }: { portal: Portal }) {
           </>
         )}
       </QueryBoundary>
-    </>
+    </div>
   )
 }

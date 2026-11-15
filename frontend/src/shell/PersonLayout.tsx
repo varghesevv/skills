@@ -14,6 +14,8 @@ import {
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
   PERSON_RATINGS,
+  PERSON_RATINGS_GIVEN,
+  PERSON_SEARCH,
   PERSON_SKILLS,
   OWNER_CHURCHES,
   OWNER_HANDOVER,
@@ -41,6 +43,7 @@ export default function PersonLayout() {
   const unread = notifications.data?.unread_count ?? 0
   const leader = ['verifier', 'admin', 'owner'].includes(person.status)
   const admin = person.status === 'admin' || person.status === 'owner'
+  const searcher = ['searcher', 'provider', 'verifier', 'admin', 'owner'].includes(person.status)
   const provider = ['provider', 'verifier', 'admin', 'owner'].includes(person.status)
   return (
     <div className="public">
@@ -51,6 +54,16 @@ export default function PersonLayout() {
         <Link className="brand" to={PERSON_HOME}>
           {t('app.name')}
         </Link>
+        {searcher && (
+          <nav className="topbar-nav" aria-label={t('member.nav.label')}>
+            <Link className="btn btn-quiet" to={PERSON_SEARCH}>
+              {t('nav.search')}
+            </Link>
+            <Link className="btn btn-quiet" to={PERSON_RATINGS_GIVEN}>
+              {t('nav.given')}
+            </Link>
+          </nav>
+        )}
         {provider && (
           <nav className="topbar-nav" aria-label={t('provider.nav.label')}>
             <Link className="btn btn-quiet" to={PERSON_PROFILE}>

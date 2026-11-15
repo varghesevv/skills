@@ -56,6 +56,16 @@ export function RequirePerson() {
   return <Outlet />
 }
 
+/** The screens of a SEARCHER, and of everyone above: an applicant goes home. */
+export function RequireSearcher() {
+  const { user } = useAuth()
+  if (!user) return <LoadingScreen />
+  const searcher =
+    user.user_type === 'person' &&
+    ['searcher', 'provider', 'verifier', 'admin', 'owner'].includes(user.status)
+  return searcher ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
+}
+
 /** The screens of a provider, and of everyone above: a SEARCHER or an applicant goes home. */
 export function RequireProvider() {
   const { user } = useAuth()

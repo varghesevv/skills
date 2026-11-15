@@ -2,14 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
-import { listLabels } from '../../api/freelancer'
-import type { SearchResult } from '../../api/types'
-import { SEARCH_PAGE_SIZE, listOrganisations, searchFreelancers } from '../../api/workhost'
-import { t } from '../../i18n'
-import { portalPath } from '../config'
-import { term } from '../../terminology/terms'
-import { Badge, Pager, QueryBoundary, SelectField, TextField } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
+import { listLabels } from '../../../api/freelancer'
+import { fetchChurches, fetchHomeGroups } from '../../../api/person'
+import { SEARCH_PAGE_SIZE, searchProviders } from '../../../api/providers'
+import type { SearchResult } from '../../../api/types'
+import { usePerson } from '../../../auth/AuthContext'
+import { t } from '../../../i18n'
+import { PERSON_PROVIDERS } from '../../../portals/config'
+import { Badge, Pager, QueryBoundary, SelectField, TextField } from '../../../shared/ui'
+import { usePageTitle } from '../../../shared/usePageTitle'
 import { activeChips, clearedFilters } from './activeFilters'
 import FilterForm, { SORT_OPTIONS } from './FilterForm'
 import { formatRate } from './format'
@@ -27,18 +28,18 @@ import {
 function ResultCard({
   item,
   search,
-  portal,
   searchedSkills,
+  own,
 }: {
   item: SearchResult
   search: string
-  portal: Portal
   searchedSkills: string[]
+  own: boolean
 }) {
   return (
     <li className="card result">
       <h2>
-        <Link to={portalPath(portal, term('freelancers_path'), item.id)} state={{ search }}>
+        <Link to={`${PERSON_PROVIDERS}/${item.id}`} state={{ search }}>
           {item.full_name ?? t('search.noName')}
         </Link>
       </h2>
@@ -53,7 +54,6 @@ function ResultCard({
               average: item.average_rating.toFixed(1),
               count: item.rating_count,
             })}
-        {item.vouch_count > 0 && <> · {t('search.vouches', { count: item.vouch_count })}</>}
       </p>
       <ul className="chips plain-list">
         {item.skills.map((skill) => (
@@ -64,7 +64,10 @@ function ResultCard({
         ))}
       </ul>
       <p className="muted">{[item.nationality, ...item.languages].filter(Boolean).join(' · ')}</p>
-      {portal === 'workhost' && (
+      <p className="muted">
+        {item.church.name} · {item.home_group.name}
+      </p>
+      {!own && (
         <p className="result-contact">
           <RevealMobile
             freelancerId={item.id}
@@ -78,10 +81,9 @@ function ResultCard({
   )
 }
 
-export type Portal = 'workhost' | 'organisation'
-
-/** The freelancer search, shared by work hosts and organisations (who search to find people to vouch for). */
-export default function SearchPage({ portal }: { portal: Portal }) {
+/** The provider search: for a SEARCHER and everyone above, over every church. */
+export default function SearchPage() {
+  const me = usePerson()
   const [params, setParams] = useSearchParams()
   const [panelOpen, setPanelOpen] = useState(false)
   const filterButton = useRef<HTMLButtonElement>(null)
@@ -92,11 +94,16 @@ export default function SearchPage({ portal }: { portal: Portal }) {
   const paramsKey = params.toString()
 
   const labels = useQuery({ queryKey: ['labels'], queryFn: listLabels })
-  // The organisation filter is optional: if the list cannot be loaded the rest still works.
-  const organisations = useQuery({ queryKey: ['organisations'], queryFn: listOrganisations })
+  // The church filter is optional: if the lists cannot be loaded the rest still works.
+  const churches = useQuery({ queryKey: ['churches'], queryFn: fetchChurches })
+  const groups = useQuery({
+    queryKey: ['church-groups', applied.churchId],
+    queryFn: () => fetchHomeGroups(applied.churchId),
+    enabled: applied.churchId !== '',
+  })
   const results = useQuery({
     queryKey: ['search', paramsKey],
-    queryFn: () => searchFreelancers(apiQuery(params, page, SEARCH_PAGE_SIZE)),
+    queryFn: () => searchProviders(apiQuery(params, page, SEARCH_PAGE_SIZE)),
     placeholderData: (previous) => previous,
   })
 
@@ -143,10 +150,13 @@ export default function SearchPage({ portal }: { portal: Portal }) {
   }
 
   const count = activeFilterCount(applied)
-  const chips = activeChips(applied, organisations.data ?? [])
+  const chips = activeChips(applied, {
+    churches: churches.data?.items ?? [],
+    groups: groups.data?.items ?? [],
+  })
 
   return (
-    <>
+    <div className="container">
       <h1>{t('search.title')}</h1>
       <p className="lead">{t('search.lead')}</p>
 
@@ -171,9 +181,9 @@ export default function SearchPage({ portal }: { portal: Portal }) {
           <QueryBoundary query={labels}>
             {(available) => (
               <FilterForm
-                key={`${filterKey}-${organisations.data?.length ?? 0}`}
+                key={`${filterKey}-${churches.data?.items.length ?? 0}`}
                 labels={available}
-                organisations={organisations.data ?? []}
+                churches={churches.data?.items ?? []}
                 initial={applied}
                 onApply={apply}
               />
@@ -267,8 +277,8 @@ export default function SearchPage({ portal }: { portal: Portal }) {
                         key={item.id}
                         item={item}
                         search={paramsKey}
-                        portal={portal}
                         searchedSkills={applied.skills}
+                        own={item.id === me.id}
                       />
                     ))}
                   </ul>
@@ -284,6 +294,6 @@ export default function SearchPage({ portal }: { portal: Portal }) {
           </QueryBoundary>
         </section>
       </div>
-    </>
+    </div>
   )
 }

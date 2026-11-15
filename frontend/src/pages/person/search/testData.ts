@@ -1,4 +1,4 @@
-import type { FreelancerPublic, SearchResult } from '../../api/types'
+import type { FreelancerPublic, SearchResult } from '../../../api/types'
 
 export const PERSON_ID = '22222222-2222-2222-2222-222222222222'
 
@@ -14,7 +14,8 @@ export function makeResult(overrides: Partial<SearchResult> = {}): SearchResult 
     is_rate_negotiable: true,
     average_rating: 8.5,
     rating_count: 4,
-    vouch_count: 2,
+    church: { id: 'church-1', name: 'Grace Church' },
+    home_group: { id: 'group-1', name: 'Riverside' },
     skills: [{ name: 'plumbing', level: '80%' }],
     languages: ['English'],
     timings: ['weekends'],
@@ -45,7 +46,8 @@ export function makePerson(overrides: Partial<FreelancerPublic> = {}): Freelance
     ],
     average_rating: 8.5,
     rating_count: 4,
-    vouched_by: [{ org_id: 'o1', org_name: 'Acme Training' }],
+    church: { id: 'church-1', name: 'Grace Church' },
+    home_group: { id: 'group-1', name: 'Riverside' },
     unavailable: [
       {
         id: 'u1',

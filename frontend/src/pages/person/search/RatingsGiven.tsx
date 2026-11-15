@@ -2,17 +2,17 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { GIVEN_PAGE_SIZE, listGivenRatings } from '../../api/workhost'
-import { t } from '../../i18n'
-import { portalPath } from '../config'
-import { term } from '../../terminology/terms'
-import { formatDate } from '../../shared/dates'
-import { Pager, QueryBoundary } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
+import { GIVEN_PAGE_SIZE, listGivenRatings } from '../../../api/providers'
+import { t } from '../../../i18n'
+import { PERSON_PROVIDERS } from '../../../portals/config'
+import { formatDate } from '../../../shared/dates'
+import { Pager, QueryBoundary } from '../../../shared/ui'
+import { usePageTitle } from '../../../shared/usePageTitle'
 
-export const GIVEN_KEY = ['host', 'given'] as const
+export const GIVEN_KEY = ['member', 'ratings-given'] as const
 
-export default function GivenRatingsPage() {
+/** The ratings the person gave; each links to the provider so it can be changed. */
+export default function RatingsGiven() {
   usePageTitle(t('given.title'))
   const [page, setPage] = useState(1)
   const query = useQuery({
@@ -22,7 +22,7 @@ export default function GivenRatingsPage() {
   })
 
   return (
-    <>
+    <div className="container">
       <h1>{t('given.title')}</h1>
       <p className="lead">{t('given.lead')}</p>
       <QueryBoundary query={query}>
@@ -35,10 +35,8 @@ export default function GivenRatingsPage() {
                 {data.items.map((item) => (
                   <li key={item.id} className="card">
                     <h2>
-                      <Link
-                        to={portalPath('workhost', term('freelancers_path'), item.freelancer_id)}
-                      >
-                        {item.freelancer_name ?? t('search.noName')}
+                      <Link to={`${PERSON_PROVIDERS}/${item.provider_id}`}>
+                        {item.provider_name ?? t('search.noName')}
                       </Link>
                     </h2>
                     <p className="rating-score">{t('ratings.score', { rating: item.rating })}</p>
@@ -61,6 +59,6 @@ export default function GivenRatingsPage() {
           )
         }
       </QueryBoundary>
-    </>
+    </div>
   )
 }

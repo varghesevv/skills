@@ -1,6 +1,6 @@
-import { t } from '../../i18n'
-import { fromLocalInput, toLocalInput } from '../../shared/dates'
-import type { FieldErrors } from '../../shared/validation'
+import { t } from '../../../i18n'
+import { fromLocalInput, toLocalInput } from '../../../shared/dates'
+import type { FieldErrors } from '../../../shared/validation'
 
 export type SortKey = 'newest' | 'rating' | 'rate'
 
@@ -17,7 +17,8 @@ export type FilterValues = {
   availableFrom: string // value of a datetime-local input
   availableTo: string
   minRating: string
-  orgId: string
+  churchId: string
+  homeGroupId: string
   name: string
   sort: SortKey
 }
@@ -35,7 +36,8 @@ export const EMPTY_FILTERS: FilterValues = {
   availableFrom: '',
   availableTo: '',
   minRating: '',
-  orgId: '',
+  churchId: '',
+  homeGroupId: '',
   name: '',
   sort: 'newest',
 }
@@ -60,7 +62,8 @@ export function valuesFromParams(params: URLSearchParams): FilterValues {
     availableFrom: from ? toLocalInput(from) : '',
     availableTo: to ? toLocalInput(to) : '',
     minRating: params.get('min_rating') ?? '',
-    orgId: params.get('org_id') ?? '',
+    churchId: params.get('church_id') ?? '',
+    homeGroupId: params.get('home_group_id') ?? '',
     name: params.get('name') ?? '',
     sort: SORTS.find((key) => key === sort) ?? 'newest',
   }
@@ -83,7 +86,8 @@ export function paramsFromValues(values: FilterValues): URLSearchParams {
   if (from) params.set('available_from', from)
   if (to) params.set('available_to', to)
   if (values.minRating) params.set('min_rating', values.minRating)
-  if (values.orgId) params.set('org_id', values.orgId)
+  if (values.churchId) params.set('church_id', values.churchId)
+  if (values.homeGroupId) params.set('home_group_id', values.homeGroupId)
   if (values.name.trim()) params.set('name', values.name.trim())
   if (values.sort !== 'newest') params.set('sort', values.sort)
   return params
@@ -130,7 +134,8 @@ export function activeFilterCount(values: FilterValues): number {
     values.negotiable,
     values.availableFrom,
     values.minRating,
-    values.orgId,
+    values.churchId,
+    values.homeGroupId,
     values.name.trim(),
     values.maxRate ? '' : values.currency.trim(),
   ].filter(Boolean).length

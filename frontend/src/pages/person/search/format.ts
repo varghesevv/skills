@@ -1,4 +1,4 @@
-import { t } from '../../i18n'
+import { t } from '../../../i18n'
 
 /** "45.5 AED per hour", or the "not set" text when the freelancer has no rate. */
 export function formatRate(rate: number | null, currency: string | null): string {
