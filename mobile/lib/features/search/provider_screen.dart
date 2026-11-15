@@ -177,16 +177,22 @@ class _ContactState extends ConsumerState<_Contact> {
       if (mounted) setState(() => _busy = false);
       return;
     }
-    // The reveal is recorded whatever the phone does next: a dialler that cannot open is its own
-    // message, and the number stays on the screen.
+    await _dial();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  /// The reveal is recorded whatever the phone does next: a dialler that cannot open is its own
+  /// message, and the number stays on the screen. The Call button comes here too.
+  Future<void> _dial() async {
+    final number = _number;
+    if (number == null) return;
     try {
-      await ref.read(dialerProvider)(_number!);
+      await ref.read(dialerProvider)(number);
+      if (mounted) setState(() => _error = null);
     } catch (_) {
       if (mounted) {
         setState(() => _error = ref.read(appTextProvider)('reveal.dialFailed'));
       }
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -218,7 +224,7 @@ class _ContactState extends ConsumerState<_Contact> {
                     key: const Key('call'),
                     tooltip: text('reveal.callLabel', {'number': _number!}),
                     icon: const Icon(Icons.call),
-                    onPressed: () => ref.read(dialerProvider)(_number!),
+                    onPressed: _dial,
                   ),
                 ],
               )
