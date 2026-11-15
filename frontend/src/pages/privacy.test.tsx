@@ -24,6 +24,15 @@ describe('the privacy statement', () => {
     expect(screen.getByText(/each view is recorded/)).toBeVisible()
   })
 
+  it('uses the words of the installation, not fixed ones', async () => {
+    renderApp('/privacy')
+    expect(
+      await screen.findByText(/The Owner of this installation|The owner of this installation/i),
+    ).toBeVisible()
+    // Role words are tokens, never left in the text.
+    expect(document.body.textContent).not.toMatch(/\{[A-Za-z_]+\}/)
+  })
+
   it('is linked from the top bar, signed in or not', async () => {
     const visitor = renderApp('/')
     expect(await screen.findByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy')
