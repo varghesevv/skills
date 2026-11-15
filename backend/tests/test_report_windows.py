@@ -55,7 +55,9 @@ def test_default_window_is_the_last_complete_days() -> None:
     assert (end - start).days == 30
 
 
-@pytest.mark.parametrize("name", ["../etc", "a/b", "", "Upper", "x" * 80, "ok name"])
+@pytest.mark.parametrize(
+    "name", ["../etc", "a/b", "", "Upper", "x" * 80, "ok name", "nosuchreport"]
+)
 def test_a_report_name_that_is_not_a_plain_name_never_becomes_a_path(name: str) -> None:
     from pathlib import Path
 
