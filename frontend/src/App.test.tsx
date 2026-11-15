@@ -54,6 +54,17 @@ describe('public pages', () => {
   )
 })
 
+describe('the older portals', () => {
+  it.each(['/freelancer', '/workhost/search', '/organisation', '/admin/labels'])(
+    'show the not-found page at %s',
+    async (path) => {
+      mockApi({})
+      renderApp(path)
+      expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+    },
+  )
+})
+
 describe('protected pages', () => {
   it.each(['/member', '/member/search', '/member/reports', '/member/account'])(
     'sends a visitor from %s to sign in',
