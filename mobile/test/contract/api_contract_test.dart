@@ -147,6 +147,8 @@ void main() {
       'POST /group-invitations/lookup': '200',
       'PUT /me/application': '200',
       'DELETE /me': '204',
+      'PUT /me': '200',
+      'GET /workhosts/me/ratings': '200',
       // Vouching, notifications and the screens of a leader.
       'POST /me/apply-provider': '200',
       'GET /me/vouch-link': '200',
@@ -263,6 +265,28 @@ void main() {
       );
       expect(properties('GroupInvitationLookup'), {'token'});
     });
+
+    test(
+      'the account page changes name and mobile; the ratings given are paged',
+      () {
+        expect(requestSchema('PUT', '/me'), 'PersonUpdate');
+        expect(properties('PersonUpdate'), {'full_name', 'mobile_number'});
+        // The person shape that `GET /me` also gives a person of the church trust model.
+        expect(responseSchemas('PUT', '/me', '200'), {'PersonMeResponse'});
+        expect(
+          responseSchemas('GET', '/me', '200'),
+          contains('PersonMeResponse'),
+        );
+        expect(
+          responseSchema('GET', '/workhosts/me/ratings', '200'),
+          'Page_GivenRating_',
+        );
+        expect(
+          properties('Page_GivenRating_'),
+          containsAll(['items', 'total', 'page', 'page_size']),
+        );
+      },
+    );
 
     test('closing the account sends the password', () {
       expect(requestSchema('DELETE', '/me'), 'CloseAccountRequest');

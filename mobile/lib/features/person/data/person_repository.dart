@@ -128,6 +128,17 @@ class PersonRepository {
     PersonMe.fromJson,
   );
 
+  /// Changes one's own name or mobile number (`PUT /me`); the answer is the person as `GET /me`
+  /// shows them. Throws `ApiException` (`account_exists` for a number that is someone else's).
+  Future<PersonMe> updateMe({String? fullName, String? mobileNumber}) async =>
+      parseResponse(
+        await _api.put(
+          '/me',
+          body: {'full_name': ?fullName, 'mobile_number': ?mobileNumber},
+        ),
+        PersonMe.fromJson,
+      );
+
   /// Closes the account after the password is asked again. Throws `ApiException`
   /// (`invalid_password`, `rate_limited`, ...).
   Future<void> closeAccount(String password) async {

@@ -21,3 +21,8 @@ const personSearch = '/member/search';
 
 /// One provider's page: `/member/providers/<id>`.
 const personProviders = '/member/providers';
+
+/// The ratings the person gave (a SEARCHER or above), and their own account page (everyone but
+/// the revoked).
+const personRatingsGiven = '/member/ratings-given';
+const personAccount = '/member/account';

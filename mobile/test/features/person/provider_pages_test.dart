@@ -57,6 +57,12 @@ void main() {
       testWidgets('a $status finds the four pages on the home', (tester) async {
         await _open(tester, status);
         for (final key in _tiles) {
+          // A long list builds its rows lazily; scroll until the tile exists.
+          await tester.scrollUntilVisible(
+            find.byKey(Key(key)),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
           expect(find.byKey(Key(key)), findsOneWidget, reason: key);
         }
       });

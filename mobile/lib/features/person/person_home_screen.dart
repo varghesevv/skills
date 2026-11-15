@@ -191,6 +191,14 @@ class _Member extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(personSearch),
           ),
+        if (person.status.isSearcher)
+          ListTile(
+            key: const Key('ratings-given'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(text('given.title')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(personRatingsGiven),
+          ),
         if (person.status.isProvider) ...[
           ListTile(
             key: const Key('provider-profile'),
@@ -251,6 +259,13 @@ class _Member extends ConsumerWidget {
         ),
         ProviderUpgrade(person: person),
         const SizedBox(height: 16),
+        ListTile(
+          key: const Key('account'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(text('account.link')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(personAccount),
+        ),
         const LeaveAccount(),
         const SizedBox(height: 8),
         Text(text('member.soon')),

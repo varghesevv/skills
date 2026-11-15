@@ -8,6 +8,9 @@ import 'search_models.dart';
 /// Results come twelve at a time, as on the web.
 const searchPageSize = 12;
 
+/// The ratings given are listed ten at a time, as on the web.
+const givenPageSize = 10;
+
 class SearchRepository {
   SearchRepository(this._api);
 
@@ -23,6 +26,16 @@ class SearchRepository {
     ),
     (json) => Paged.fromJson(json, SearchResultItem.fromJson),
   );
+
+  /// One page of the ratings the caller gave, newest first. The path keeps its older name.
+  Future<Paged<GivenRating>> givenRatings({required int page}) async =>
+      parseResponse(
+        await _api.get(
+          '/workhosts/me/ratings',
+          query: {'page': page, 'page_size': givenPageSize},
+        ),
+        (json) => Paged.fromJson(json, GivenRating.fromJson),
+      );
 
   Future<ProviderPublic> provider(String id) async => parseResponse(
     await _api.get('/freelancers/$id'),
