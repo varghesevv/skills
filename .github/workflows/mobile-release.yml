@@ -39,6 +39,13 @@ jobs:
     environment: demo
     timeout-minutes: 45
     steps:
+      # A build that carries the release key is made from reviewed code only.
+      - name: Only from main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "mobile-release runs only on main (this run is on $GITHUB_REF)." >&2; exit 1
+          fi
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
@@ -53,10 +60,11 @@ jobs:
           AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           SERVER_HOST: ${{ vars.SERVER_HOST }}
           SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          ANDROID_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
         run: |
           missing=0
           for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD \
-                   DEPLOY_SSH_PRIVATE_KEY AWS_DEPLOY_ROLE_ARN SERVER_HOST SITE_ADDRESS; do
+                   DEPLOY_SSH_PRIVATE_KEY AWS_DEPLOY_ROLE_ARN SERVER_HOST SITE_ADDRESS ANDROID_CERT_SHA256; do
             if [ -z "${!v}" ]; then echo "Missing Environment setting: $v" >&2; missing=1; fi
           done
           # A secret must be one line (the keystore is base64 on one line): a pasted newline or a
@@ -84,15 +92,8 @@ jobs:
           test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
 
-      - name: Cache pub and Gradle downloads
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.pub-cache
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: mobile-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock', 'mobile/android/gradle/wrapper/gradle-wrapper.properties', 'mobile/android/settings.gradle.kts') }}
-          restore-keys: mobile-${{ runner.os }}-
+      # No cache here: this job holds the signing key, and a cache written by another workflow
+      # must not run in it.
 
       - name: Build the signed release APK
         working-directory: mobile
@@ -112,6 +113,7 @@ jobs:
           export ANDROID_KEYSTORE_FILE="$keystore"
           flutter build apk --release --flavor demo \
             --build-name "$VERSION_NAME" --build-number "$BUILD_NUMBER" \
+            --obfuscate --split-debug-info="${RUNNER_TEMP}/symbols" \
             --dart-define=FLAVOR=demo \
             --dart-define="API_BASE_URL=https://${SITE_ADDRESS}/api/v1" \
             --dart-define="APP_VERSION=${VERSION_NAME}+${BUILD_NUMBER}" \
@@ -121,13 +123,28 @@ jobs:
       - name: Check that the APK is signed with the release key
         env:
           VERSION_NAME: ${{ steps.version.outputs.name }}
+          EXPECTED_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
         run: |
           set -euo pipefail
           apk=mobile/build/app/outputs/flutter-apk/app-demo-release.apk
           apksigner="$(ls "${ANDROID_HOME}"/build-tools/*/apksigner | sort -V | tail -1)"
-          "$apksigner" verify --print-certs "$apk" | grep -v "SHA-1" | head -3
           "$apksigner" verify "$apk"
+          certs="$("$apksigner" verify --print-certs "$apk")"
+          actual="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | tr -d ':' | tr 'A-F' 'a-f')"
+          expected="$(printf '%s' "$EXPECTED_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')"
+          if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
+            echo "The APK is not signed with the release certificate (ANDROID_CERT_SHA256)." >&2; exit 1
+          fi
+          echo "Signed with the release certificate ${actual}"
           cp "$apk" "${RUNNER_TEMP}/skills-demo-${VERSION_NAME}.apk"
+
+      # The symbols that turn a crash trace back into names; not secret, kept for 90 days.
+      - name: Keep the debug symbols
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: skills-demo-symbols-${{ steps.version.outputs.name }}-${{ steps.version.outputs.build }}
+          path: ${{ runner.temp }}/symbols
+          retention-days: 90
 
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:

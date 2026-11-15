@@ -6,15 +6,15 @@ How a signed build of the app reaches the demo server and the testers' phones. T
 
 1. Reads the version from `mobile/pubspec.yaml` (`version: 1.2.3` or `1.2.3+4`; the part after `+` is ignored). The **build number is the run number** of the workflow, so it grows with every run.
 2. Builds a **release** APK of the `demo` flavor, signed with your release key, pointing at `https://<SITE_ADDRESS>/api/v1`, with `PRIVACY_URL=https://<SITE_ADDRESS>/privacy` (the Privacy row of the settings).
-3. Checks the signature with `apksigner`. An unsigned build fails the run.
+3. Checks the signature with `apksigner` and that the certificate is the release certificate (`ANDROID_CERT_SHA256`). An unsigned build, or one signed with another key, fails the run. The build is obfuscated; the symbol files are kept as a workflow artifact for 90 days, to decode crash traces.
 4. Copies the APK to `/opt/skills/data/downloads` on the server with `scripts/add-download.py` (it keeps the newest 10 versions). The Android app page of the web app and `GET /api/v1/app/downloads` list it for signed-in people; there is no public address for the file.
 5. If you give a release tag (for example `skills-v1.0.0`) it also attaches the APK to that GitHub release.
 
-The signing key is decoded for the build only and deleted afterwards; nothing secret is printed. The workflow shares the `deploy-demo` concurrency group because both open and restore the server's SSH rule.
+The signing key is decoded for the build only and deleted afterwards; nothing secret is printed. It runs only on `main`, has no build cache of its own (a shared cache must not run next to the key), and shares the `deploy-demo` concurrency group because both open and restore the server's SSH rule.
 
 ## What you provide (once)
 
-All of these go in the GitHub **Environment `demo`** (Settings > Environments > demo). The deploy already uses the last four.
+All of these go in the GitHub **Environment `demo`** (Settings > Environments > demo). The rows marked Existing are already used by the deploy.
 
 | Kind | Name | What it is |
 |---|---|---|
@@ -22,7 +22,8 @@ All of these go in the GitHub **Environment `demo`** (Settings > Environments > 
 | Secret | `ANDROID_KEYSTORE_PASSWORD` | The keystore password |
 | Secret | `ANDROID_KEY_ALIAS` | The key's alias in the keystore |
 | Secret | `ANDROID_KEY_PASSWORD` | The key's password |
-| Variable | `APP_MIN_VERSION`, `APP_LATEST_VERSION` | `1.2.3`; the minimum the server accepts and the newest it offers (deploy-demo writes them; default `0.0.0`) |
+| Variable | `ANDROID_CERT_SHA256` | The SHA-256 fingerprint of the release certificate (see below); the run fails when the APK is signed with anything else |
+| Variable | `APP_MIN_VERSION`, `APP_LATEST_VERSION` | `1.2.3`; the minimum the server accepts and the newest it offers. `deploy-demo` writes them once S7.2a (pull request 205) is merged; default `0.0.0` |
 | Existing | `DEPLOY_SSH_PRIVATE_KEY`, `AWS_DEPLOY_ROLE_ARN`, `SERVER_HOST`, `SITE_ADDRESS`, `TF_SSH_ALLOWED_CIDRS` | Used to reach the server |
 
 ### Make the key
@@ -35,6 +36,12 @@ keytool -genkeypair -v -keystore skills-release.jks -alias skills -keyalg RSA -k
 
 It asks for the two passwords and a name. **Back the file and the passwords up in two places** (a password manager and an offline copy). A build signed with a different key cannot update an installed app: if you lose the key, every phone has to uninstall first. Never commit the file; Git ignores `*.jks`.
 
+Read its fingerprint (it is public) and keep it for the Environment variable `ANDROID_CERT_SHA256`:
+
+```bash
+keytool -list -v -keystore skills-release.jks -alias skills | grep 'SHA256:'
+```
+
 ### Put it in the Environment
 
 The values are read from files and the keyboard so that they do not end up in your shell history or on screen:
@@ -46,14 +53,16 @@ gh secret set ANDROID_KEY_ALIAS --env demo
 gh secret set ANDROID_KEY_PASSWORD --env demo
 ```
 
-(On macOS use `base64 -i skills-release.jks | tr -d '\n'`.)
+(On macOS use `base64 -i skills-release.jks | tr -d '\n'`.) Then set the fingerprint: `gh variable set ANDROID_CERT_SHA256 --env demo --body '<the SHA256 value>'`.
+
+**Restrict the Environment to `main`**: Settings > Environments > demo > Deployment branches and tags > Selected branches > `main`. The workflow also refuses to run anywhere else, but the Environment is what keeps the key from a run on another branch.
 
 ## Run it
 
 1. Set `version:` in `mobile/pubspec.yaml` and merge that change.
 2. Actions > mobile-release > Run workflow. Optionally give release notes (shown on the Android app page) and a release tag.
 3. When it is green, open the Android app page of the web app, or ask the API: the new version is listed with its SHA-256. A tester can check it with `sha256sum`.
-4. To make older builds ask people to update, set `APP_MIN_VERSION` (and `APP_LATEST_VERSION`) in the Environment and run `deploy-demo` again.
+4. To make older builds ask people to update (needs S7.2a), set `APP_MIN_VERSION` and `APP_LATEST_VERSION` in the Environment and run `deploy-demo` again.
 
 ## How this follows ADR-0011 (secrets from the environment only)
 
