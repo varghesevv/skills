@@ -38,11 +38,8 @@ class RatingsController extends AsyncNotifier<RatingsState> {
   Future<RatingsState> build() async {
     final generation = ++_generation;
     _loadedPages = 0;
-    // A person of the church trust model, or an account of the older kind until it is removed.
     // Only the identity matters: a refresh of the person must not drop the pages shown.
-    final id =
-        ref.watch(personProvider.select((person) => person?.id)) ??
-        ref.watch(meProvider.select((me) => me?.id));
+    final id = ref.watch(personProvider.select((person) => person?.id));
     if (id == null) return const RatingsState(items: [], total: 0);
     final page = await ref
         .read(freelancerRepositoryProvider)
@@ -53,7 +50,7 @@ class RatingsController extends AsyncNotifier<RatingsState> {
 
   Future<void> loadMore() async {
     final current = state.value;
-    final id = ref.read(personProvider)?.id ?? ref.read(meProvider)?.id;
+    final id = ref.read(personProvider)?.id;
     if (current == null ||
         id == null ||
         current.loadingMore ||

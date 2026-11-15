@@ -78,9 +78,10 @@ Map<String, Object?> personJson({
   int vouches = 0,
   Map<String, Object?>? group = const {'id': 'group-1', 'name': 'Riverside'},
   String? leader = 'Lena Leader',
+  String id = 'p1',
 }) => {
   'user_type': 'person',
-  'id': 'p1',
+  'id': id,
   'full_name': name,
   'email': 'nadia@example.test',
   'mobile_number': '+10000000001',
@@ -92,17 +93,6 @@ Map<String, Object?> personJson({
   'status_set_by': null,
   'flagged_for_recheck': false,
   'vouch_count': vouches,
-};
-
-Map<String, Object?> meJson(String type, {String? name}) => {
-  'id': 'u1',
-  'user_type': type,
-  'email': 'person@example.test',
-  'mobile_number': '+10000000000',
-  'full_name': type == 'organisation' ? null : (name ?? 'Pat Example'),
-  'org_name': type == 'organisation' ? (name ?? 'Example Org') : null,
-  'approval_status': null,
-  'created_at': '2026-10-01T10:00:00Z',
 };
 
 class TestApp {
@@ -173,22 +163,24 @@ Future<void> tapKey(WidgetTester tester, String key) async {
   await tester.pumpAndSettle();
 }
 
-/// Seeds a saved session, as after an app restart: only the refresh token survives.
-void signedInAs(
-  FakeAdapter adapter,
-  MemoryTokenStore store,
-  String userType, {
-  String? name,
-}) {
-  store.save(accessToken: fresh('old'), refreshToken: fresh('r'));
-  store.clearAccessForRestart();
-  adapter
-    ..reply(
-      'POST',
-      '/auth/refresh',
-      FakeReply(200, tokens(fresh('a'), fresh('r'))),
-    )
-    ..reply('GET', '/me', FakeReply(200, meJson(userType, name: name)));
+/// Seeds a saved session of a PROVIDER whose id is `u1`, with no notifications, so the home page
+/// can be opened and the provider pages reached through their tiles.
+void signedInAsProvider(FakeAdapter adapter, MemoryTokenStore store) {
+  signedInAsPerson(
+    adapter,
+    store,
+    personJson(
+      status: 'provider',
+      requested: null,
+      id: 'u1',
+      name: 'Pat Example',
+    ),
+  );
+  adapter.reply(
+    'GET',
+    '/me/notifications',
+    FakeReply(200, {'items': [], 'total': 0, 'unread_count': 0}),
+  );
 }
 
 /// Seeds a saved session of a person of the church trust model.
@@ -206,18 +198,6 @@ void signedInAsPerson(
       FakeReply(200, tokens(fresh('a'), fresh('r'))),
     )
     ..reply('GET', '/me', FakeReply(200, person ?? personJson()));
-}
-
-/// Taps a tab of the bottom navigation. Found by its tooltip (also its screen-reader label),
-/// because at large text only the open tab shows its written label.
-Future<void> tapTab(WidgetTester tester, String label) async {
-  await tester.tap(
-    find.descendant(
-      of: find.byType(NavigationBar),
-      matching: find.byTooltip(label),
-    ),
-  );
-  await tester.pumpAndSettle();
 }
 
 /// Answers the date picker with prepared moments, in order, instead of showing the dial.

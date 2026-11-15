@@ -93,15 +93,6 @@ void main() {
       expect(find.text('Your status: Provider'), findsOneWidget);
     });
 
-    testWidgets('an older account never sees the person home', (tester) async {
-      await pumpApp(
-        tester,
-        arrange: (adapter, store) => signedInAs(adapter, store, 'freelancer'),
-      );
-      expect(find.text('Welcome, Pat Example'), findsOneWidget);
-      expect(find.byKey(const Key('leave-open')), findsNothing);
-    });
-
     testWidgets('signing out returns to the welcome screen', (tester) async {
       await pumpApp(
         tester,

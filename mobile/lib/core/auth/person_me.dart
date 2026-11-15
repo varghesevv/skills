@@ -1,5 +1,3 @@
-import 'account.dart';
-
 /// The statuses of the church trust model, as the server names them. Which screens a person
 /// sees depends on this, read from the server (`GET /me`), never from the token.
 enum PersonStatus {
@@ -37,7 +35,7 @@ class NamedRef {
 }
 
 /// A person of the church trust model (`GET /me` with `user_type` `person`).
-class PersonMe extends Account {
+class PersonMe {
   const PersonMe({
     required this.id,
     required this.fullName,

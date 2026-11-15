@@ -2,16 +2,13 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/account.dart';
-import '../auth/me.dart';
 import '../auth/person_me.dart';
-import '../auth/user_type.dart';
 import '../providers.dart';
 
 /// Who is signed in: loading at start-up, then the account or null (signed out).
-class SessionController extends AsyncNotifier<Account?> {
+class SessionController extends AsyncNotifier<PersonMe?> {
   @override
-  Future<Account?> build() async {
+  Future<PersonMe?> build() async {
     // The API client signals when the server rejects the refresh token: the session is over.
     ref.listen(sessionExpiredProvider, (_, _) => expire());
     try {
@@ -23,18 +20,6 @@ class SessionController extends AsyncNotifier<Account?> {
   }
 
   /// Throws `ApiException` on a wrong password and so on; the caller shows the message.
-  Future<void> login({
-    required String email,
-    required String password,
-    required UserType type,
-  }) async {
-    final me = await ref
-        .read(authRepositoryProvider)
-        .login(email: email, password: password, type: type);
-    state = AsyncData(me);
-  }
-
-  /// The one login of the church trust model. Throws `ApiException` like [login].
   Future<void> loginPerson({
     required String email,
     required String password,
@@ -58,12 +43,10 @@ class SessionController extends AsyncNotifier<Account?> {
       _refreshing ??= _refreshPerson().whenComplete(() => _refreshing = null);
 
   Future<void> _refreshPerson() async {
-    if (state.value is! PersonMe) return;
+    if (state.value == null) return;
     try {
-      final account = await ref.read(authRepositoryProvider).me();
-      if (account is PersonMe && state.value is PersonMe) {
-        state = AsyncData(account);
-      }
+      final person = await ref.read(authRepositoryProvider).me();
+      if (state.value != null) state = AsyncData(person);
     } on Exception {
       // The screen keeps the last answer.
     }
@@ -78,18 +61,11 @@ class SessionController extends AsyncNotifier<Account?> {
   void expire() => state = const AsyncData(null);
 }
 
-final sessionProvider = AsyncNotifierProvider<SessionController, Account?>(
+final sessionProvider = AsyncNotifierProvider<SessionController, PersonMe?>(
   SessionController.new,
 );
 
-/// The signed-in older account, or null for a person of the church trust model or nobody.
-final meProvider = Provider<Me?>((ref) {
-  final account = ref.watch(sessionProvider).value;
-  return account is Me ? account : null;
-});
-
 /// The signed-in person of the church trust model, or null.
-final personProvider = Provider<PersonMe?>((ref) {
-  final account = ref.watch(sessionProvider).value;
-  return account is PersonMe ? account : null;
-});
+final personProvider = Provider<PersonMe?>(
+  (ref) => ref.watch(sessionProvider).value,
+);

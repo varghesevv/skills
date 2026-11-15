@@ -46,14 +46,14 @@ Future<TestApp> openRatings(
     size: size,
     textScale: textScale,
     arrange: (adapter, store) {
-      signedInAs(adapter, store, 'freelancer');
+      signedInAsProvider(adapter, store);
       adapter.reply('GET', path, first);
       for (final reply in more) {
         adapter.reply('GET', path, reply);
       }
     },
   );
-  await tapTab(tester, 'My ratings');
+  await tapKey(tester, 'provider-ratings');
   return app;
 }
 
@@ -78,27 +78,6 @@ void main() {
       );
       expect(paged.items, hasLength(2));
       expect([paged.total, paged.page, paged.pageSize], [12, 3, 10]);
-    });
-  });
-
-  group('navigation', () {
-    testWidgets('a freelancer has a ratings tab and a dashboard shortcut', (
-      tester,
-    ) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'freelancer'));
-      expect(
-        find.descendant(
-          of: find.byType(NavigationBar),
-          matching: find.text('My ratings'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('My ratings'), findsNWidgets(2));
-    });
-
-    testWidgets('other roles do not have it', (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'workhost'));
-      expect(find.text('My ratings'), findsNothing);
     });
   });
 
@@ -393,9 +372,9 @@ void main() {
             .signal();
         await tester.pumpAndSettle();
         expect(
-          find.text('I need to hire'),
+          find.byKey(const Key('member-sign-in')),
           findsOneWidget,
-        ); // signed out, back on the welcome screen
+        ); // back on the welcome screen
         gate.complete();
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

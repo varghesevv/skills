@@ -1,11 +1,20 @@
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../api/parse.dart';
-import 'account.dart';
-import 'me.dart';
 import 'person_me.dart';
 import 'token_store.dart';
-import 'user_type.dart';
+
+/// `GET /me` answered with an account of the older kind (a freelancer, work host or
+/// organisation). The app has no screens for it. It is not an [ApiException]: only this exact
+/// answer ends a saved session; any other unreadable answer keeps it.
+class OlderAccountException implements Exception {
+  const OlderAccountException();
+
+  @override
+  String toString() => 'OlderAccountException';
+}
+
+const _olderAccountTypes = {'freelancer', 'workhost', 'organisation'};
 
 /// Login, logout and the current account. Passwords are passed through and never stored.
 class AuthRepository {
@@ -14,36 +23,7 @@ class AuthRepository {
   final ApiClient _api;
   final TokenStore _tokens;
 
-  /// Logs in as [type]. Throws `ApiException` (`invalid_credentials`, `too_many_attempts`,
-  /// `organisation_pending`, ...).
-  Future<Me> login({
-    required String email,
-    required String password,
-    required UserType type,
-  }) async {
-    final data = await _api.post(
-      '/auth/login',
-      body: {'email': email, 'password': password, 'user_type': type.wire},
-      auth: false,
-    );
-    final (access, refresh) = parseResponse(
-      data,
-      (json) =>
-          (json['access_token'] as String, json['refresh_token'] as String),
-    );
-    await _tokens.save(accessToken: access, refreshToken: refresh);
-    try {
-      final account = await me();
-      if (account is! Me) throw const ApiException.badResponse();
-      return account;
-    } catch (_) {
-      // A login that cannot load the account is a failed login: do not leave a session behind.
-      await _tokens.clear();
-      rethrow;
-    }
-  }
-
-  /// The one login of the church trust model: no account type is sent.
+  /// Logs in. Throws `ApiException` (`invalid_credentials`, `too_many_attempts`, ...).
   Future<PersonMe> loginPerson({
     required String email,
     required String password,
@@ -60,30 +40,44 @@ class AuthRepository {
     );
     await _tokens.save(accessToken: access, refreshToken: refresh);
     try {
-      final account = await me();
-      if (account is! PersonMe) throw const ApiException.badResponse();
-      return account;
+      return await me();
+    } on OlderAccountException {
+      // No screens for it: the same as any answer the app cannot use.
+      await _tokens.clear();
+      throw const ApiException.badResponse();
     } catch (_) {
       await _tokens.clear();
       rethrow;
     }
   }
 
-  /// The signed-in account: a person of the church trust model, or an older account.
-  Future<Account> me() async => parseResponse(
-    await _api.get('/me'),
-    (json) => json['user_type'] == 'person'
-        ? PersonMe.fromJson(json)
-        : Me.fromJson(json),
-  );
+  /// The signed-in person. Throws [OlderAccountException] for an account of the older kind, and
+  /// an `ApiException` (`bad_response`) for any other answer the app cannot read.
+  Future<PersonMe> me() async => parseResponse(await _api.get('/me'), (json) {
+    if (_olderAccountTypes.contains(json['user_type'])) {
+      throw const OlderAccountException();
+    }
+    if (json['user_type'] != 'person') {
+      throw const FormatException('Not a person');
+    }
+    return PersonMe.fromJson(json);
+  });
 
   /// Opens a saved session after the app starts. Returns null when there is none (or it expired).
-  Future<Account?> restoreSession() async {
+  Future<PersonMe?> restoreSession() async {
     if (await _tokens.readRefreshToken() == null) return null;
     if (_tokens.accessToken == null && !await _api.refreshSession()) {
       return null;
     }
-    return me();
+    try {
+      return await me();
+    } on OlderAccountException {
+      // A session of an account of the older kind cannot be used any more: end it (the refresh
+      // token is revoked on the server, best effort) so the app opens at the welcome screen
+      // instead of failing at every start. Any other failure keeps the saved session.
+      await logout();
+      return null;
+    }
   }
 
   /// Revokes the refresh token on the server (best effort) and forgets the tokens here.

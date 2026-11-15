@@ -14,14 +14,14 @@ void main() {
   );
 
   test('fills a value', () {
-    expect(church('dashboard.welcome', {'name': 'Pat'}), 'Welcome, Pat');
+    expect(church('member.welcome', {'name': 'Pat'}), 'Welcome, Pat');
   });
 
   test(
     'a typed value that looks like a role word is shown exactly as typed',
     () {
       expect(
-        church('dashboard.welcome', {
+        church('member.welcome', {
           'name': '{organisation} {Workhost} {a_freelancer}',
         }),
         'Welcome, {organisation} {Workhost} {a_freelancer}',
@@ -31,13 +31,16 @@ void main() {
 
   test('values do not substitute into each other', () {
     expect(
-      church('dashboard.welcome', {'name': '{x}', 'x': 'boom'}),
+      church('member.welcome', {'name': '{x}', 'x': 'boom'}),
       'Welcome, {x}',
     );
   });
 
   test('role words in the template still resolve', () {
-    expect(church('register.organisation.title'), 'Create a church account');
+    expect(
+      church('vouch.page.goal.provider'),
+      'offer their skills as a provider',
+    );
   });
 
   test('an unknown key is a programming error', () {

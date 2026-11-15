@@ -8,6 +8,7 @@ import '../../../core/validation/validators.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/async_view.dart';
 import '../../../shared/widgets/message_banner.dart';
+import '../../person/person_router_paths.dart';
 import '../data/freelancer_profile.dart';
 import '../freelancer_providers.dart';
 
@@ -181,7 +182,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
               leading: const Icon(Icons.sell_outlined),
               title: Text(text('nav.labels')),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.go('/freelancer/profile/labels'),
+              onTap: () => context.push(personSkills),
             ),
           ),
         ),

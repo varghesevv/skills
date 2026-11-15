@@ -3,24 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/core/api/api_client.dart';
 import 'package:skills_app/core/api/api_exception.dart';
 import 'package:skills_app/core/auth/auth_repository.dart';
-import 'package:skills_app/core/auth/me.dart';
 
 import '../../support/memory_token_store.dart';
 
-import 'package:skills_app/core/auth/user_type.dart';
-
 import '../../support/fake_api.dart';
-
-Map<String, Object?> meJson(String type) => {
-  'id': 'u1',
-  'user_type': type,
-  'email': 'person@example.test',
-  'mobile_number': '+10000000000',
-  'full_name': type == 'organisation' ? null : 'Pat Example',
-  'org_name': type == 'organisation' ? 'Example Org' : null,
-  'approval_status': null,
-  'created_at': '2026-10-01T10:00:00Z',
-};
+import '../../support/test_app.dart' show personJson;
 
 void main() {
   late FakeAdapter adapter;
@@ -35,29 +22,29 @@ void main() {
     auth = AuthRepository(ApiClient(dio: dio, tokens: store), store);
   });
 
-  test('login sends the stored user type, keeps the tokens and returns the account', () async {
-    final password = fresh('pw');
-    final access = fresh('a');
-    final refresh = fresh('r');
-    adapter
-      ..reply('POST', '/auth/login', FakeReply(200, tokens(access, refresh)))
-      ..reply('GET', '/me', FakeReply(200, meJson('workhost')));
-    final me = await auth.login(
-      email: 'person@example.test',
-      password: password,
-      type: UserType.workhost,
-    );
-    expect(me.userType, UserType.workhost);
-    expect(me.displayName, 'Pat Example');
-    expect(adapter.seen.first.body, {
-      'email': 'person@example.test',
-      'password': password,
-      'user_type': 'workhost',
-    });
-    expect(adapter.seen.first.authorization, isNull);
-    expect(store.accessToken, access);
-    expect(await store.readRefreshToken(), refresh);
-  });
+  test(
+    'login sends no account type, keeps the tokens and returns the person',
+    () async {
+      final password = fresh('pw');
+      final access = fresh('a');
+      final refresh = fresh('r');
+      adapter
+        ..reply('POST', '/auth/login', FakeReply(200, tokens(access, refresh)))
+        ..reply('GET', '/me', FakeReply(200, personJson()));
+      final person = await auth.loginPerson(
+        email: 'person@example.test',
+        password: password,
+      );
+      expect(person.id, personJson()['id']);
+      expect(adapter.seen.first.body, {
+        'email': 'person@example.test',
+        'password': password,
+      });
+      expect(adapter.seen.first.authorization, isNull);
+      expect(store.accessToken, access);
+      expect(await store.readRefreshToken(), refresh);
+    },
+  );
 
   test(
     'a wrong password throws invalid_credentials and stores nothing',
@@ -68,11 +55,7 @@ void main() {
         FakeReply(401, apiError('invalid_credentials')),
       );
       await expectLater(
-        auth.login(
-          email: 'person@example.test',
-          password: fresh('pw'),
-          type: UserType.freelancer,
-        ),
+        auth.loginPerson(email: 'person@example.test', password: fresh('pw')),
         throwsA(
           isA<ApiException>().having(
             (e) => e.code,
@@ -95,11 +78,7 @@ void main() {
         FakeReply(200, {'unexpected': true}),
       );
       await expectLater(
-        auth.login(
-          email: 'person@example.test',
-          password: fresh('pw'),
-          type: UserType.freelancer,
-        ),
+        auth.loginPerson(email: 'person@example.test', password: fresh('pw')),
         throwsA(
           isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
         ),
@@ -124,11 +103,7 @@ void main() {
           FakeReply(200, {'id': 'u1', 'user_type': 'admin'}),
         );
       await expectLater(
-        auth.login(
-          email: 'person@example.test',
-          password: fresh('pw'),
-          type: UserType.freelancer,
-        ),
+        auth.loginPerson(email: 'person@example.test', password: fresh('pw')),
         throwsA(
           isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
         ),
@@ -147,19 +122,19 @@ void main() {
       )
       ..reply('GET', '/me', FakeReply(503, apiError('service_unavailable')));
     await expectLater(
-      auth.login(
-        email: 'person@example.test',
-        password: fresh('pw'),
-        type: UserType.freelancer,
-      ),
+      auth.loginPerson(email: 'person@example.test', password: fresh('pw')),
       throwsA(isA<ApiException>().having((e) => e.status, 'status', 503)),
     );
     expect(await store.readRefreshToken(), isNull);
   });
 
-  test('an organisation shows its name', () async {
-    adapter.reply('GET', '/me', FakeReply(200, meJson('organisation')));
-    expect(((await auth.me()) as Me).displayName, 'Example Org');
+  test('an account of the older kind is not a person', () async {
+    adapter.reply(
+      'GET',
+      '/me',
+      FakeReply(200, {'id': 'u1', 'user_type': 'freelancer'}),
+    );
+    await expectLater(auth.me(), throwsA(isA<OlderAccountException>()));
   });
 
   test('restoreSession returns null without a saved session', () async {
@@ -185,10 +160,98 @@ void main() {
         '/auth/refresh',
         FakeReply(200, tokens(fresh('a'), fresh('r'))),
       )
-      ..reply('GET', '/me', FakeReply(200, meJson('freelancer')));
-    expect(
-      ((await repo.restoreSession()) as Me?)?.userType,
-      UserType.freelancer,
+      ..reply('GET', '/me', FakeReply(200, personJson()));
+    expect((await repo.restoreSession())?.id, personJson()['id']);
+  });
+
+  test('a saved session of an older account is ended, not kept', () async {
+    final coldStart = _ColdStartStore('saved-refresh');
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.test/api/v1'))
+      ..httpClientAdapter = adapter;
+    final repo = AuthRepository(
+      ApiClient(dio: dio, tokens: coldStart),
+      coldStart,
+    );
+    adapter
+      ..reply(
+        'POST',
+        '/auth/refresh',
+        FakeReply(200, tokens(fresh('a'), fresh('r'))),
+      )
+      ..reply(
+        'GET',
+        '/me',
+        FakeReply(200, {'id': 'u1', 'user_type': 'workhost'}),
+      )
+      ..reply('POST', '/auth/logout', FakeReply(204));
+    expect(await repo.restoreSession(), isNull);
+    expect(await coldStart.readRefreshToken(), isNull);
+    // The abandoned refresh token is revoked on the server too.
+    expect(adapter.count('POST', '/auth/logout'), 1);
+  });
+
+  group('a saved session is kept when /me cannot be read, but not for an older account', () {
+    Future<(AuthRepository, _ColdStartStore)> coldRepo(FakeReply me) async {
+      final store = _ColdStartStore('saved-refresh');
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.test/api/v1'))
+        ..httpClientAdapter = adapter;
+      adapter
+        ..reply(
+          'POST',
+          '/auth/refresh',
+          FakeReply(200, tokens(fresh('a'), fresh('r'))),
+        )
+        ..reply('GET', '/me', me);
+      return (AuthRepository(ApiClient(dio: dio, tokens: store), store), store);
+    }
+
+    final cases = {
+      'an unknown status': FakeReply(200, {
+        ...personJson(),
+        'status': 'archangel',
+      }),
+      'a page that is not JSON': FakeReply(
+        200,
+        '<html>sign in to the wifi</html>',
+      ),
+      'an answer without an account type': FakeReply(200, {'id': 'u1'}),
+    };
+    cases.forEach((name, reply) {
+      test('$name keeps the session and asks again next time', () async {
+        final (repo, store) = await coldRepo(reply);
+        await expectLater(
+          repo.restoreSession(),
+          throwsA(
+            isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
+          ),
+        );
+        expect(await store.readRefreshToken(), isNotNull);
+        expect(adapter.count('POST', '/auth/logout'), 0);
+      });
+    });
+
+    test(
+      'an older account at login is refused and leaves no session',
+      () async {
+        adapter
+          ..reply(
+            'POST',
+            '/auth/login',
+            FakeReply(200, tokens(fresh('a'), fresh('r'))),
+          )
+          ..reply(
+            'GET',
+            '/me',
+            FakeReply(200, {'id': 'u1', 'user_type': 'workhost'}),
+          );
+        await expectLater(
+          auth.loginPerson(email: 'person@example.test', password: fresh('pw')),
+          throwsA(
+            isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
+          ),
+        );
+        expect(await store.readRefreshToken(), isNull);
+      },
     );
   });
 
@@ -209,10 +272,6 @@ void main() {
     adapter.reply('POST', '/auth/logout', FakeReply(204));
     await auth.logout();
     expect(adapter.seen.single.body, {'refresh_token': refresh});
-  });
-
-  test('an unknown user type is refused', () {
-    expect(() => UserType.fromWire('admin'), throwsFormatException);
   });
 }
 
