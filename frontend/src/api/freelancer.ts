@@ -8,7 +8,6 @@ import type {
   ProfileUpdate,
   PublicRating,
   Unavailability,
-  Vouch,
 } from './types'
 
 export const RATINGS_PAGE_SIZE = 10
@@ -35,11 +34,6 @@ export const updateUnavailability = (id: string, body: Period) =>
 
 export const deleteUnavailability = (id: string) =>
   request<void>(`/freelancers/me/unavailability/${id}`, { method: 'DELETE' })
-
-export const listVouches = () => request<Vouch[]>('/freelancers/me/vouches')
-
-export const decideVouch = (orgId: string, decision: 'accept' | 'reject') =>
-  request<Vouch>(`/freelancers/me/vouches/${orgId}/${decision}`, { method: 'POST' })
 
 export const listRatings = (freelancerId: string, page: number) =>
   request<Page<PublicRating>>(

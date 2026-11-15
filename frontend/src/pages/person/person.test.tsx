@@ -309,18 +309,6 @@ describe('the home of a person by status', () => {
     renderApp('/member')
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeVisible()
   })
-
-  it('keeps a person out of the portals of the older accounts and the other way round', async () => {
-    signedInAs(makeMe(), { 'GET /me': () => json(200, makePerson()) })
-    renderApp('/freelancer')
-    expect(await screen.findByRole('heading', { name: 'Your application' })).toBeVisible()
-  })
-
-  it('sends an older account that opens the person home to its own portal', async () => {
-    signedInAs()
-    renderApp('/member')
-    expect(await screen.findByRole('heading', { name: 'Welcome, Fatima Khan' })).toBeVisible()
-  })
 })
 
 describe('change of choice and leaving', () => {

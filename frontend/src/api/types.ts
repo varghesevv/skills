@@ -1,10 +1,6 @@
 // Shapes of the API responses used by the shell. Keep in step with docs/specification/04-api.md.
 
 export type UserType = 'freelancer' | 'workhost' | 'organisation' | 'admin'
-export type RegisterType = Exclude<UserType, 'admin'>
-/** The identity of the church trust model; the four above are the older accounts. */
-export type AuthUserType = UserType | 'person'
-
 export type TokenResponse = {
   access_token: string
   refresh_token: string
@@ -97,13 +93,6 @@ export type SignupBody = {
   invitation_token?: string
 }
 
-export type RegisterResponse = {
-  id: string
-  user_type: UserType
-  email: string
-  approval_status: string | null
-}
-
 // ---- freelancer portal (docs/specification/04-api.md) ----
 
 export type Page<T> = { items: T[]; total: number; page: number; page_size: number }
@@ -151,35 +140,12 @@ export type Unavailability = { id: string; unavailable_from: string; unavailable
 
 export type VouchStatus = 'pending' | 'approved' | 'revoked'
 
-export type Vouch = {
-  org_id: string
-  org_name: string
-  status: VouchStatus
-  is_active: boolean
-  created_at: string
-}
-
 export type PublicRating = { rating: number; comment: string | null; rated_on: string }
 
 // ---- work host portal ----
 
 export type Day = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
 export const DAYS: readonly Day[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
-
-export type WorkHostProfile = {
-  id: string
-  full_name: string | null
-  email: string
-  mobile_number: string
-  available_days: Day[]
-  created_at: string
-}
-
-export type WorkHostUpdate = {
-  full_name: string
-  mobile_number: string
-  available_days: Day[]
-}
 
 export type SearchResult = {
   id: string
@@ -236,32 +202,7 @@ export type RevealRequest = {
 
 export type RevealedMobile = { mobile_number: string }
 
-export type OrgBrief = { id: string; org_name: string }
-
 // ---- organisation portal ----
-
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
-
-export type OrgProfile = {
-  id: string
-  email: string
-  org_name: string
-  mobile_number: string
-  approval_status: ApprovalStatus
-  created_at: string
-}
-
-export type OrgUpdate = { org_name: string; mobile_number: string }
-
-export type VouchedFreelancer = {
-  freelancer_id: string
-  full_name: string | null
-  nationality: string | null
-  primary_language: string | null
-  status: VouchStatus
-  is_active: boolean
-  created_at: string
-}
 
 export type ReportInfo = {
   name: string
@@ -282,15 +223,6 @@ export type ReportData = {
 }
 
 // ---- admin portal ----
-
-export type OrgSummary = {
-  id: string
-  org_name: string
-  email: string
-  mobile_number: string
-  approval_status: ApprovalStatus
-  created_at: string
-}
 
 export type ReportRun = {
   id: string

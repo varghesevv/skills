@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { apiError, json, makeMe, makePerson, renderApp, signedInAs } from '../../../testUtils'
-import { ALL_LABELS, ME_ID, makeProfile } from '../../../portals/freelancer/testData'
+import { ALL_LABELS, ME_ID, makeProfile } from './testData'
 
 const quiet = {
   'GET /me/notifications?limit=50': () => json(200, { items: [], total: 0, unread_count: 0 }),

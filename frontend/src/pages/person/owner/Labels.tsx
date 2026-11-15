@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
-import { createLabel, listAllLabels, updateLabel } from '../../api/admin'
-import type { LabelOut, LabelType } from '../../api/types'
-import { t, type StringKey } from '../../i18n'
-import { errorMessage } from '../../shared/errors'
-import { Alert, Badge, QueryBoundary, SelectField, TextField } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
-import { labelNameSchema, validate } from '../../shared/validation'
-import { ADMIN_LABELS_KEY } from './keys'
+import { createLabel, listAllLabels, updateLabel } from '../../../api/labels'
+import type { LabelOut, LabelType } from '../../../api/types'
+import { t, type StringKey } from '../../../i18n'
+import { errorMessage } from '../../../shared/errors'
+import { Alert, Badge, QueryBoundary, SelectField, TextField } from '../../../shared/ui'
+import { usePageTitle } from '../../../shared/usePageTitle'
+import { labelNameSchema, validate } from '../../../shared/validation'
+
+const LABELS_KEY = ['member', 'labels'] as const
 
 const TYPES: { type: LabelType; title: StringKey }[] = [
   { type: 'skill', title: 'labels.skill' },
@@ -29,7 +30,7 @@ function LabelRow({ item }: { item: LabelOut }) {
     mutationFn: (body: { label_name?: string; is_active?: boolean }) => updateLabel(item.id, body),
     onSuccess: async () => {
       setEditing(false)
-      await queryClient.invalidateQueries({ queryKey: ADMIN_LABELS_KEY })
+      await queryClient.invalidateQueries({ queryKey: LABELS_KEY })
     },
     onError: (failure) => setError(errorMessage(failure)),
   })
@@ -119,7 +120,7 @@ function AddLabel({ type }: { type: LabelType }) {
     mutationFn: createLabel,
     onSuccess: async () => {
       setName('')
-      await queryClient.invalidateQueries({ queryKey: ADMIN_LABELS_KEY })
+      await queryClient.invalidateQueries({ queryKey: LABELS_KEY })
     },
     onError: (failure) => setError(errorMessage(failure)),
   })
@@ -161,7 +162,7 @@ function AddLabel({ type }: { type: LabelType }) {
 export default function AdminLabelsPage() {
   usePageTitle(t('adminLabels.title'))
   const [type, setType] = useState<LabelType>('skill')
-  const query = useQuery({ queryKey: ADMIN_LABELS_KEY, queryFn: listAllLabels })
+  const query = useQuery({ queryKey: LABELS_KEY, queryFn: listAllLabels })
 
   return (
     <>

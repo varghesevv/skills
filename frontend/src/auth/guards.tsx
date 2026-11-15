@@ -1,58 +1,19 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
-import type { UserType } from '../api/types'
-import {
-  homePath,
-  loginPathFor,
-  PERSON_HOME,
-  PERSON_SIGN_IN,
-  VOUCH_LINK_PREFIX,
-} from '../portals/config'
+import { PERSON_HOME, PERSON_SIGN_IN } from '../portals/config'
 import { LoadingScreen } from '../shared/ui'
 import { useAuth } from './AuthContext'
 
+/** Everything behind the sign-in: a visitor is sent to sign in and brought back afterwards. */
 export function RequireAuth() {
   const { status } = useAuth()
   const location = useLocation()
   if (status === 'loading') return <LoadingScreen />
   if (status === 'anonymous') {
     return (
-      <Navigate
-        to={
-          location.pathname.startsWith(PERSON_HOME) ||
-          location.pathname.startsWith(VOUCH_LINK_PREFIX)
-            ? PERSON_SIGN_IN
-            : loginPathFor(location.pathname)
-        }
-        replace
-        state={{ from: location.pathname + location.search }}
-      />
+      <Navigate to={PERSON_SIGN_IN} replace state={{ from: location.pathname + location.search }} />
     )
   }
-  return <Outlet />
-}
-
-export function RequireRole({ role }: { role: UserType }) {
-  const { user } = useAuth()
-  if (!user) return <LoadingScreen />
-  if (user.user_type === 'person') return <Navigate to={PERSON_HOME} replace />
-  if (user.user_type !== role) return <Navigate to={homePath(user.user_type)} replace />
-  return <Outlet />
-}
-
-/** In front of the portals of the older accounts: a person goes to their own home instead. */
-export function RequireOlderAccount() {
-  const { user } = useAuth()
-  if (!user) return <LoadingScreen />
-  if (user.user_type === 'person') return <Navigate to={PERSON_HOME} replace />
-  return <Outlet />
-}
-
-/** Only people of the church trust model; an older account is sent to its own portal. */
-export function RequirePerson() {
-  const { user } = useAuth()
-  if (!user) return <LoadingScreen />
-  if (user.user_type !== 'person') return <Navigate to={homePath(user.user_type)} replace />
   return <Outlet />
 }
 
@@ -60,7 +21,7 @@ export function RequirePerson() {
 export function RequireOpenAccount() {
   const { user } = useAuth()
   if (!user) return <LoadingScreen />
-  const open = user.user_type === 'person' && user.status !== 'revoked'
+  const open = user.status !== 'revoked'
   return open ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
 
@@ -68,9 +29,7 @@ export function RequireOpenAccount() {
 export function RequireSearcher() {
   const { user } = useAuth()
   if (!user) return <LoadingScreen />
-  const searcher =
-    user.user_type === 'person' &&
-    ['searcher', 'provider', 'verifier', 'admin', 'owner'].includes(user.status)
+  const searcher = ['searcher', 'provider', 'verifier', 'admin', 'owner'].includes(user.status)
   return searcher ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
 
@@ -78,8 +37,7 @@ export function RequireSearcher() {
 export function RequireProvider() {
   const { user } = useAuth()
   if (!user) return <LoadingScreen />
-  const provider =
-    user.user_type === 'person' && ['provider', 'verifier', 'admin', 'owner'].includes(user.status)
+  const provider = ['provider', 'verifier', 'admin', 'owner'].includes(user.status)
   return provider ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
 
@@ -87,7 +45,7 @@ export function RequireProvider() {
 export function RequireLeader() {
   const { user } = useAuth()
   if (!user) return <LoadingScreen />
-  const leader = user.user_type === 'person' && ['verifier', 'admin', 'owner'].includes(user.status)
+  const leader = ['verifier', 'admin', 'owner'].includes(user.status)
   return leader ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
 
@@ -95,7 +53,7 @@ export function RequireLeader() {
 export function RequireAdmin() {
   const { user } = useAuth()
   if (!user) return <LoadingScreen />
-  const admin = user.user_type === 'person' && ['admin', 'owner'].includes(user.status)
+  const admin = ['admin', 'owner'].includes(user.status)
   return admin ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
 
@@ -103,6 +61,6 @@ export function RequireAdmin() {
 export function RequireOwner() {
   const { user } = useAuth()
   if (!user) return <LoadingScreen />
-  const owner = user.user_type === 'person' && user.status === 'owner'
+  const owner = user.status === 'owner'
   return owner ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
 }
