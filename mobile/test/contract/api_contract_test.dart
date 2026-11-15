@@ -1034,6 +1034,30 @@ void main() {
     });
 
     test(
+      'changing a rating sends the score and comment and gets the rating back',
+      () {
+        expect(requestSchema('PUT', '/ratings/{rating_id}'), 'RatingUpdate');
+        expect(properties('RatingUpdate'), containsAll(['rating', 'comment']));
+        expect(
+          responseSchema('PUT', '/ratings/{rating_id}', '200'),
+          'GivenRating',
+        );
+        expect(
+          responseSchema('GET', '/freelancers/{freelancer_id}', '200'),
+          'FreelancerPublic',
+        );
+        expect(
+          responseSchema(
+            'POST',
+            '/freelancers/{freelancer_id}/reveal-mobile',
+            '200',
+          ),
+          'RevealedMobile',
+        );
+      },
+    );
+
+    test(
       'Reveal takes the channel and source, and answers with the number only',
       () {
         expect(

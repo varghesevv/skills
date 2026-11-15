@@ -56,7 +56,7 @@ class ProviderScreen extends ConsumerWidget {
               _Unavailable(provider: p, text: text),
               const SizedBox(height: 16),
               if (!own) ...[
-                _RatingForm(key: ValueKey(p.myRating?.id), provider: p),
+                _RatingForm(key: ValueKey(p.id), provider: p),
                 const SizedBox(height: 16),
               ],
               _Ratings(id: id, text: text),
@@ -170,10 +170,20 @@ class _ContactState extends ConsumerState<_Contact> {
           .reveal(widget.provider.id);
       if (!mounted) return;
       setState(() => _number = number);
-      await ref.read(dialerProvider)(number);
     } catch (error) {
       if (mounted) {
         setState(() => _error = ref.read(appTextProvider).error(error));
+      }
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+    // The reveal is recorded whatever the phone does next: a dialler that cannot open is its own
+    // message, and the number stays on the screen.
+    try {
+      await ref.read(dialerProvider)(_number!);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = ref.read(appTextProvider)('reveal.dialFailed'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

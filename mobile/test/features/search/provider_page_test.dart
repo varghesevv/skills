@@ -116,12 +116,14 @@ Future<TestApp> _open(
   Map<String, Object?>? provider,
   void Function(FakeAdapter adapter)? arrange,
   List<String>? dialled,
+  bool failDialler = false,
 }) async {
   final app = await pumpApp(
     tester,
     size: const Size(400, 3000),
     overrides: [
       dialerProvider.overrideWithValue((number) async {
+        if (failDialler) throw StateError('no dialler');
         dialled?.add(number);
         return true;
       }),
@@ -289,6 +291,30 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a phone that cannot open the dialler keeps the number and says so',
+      (tester) async {
+        await _open(
+          tester,
+          failDialler: true,
+          arrange: (a) => a.reply(
+            'POST',
+            '/freelancers/$_id/reveal-mobile',
+            FakeReply(200, {'mobile_number': _number}),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('reveal')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('revealed-number')), findsOneWidget);
+        expect(
+          find.text(
+            'The phone could not open the dialler. The number is shown below.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('says so when the limit is reached', (tester) async {
       await _open(
         tester,
@@ -346,6 +372,29 @@ void main() {
         'comment': 'Great',
       });
       expect(find.text('Saved.'), findsOneWidget);
+    });
+
+    testWidgets('the first rating is confirmed although the page reloads', (
+      tester,
+    ) async {
+      final app = await _open(
+        tester,
+        arrange: (a) => a.reply('POST', '/ratings', FakeReply(201, _given(8))),
+      );
+      // The page reloads after saving, now with the rating the person gave.
+      app.adapter.setReply(
+        'GET',
+        '/freelancers/$_id',
+        FakeReply(200, _provider(mine: _given(8))),
+      );
+      await tester.tap(find.byKey(const Key('rating-score')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('8').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('rating-save')));
+      await tester.pumpAndSettle();
+      expect(find.text('Saved.'), findsOneWidget);
+      expect(find.text('Change your rating'), findsOneWidget);
     });
 
     testWidgets('changes the rating already given, through PUT', (

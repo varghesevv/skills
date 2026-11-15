@@ -424,6 +424,8 @@ const stringsEn = <String, String>{
   'reveal.working': 'Asking…',
   'reveal.hidden': 'Mobile number hidden',
   'reveal.callLabel': 'Call {number}',
+  'reveal.dialFailed':
+      'The phone could not open the dialler. The number is shown below.',
   'invitations.nav': 'Invite to my {homegroup}',
   'invitations.title': 'Invite to my {homegroup}',
   'invitations.lead': 'Make a link and send it to people who may join your {homegroup}. They sign up through it and wait for you to admit them. A link works for a while, and anyone who has it can use it.',

@@ -131,7 +131,7 @@ Status column: "at least X" means that status or higher.
 | GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done: a PROVIDER or above opens them from the member home |
 | GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | done: labels screen and filter sheet |
 | GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | done |
-| POST `/freelancers/{id}/reveal-mobile` | at least SEARCHER | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 and 6 | S5.9 | not started |
+| POST `/freelancers/{id}/reveal-mobile` | at least SEARCHER | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 and 6 | S5.9 | done |
 | GET `/workhosts/me/ratings`; POST `/ratings`; PUT `/ratings/{id}` | at least SEARCHER | Ratings given, rate | S5.9, S5.10 | rate and change done (S5.9); ratings given are S5.10 |
 | GET `/search/freelancers` | at least SEARCHER | Search | S5.8 | done |
 | GET `/reports`, `/reports/{name}` | ADMIN (church) | Church reports | after S5 | not started |
