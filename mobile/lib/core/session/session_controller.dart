@@ -11,6 +11,8 @@ class SessionController extends AsyncNotifier<PersonMe?> {
   Future<PersonMe?> build() async {
     // The API client signals when the server rejects the refresh token: the session is over.
     ref.listen(sessionExpiredProvider, (_, _) => expire());
+    // A refused call because of the status means the status changed: ask who the person is.
+    ref.listen(accessDeniedProvider, (_, _) => unawaited(refreshPerson()));
     try {
       return await ref.read(authRepositoryProvider).restoreSession();
     } on Exception {

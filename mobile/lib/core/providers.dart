@@ -22,6 +22,19 @@ class SessionExpiry extends Notifier<int> {
   void signal() => state++;
 }
 
+/// Counts the times the server refused a call because of the person's status. The session
+/// controller listens to it and asks who the person is again.
+class AccessDenied extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void signal() => state++;
+}
+
+final accessDeniedProvider = NotifierProvider<AccessDenied, int>(
+  AccessDenied.new,
+);
+
 final sessionExpiredProvider = NotifierProvider<SessionExpiry, int>(
   SessionExpiry.new,
 );
@@ -60,6 +73,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     tokens: ref.watch(tokenStoreProvider),
     appVersion: Env.appVersion,
     onSessionExpired: () => ref.read(sessionExpiredProvider.notifier).signal(),
+    onAccessDenied: () => ref.read(accessDeniedProvider.notifier).signal(),
   );
 });
 

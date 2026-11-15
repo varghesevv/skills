@@ -13,6 +13,7 @@ void main() {
   late FakeAdapter adapter;
   late MemoryTokenStore store;
   late int expiredCalls;
+  late int deniedCalls;
   late ApiClient client;
   late String access;
   late String refresh;
@@ -21,6 +22,7 @@ void main() {
     adapter = FakeAdapter();
     store = MemoryTokenStore();
     expiredCalls = 0;
+    deniedCalls = 0;
     access = fresh('a');
     refresh = fresh('r');
     await store.save(accessToken: access, refreshToken: refresh);
@@ -30,6 +32,7 @@ void main() {
       dio: dio,
       tokens: store,
       onSessionExpired: () => expiredCalls++,
+      onAccessDenied: () => deniedCalls++,
       appVersion: '1.2.3',
     );
   });
@@ -165,6 +168,50 @@ void main() {
       },
     );
   }
+
+  group('a refusal because of the status tells the app to ask again', () {
+    for (final code in ['not_admitted', 'account_revoked']) {
+      test('403 $code on a call is reported once', () async {
+        adapter.reply(
+          'GET',
+          '/search/freelancers',
+          FakeReply(403, apiError(code)),
+        );
+        await expectLater(
+          client.get('/search/freelancers'),
+          throwsA(isA<ApiException>().having((e) => e.code, 'code', code)),
+        );
+        expect(deniedCalls, 1);
+      });
+    }
+
+    test(
+      'other refusals, other statuses and /me itself are not reported',
+      () async {
+        adapter
+          ..reply('GET', '/a', FakeReply(403, apiError('forbidden')))
+          ..reply('GET', '/b', FakeReply(404, apiError('not_admitted')))
+          ..reply('GET', '/me', FakeReply(403, apiError('account_revoked')));
+        for (final path in ['/a', '/b', '/me']) {
+          await expectLater(client.get(path), throwsA(isA<ApiException>()));
+        }
+        expect(deniedCalls, 0);
+      },
+    );
+
+    test('a call that sends no token is not reported', () async {
+      adapter.reply(
+        'POST',
+        '/auth/login',
+        FakeReply(403, apiError('account_revoked')),
+      );
+      await expectLater(
+        client.post('/auth/login', auth: false),
+        throwsA(isA<ApiException>()),
+      );
+      expect(deniedCalls, 0);
+    });
+  });
 
   test('maps the error envelope and Retry-After', () async {
     adapter.reply(

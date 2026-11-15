@@ -16,6 +16,7 @@ class ApiClient {
     required Dio dio,
     required TokenStore tokens,
     this.onSessionExpired,
+    this.onAccessDenied,
     String appVersion = '',
   }) : _dio = dio, // ignore: prefer_initializing_formals (private fields, public named parameters)
        _tokens = tokens, // ignore: prefer_initializing_formals
@@ -27,6 +28,12 @@ class ApiClient {
 
   /// Called when the refresh token is rejected, so the app can return to the login screen.
   final void Function()? onSessionExpired;
+
+  /// Called when the server refuses a call because of the person's status (`not_admitted`,
+  /// `account_revoked`): the status changed since the app last asked, so it should ask again.
+  final void Function()? onAccessDenied;
+
+  static const _statusCodes = {'not_admitted', 'account_revoked'};
 
   Future<bool>? _refreshInFlight;
 
@@ -124,7 +131,17 @@ class ApiClient {
       }
     }
     final status = response.statusCode ?? 0;
-    if (status < 200 || status >= 300) throw _toException(response);
+    if (status < 200 || status >= 300) {
+      final error = _toException(response);
+      // `/me` itself is how the app asks again; it must not trigger another ask.
+      if (status == 403 &&
+          auth &&
+          path != '/me' &&
+          _statusCodes.contains(error.code)) {
+        onAccessDenied?.call();
+      }
+      throw error;
+    }
     return status == 204 ? null : response.data;
   }
 
