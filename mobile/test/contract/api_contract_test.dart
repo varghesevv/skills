@@ -130,6 +130,7 @@ void main() {
       'PUT /freelancers/me': '200',
       'GET /labels': '200',
       'GET /freelancers/{freelancer_id}/ratings': '200',
+      'GET /search/freelancers': '200',
       'PUT /freelancers/me/labels': '200',
       'GET /freelancers/me/unavailability': '200',
       'POST /freelancers/me/unavailability': '201',
@@ -919,6 +920,67 @@ void main() {
         expect(property['format'], 'date-time');
       },
     );
+  });
+
+  group('search', () {
+    test('the filters are the parameters the app sends', () {
+      final names = {
+        for (final p
+            in (operation('GET', '/search/freelancers')['parameters'] as List)
+                .cast<Map>())
+          p['name'] as String,
+      };
+      expect(
+        names,
+        containsAll([
+          'skill',
+          'skill_match',
+          'skill_level',
+          'language',
+          'timing',
+          'nativity',
+          'max_rate',
+          'currency',
+          'negotiable',
+          'available_from',
+          'available_to',
+          'min_rating',
+          'church_id',
+          'home_group_id',
+          'name',
+          'sort',
+          'page',
+          'page_size',
+        ]),
+      );
+    });
+
+    test('a result has the fields the app reads, and no way to a number', () {
+      expect(
+        responseSchema('GET', '/search/freelancers', '200'),
+        'Page_SearchResult_',
+      );
+      expect(
+        properties('SearchResult'),
+        containsAll([
+          'id',
+          'full_name',
+          'church',
+          'home_group',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+          'average_rating',
+          'rating_count',
+          'skills',
+          'languages',
+        ]),
+      );
+      expect(properties('SearchResult'), isNot(contains('mobile_number')));
+      expect(properties('SearchResult'), isNot(contains('email')));
+    });
   });
 
   group('ratings received', () {

@@ -15,6 +15,7 @@ import '../features/freelancer/availability/availability_screen.dart';
 import '../features/freelancer/labels/labels_screen.dart';
 import '../features/freelancer/profile/profile_screen.dart';
 import '../features/freelancer/ratings/ratings_screen.dart';
+import '../features/search/search_screen.dart';
 import '../features/leader/applicants_screen.dart';
 import '../features/leader/leader_paths.dart';
 import '../features/groups/group_requests_screen.dart';
@@ -65,6 +66,8 @@ bool personMayVisit(PersonMe person, String path) {
       path == personSkills ||
       path == personAvailability ||
       path == personRatings;
+  // Finding providers is for a SEARCHER or above.
+  final isSearchPage = path == personSearch;
   // The groups of the church are for an ADMIN or the OWNER only.
   final isAdminPage = path == adminGroups;
   return switch (person.status) {
@@ -74,6 +77,7 @@ bool personMayVisit(PersonMe person, String path) {
       (path.startsWith('$personHome/') || path == vouchLinkPath) &&
           (!isLeaderPage || person.status.isLeader) &&
           (!isProviderPage || person.status.isProvider) &&
+          (!isSearchPage || person.status.isSearcher) &&
           (!isAdminPage ||
               person.status == PersonStatus.admin ||
               person.status == PersonStatus.owner),
@@ -155,6 +159,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'search',
+            builder: (context, state) => const SearchScreen(),
           ),
           GoRoute(
             path: 'profile',
