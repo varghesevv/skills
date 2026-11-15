@@ -81,8 +81,8 @@ cd /opt/skills
 It prints how long the restore took and the row counts. Compare with the live database:
 
 ```bash
-dc exec -T db psql -U skills -d skills -c "SELECT count(*) FROM freelancers"
-dc exec -T db psql -U skills -d skills_restore -c "SELECT count(*) FROM freelancers"
+dc exec -T db psql -U skills -d skills -c "SELECT count(*) FROM people"
+dc exec -T db psql -U skills -d skills_restore -c "SELECT count(*) FROM people"
 ```
 
 The numbers match if no one registered since that backup. Clean up afterwards:
@@ -180,7 +180,30 @@ dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.
 dc run --rm tools python -m app.cli seed-demo
 ```
 
-Starting the demo over means wiping the demo database, because the history of people is append-only and cannot be removed row by row (D-45). That is an action on the live server that the owner takes; its step-by-step procedure (the reset of the demo) is written in slice S5.14 of the roadmap. Until then, `generate-demo-data` on a server that has demo people refuses, and `seed-demo` says that they exist and does nothing.
+Starting the demo over means wiping the demo database, because the history of people is append-only and cannot be removed row by row (D-45). `generate-demo-data` on a server that has demo people refuses, and `seed-demo` says that they exist and does nothing.
+
+### Reset the demo (the owner's action on the live server)
+
+This **deletes every person, group, rating and report run in the demo**, real sign-ups included. Do it only on the demo, only when the owner has agreed, and not on a server that holds anything that must be kept.
+
+```bash
+cd /opt/skills
+dc() { docker compose --env-file .env -f compose.demo.yml "$@"; }
+
+./backup.sh                                   # 1. a backup first (it is kept 30 days, section 6)
+dc stop api worker                            # 2. nothing writes while the database is replaced
+dc exec -T db psql -U skills -d postgres \
+  -c 'DROP DATABASE skills WITH (FORCE)' \
+  -c 'CREATE DATABASE skills OWNER skills'    # 3. an empty database
+dc run --rm api alembic upgrade head          # 4. the schema (also the labels the app needs)
+dc run --rm tools python -m app.cli create-owner --name "Your Name" --email you@example.com \
+  --mobile +971500000000 --church "Your church" --group "Your home group"   # 5. asks for the password twice
+umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # 6. optional: the 200 demo people
+dc up -d                                      # 7. start everything again
+curl -fsS https://skills-demo.privatedir.in/health/ready   # 8. it answers ok
+```
+
+Check: sign in as the OWNER from step 5 and open the churches page. `demo-logins.csv` contains the demo password: keep it on the server, never share it, and delete it when done. To go back, restore the backup of step 1 (section 6, disaster recovery) and start the stack again.
 
 ### The migration that removes the older accounts (migration 0018, at the cut-over)
 

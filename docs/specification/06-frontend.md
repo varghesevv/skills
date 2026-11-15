@@ -1,6 +1,6 @@
 # 06 Frontend
 
-The Android app is specified in [docs/android/](../android/plan.md); its screens mirror the portals below ([parity table](../android/parity.md)).
+The Android app is specified in [docs/android/](../android/plan.md); its screens mirror the pages below ([parity table](../android/parity.md)).
 
 Decision record: [ADR-0005](../adr/0005-react-typescript-frontend.md). One React app; the screens shown depend on the person's status and share components. API access only through the generated client.
 
@@ -44,12 +44,12 @@ Everything an ADMIN has for every church, plus: churches (create by inviting an 
 
 ## Installation terminology
 
-Screen text refers to the kinds of people and the structure through tokens such as `{church}`, `{home_group}`, `{Searchers}`, `{a_provider}`, `{verifier}`, `{admin}` and `{owner}` (see `src/terminology/terms.ts`). The words and the web-address
-segments come from the active profile in `src/terminology/profiles.json` (key/value pairs, one block
+Screen text refers to the kinds of people and the structure through tokens such as `{church}`, `{home_group}`, `{Searchers}`, `{a_provider}`, `{verifier}`, `{admin}` and `{owner}` (see `src/terminology/terms.ts`). The words
+come from the active profile in `src/terminology/profiles.json` (key/value pairs, one block
 per profile). The profile is chosen per installation: the web server serves `/config.json` from its
 `TERMINOLOGY_PROFILE` setting and the app reads it before it starts (development uses
-`VITE_TERMINOLOGY_PROFILE`). An unknown name falls back to `default`. Web addresses that carry a word (for example the provider pages) are built from the profile, while API
-paths, status values, report files and emails never change with the words. The keys for searcher, provider, verifier, admin, owner, church and home group are added in S2.9; the backend and web copies of the profiles stay equal.
+`VITE_TERMINOLOGY_PROFILE`). An unknown name falls back to `default`. Web addresses (`/sign-in`, `/member/...`), API
+paths, status values, report files and emails never change with the words (D-47). The keys for searcher, provider, verifier, admin, owner, church and home group are added in S2.9; the backend and web copies of the profiles stay equal.
 
 ## UI requirements
 
@@ -101,7 +101,7 @@ Every page, for every status, works on phones, tablets and desktops. This is a r
 
 ### Acceptance criteria
 1. No horizontal page scrolling at any width from 320 px up.
-2. Every function in the portals can be completed at 360 px width using touch only.
+2. Every function of the member pages can be completed at 360 px width using touch only.
 3. Layout changes at the breakpoints above, with no overlapping or clipped content.
 4. Each page is checked at all five reference viewports, with automated browser tests (Playwright screenshots and an overflow check) for the shell, login, search, a form page and a report page. They live in `frontend/e2e` and run in CI as the `responsive` job.
 5. Pages meet the WCAG 2.1 AA reflow and target-size expectations.

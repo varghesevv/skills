@@ -5,11 +5,11 @@ Version 0.1 (draft). Single source of truth for what Skills must do. Technical r
 | # | File | Contents |
 |---|---|---|
 | 01 | [overview.md](01-overview.md) | Vision, users, scope, glossary |
-| 02 | [functional-requirements.md](02-functional-requirements.md) | What each user type can do |
+| 02 | [functional-requirements.md](02-functional-requirements.md) | What each status can do |
 | 03 | [data-model.md](03-data-model.md) | PostgreSQL schema, constraints, seed data |
 | 04 | [api.md](04-api.md) | REST API conventions and endpoints |
 | 05 | [reports.md](05-reports.md) | Standard reports and scheduled generation |
-| 06 | [frontend.md](06-frontend.md) | React portals and pages |
+| 06 | [frontend.md](06-frontend.md) | The web pages by status, and the responsive rules |
 | 07 | [non-functional.md](07-non-functional.md) | Security, performance, testing, operations |
 | 08 | [delivery-plan.md](08-delivery-plan.md) | Phases and definition of done |
 | 09 | [infrastructure.md](09-infrastructure.md) | AWS Lightsail demo, Terraform, Docker, GitHub Actions CI/CD, backups |
