@@ -91,16 +91,16 @@ const SCENARIOS: Scenario[] = [
   },
   {
     name: 'search',
-    role: 'workhost',
-    path: '/workhost/search',
+    role: 'searcher',
+    path: '/member/search',
     ready: async (page) => {
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
     },
   },
   {
     name: 'search with the filter panel open',
-    role: 'workhost',
-    path: '/workhost/search',
+    role: 'searcher',
+    path: '/member/search',
     ready: async (page) => {
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
       const toggle = page.getByRole('button', { name: 'Filters', exact: true })
@@ -179,7 +179,10 @@ for (const scenario of SCENARIOS) {
 
     expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
     expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
-    if (scenario.role) await checkNavigation(page)
+    // The member pages show their menus in the top bar all the time (there is no menu button), so
+    // the overflow and target-size checks above already cover them; only the older portals keep
+    // the main navigation behind a menu button.
+    if (scenario.role && scenario.role !== 'searcher') await checkNavigation(page)
     await keepScreenshot(page, testInfo, scenario.name)
   })
 }
@@ -188,8 +191,8 @@ for (const scenario of SCENARIOS) {
 test('narrowest supported width (320 px)', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'phone-small-360x640', 'run once')
   await page.setViewportSize({ width: 320, height: 640 })
-  await mockApi(page, 'workhost')
-  await page.goto('/workhost/search')
+  await mockApi(page, 'searcher')
+  await page.goto('/member/search')
   await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
   expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
 })
