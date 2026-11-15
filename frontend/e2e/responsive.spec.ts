@@ -179,8 +179,9 @@ for (const scenario of SCENARIOS) {
 
     expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
     expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
-    // The member pages have their own menus (checked by the unit tests); only the older portals
-    // keep the main navigation with a menu button.
+    // The member pages show their menus in the top bar all the time (there is no menu button), so
+    // the overflow and target-size checks above already cover them; only the older portals keep
+    // the main navigation behind a menu button.
     if (scenario.role && scenario.role !== 'searcher') await checkNavigation(page)
     await keepScreenshot(page, testInfo, scenario.name)
   })
