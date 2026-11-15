@@ -77,7 +77,14 @@ describe('the Android app page', () => {
     expect(create).toHaveBeenCalled()
   })
 
-  it('shows the loading state, then an error with a way to try again', async () => {
+  it('shows that it is loading before the list arrives', async () => {
+    as('searcher', { 'GET /app/downloads': () => json(200, { items: [build] }) })
+    renderApp('/member/downloads')
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading')
+    expect(await screen.findByText('Version 1.2.0 (build 7)')).toBeVisible()
+  })
+
+  it('shows an error with a way to try again', async () => {
     let calls = 0
     as('searcher', {
       'GET /app/downloads': () => {
