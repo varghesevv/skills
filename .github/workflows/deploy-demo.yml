@@ -131,6 +131,9 @@ jobs:
           for v in APP_MIN_VERSION APP_LATEST_VERSION; do
             [[ "${!v}" =~ ^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}$ ]] || { echo "$v must look like 1.2.3." >&2; exit 1; }
           done
+          if [ "$(printf '%s\n%s\n' "$APP_MIN_VERSION" "$APP_LATEST_VERSION" | sort -V | head -1)" != "$APP_MIN_VERSION" ]; then
+            echo "APP_LATEST_VERSION ($APP_LATEST_VERSION) must not be older than APP_MIN_VERSION ($APP_MIN_VERSION)." >&2; exit 1
+          fi
           case "${TERMINOLOGY_PROFILE}" in *[!a-z0-9_-]*) echo "TERMINOLOGY_PROFILE may only contain a-z, 0-9, _ and -." >&2; exit 1;; esac
           umask 077
           envfile="$(mktemp)"
