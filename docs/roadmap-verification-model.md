@@ -122,7 +122,7 @@ Backend first, then web and mobile.
 
 ### S7. Release pipeline (on `main`, may run in parallel) — 5 pull requests
 - [ ] 7.1 Web Downloads page (the API already exists).
-- [ ] 7.2a The deploy workflow passes `APP_MIN_VERSION` and `APP_LATEST_VERSION` from the environment (owner approves `.github/`), so old app builds are asked to update.
+- [x] 7.2a (205) The deploy workflow passes `APP_MIN_VERSION` and `APP_LATEST_VERSION` from the environment (owner approves `.github/`), so old app builds are asked to update.
 - [ ] 7.2 `mobile-release` workflow: signed build, upload to the server folder, release asset (owner approves `.github/`).
 - [ ] 7.3 Signing and environment documentation (values supplied by the owner as environment secrets).
 - [ ] 7.4 Privacy page text (accounts, closure, messages, push tokens).
