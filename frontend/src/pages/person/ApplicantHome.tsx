@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
 
-import { closeAccount, fetchChurches, fetchHomeGroups, updateApplication } from '../../api/person'
+import { fetchChurches, fetchHomeGroups, updateApplication } from '../../api/person'
 import type { AppliedStatus } from '../../api/types'
 import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
 import { errorMessage } from '../../shared/errors'
-import { Alert, LoadingScreen, PasswordField, SelectField } from '../../shared/ui'
+import { Alert, LoadingScreen, SelectField } from '../../shared/ui'
+import LeaveAccount from './LeaveAccount'
 import VouchShare from './VouchShare'
 import { usePageTitle } from '../../shared/usePageTitle'
 
@@ -55,7 +55,7 @@ export default function ApplicantHome() {
           setSaved(true)
         }}
       />
-      <Leave />
+      <LeaveAccount />
     </div>
   )
 }
@@ -186,89 +186,6 @@ function ChangeChoice({
           {t('applicant.change.save')}
         </button>
       </form>
-    </section>
-  )
-}
-
-function Leave() {
-  const { signOut } = useAuth()
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const [password, setPassword] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const trigger = useRef<HTMLButtonElement>(null)
-  const confirmation = useRef<HTMLDivElement>(null)
-
-  // The confirmation replaces the button: move focus to it, and give it back on cancel.
-  useEffect(() => {
-    if (open) confirmation.current?.focus()
-  }, [open])
-
-  function cancel() {
-    setOpen(false)
-    setPassword('')
-    setFormError(null)
-    window.setTimeout(() => trigger.current?.focus(), 0)
-  }
-
-  async function leave(event: FormEvent) {
-    event.preventDefault()
-    setFormError(null)
-    if (!password) return setFormError(t('validation.required'))
-    setBusy(true)
-    try {
-      await closeAccount(password)
-      await signOut() // every session of the closed account is already ended
-      navigate('/', { replace: true })
-    } catch (error) {
-      setFormError(errorMessage(error))
-      setBusy(false)
-    }
-  }
-
-  return (
-    <section className="card">
-      <h2>{t('applicant.leave.title')}</h2>
-      <p>{t('applicant.leave.text')}</p>
-      {!open ? (
-        <button ref={trigger} type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>
-          {t('applicant.leave.open')}
-        </button>
-      ) : (
-        <form onSubmit={leave} noValidate className="form-grid">
-          <div
-            ref={confirmation}
-            tabIndex={-1}
-            className="span-2"
-            role="group"
-            aria-label={t('applicant.leave.title')}
-          >
-            <p>{t('applicant.leave.warning')}</p>
-          </div>
-          {formError && (
-            <Alert kind="error" focus>
-              {formError}
-            </Alert>
-          )}
-          <PasswordField
-            className="span-2"
-            label={t('applicant.leave.confirm')}
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={setPassword}
-          />
-          <div className="form-actions span-2">
-            <button type="button" className="btn btn-quiet" onClick={cancel} disabled={busy}>
-              {t('applicant.leave.cancel')}
-            </button>
-            <button type="submit" className="btn btn-danger" disabled={busy}>
-              {busy ? t('applicant.leave.working') : t('applicant.leave.submit')}
-            </button>
-          </div>
-        </form>
-      )}
     </section>
   )
 }

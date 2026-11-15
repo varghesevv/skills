@@ -125,6 +125,9 @@ export const signupDetailsSchema = z.object({
   password: newPassword,
 })
 
+/** One's own name and mobile number, on the account page. */
+export const accountDetailsSchema = z.object({ full_name: fullName, mobile_number: mobile })
+
 /** An invited ADMIN: about them and the first home group; the address is the one invited. */
 export const acceptInvitationSchema = z.object({
   full_name: fullName,

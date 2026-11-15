@@ -11,6 +11,7 @@ import {
   LEADER_GROUP,
   LEADER_INVITATIONS,
   OWNER_LABELS,
+  PERSON_ACCOUNT,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
   PERSON_RATINGS,
@@ -138,6 +139,11 @@ export default function PersonLayout() {
               {unread > 0
                 ? t('notifications.link.unread', { count: unread })
                 : t('notifications.link')}
+            </Link>
+          )}
+          {person.status !== 'revoked' && (
+            <Link className="btn btn-quiet" to={PERSON_ACCOUNT}>
+              {t('account.link')}
             </Link>
           )}
           <span className="topbar-email">{person.email}</span>
