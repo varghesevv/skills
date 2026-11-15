@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
+import { ApiError } from '../../api/http'
 import { updateMe } from '../../api/person'
 import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
@@ -30,7 +31,12 @@ export default function Account() {
     },
     onError: (error) => {
       setErrors(serverFieldErrors(error))
-      setFormError(errorMessage(error))
+      // The generic answer says to sign in instead, which makes no sense here.
+      setFormError(
+        error instanceof ApiError && error.code === 'account_exists'
+          ? t('account.error.taken')
+          : errorMessage(error),
+      )
     },
   })
 

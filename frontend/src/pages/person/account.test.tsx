@@ -28,9 +28,14 @@ describe('the account page', () => {
     'is open to a %s, who finds it from the top bar',
     async (status) => {
       as(status)
-      renderApp('/member')
+      const first = renderApp('/member')
       const link = await screen.findByRole('link', { name: 'My account' })
       expect(link).toHaveAttribute('href', '/member/account')
+      first.unmount()
+      as(status)
+      renderApp('/member/account')
+      expect(await screen.findByRole('heading', { name: 'My account' })).toBeVisible()
+      expect(screen.getByLabelText('Full name')).toBeVisible()
     },
   )
 
@@ -86,10 +91,19 @@ describe('the account page', () => {
 
   it('says so when the number belongs to someone else', async () => {
     const user = userEvent.setup({ delay: null })
-    as('searcher', { 'PUT /me': () => apiError(409, 'account_exists') })
+    const api = as('searcher', { 'PUT /me': () => apiError(409, 'account_exists') })
     renderApp('/member/account')
-    await user.click(await screen.findByRole('button', { name: 'Save' }))
-    expect(await screen.findByRole('alert')).toBeVisible()
+    const mobile = await screen.findByLabelText('Mobile number')
+    await user.clear(mobile)
+    await user.type(mobile, '+971509998888')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This mobile number belongs to another account.',
+    )
+    expect(api.last('PUT /me')?.body).toEqual({
+      full_name: 'Nadia Applicant',
+      mobile_number: '+971509998888',
+    })
   })
 })
 

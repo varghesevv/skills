@@ -77,6 +77,7 @@ const en = {
   'account.save': 'Save',
   'account.saving': 'Saving…',
   'account.saved': 'Saved.',
+  'account.error.taken': 'This mobile number belongs to another account.',
   'applicant.leave.title': 'Leave',
   'applicant.leave.text':
     'Closing your account removes your name, email and mobile number. You can apply again later.',
@@ -87,7 +88,7 @@ const en = {
   'applicant.leave.warning': 'This closes your account for good. Enter your password to confirm.',
   'applicant.leave.cancel': 'Cancel',
   'applicant.leave.error.leadsGroup':
-    'You lead a {homegroup}. Ask your {admin} to choose someone else to lead it first, then you can leave.',
+    'You lead a {homegroup}. Ask your {admin} to choose someone else to lead it first, then you can leave. If nobody else is in it, close it from the page of your own {homegroup} instead.',
   'applicant.leave.error.leadsChurch':
     'You are the {admin} of a {organisation}. Hand that role on first, then you can leave.',
   'applicant.leave.error.revoked': 'This account cannot be closed.',
