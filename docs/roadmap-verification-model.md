@@ -117,7 +117,7 @@ Backend first, then web and mobile.
 - [x] 5.14 (198) Documentation pass: runbook (operator procedures, reset of the demo, creating the OWNER), specification reconciled.
 
 ### S6. Cut-over — 2 pull requests
-- [ ] 6.1 Rehearsal on the integration branch: full CI, end-to-end run, migration on a fresh database; backup and rollback steps in the runbook; the minimum app version raised so old app builds ask to update; release version chosen.
+- [x] 6.1 (199) Rehearsal on the integration branch: full CI, end-to-end run, migration on a fresh database; backup and rollback steps in the runbook; the minimum app version raised so old app builds ask to update; release version chosen.
 - [ ] 6.2 The pull request `model/verification` into `main` (owner approves), then the demo deploy and smoke test, then a check on a phone.
 
 ### S7. Release pipeline (on `main`, may run in parallel) — 4 pull requests

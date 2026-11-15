@@ -214,6 +214,22 @@ Migration `0018` drops the tables of freelancers, work hosts, organisations and 
 3. Deploy as usual (section 3); `deploy.sh` runs the migration. Afterwards create the OWNER (next section) if the database has none.
 4. To go back, restore the backup of step 1 (section 6) with the previous release; do not rely on the downgrade for data.
 
+### Cut-over checklist (merging `model/verification` into `main`)
+
+Merging to `main` builds the images and deploys the demo on its own, and the deploy runs migration `0018` (above). What was rehearsed (2026-11-15): the whole migration chain from the schema the demo runs today, with rows in every older table, ends at revision `0018` with the older tables gone and the labels and report schedules kept.
+
+Before: all required checks green on the pull request; a backup is taken by the deploy itself (`deploy.sh` runs `backup.sh` first), and you may take one by hand (section 6). The demo holds no real users (decision 2 of the roadmap).
+
+After the deploy the database is new: **there is no OWNER and nobody can sign in** until an operator creates one on the server:
+
+1. `dc run --rm tools python -m app.cli create-owner ...` (the command in "Set up Skills: the first OWNER" below).
+2. Optional: `umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv`.
+3. Smoke test: `curl -fsS https://<demo-domain>/health/ready`; sign in as the OWNER on the web; open the churches page; sign in on the phone app (version 1.0.0 or later) and open the member home.
+
+Old app builds cannot sign in any more (their requests name an account type the API no longer has) and show a message; install the new build from the Downloads page. `APP_MIN_VERSION` and `APP_LATEST_VERSION` are read from the environment but the deploy workflow does not pass them (a `.github/` change, S7); until it does, an old build is not asked to update.
+
+Rollback: restore the backup taken by the deploy (section 6, disaster recovery) and deploy the previous image tag (section 4). The migration's downgrade brings the older tables back empty and is not a rollback of data.
+
 ### Set up Skills: the first OWNER (church trust model)
 
 Once per installation, on a database that has the church trust schema (migration `0007` and later), the operators create the OWNER with the first church and home group. The command asks for the password (twice) or reads one line with `--password-stdin`; it is never a command-line argument and is never printed.
