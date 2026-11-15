@@ -41,7 +41,7 @@ Future<TestApp> openAvailability(
       if (picker != null) dateTimePickerProvider.overrideWithValue(picker.call),
     ],
     arrange: (adapter, store) {
-      signedInAs(adapter, store, 'freelancer');
+      signedInAsProvider(adapter, store);
       adapter.reply(
         'GET',
         '/freelancers/me/unavailability',
@@ -49,7 +49,7 @@ Future<TestApp> openAvailability(
       );
     },
   );
-  await tapTab(tester, 'Availability');
+  await tapKey(tester, 'provider-availability');
   return app;
 }
 
@@ -96,23 +96,6 @@ void main() {
   });
 
   group('list', () {
-    testWidgets('has its own tab and a dashboard shortcut', (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'freelancer'));
-      expect(
-        find.descendant(
-          of: find.byType(NavigationBar),
-          matching: find.text('Availability'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Availability'), findsNWidgets(2)); // tab + shortcut
-    });
-
-    testWidgets('is not offered to other roles', (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'workhost'));
-      expect(find.text('Availability'), findsNothing);
-    });
-
     testWidgets('says so when there are no periods, with the server words', (
       tester,
     ) async {
@@ -448,7 +431,7 @@ void main() {
             .signal();
         await tester.pumpAndSettle();
         expect(
-          find.text('I need to hire'),
+          find.byKey(const Key('member-sign-in')),
           findsOneWidget,
         ); // back on the welcome screen
         gate.complete();

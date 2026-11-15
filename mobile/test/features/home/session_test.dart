@@ -6,32 +6,25 @@ import 'package:skills_app/core/providers.dart';
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
 
+const _noNotes = {'items': [], 'total': 0, 'unread_count': 0};
+
 void main() {
-  testWidgets('a saved session opens the dashboard without a login', (
+  testWidgets('a saved session opens the member home without a login', (
     tester,
   ) async {
-    final access = fresh('a');
-    final refresh = fresh('r');
     final app = await pumpApp(
       tester,
       arrange: (adapter, store) {
         // As after an app restart: only the refresh token survives in the keystore.
-        store.save(accessToken: fresh('old'), refreshToken: refresh);
-        store.clearAccessForRestart();
-        adapter
-          ..reply(
-            'POST',
-            '/auth/refresh',
-            FakeReply(200, tokens(access, fresh('r2'))),
-          )
-          ..reply(
-            'GET',
-            '/me',
-            FakeReply(200, meJson('organisation', name: 'Example Church')),
-          );
+        signedInAsPerson(
+          adapter,
+          store,
+          personJson(status: 'searcher', requested: null, name: 'Sam Searcher'),
+        );
+        adapter.reply('GET', '/me/notifications', FakeReply(200, _noNotes));
       },
     );
-    expect(find.text('Welcome, Example Church'), findsOneWidget);
+    expect(find.text('Welcome, Sam Searcher'), findsOneWidget);
     expect(app.adapter.count('POST', '/auth/refresh'), 1);
   });
 
@@ -41,23 +34,13 @@ void main() {
     final app = await pumpApp(
       tester,
       arrange: (adapter, store) {
-        store.save(accessToken: fresh('a'), refreshToken: fresh('r'));
-        store.clearAccessForRestart();
-        adapter
-          ..reply(
-            'POST',
-            '/auth/refresh',
-            FakeReply(200, tokens(fresh('a'), fresh('r'))),
-          )
-          ..reply('GET', '/me', FakeReply(200, meJson('freelancer')))
-          ..reply('POST', '/auth/logout', FakeReply(204));
+        signedInAsProvider(adapter, store);
+        adapter.reply('POST', '/auth/logout', FakeReply(204));
       },
     );
-    await tester.tap(find.text('Settings'));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('log-out')));
     await tester.pumpAndSettle();
-    expect(find.text('I am a freelancer'), findsOneWidget);
+    expect(find.byKey(const Key('member-sign-in')), findsOneWidget);
     expect(await app.store.readRefreshToken(), isNull);
     expect(app.adapter.count('POST', '/auth/logout'), 1);
   });
@@ -79,7 +62,7 @@ void main() {
             ..reply('GET', '/me', FakeReply(401, apiError('unauthorized')));
         },
       );
-      expect(find.text('I am a freelancer'), findsOneWidget);
+      expect(find.byKey(const Key('member-sign-in')), findsOneWidget);
     },
   );
 
@@ -97,7 +80,19 @@ void main() {
               '/auth/refresh',
               FakeReply(200, tokens(fresh('a'), fresh('r'))),
             )
-            ..reply('GET', '/me', FakeReply(200, meJson('workhost')));
+            ..reply(
+              'GET',
+              '/me',
+              FakeReply(
+                200,
+                personJson(
+                  status: 'provider',
+                  requested: null,
+                  name: 'Pat Example',
+                ),
+              ),
+            )
+            ..reply('GET', '/me/notifications', FakeReply(200, _noNotes));
         },
       );
       expect(find.text('Welcome, Pat Example'), findsOneWidget);
@@ -107,7 +102,7 @@ void main() {
       );
       container.read(sessionExpiredProvider.notifier).signal();
       await tester.pumpAndSettle();
-      expect(find.text('I need to hire'), findsOneWidget);
+      expect(find.byKey(const Key('member-sign-in')), findsOneWidget);
       expect(find.text('Welcome, Pat Example'), findsNothing);
     },
   );

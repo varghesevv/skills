@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skills_app/core/auth/user_type.dart';
 
 /// Checks what the app sends and reads against the committed API contract (`docs/openapi.json`,
 /// kept current by `ci-backend`). When the backend changes an endpoint or a field the app uses,
@@ -122,9 +121,6 @@ void main() {
       'POST /auth/refresh': '200',
       'POST /auth/logout': '204',
       'POST /auth/forgot-password': '202',
-      'POST /auth/register/freelancer': '201',
-      'POST /auth/register/workhost': '201',
-      'POST /auth/register/organisation': '201',
       'GET /me': '200',
       'GET /freelancers/me': '200',
       'PUT /freelancers/me': '200',
@@ -686,25 +682,9 @@ void main() {
   group('requests the app sends', () {
     test('login body', () {
       expect(requestSchema('POST', '/auth/login'), 'LoginRequest');
-      // user_type became optional with the church trust model (ADR-0017): a request without
-      // it logs in as a person. The older app still sends it, and the server still accepts it.
+      // The app logs in as a person: no account type is sent (ADR-0017).
       expect(required('LoginRequest'), {'email', 'password'});
-      expect(properties('LoginRequest'), contains('user_type'));
     });
-
-    test(
-      'every user type the app sends is accepted, and the app has no admin',
-      () {
-        final userType =
-            (schemaNamed('LoginRequest')['properties'] as Map)['user_type']
-                as Map;
-        final accepted = userType['enum'] as List;
-        for (final type in UserType.values) {
-          expect(accepted, contains(type.wire));
-        }
-        expect(UserType.values.map((t) => t.wire), isNot(contains('admin')));
-      },
-    );
 
     test('refresh and logout bodies', () {
       expect(requestSchema('POST', '/auth/refresh'), 'RefreshRequest');
@@ -714,7 +694,6 @@ void main() {
 
     test('forgot-password body', () {
       expect(required('ForgotPasswordRequest'), {'email'});
-      expect(properties('ForgotPasswordRequest'), contains('user_type'));
     });
 
     test('registration bodies carry the fields the forms send', () {
@@ -751,34 +730,11 @@ void main() {
       );
     });
 
-    test('the account answer has the fields `Me` reads', () {
-      // The answer is MeResponse for the older accounts the app uses today, or PersonMeResponse
-      // for a person of the church trust model (the app moves to it in S2.8).
+    test('the account answer is the person the app reads', () {
       expect(
         responseSchemas('GET', '/me', '200'),
-        containsAll(['MeResponse', 'PersonMeResponse']),
+        contains('PersonMeResponse'),
       );
-      expect(
-        properties('MeResponse'),
-        containsAll([
-          'id',
-          'user_type',
-          'email',
-          'mobile_number',
-          'full_name',
-          'org_name',
-          'approval_status',
-          'created_at',
-        ]),
-      );
-    });
-
-    test('registration answer has the approval status', () {
-      expect(
-        responseSchema('POST', '/auth/register/organisation', '201'),
-        'RegisterResponse',
-      );
-      expect(properties('RegisterResponse'), contains('approval_status'));
     });
 
     test('app config has the words and versions', () {

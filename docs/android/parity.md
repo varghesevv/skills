@@ -18,17 +18,17 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8 | done: a Join and Sign in card for people next to the older entries, which go with the older accounts (S5) | `test/features/person/person_flow_test.dart`, `test/features/auth/auth_flow_test.dart` |
-| Log in (one screen for everyone) | `pages/person/PersonSignIn.tsx` | S2.8 | done for people at `/sign-in` (no account type sent); the older screens go with the older accounts (S5) | `test/features/person/person_flow_test.dart` |
-| Sign-up wizard: details, church, home group (with leader name), searcher or provider | `pages/person/SignUp.tsx` | S2.8 | done at `/sign-up`; the older register forms go with the older accounts | `test/features/person/person_flow_test.dart` |
+| Welcome (sign in, sign up) | `pages/Landing.tsx` | S2.8, S5.12 | done: Join and Sign in only; the older entries (log in and register as a freelancer, work host or organisation) are removed from the app. The text still names the older roles in its lead; the web's is the same, so the wording is settled once for both (owner) | `test/features/person/person_flow_test.dart`, `test/features/auth/auth_flow_test.dart` |
+| Log in (one screen for everyone) | `pages/person/PersonSignIn.tsx` | S2.8, S5.12 | done at `/sign-in` (no account type sent); the older screens are removed, and a saved session of an older account is forgotten at start | `test/features/person/person_flow_test.dart`, `test/core/auth/auth_repository_test.dart` |
+| Sign-up wizard: details, church, home group (with leader name), searcher or provider | `pages/person/SignUp.tsx` | S2.8, S5.12 | done at `/sign-up`; the older register forms are removed | `test/features/person/person_flow_test.dart` |
 | Join through a group invitation link | `/join/<token>` | S2.8 | done: a link or token pasted on the sign-up screen opens `/join/<token>` (the token goes in a body, never in an address); opening a link from outside the app (app links) is later | `test/features/person/person_flow_test.dart` |
-| Forgot password | `pages/ForgotPassword.tsx` | | done | `test/features/auth/auth_flow_test.dart` |
+| Forgot password | `pages/ForgotPassword.tsx` | S5.12 | done, reached from the sign-in screen; sends the email only | `test/features/auth/auth_flow_test.dart` |
 | Reset password | `pages/ResetPassword.tsx` | | n/a (v1: the link opens in the browser) | |
 | Applicant home: status, leader, change choice, leave; vouches received and my vouch link | `pages/person/ApplicantHome.tsx` | S2.8, S3.6 | done; the link is made and copied (shown once); the phone's share sheet needs a plugin and comes with the release setup; change of group or status, and leaving with the password asked again | `test/features/person/person_home_test.dart`, `test/features/person/vouching_test.dart` |
 | Revoked notice with log out | `pages/person/PersonHome.tsx` | S2.8 | done | `test/features/person/person_home_test.dart` |
-| Navigation by status (bottom bar and routes) | `App.tsx` | S2.8, S3.6 | in progress: a person lives at `/member` and below it, and the router lets each status reach only its own pages (applicant: home and notifications; admitted: the member pages and the vouch page; revoked: home only); the older accounts keep their own tabs; tabs for admitted people come with S3 and S5 | `test/features/person/person_home_test.dart`, `test/features/person/vouching_test.dart` (the table of who may go where) |
-| Home / dashboard | `pages/Dashboard.tsx` | S2.8 | done on the older model | `test/features/home/session_test.dart` |
-| Log out | `auth/AuthContext.tsx` | | done | `test/features/home/session_test.dart` |
+| Navigation by status (the member home and routes) | `App.tsx` | S2.8, S3.6, S5.12 | done: a person lives at `/member` and below it, and the router lets each status reach only its own pages (applicant: home and notifications; admitted: the member pages and the vouch page; revoked: home only). There is no bottom bar: the home lists the pages by status | `test/features/person/person_home_test.dart`, `test/features/person/vouching_test.dart` (the table of who may go where) |
+| Home / dashboard | `pages/person/PersonHome.tsx` | S5.12 | done as the member home (`/member`); the older dashboard and its bottom bar are removed | `test/features/person/person_home_test.dart`, `test/features/home/session_test.dart` |
+| Log out | `auth/AuthContext.tsx` | | done on the home and in the settings | `test/features/home/session_test.dart`, `test/features/person/person_settings_test.dart` |
 | Notifications list (mark read) | new | S3.6 | done: a bell with the unread count in the top bar, polled every minute, a list with mark one or all as read | `test/features/person/vouching_test.dart` |
 | Settings: about, privacy link, version, close account | new | S5.11, S4.10 | done for members at `/member/settings` (not for applicants, who have log out on their page): version, a hint when the server knows a newer version, the privacy statement (only when the build has `PRIVACY_URL`; the statement itself is the owner's to write), log out; closing the account stays on the member home | `test/features/person/person_settings_test.dart`, `test/features/person/leave_test.dart` |
 | Minimum-version / update-required screen | none on web | | done | `test/app/config_gate_test.dart` |
@@ -40,7 +40,7 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Profile and rate | `ProfilePage.tsx` | S5.7 | done: the person's own profile at `/member/profile` for a PROVIDER or above, on `/freelancers/me` (D-41); the older account screens stay until S5.12a | `test/features/freelancer/profile_test.dart`, `test/features/person/provider_pages_test.dart` |
+| Profile and rate | `ProfilePage.tsx` | S5.7 | done: the person's own profile at `/member/profile` for a PROVIDER or above, on `/freelancers/me` (D-41) | `test/features/freelancer/profile_test.dart`, `test/features/person/provider_pages_test.dart` |
 | Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | S5.7 | done at `/member/skills` | `test/features/freelancer/labels_test.dart`, `test/features/person/provider_pages_test.dart` |
 | Availability list with add, edit, delete | `AvailabilityPage.tsx` | S5.7 | done at `/member/availability` (month calendar is for larger screens, not built) | `test/features/freelancer/availability_test.dart`, `test/features/person/provider_pages_test.dart` |
 | Ratings received | `RatingsPage.tsx` | S5.7 | done at `/member/ratings`, with the person's own id | `test/features/freelancer/ratings_test.dart`, `test/features/person/provider_pages_test.dart` |
@@ -112,7 +112,7 @@ Status column: "at least X" means that status or higher.
 | Method and path | Who | App use | Slice | Status |
 |---|---|---|---|---|
 | POST `/auth/signup` | public | Sign-up wizard | S2.8 | done |
-| POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8 | done on the older request shape (`user_type` is dropped in S2.8) |
+| POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8 | done: the person login, no `user_type` is sent |
 | POST `/auth/forgot-password` | public | Forgot password | | done |
 | POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
 | GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | done |
