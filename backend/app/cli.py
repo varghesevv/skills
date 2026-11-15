@@ -46,7 +46,8 @@ _EMAIL: TypeAdapter[str] = TypeAdapter(Email)
 _PERSON_NAME: TypeAdapter[str] = TypeAdapter(PersonName)
 
 
-_LENGTH_PROBLEM = f"Password must be {MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters long"
+# A fixed text (a test keeps it equal to the limits of the schema).
+_LENGTH_PROBLEM = "Password must be 10 to 128 characters long"
 
 
 def _length_ok(password: str) -> bool:
