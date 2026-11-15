@@ -151,7 +151,7 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 
 ### Privacy statement in the mobile app
 
-The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement itself is written by the owner.
+The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement is the web page `https://<demo-domain>/privacy` (S7.4); the owner reads it, changes the wording if needed (`privacy.*` in `frontend/src/i18n/index.ts`) and gives that address as `PRIVACY_URL`.
 
 ### What the logs hold
 

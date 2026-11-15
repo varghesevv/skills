@@ -13,6 +13,7 @@ import {
   ADMIN_REPORTS,
   OWNER_LABELS,
   PERSON_ACCOUNT,
+  PRIVACY,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
   PERSON_RATINGS,
@@ -152,6 +153,9 @@ export default function PersonLayout() {
               {t('account.link')}
             </Link>
           )}
+          <Link className="btn btn-quiet" to={PRIVACY}>
+            {t('privacy.link')}
+          </Link>
           <span className="topbar-email">{person.email}</span>
           <button type="button" className="btn btn-quiet" onClick={() => void signOut()}>
             {t('nav.logOut')}

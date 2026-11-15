@@ -68,6 +68,33 @@ const en = {
   'applicant.change.saved': 'Your choice was saved.',
   'applicant.change.church': 'Another {organisation}',
   'applicant.change.keep': 'Keep my current {homegroup}',
+  'privacy.title': 'Privacy',
+  'privacy.lead': 'What Skills keeps about you, who can see it and how to remove it.',
+  'privacy.who.title': 'Who looks after your data',
+  'privacy.who.text':
+    'The owner of this installation of Skills looks after your data. Your group leader, your church admin or the owner can tell you how to reach them.',
+  'privacy.keep.title': 'What is kept about you',
+  'privacy.keep.text':
+    'Your name, email address and mobile number; a one-way scrambled form of your password (the password itself is never kept); your church and home group; your status and every change of it, with who made the change; the vouches given and received; the ratings you gave and received; if you are a provider, your skills, languages, rate and the times you are away; your notifications; and a record of each sign-in attempt (time, result, network address and browser).',
+  'privacy.see.title': 'Who can see what',
+  'privacy.see.text':
+    'Your email address is not shown to other members. Your mobile number is not shown in search results. A searcher sees it only when they press Reveal on your page: each reveal is recorded and limited per person. The leader of your home group, your church admin and the owner see the numbers of people in their own group or church on their screens, one person at a time, and each view is recorded; the owner reads that record, which never contains the number. A rating is shown without the name of the person who gave it.',
+  'privacy.close.title': 'Closing your account',
+  'privacy.close.text':
+    'You can close your account yourself under My account (or in the app, Leave). Your name, email address, mobile number and password are removed, and every session and link of yours stops working. What remains is the record that keeps the community trustworthy: the history of statuses, who vouched for whom and the ratings, without your personal details.',
+  'privacy.long.title': 'How long it is kept',
+  'privacy.long.text':
+    'Notifications, sign-in records and the record of number views are kept for 12 months and then deleted by the operators. The rest is kept while the installation runs, or until you close your account (see above).',
+  'privacy.more.title': 'Messages and notifications on your phone',
+  'privacy.more.text':
+    'Skills has no chat and sends no push notifications yet, so no messages and no device tokens are kept. If that changes, this page will say what is kept and for how long before it starts.',
+  'privacy.tools.title': 'Tools that watch you',
+  'privacy.tools.text':
+    'The web site and the app use no advertising and no analytics tools, and nothing about what you do is sent to anyone else.',
+  'privacy.choices.title': 'Your choices',
+  'privacy.choices.text':
+    'You can change your name and mobile number under My account, and close your account at any time. For anything else, ask the owner.',
+  'privacy.link': 'Privacy',
   'account.link': 'My account',
   'account.title': 'My account',
   'account.lead': 'Your details, and how to leave.',
