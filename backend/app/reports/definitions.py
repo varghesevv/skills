@@ -30,7 +30,7 @@ from app.models.church import Church, HomeGroup, Person
 from app.models.enums import STATUS_RANK
 from app.models.labels import Label, PersonLabel
 from app.models.ratings import Rating
-from app.models.reveals import PersonPhoneReveal
+from app.models.reveals import PhoneReveal
 from app.models.trust import MoveRequest, StatusChange, Vouch
 from app.reports.types import ReportDef, ReportError, ReportParams, Section, cell
 
@@ -121,7 +121,6 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
             select(func.count())
             .select_from(LoginHistory)
             .where(
-                LoginHistory.user_type == "person",  # until the older rows go (S5.12a part 2)
                 LoginHistory.user_id.is_(None),
                 LoginHistory.succeeded.is_(False),
                 LoginHistory.login_time >= p.start,
@@ -398,7 +397,7 @@ def availability_overview(db: Session, p: ReportParams) -> list[Section]:
 
 def phone_reveals(db: Session, p: ReportParams) -> list[Section]:
     """How often a number was revealed, who asked, and for whom (people shown by code)."""
-    reveal = PersonPhoneReveal
+    reveal = PhoneReveal
     in_window = and_(reveal.revealed_at >= p.start, reveal.revealed_at < p.end)
     if p.church_id is not None:  # the reveals of the providers of that church
         in_window = and_(

@@ -15,8 +15,8 @@ from app.models import (
     MoveRequest,
     Person,
     PersonLabel,
-    PersonPhoneReveal,
     PersonUnavailability,
+    PhoneReveal,
     Rating,
     StatusChange,
     Vouch,
@@ -139,7 +139,6 @@ def test_active_people_and_logins_by_status(world: World) -> None:
     for when, ok in ((dubai(20, 9), True), (dubai(20, 10), True), (dubai(20, 11), False)):
         session.add(
             LoginHistory(
-                user_type="person",
                 user_id=active.person.id,
                 login_email="act@example.com",
                 succeeded=ok,
@@ -149,13 +148,11 @@ def test_active_people_and_logins_by_status(world: World) -> None:
     session.add_all(
         [
             LoginHistory(  # an address nobody has
-                user_type="person",
                 login_email="nobody@example.com",
                 succeeded=False,
                 login_time=dubai(20, 12),
             ),
             LoginHistory(  # outside the window
-                user_type="person",
                 user_id=active.person.id,
                 login_email="act@example.com",
                 succeeded=False,
@@ -332,7 +329,7 @@ def test_phone_reveals_report(world: World) -> None:
 
     def reveal(who: Member, target: Member, channel: str, source: str, skills: list[str]) -> None:
         session.add(
-            PersonPhoneReveal(
+            PhoneReveal(
                 revealer_id=who.person.id,
                 provider_id=target.person.id,
                 revealed_at=inside,
@@ -347,7 +344,7 @@ def test_phone_reveals_report(world: World) -> None:
     reveal(one, cook, "show", "search", ["plumbing"])
     reveal(other, plumber, "show", "search", [])
     session.add(  # outside the window: ignored
-        PersonPhoneReveal(
+        PhoneReveal(
             revealer_id=other.person.id,
             provider_id=cook.person.id,
             revealed_at=dubai(20, 12),
@@ -479,7 +476,7 @@ def test_reports_limited_to_a_church_hold_only_that_church(world: World) -> None
     ):
         session.add(Rating(rater_id=rater.id, provider_id=target.id, rating=7, rated_on=now))
         session.add(
-            PersonPhoneReveal(
+            PhoneReveal(
                 revealer_id=rater.id,
                 provider_id=target.id,
                 revealed_at=now,
@@ -489,25 +486,13 @@ def test_reports_limited_to_a_church_hold_only_that_church(world: World) -> None
         )
         session.add(
             LoginHistory(
-                user_type="person",
                 user_id=rater.id,
                 login_email="x@example.com",
                 succeeded=True,
                 login_time=now,
             )
         )
-    session.add(
-        LoginHistory(
-            user_type="person", login_email="nobody@example.com", succeeded=False, login_time=now
-        )
-    )
-    # A failed attempt of an account of the older kind (rows that stay until the table is
-    # reshaped) is not a person's and is not counted.
-    session.add(
-        LoginHistory(
-            user_type="workhost", login_email="older@example.com", succeeded=False, login_time=now
-        )
-    )
+    session.add(LoginHistory(login_email="nobody@example.com", succeeded=False, login_time=now))
     session.flush()
     window = params(date(2026, 10, 10), date(2026, 10, 10))
     limited = params(date(2026, 10, 10), date(2026, 10, 10), church_id=other_church.id)

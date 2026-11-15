@@ -18,8 +18,8 @@ from app.models import (
     HomeGroup,
     Person,
     PersonLabel,
-    PersonPhoneReveal,
     PersonUnavailability,
+    PhoneReveal,
     Rating,
     StatusChange,
     Vouch,
@@ -157,7 +157,7 @@ def test_the_history_agrees_with_the_people_and_lies_in_the_past(session: Sessio
                 )
             ).first()
             assert admitted is not None and admitted <= rating.rated_on
-    for reveal in session.scalars(select(PersonPhoneReveal)):
+    for reveal in session.scalars(select(PhoneReveal)):
         for who in (reveal.revealer_id, reveal.provider_id):
             admitted = session.scalars(
                 select(StatusChange.at).where(

@@ -22,16 +22,16 @@ Migration `0007` creates the tables of this file that belong to the new identity
 
 | Old table | Fate | Dropped or changed by |
 |---|---|---|
-| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. | Sign-up on `people` is S2.6; the table is removed with the last older account type (S5.12a, D-46) |
-| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. | S5.12a, with the older routes that use them (D-46) |
-| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. | S5.12a (D-46); the `create-owner` command exists since S2.4 |
+| `work_hosts`, `freelancers` | Replaced by `people` (one account, one status). A work host's available days are dropped: the model has no use for them. | Done in S5.12a (migration 0018, D-49) |
+| `organisations`, `org_freelancers` | Dropped. The church is a structure (`churches`, `home_groups`); vouching is `vouches`. | Done in S5.12a (migration 0018, D-49) |
+| `admins` | Dropped. The platform admin is the OWNER, a row in `people`. | Done in S5.12a (migration 0018, D-49) |
 | `labels` | Kept unchanged. | |
-| `freelancer_labels` | Replaced by `person_labels`, key `person_id` (created in S5.1, D-41); the older table stays until the older accounts that use it are removed (S5.12a, D-46). | S5.1 creates, S5.12a drops |
-| `freelancer_unavailability` | Replaced by `person_unavailability`, key `person_id` (created in S5.1, D-41); the older table stays until the older accounts that use it are removed (S5.12a, D-46). | S5.1 creates, S5.12a drops |
-| `user_ratings` | Replaced by `ratings`, with `rater_id` and `provider_id` pointing at `people` (created in S5.2a, D-42); the older table stays until the older accounts that use it are removed (S5.12a, D-46). | S5.2a creates, S5.12a drops |
-| `phone_reveals` | Replaced by the table of the same name with `revealer_id` and `provider_id`, built as `person_phone_reveals` in S5.2b (D-43) and renamed when the older one is dropped. | S5.2b creates, S5.12a drops and renames |
-| `login_history` | Kept; `user_type` dropped, `person_id` added. | S2.3 accepts `person` in `user_type` (migration 0008), the person's id goes in `user_id`; the column is dropped with the last older account type (S5.12a, D-46) |
-| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, key `person_id`. | Same as `login_history` |
+| `freelancer_labels` | Replaced by `person_labels`, key `person_id` (created in S5.1, D-41); the older table stays until the older accounts that use it are removed (S5.12a, D-46). | Done in S5.12a (migration 0018, D-49) |
+| `freelancer_unavailability` | Replaced by `person_unavailability`, key `person_id` (created in S5.1, D-41); the older table stays until the older accounts that use it are removed (S5.12a, D-46). | Done in S5.12a (migration 0018, D-49) |
+| `user_ratings` | Replaced by `ratings`, with `rater_id` and `provider_id` pointing at `people` (created in S5.2a, D-42); the older table stays until the older accounts that use it are removed (S5.12a, D-46). | Done in S5.12a (migration 0018, D-49) |
+| `phone_reveals` | Replaced by the table of the same name with `revealer_id` and `provider_id`, built as `person_phone_reveals` in S5.2b (D-43) and renamed when the older one is dropped. | Done in S5.12a (migration 0018, D-49) |
+| `login_history` | Kept; `user_type` dropped, `user_id` points at `people`. | Done in S5.12a (migration 0018, D-49) |
+| `password_reset_tokens`, `refresh_tokens` | Kept; `user_type` dropped, `user_id` points at `people`. | Done in S5.12a (migration 0018, D-49) |
 | `report_schedules`, `report_runs` | Kept; the report set changed in S5.3a (D-44). | S5.3a |
 
 The last pull request that removes an old table also removes the old identity tables, so the old and the new identity never coexist at the cut-over.
@@ -160,16 +160,16 @@ id uuid PK, person_id FK, unavailable_from timestamptz, unavailable_to timestamp
 id uuid PK, rater_id FK people, provider_id FK people, rating smallint CHECK (rating BETWEEN 1 AND 10), comment text, rated_on timestamptz, updated_at timestamptz null (set when the rating is edited), UNIQUE (rater_id, provider_id) (Q5), CHECK (rater_id <> provider_id). Ratings stay when a person's account is closed; the rater is never shown to the provider.
 
 ### phone_reveals
-Built in S5.2b as `person_phone_reveals` (D-43), because the older `phone_reveals` is still read by the reports; S5.12a drops the older table and renames this one. id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10), CHECK (revealer_id <> provider_id). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
+Built in S5.2b as `person_phone_reveals` (D-43) and renamed `phone_reveals` in S5.12a (migration 0018, D-49), when the older table of work hosts was dropped. id uuid PK, revealer_id FK people, provider_id FK people, revealed_at timestamptz, channel text CHECK (dial/show), source text CHECK (search/detail), searched_skills text[] null (at most 10), CHECK (revealer_id <> provider_id). The number itself is never stored. Indexes: `(revealer_id, revealed_at)` for rate limiting, `provider_id`, `revealed_at`.
 
 ### login_history
-id uuid PK, person_id uuid null, login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. No foreign keys, so rows survive account closing; when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions; the column is nullable since migration `0010`).
+id uuid PK, user_id uuid null FK people (ON DELETE SET NULL; empty for an address nobody has), login_email text null, login_time timestamptz, succeeded boolean, ip_address inet null, user_agent text null. Rows survive account closing (a closed person stays in `people`); when the account is closed, `login_email`, `ip_address` and `user_agent` of that person's rows are set to NULL (the exception named in the conventions; the column is nullable since migration `0010`).
 
 ### password_reset_tokens
-id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, used_at timestamptz null.
+id uuid PK, user_id FK people (ON DELETE CASCADE), token_hash text, expires_at timestamptz, used_at timestamptz null.
 
 ### refresh_tokens
-id uuid PK, person_id FK people, token_hash text, expires_at timestamptz, revoked_at timestamptz null, created_at timestamptz, replaced_by uuid null (rotation).
+id uuid PK, user_id FK people (ON DELETE CASCADE), token_hash text, expires_at timestamptz, revoked_at timestamptz null, created_at timestamptz, replaced_by_id uuid null (rotation).
 
 ### report_schedules and report_runs
 - `report_schedules`: id, report_name, cron_expression, timezone, is_enabled, recipients (text).

@@ -164,7 +164,7 @@ The settings of the app show a Privacy row only when the build is made with `--d
 - Phone number views: each `GET /verifier/people/{id}` adds a row to `contact_views` (who, whom, when, never the number). The OWNER reads the log at `GET /owner/contact-views`. It is kept 12 calendar months (decision O-03, D-40): delete older rows with `python -m app.cli purge-contact-views` (`--months N` to change it; run it by hand or from a scheduled job, for example monthly). Nothing deletes them automatically.
 - Links in addresses: the home group invitation, the vouch link and the invitation to be an ADMIN are shared as web addresses (`/join/<token>`, `/vouch/<token>`, `/invite/<token>`), so the web server's own access log records them. The API never has the token in an address (the lookups take it in the body). To keep the tokens out of the proxy logs as well, drop the path of these three routes from the Caddy and nginx log format; that is an infrastructure change for the owner, and this is the one place that lists the paths. The web server sends `Referrer-Policy: strict-origin-when-cross-origin`, so other sites only ever get the origin, never the path with a token.
 - Downloads of mobile test builds: each person may download `DOWNLOAD_MAX_PER_HOUR` files per hour (default 20); beyond that HTTP 429 `download_limit_reached` with `Retry-After`. The count is kept in the memory of one API process, so with several instances each allows its own share.
-- Mobile number reveals: each person (a SEARCHER or above) may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `person_phone_reveals` (no number is stored; renamed `phone_reveals` in S5.12a); the OWNER's report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per searcher" (people are shown by a short code; the log of reveals ties the code to the person).
+- Mobile number reveals: each person (a SEARCHER or above) may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `phone_reveals` (no number is stored); the OWNER's report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per searcher" (people are shown by a short code; the log of reveals ties the code to the person).
 - Port 22 is open only to your addresses; ports 80 and 443 to the world.
 
 ## 9. Data tasks
@@ -177,6 +177,15 @@ dc run --rm tools python -m app.cli seed-demo
 ```
 
 Starting the demo over means wiping the demo database, because the history of people is append-only and cannot be removed row by row (D-45). That is an action on the live server that the owner takes; its step-by-step procedure (the reset of the demo) is written in slice S5.14 of the roadmap. Until then, `generate-demo-data` on a server that has demo people refuses, and `seed-demo` says that they exist and does nothing.
+
+### The migration that removes the older accounts (migration 0018, at the cut-over)
+
+Migration `0018` drops the tables of freelancers, work hosts, organisations and administrators with their data, and ends the sessions and reset links of those accounts. It is destructive: the downgrade brings the older tables back **empty**, never their data. It belongs to the cut-over to the church model (roadmap S6) and is run only with the owner's approval:
+
+1. Make a backup now and check it can be restored (section 6). The deploy takes one too, but this one is yours to keep until the new model has run for a while.
+2. Get the owner's approval to remove the older accounts.
+3. Deploy as usual (section 3); `deploy.sh` runs the migration. Afterwards create the OWNER (next section) if the database has none.
+4. To go back, restore the backup of step 1 (section 6) with the previous release; do not rely on the downgrade for data.
 
 ### Set up Skills: the first OWNER (church trust model)
 

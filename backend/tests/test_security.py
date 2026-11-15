@@ -41,14 +41,14 @@ def test_the_production_hasher_keeps_strong_parameters() -> None:
 
 
 def test_access_token_round_trip() -> None:
-    principal = Principal("freelancer", uuid.uuid4())
+    principal = Principal(uuid.uuid4())
     token, expires_in = create_access_token(principal, secret=SECRET, lifetime_minutes=15)
     assert expires_in == 900
     assert decode_access_token(token, secret=SECRET) == principal
 
 
 def test_access_token_rejects_wrong_key_expiry_and_tampering() -> None:
-    principal = Principal("admin", uuid.uuid4())
+    principal = Principal(uuid.uuid4())
     token, _ = create_access_token(principal, secret=SECRET, lifetime_minutes=15)
     with pytest.raises(TokenError):
         decode_access_token(token, secret=secrets.token_hex(32))

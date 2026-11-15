@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.models import PersonLabel
 from app.models.labels import Label
-from tests.api_helpers import API, label_id, older_actor
+from tests.api_helpers import API, ghost_actor, label_id
 from tests.test_admission import headers_of, owner_member
 from tests.test_person_auth import Member, add_member
 from tests.trust_helpers import World
@@ -85,7 +85,7 @@ def test_a_revoked_person_has_none_and_the_door_is_closed_without_a_token(
 
 
 def test_a_token_of_an_older_account_type_has_no_profile(client: TestClient, world: World) -> None:
-    old = older_actor("freelancer")
+    old = ghost_actor()
     assert client.get(f"{API}/freelancers/me", headers=old.headers).status_code == 401
 
 

@@ -69,9 +69,9 @@ def client() -> Iterator[TestClient]:
         app.dependency_overrides.pop(get_principal, None)
 
 
-def auth(user_type: str = "person", user_id: uuid.UUID | None = None) -> dict[str, str]:
+def auth(user_id: uuid.UUID | None = None) -> dict[str, str]:
     token, _ = create_access_token(
-        Principal(user_type=user_type, user_id=user_id or uuid.uuid4()),
+        Principal(user_id=user_id or uuid.uuid4()),
         secret=get_settings().require_jwt_secret(),
         lifetime_minutes=5,
     )
@@ -95,12 +95,6 @@ def test_a_login_is_required(client: TestClient, folder: Path, path: str) -> Non
 def test_a_person_can_list_and_download(client: TestClient, folder: Path) -> None:
     assert client.get(LIST_URL, headers=auth()).status_code == 200
     assert client.get(f"{LIST_URL}/android/1.10.0", headers=auth()).content == APK_BYTES
-
-
-@pytest.mark.parametrize("role", ["freelancer", "workhost", "organisation", "admin"])
-def test_a_token_of_an_older_kind_is_refused(client: TestClient, folder: Path, role: str) -> None:
-    assert client.get(LIST_URL, headers=auth(role)).status_code == 401
-    assert client.get(f"{LIST_URL}/android/1.10.0", headers=auth(role)).status_code == 401
 
 
 def test_list_is_newest_first_by_number(client: TestClient, folder: Path) -> None:

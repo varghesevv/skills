@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.v1 import churches
 from app.core.config import get_settings
 from app.models import HomeGroup, Person, Vouch
-from tests.api_helpers import API, older_actor
+from tests.api_helpers import API, ghost_actor
 from tests.test_person_auth import Member, add_member, bearer, login
 from tests.trust_helpers import World, check_rules
 
@@ -172,10 +172,9 @@ def test_put_me_needs_a_token(client: TestClient) -> None:
     assert client.put(f"{API}/me", json={"full_name": "Someone"}).status_code == 401
 
 
-@pytest.mark.parametrize("user_type", ["workhost", "freelancer", "organisation", "admin"])
-def test_put_me_refuses_a_token_of_an_older_kind(client: TestClient, user_type: str) -> None:
-    older = older_actor(user_type)
-    response = client.put(f"{API}/me", headers=older.headers, json={"full_name": "Changed Name"})
+def test_put_me_refuses_a_token_for_nobody(client: TestClient) -> None:
+    ghost = ghost_actor()
+    response = client.put(f"{API}/me", headers=ghost.headers, json={"full_name": "Changed Name"})
     assert response.status_code == 401
 
 

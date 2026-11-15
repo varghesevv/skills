@@ -10,10 +10,10 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.errors import ApiError
-from app.models.reveals import PersonPhoneReveal
+from app.models.reveals import PhoneReveal
 from app.schemas.profiles import RevealRequest
 from app.services.reveals import reveal_mobile_number
-from tests.api_helpers import API, older_actor
+from tests.api_helpers import API, ghost_actor
 from tests.test_admission import headers_of
 from tests.test_person_auth import Member, add_member
 from tests.trust_helpers import World
@@ -44,7 +44,7 @@ def reveal(
 
 
 def reveals(session: Session) -> int:
-    return session.scalar(select(func.count()).select_from(PersonPhoneReveal)) or 0
+    return session.scalar(select(func.count()).select_from(PhoneReveal)) or 0
 
 
 def test_a_searcher_reveals_and_it_is_recorded(client: TestClient, world: World) -> None:
@@ -56,7 +56,7 @@ def test_a_searcher_reveals_and_it_is_recorded(client: TestClient, world: World)
     assert response.status_code == 200
     assert response.json() == {"mobile_number": "+971500000321"}
     assert response.headers["cache-control"] == "no-store"
-    row = world.session.scalars(select(PersonPhoneReveal)).one()
+    row = world.session.scalars(select(PhoneReveal)).one()
     assert (row.revealer_id, row.provider_id) == (searcher.person.id, provider.person.id)
     assert (row.channel, row.source, row.searched_skills) == ("show", "detail", ["plumbing"])
 
@@ -89,7 +89,7 @@ def test_a_revoked_person_may_not(client: TestClient, world: World) -> None:
 def test_no_token_and_older_account_tokens_are_refused(client: TestClient, world: World) -> None:
     provider = add_member(world, "provider")
     assert client.post(url_of(provider.person.id), json=BODY).status_code == 401
-    old = older_actor("workhost")
+    old = ghost_actor()
     assert (
         client.post(url_of(provider.person.id), json=BODY, headers=old.headers).status_code == 401
     )
@@ -176,7 +176,7 @@ def test_daily_limit_and_window_slides(client: TestClient, world: World) -> None
         assert reveal(client, world, provider.person.id, searcher).status_code == 200
     # Move those three to 2 hours ago: the hourly window is free again, the daily one is not.
     world.session.execute(
-        update(PersonPhoneReveal).values(revealed_at=datetime.now(UTC) - timedelta(hours=2))
+        update(PhoneReveal).values(revealed_at=datetime.now(UTC) - timedelta(hours=2))
     )
     world.session.flush()
     for _ in range(2):  # the test limit is 5 per day
@@ -188,7 +188,7 @@ def test_daily_limit_and_window_slides(client: TestClient, world: World) -> None
 
     # After a day the oldest ones no longer count.
     world.session.execute(
-        update(PersonPhoneReveal).values(revealed_at=datetime.now(UTC) - timedelta(hours=25))
+        update(PhoneReveal).values(revealed_at=datetime.now(UTC) - timedelta(hours=25))
     )
     world.session.flush()
     assert reveal(client, world, provider.person.id, searcher).status_code == 200

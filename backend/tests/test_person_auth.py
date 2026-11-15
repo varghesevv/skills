@@ -5,7 +5,6 @@ a change of status takes effect on the next request without a new token.
 """
 
 import secrets
-import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -20,7 +19,7 @@ from app.api.deps import current_person
 from app.core.security import hash_password
 from app.models import LoginHistory, Person, RefreshToken
 from app.models.church import Person as PersonModel
-from tests.api_helpers import API
+from tests.api_helpers import API, ghost_actor
 from tests.trust_helpers import World
 
 pytestmark = pytest.mark.db
@@ -166,7 +165,7 @@ def test_logins_are_recorded_for_people(client: TestClient, session: Session, wo
     rows = session.scalars(
         select(LoginHistory).where(LoginHistory.login_email == member.email)
     ).all()
-    assert [(r.user_type, r.succeeded) for r in rows] == [("person", False), ("person", True)]
+    assert [r.succeeded for r in rows] == [False, True]
     assert all(r.user_id == member.person.id for r in rows)
     assert member.person.last_login_at is not None
 
@@ -202,7 +201,7 @@ def test_refresh_rotates_and_reuse_ends_every_session(
     rows = session.scalars(
         select(RefreshToken).where(RefreshToken.user_id == member.person.id)
     ).all()
-    assert rows and all(r.revoked_at is not None and r.user_type == "person" for r in rows)
+    assert rows and all(r.revoked_at is not None for r in rows)
 
 
 def test_refresh_stops_for_a_closed_account(
@@ -359,20 +358,12 @@ def test_other_endpoints_refuse_revoked_people_too(client: TestClient, world: Wo
     assert (response.status_code, response.json()["error"]["code"]) == (403, "account_revoked")
 
 
-@pytest.mark.parametrize("role", ["freelancer", "workhost", "organisation", "admin"])
-def test_a_token_of_an_older_kind_opens_nothing(guarded: TestClient, role: str) -> None:
-    from app.core.config import get_settings
-    from app.core.security import Principal, create_access_token
-
-    token, _ = create_access_token(
-        Principal(role, uuid.uuid4()),
-        secret=get_settings().require_jwt_secret(),
-        lifetime_minutes=5,
-    )
-    headers = {"Authorization": f"Bearer {token}"}
+def test_a_token_for_nobody_opens_nothing(guarded: TestClient) -> None:
+    """A token that is valid but names no person (an account of the older kind, which is gone)."""
+    headers = ghost_actor().headers
     for path in ("/test/anyone", "/me", "/labels"):
         response = guarded.get(f"{API}{path}", headers=headers)
-        assert response.status_code == 401, (role, path)
+        assert response.status_code == 401, path
         assert response.json()["error"]["code"] == "invalid_token"
 
 

@@ -108,7 +108,7 @@ class Run:
 
     def headers(self, person: Person) -> dict[str, str]:
         token, _ = create_access_token(
-            Principal("person", person.id),
+            Principal(person.id),
             secret=get_settings().require_jwt_secret(),
             lifetime_minutes=30,
         )
