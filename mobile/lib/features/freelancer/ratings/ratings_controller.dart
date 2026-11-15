@@ -38,20 +38,21 @@ class RatingsController extends AsyncNotifier<RatingsState> {
   Future<RatingsState> build() async {
     final generation = ++_generation;
     _loadedPages = 0;
-    final me = ref.watch(sessionProvider).value;
-    if (me == null) return const RatingsState(items: [], total: 0);
+    // Only the identity matters: a refresh of the person must not drop the pages shown.
+    final id = ref.watch(personProvider.select((person) => person?.id));
+    if (id == null) return const RatingsState(items: [], total: 0);
     final page = await ref
         .read(freelancerRepositoryProvider)
-        .ratings(me.id, page: 1);
+        .ratings(id, page: 1);
     if (generation == _generation) _loadedPages = 1;
     return RatingsState(items: page.items, total: page.total);
   }
 
   Future<void> loadMore() async {
     final current = state.value;
-    final me = ref.read(sessionProvider).value;
+    final id = ref.read(personProvider)?.id;
     if (current == null ||
-        me == null ||
+        id == null ||
         current.loadingMore ||
         !current.hasMore) {
       return;
@@ -69,7 +70,7 @@ class RatingsController extends AsyncNotifier<RatingsState> {
     try {
       final page = await ref
           .read(freelancerRepositoryProvider)
-          .ratings(me.id, page: pageToLoad);
+          .ratings(id, page: pageToLoad);
       next = (latest) => RatingsState(
         items: [...latest.items, ...page.items],
         total: page.total,

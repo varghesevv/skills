@@ -149,10 +149,13 @@ main:focus {
 /* ---------- Top bar ---------- */
 
 .topbar {
-  position: sticky;
+  /* Stays in view from tablet width up; on a phone a leader's menu wraps over several lines and
+     would cover too much of the screen, so it scrolls away there. */
+  position: static;
   top: 0;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap; /* the links of a leader do not fit on one line of a small phone */
   align-items: center;
   gap: 0.5rem;
   min-height: var(--topbar-height);
@@ -173,9 +176,16 @@ main:focus {
   color: var(--ink);
 }
 
+.topbar-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
 .topbar-user {
   margin-inline-start: auto;
   display: flex;
+  flex-wrap: wrap; /* notifications, account and log out together do not fit a 320 px phone */
+  justify-content: flex-end;
   align-items: center;
   gap: 0.5rem;
 }
@@ -846,6 +856,9 @@ input[aria-invalid='true'] {
 /* ---------- Tablet: 640px and up ---------- */
 
 @media (min-width: 640px) {
+  .topbar {
+    position: sticky;
+  }
   h1 {
     font-size: 2rem;
   }
@@ -976,4 +989,55 @@ input[aria-invalid='true'] {
 
 .table-wrap th {
   text-transform: capitalize;
+}
+
+/* ---------- Joining (sign-up wizard) and the applicant home ---------- */
+
+.step-label,
+.hint {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.choice-list {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.choice-list legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+/* One option per row, at least 44 px high so it can be tapped. */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.choice small {
+  display: block;
+  color: var(--muted);
+}
+
+.choice input {
+  flex: none;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
 }

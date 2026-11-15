@@ -16,7 +16,7 @@ PI_COPY := mkdir w && (cd /src && tar --exclude=node_modules --exclude=dist -cf 
 .PHONY: help env check-secrets install-hooks up down logs ps reset-db be-install be-check be-test be-migrate openapi fe-install fe-check \
 	sync-start sync-status sync-stop pi-sync pi-up pi-down pi-ps pi-logs pi-reset-db \
 	pi-test pi-check pi-test-web pi-format-web pi-lock-web pi-upgrade-web pi-format pi-shell \
-	pi-lock pi-migrate pi-seed-demo pi-create-admin \
+	pi-lock pi-migrate pi-seed-demo pi-create-owner \
 	tf-fmt tf-validate tf-lock tf-init tf-plan tf-apply
 
 help: ## Show this help
@@ -121,8 +121,8 @@ pi-migrate: ## Apply database migrations to the dev database on the Pi
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head'
 pi-seed-demo: ## Create fake demo users in the Pi dev database (password: DEMO_USER_PASSWORD in the Pi's .env)
 	ssh $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli seed-demo'
-pi-create-admin: ## Create an admin on the Pi: make pi-create-admin EMAIL=you@example.com MOBILE=+971500000000 (asks for the password)
-	ssh -t $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli create-admin --email "$(EMAIL)" --mobile "$(MOBILE)"'
+pi-create-owner: ## Create the OWNER on the Pi: make pi-create-owner NAME="Your Name" EMAIL=you@example.com MOBILE=<number> CHURCH="Your church" GROUP="Your home group" (asks for the password; no quotes, $ or backticks inside a value)
+	ssh -t $(PI_HOST) '$(PI_PATH); cd $(PI_DIR) && $(DB_ENV) && docker compose up -d --wait db && cd backend && uv sync && uv run alembic upgrade head && uv run python -m app.cli create-owner --name "$(NAME)" --email "$(EMAIL)" --mobile "$(MOBILE)" --church "$(CHURCH)" --group "$(GROUP)"'
 pi-shell: ## Open a shell in the project folder on the Pi
 	ssh -t $(PI_HOST) 'cd $(PI_DIR) && exec $$SHELL -l'
 

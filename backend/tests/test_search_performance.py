@@ -1,7 +1,7 @@
-"""Search speed check against many generated freelancers. Off by default.
+"""Search speed check against many generated providers. Off by default.
 
 Run with (from backend/):
-  RUN_PERF_TESTS=1 PERF_FREELANCERS=100000 uv run pytest tests/test_search_performance.py -s
+  RUN_PERF_TESTS=1 PERF_PROVIDERS=100000 uv run pytest tests/test_search_performance.py -s
 Target (docs/specification/07-non-functional.md): p95 under 500 ms with 100,000 freelancers.
 """
 
@@ -14,7 +14,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from tests.api_helpers import API, signup
+from tests.api_helpers import API
+from tests.test_admission import headers_of
+from tests.test_person_auth import add_member
+from tests.trust_helpers import World
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_PERF_TESTS") != "1", reason="set RUN_PERF_TESTS=1 to run"
@@ -30,19 +33,21 @@ QUERIES = [
 
 
 def test_search_p95_under_half_a_second(client: TestClient, session: Session) -> None:
-    count = int(os.environ.get("PERF_FREELANCERS", "20000"))
-    host = signup(client, session, "workhost", "perf.host@example.com")
+    count = int(os.environ.get("PERF_PROVIDERS", "20000"))
+    world = World(session)
+    viewer = add_member(world, "searcher")
+    headers = headers_of(client, viewer)
     session.execute(
         text(
             """
-            INSERT INTO freelancers (user_email, mobile_number, password_hash, rate_per_hour,
-                                     rate_currency, is_rate_negotiable)
-            SELECT 'perf' || g || '@example.com', '+971500000000', 'unused',
-                   10 + (g % 90), 'AED', (g % 3 = 0)
+            INSERT INTO people (status, church_id, home_group_id, full_name, email, mobile_number,
+                                password_hash, rate_per_hour, rate_currency, is_rate_negotiable)
+            SELECT 'provider', :church, :grp, 'Perf ' || g, 'perf' || g || '@example.com',
+                   '+9716' || lpad(g::text, 8, '0'), 'unused', 10 + (g % 90), 'AED', (g % 3 = 0)
             FROM generate_series(1, :n) AS g
             """
         ),
-        {"n": count},
+        {"n": count, "church": world.church.id, "grp": world.group.id},
     )
     for label_type in ("skill", "language", "timing"):
         session.execute(
@@ -55,9 +60,9 @@ def test_search_p95_under_half_a_second(client: TestClient, session: Session) ->
                 ),
                 f AS (
                     SELECT id, row_number() OVER (ORDER BY id) AS g
-                    FROM freelancers WHERE user_email LIKE 'perf%'
+                    FROM people WHERE email LIKE 'perf%'
                 )
-                INSERT INTO freelancer_labels (freelancer_id, label_id)
+                INSERT INTO person_labels (person_id, label_id)
                 SELECT f.id, l.id FROM f JOIN l ON l.n = f.g % l.total
                 """
             ),
@@ -66,12 +71,12 @@ def test_search_p95_under_half_a_second(client: TestClient, session: Session) ->
     session.execute(
         text(
             """
-            INSERT INTO user_ratings (work_host_id, freelancer_id, rating)
-            SELECT :host, id, 1 + (row_number() OVER (ORDER BY id) % 10)
-            FROM freelancers WHERE user_email LIKE 'perf%' AND id::text < '8'
+            INSERT INTO ratings (rater_id, provider_id, rating)
+            SELECT :rater, id, 1 + (row_number() OVER (ORDER BY id) % 10)
+            FROM people WHERE email LIKE 'perf%' AND id::text < '8'
             """
         ),
-        {"host": host.id},
+        {"rater": viewer.person.id},
     )
     session.execute(text("ANALYZE"))
 
@@ -79,10 +84,10 @@ def test_search_p95_under_half_a_second(client: TestClient, session: Session) ->
     for _ in range(5):
         for query in QUERIES:
             started = time.perf_counter()
-            response = client.get(f"{API}/search/freelancers?{query}", headers=host.headers)
+            response = client.get(f"{API}/search/freelancers?{query}", headers=headers)
             timings.append(time.perf_counter() - started)
             assert response.status_code == 200
     timings.sort()
     p95 = timings[int(len(timings) * 0.95) - 1]
-    print(f"\n{count} freelancers: median {statistics.median(timings):.3f}s, p95 {p95:.3f}s")
+    print(f"\n{count} providers: median {statistics.median(timings):.3f}s, p95 {p95:.3f}s")
     assert p95 < 0.5

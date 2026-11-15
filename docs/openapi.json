@@ -1,6 +1,213 @@
 {
   "components": {
     "schemas": {
+      "AdminAccepted": {
+        "properties": {
+          "church_id": {
+            "format": "uuid",
+            "title": "Church Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "church_id",
+          "status"
+        ],
+        "title": "AdminAccepted",
+        "type": "object"
+      },
+      "AdminChange": {
+        "description": "Replace the ADMIN of a church (the OWNER's own church changes only by a handover).",
+        "properties": {
+          "former_admin_status": {
+            "enum": [
+              "provider",
+              "searcher"
+            ],
+            "title": "Former Admin Status",
+            "type": "string"
+          },
+          "group_successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Successor Id"
+          },
+          "successor_id": {
+            "format": "uuid",
+            "title": "Successor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "successor_id",
+          "former_admin_status"
+        ],
+        "title": "AdminChange",
+        "type": "object"
+      },
+      "AdminChanged": {
+        "properties": {
+          "admin": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "former_admin_keeps_leading": {
+            "title": "Former Admin Keeps Leading",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "church",
+          "admin",
+          "former_admin_keeps_leading"
+        ],
+        "title": "AdminChanged",
+        "type": "object"
+      },
+      "AdminInvitationAccept": {
+        "properties": {
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Home Group Name",
+            "type": "string"
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "full_name",
+          "mobile_number",
+          "password",
+          "home_group_name"
+        ],
+        "title": "AdminInvitationAccept",
+        "type": "object"
+      },
+      "AdminInvitationInfo": {
+        "description": "What the person invited sees before accepting: the church, and where the invitation was\nsent (the domain only).",
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "email_domain": {
+            "title": "Email Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "church_name",
+          "email_domain"
+        ],
+        "title": "AdminInvitationInfo",
+        "type": "object"
+      },
+      "AdminInvitationLookup": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "AdminInvitationLookup",
+        "type": "object"
+      },
+      "AdmitRequest": {
+        "properties": {
+          "to": {
+            "enum": [
+              "searcher",
+              "provider"
+            ],
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "AdmitRequest",
+        "type": "object"
+      },
+      "AdmitResult": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "requested_status"
+        ],
+        "title": "AdmitResult",
+        "type": "object"
+      },
       "AppConfig": {
         "properties": {
           "app": {
@@ -33,6 +240,495 @@
           "latest_version"
         ],
         "title": "AppVersions",
+        "type": "object"
+      },
+      "ApplicantList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicantRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ApplicantList",
+        "type": "object"
+      },
+      "ApplicantRow": {
+        "properties": {
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          },
+          "can_admit_as_provider": {
+            "title": "Can Admit As Provider",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vouch_count": {
+            "title": "Vouch Count",
+            "type": "integer"
+          },
+          "vouchers": {
+            "items": {
+              "$ref": "#/components/schemas/Voucher"
+            },
+            "title": "Vouchers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "status",
+          "requested_status",
+          "home_group",
+          "applied_at",
+          "vouch_count",
+          "vouchers",
+          "can_admit_as_provider"
+        ],
+        "title": "ApplicantRow",
+        "type": "object"
+      },
+      "ApplicationUpdate": {
+        "properties": {
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "searcher",
+                  "provider"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          }
+        },
+        "title": "ApplicationUpdate",
+        "type": "object"
+      },
+      "ChainLink": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "status"
+        ],
+        "title": "ChainLink",
+        "type": "object"
+      },
+      "ChurchClosed": {
+        "properties": {
+          "closed_accounts": {
+            "title": "Closed Accounts",
+            "type": "integer"
+          },
+          "closed_groups": {
+            "title": "Closed Groups",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "closed_groups",
+          "closed_accounts"
+        ],
+        "title": "ChurchClosed",
+        "type": "object"
+      },
+      "ChurchInvitationCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
+        "title": "ChurchInvitationCreated",
+        "type": "object"
+      },
+      "ChurchInvitationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChurchInvitationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ChurchInvitationList",
+        "type": "object"
+      },
+      "ChurchInvitationSummary": {
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expired": {
+            "title": "Expired",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "church_name",
+          "email",
+          "created_at",
+          "expires_at",
+          "expired"
+        ],
+        "title": "ChurchInvitationSummary",
+        "type": "object"
+      },
+      "ChurchInvite": {
+        "properties": {
+          "church_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Church Name",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "church_name",
+          "email"
+        ],
+        "title": "ChurchInvite",
+        "type": "object"
+      },
+      "ChurchList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChurchSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ChurchList",
+        "type": "object"
+      },
+      "ChurchListOwner": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChurchSummaryOwner"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ChurchListOwner",
+        "type": "object"
+      },
+      "ChurchSummary": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ChurchSummary",
+        "type": "object"
+      },
+      "ChurchSummaryOwner": {
+        "properties": {
+          "admin_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Id"
+          },
+          "admin_name": {
+            "title": "Admin Name",
+            "type": "string"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "groups": {
+            "title": "Groups",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "revoked": {
+            "title": "Revoked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "admin_name",
+          "open",
+          "groups",
+          "members",
+          "revoked",
+          "closed_at"
+        ],
+        "title": "ChurchSummaryOwner",
+        "type": "object"
+      },
+      "CloseAccountRequest": {
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 1024,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "CloseAccountRequest",
+        "type": "object"
+      },
+      "ContactViewList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContactViewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ContactViewList",
+        "type": "object"
+      },
+      "ContactViewOut": {
+        "description": "One time a leader's screen showed a person's mobile number. Never the number itself.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "person": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "screen": {
+            "title": "Screen",
+            "type": "string"
+          },
+          "viewed_at": {
+            "format": "date-time",
+            "title": "Viewed At",
+            "type": "string"
+          },
+          "viewer": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "id",
+          "viewer",
+          "person",
+          "screen",
+          "viewed_at"
+        ],
+        "title": "ContactViewOut",
+        "type": "object"
+      },
+      "DirectMove": {
+        "properties": {
+          "home_group_id": {
+            "format": "uuid",
+            "title": "Home Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "home_group_id"
+        ],
+        "title": "DirectMove",
         "type": "object"
       },
       "DownloadList": {
@@ -100,27 +796,83 @@
         "title": "DownloadOut",
         "type": "object"
       },
+      "FlaggedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlaggedRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "FlaggedList",
+        "type": "object"
+      },
+      "FlaggedRow": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "status",
+          "home_group",
+          "status_set_by"
+        ],
+        "title": "FlaggedRow",
+        "type": "object"
+      },
       "ForgotPasswordRequest": {
         "properties": {
           "email": {
             "format": "email",
             "title": "Email",
             "type": "string"
-          },
-          "user_type": {
-            "enum": [
-              "freelancer",
-              "workhost",
-              "organisation",
-              "admin"
-            ],
-            "title": "User Type",
-            "type": "string"
           }
         },
         "required": [
-          "email",
-          "user_type"
+          "email"
         ],
         "title": "ForgotPasswordRequest",
         "type": "object"
@@ -256,7 +1008,7 @@
         "type": "object"
       },
       "FreelancerPublic": {
-        "description": "What work hosts, organisations and admins see. Never the email.",
+        "description": "What a SEARCHER or above sees of a provider. Never the email or the mobile number.",
         "properties": {
           "average_rating": {
             "anyOf": [
@@ -269,6 +1021,9 @@
             ],
             "title": "Average Rating"
           },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
           "full_name": {
             "anyOf": [
               {
@@ -279,6 +1034,9 @@
               }
             ],
             "title": "Full Name"
+          },
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
           },
           "id": {
             "format": "uuid",
@@ -361,13 +1119,6 @@
             "title": "Unavailable",
             "type": "array"
           },
-          "vouched_by": {
-            "items": {
-              "$ref": "#/components/schemas/VouchingOrg"
-            },
-            "title": "Vouched By",
-            "type": "array"
-          },
           "whatsapp_availability": {
             "title": "Whatsapp Availability",
             "type": "boolean"
@@ -385,74 +1136,11 @@
           "labels",
           "average_rating",
           "rating_count",
-          "vouched_by",
+          "church",
+          "home_group",
           "unavailable"
         ],
         "title": "FreelancerPublic",
-        "type": "object"
-      },
-      "FreelancerRegister": {
-        "properties": {
-          "email": {
-            "format": "email",
-            "title": "Email",
-            "type": "string"
-          },
-          "full_name": {
-            "maxLength": 200,
-            "minLength": 2,
-            "title": "Full Name",
-            "type": "string"
-          },
-          "mobile_number": {
-            "title": "Mobile Number",
-            "type": "string"
-          },
-          "nationality": {
-            "anyOf": [
-              {
-                "maxLength": 100,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Nationality"
-          },
-          "password": {
-            "format": "password",
-            "maxLength": 128,
-            "minLength": 10,
-            "title": "Password",
-            "type": "string",
-            "writeOnly": true
-          },
-          "primary_language": {
-            "anyOf": [
-              {
-                "maxLength": 100,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Primary Language"
-          },
-          "whatsapp_availability": {
-            "default": false,
-            "title": "Whatsapp Availability",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "email",
-          "mobile_number",
-          "password",
-          "full_name"
-        ],
-        "title": "FreelancerRegister",
         "type": "object"
       },
       "FreelancerUpdate": {
@@ -543,7 +1231,7 @@
         "type": "object"
       },
       "GivenRating": {
-        "description": "A rating a work host gave, with the freelancer's name so the host can recognise it.",
+        "description": "A rating a person gave, with the provider's name so they can recognise it.",
         "properties": {
           "comment": {
             "anyOf": [
@@ -556,12 +1244,17 @@
             ],
             "title": "Comment"
           },
-          "freelancer_id": {
+          "id": {
             "format": "uuid",
-            "title": "Freelancer Id",
+            "title": "Id",
             "type": "string"
           },
-          "freelancer_name": {
+          "provider_id": {
+            "format": "uuid",
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "provider_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -570,12 +1263,7 @@
                 "type": "null"
               }
             ],
-            "title": "Freelancer Name"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Provider Name"
           },
           "rated_on": {
             "format": "date-time",
@@ -601,14 +1289,326 @@
         },
         "required": [
           "id",
-          "freelancer_id",
-          "freelancer_name",
+          "provider_id",
+          "provider_name",
           "rating",
           "comment",
           "rated_on",
           "updated_at"
         ],
         "title": "GivenRating",
+        "type": "object"
+      },
+      "GroupClose": {
+        "description": "The leader closes their own group, being its last member, by moving into another group.",
+        "properties": {
+          "former_leader_status": {
+            "enum": [
+              "provider",
+              "searcher",
+              "keep"
+            ],
+            "title": "Former Leader Status",
+            "type": "string"
+          },
+          "move_to_group_id": {
+            "format": "uuid",
+            "title": "Move To Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "move_to_group_id",
+          "former_leader_status"
+        ],
+        "title": "GroupClose",
+        "type": "object"
+      },
+      "GroupClosed": {
+        "properties": {
+          "closed_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "joined_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "closed_group",
+          "joined_group",
+          "status"
+        ],
+        "title": "GroupClosed",
+        "type": "object"
+      },
+      "GroupInvitationCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
+        "title": "GroupInvitationCreated",
+        "type": "object"
+      },
+      "GroupInvitationInfo": {
+        "description": "What the sign-up screen shows for an invitation link.",
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "home_group_name": {
+            "title": "Home Group Name",
+            "type": "string"
+          },
+          "leader_name": {
+            "title": "Leader Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "church_name",
+          "home_group_name",
+          "leader_name"
+        ],
+        "title": "GroupInvitationInfo",
+        "type": "object"
+      },
+      "GroupInvitationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupInvitationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GroupInvitationList",
+        "type": "object"
+      },
+      "GroupInvitationLookup": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "GroupInvitationLookup",
+        "type": "object"
+      },
+      "GroupInvitationSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "GroupInvitationSummary",
+        "type": "object"
+      },
+      "GroupRequestApprove": {
+        "properties": {
+          "successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Id"
+          }
+        },
+        "title": "GroupRequestApprove",
+        "type": "object"
+      },
+      "GroupRequestCreate": {
+        "properties": {
+          "group_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Group Name",
+            "type": "string"
+          },
+          "successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Id"
+          }
+        },
+        "required": [
+          "group_name"
+        ],
+        "title": "GroupRequestCreate",
+        "type": "object"
+      },
+      "GroupRequestCreated": {
+        "description": "The request, or for an ADMIN or the OWNER the group, started at once.",
+        "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request": {
+            "$ref": "#/components/schemas/GroupRequestOut"
+          }
+        },
+        "required": [
+          "request",
+          "group"
+        ],
+        "title": "GroupRequestCreated",
+        "type": "object"
+      },
+      "GroupRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupRequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "GroupRequestList",
+        "type": "object"
+      },
+      "GroupRequestOut": {
+        "properties": {
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "group_name": {
+            "title": "Group Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requester": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "requester_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requester_leads_a_group": {
+            "title": "Requester Leads A Group",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "approved",
+              "declined"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_name",
+          "church",
+          "requester",
+          "state",
+          "created_at",
+          "requester_leads_a_group"
+        ],
+        "title": "GroupRequestOut",
+        "type": "object"
+      },
+      "GroupStarted": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "group"
+        ],
+        "title": "GroupStarted",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -622,6 +1622,256 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HandoverAccepted": {
+        "properties": {
+          "former_owner": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "former_owner_status": {
+            "title": "Former Owner Status",
+            "type": "string"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "owner",
+          "former_owner",
+          "former_owner_status"
+        ],
+        "title": "HandoverAccepted",
+        "type": "object"
+      },
+      "HandoverCurrent": {
+        "description": "The open request that concerns the caller, if there is one.",
+        "properties": {
+          "request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandoverOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "HandoverCurrent",
+        "type": "object"
+      },
+      "HandoverOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "former_owner_status": {
+            "title": "Former Owner Status",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "new_owner": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "successor_admin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "successor_leader": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "new_owner",
+          "successor_admin",
+          "successor_leader",
+          "former_owner_status",
+          "created_at"
+        ],
+        "title": "HandoverOut",
+        "type": "object"
+      },
+      "HandoverPropose": {
+        "description": "The OWNER proposes to hand over to the ADMIN of another church.",
+        "properties": {
+          "former_owner_status": {
+            "default": "provider",
+            "enum": [
+              "provider",
+              "searcher"
+            ],
+            "title": "Former Owner Status",
+            "type": "string"
+          },
+          "new_owner_id": {
+            "format": "uuid",
+            "title": "New Owner Id",
+            "type": "string"
+          },
+          "successor_admin_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Admin Id"
+          },
+          "successor_leader_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Leader Id"
+          }
+        },
+        "required": [
+          "new_owner_id"
+        ],
+        "title": "HandoverPropose",
+        "type": "object"
+      },
+      "HistoryEntry": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "changed_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "from_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Status"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "to_status": {
+            "title": "To Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "from_status",
+          "to_status",
+          "changed_by",
+          "at"
+        ],
+        "title": "HistoryEntry",
+        "type": "object"
+      },
+      "HomeGroupList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HomeGroupSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "HomeGroupList",
+        "type": "object"
+      },
+      "HomeGroupSummary": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leader_name": {
+            "title": "Leader Name",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "leader_name"
+        ],
+        "title": "HomeGroupSummary",
+        "type": "object"
+      },
+      "IdName": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "IdName",
         "type": "object"
       },
       "LabelCreate": {
@@ -752,6 +2002,47 @@
         "title": "LabelsUpdate",
         "type": "object"
       },
+      "LeaderChange": {
+        "description": "Replace the leader of a home group, or hand it on.\n\n`former_leader_status` is what a stepping-down VERIFIER becomes (`provider` or `searcher`), or\n`keep` for an ADMIN or the OWNER handing on their own group.",
+        "properties": {
+          "former_leader_status": {
+            "enum": [
+              "provider",
+              "searcher",
+              "keep"
+            ],
+            "title": "Former Leader Status",
+            "type": "string"
+          },
+          "successor_id": {
+            "format": "uuid",
+            "title": "Successor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "successor_id",
+          "former_leader_status"
+        ],
+        "title": "LeaderChange",
+        "type": "object"
+      },
+      "LeaderChanged": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "leader": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "group",
+          "leader"
+        ],
+        "title": "LeaderChanged",
+        "type": "object"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -765,176 +2056,23 @@
             "title": "Password",
             "type": "string",
             "writeOnly": true
-          },
-          "user_type": {
-            "enum": [
-              "freelancer",
-              "workhost",
-              "organisation",
-              "admin"
-            ],
-            "title": "User Type",
-            "type": "string"
           }
         },
         "required": [
           "email",
-          "password",
-          "user_type"
+          "password"
         ],
         "title": "LoginRequest",
         "type": "object"
       },
-      "MeResponse": {
-        "properties": {
-          "approval_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approval Status"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "full_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Full Name"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "mobile_number": {
-            "title": "Mobile Number",
-            "type": "string"
-          },
-          "org_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Org Name"
-          },
-          "user_type": {
-            "enum": [
-              "freelancer",
-              "workhost",
-              "organisation",
-              "admin"
-            ],
-            "title": "User Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "user_type",
-          "email",
-          "mobile_number",
-          "created_at"
-        ],
-        "title": "MeResponse",
-        "type": "object"
-      },
-      "OrganisationBrief": {
-        "description": "An approved organisation as listed in the directory (no contact details).",
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "org_name": {
-            "title": "Org Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "org_name"
-        ],
-        "title": "OrganisationBrief",
-        "type": "object"
-      },
-      "OrganisationMe": {
-        "properties": {
-          "approval_status": {
-            "title": "Approval Status",
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "mobile_number": {
-            "title": "Mobile Number",
-            "type": "string"
-          },
-          "org_name": {
-            "title": "Org Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "email",
-          "org_name",
-          "mobile_number",
-          "approval_status",
-          "created_at"
-        ],
-        "title": "OrganisationMe",
-        "type": "object"
-      },
-      "OrganisationPage": {
+      "MemberList": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/OrganisationSummary"
+              "$ref": "#/components/schemas/MemberRow"
             },
             "title": "Items",
             "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "page_size": {
-            "title": "Page Size",
-            "type": "integer"
           },
           "total": {
             "title": "Total",
@@ -943,61 +2081,200 @@
         },
         "required": [
           "items",
-          "total",
-          "page",
-          "page_size"
+          "total"
         ],
-        "title": "OrganisationPage",
+        "title": "MemberList",
         "type": "object"
       },
-      "OrganisationRegister": {
+      "MemberRow": {
         "properties": {
-          "email": {
-            "format": "email",
-            "title": "Email",
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
             "type": "string"
           },
-          "mobile_number": {
-            "title": "Mobile Number",
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
             "type": "string"
           },
-          "org_name": {
-            "maxLength": 200,
-            "minLength": 2,
-            "title": "Org Name",
+          "status": {
+            "title": "Status",
             "type": "string"
           },
-          "password": {
-            "format": "password",
-            "maxLength": 128,
-            "minLength": 10,
-            "title": "Password",
-            "type": "string",
-            "writeOnly": true
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
-          "email",
-          "mobile_number",
-          "password",
-          "org_name"
+          "id",
+          "full_name",
+          "status",
+          "home_group",
+          "status_set_by",
+          "flagged_for_recheck"
         ],
-        "title": "OrganisationRegister",
+        "title": "MemberRow",
         "type": "object"
       },
-      "OrganisationSummary": {
+      "MoveAgreements": {
         "properties": {
-          "approval_status": {
-            "title": "Approval Status",
+          "from_leader": {
+            "title": "From Leader",
+            "type": "boolean"
+          },
+          "person": {
+            "title": "Person",
+            "type": "boolean"
+          },
+          "to_leader": {
+            "title": "To Leader",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "person",
+          "from_leader",
+          "to_leader"
+        ],
+        "title": "MoveAgreements",
+        "type": "object"
+      },
+      "MoveRequestCreate": {
+        "properties": {
+          "home_group_id": {
+            "format": "uuid",
+            "title": "Home Group Id",
             "type": "string"
+          }
+        },
+        "required": [
+          "home_group_id"
+        ],
+        "title": "MoveRequestCreate",
+        "type": "object"
+      },
+      "MoveRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MoveRequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "MoveRequestList",
+        "type": "object"
+      },
+      "MoveRequestOut": {
+        "properties": {
+          "agreed": {
+            "$ref": "#/components/schemas/MoveAgreements"
           },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "email": {
-            "title": "Email",
+          "from_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "person": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "state": {
+            "enum": [
+              "open",
+              "completed",
+              "cancelled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "to_group": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "id",
+          "person",
+          "from_group",
+          "to_group",
+          "agreed",
+          "state",
+          "created_at"
+        ],
+        "title": "MoveRequestOut",
+        "type": "object"
+      },
+      "Moved": {
+        "properties": {
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "person": {
+            "$ref": "#/components/schemas/IdName"
+          }
+        },
+        "required": [
+          "person",
+          "home_group"
+        ],
+        "title": "Moved",
+        "type": "object"
+      },
+      "NameRef": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NameRef",
+        "type": "object"
+      },
+      "NotificationItem": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
             "type": "string"
           },
           "id": {
@@ -1005,44 +2282,59 @@
             "title": "Id",
             "type": "string"
           },
-          "mobile_number": {
-            "title": "Mobile Number",
+          "kind": {
+            "title": "Kind",
             "type": "string"
           },
-          "org_name": {
-            "title": "Org Name",
-            "type": "string"
+          "read": {
+            "title": "Read",
+            "type": "boolean"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "id",
-          "org_name",
-          "email",
-          "mobile_number",
-          "approval_status",
-          "created_at"
+          "kind",
+          "subject",
+          "created_at",
+          "read"
         ],
-        "title": "OrganisationSummary",
+        "title": "NotificationItem",
         "type": "object"
       },
-      "OrganisationUpdate": {
+      "NotificationList": {
         "properties": {
-          "mobile_number": {
-            "title": "Mobile Number",
-            "type": "string"
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationItem"
+            },
+            "title": "Items",
+            "type": "array"
           },
-          "org_name": {
-            "maxLength": 200,
-            "minLength": 2,
-            "title": "Org Name",
-            "type": "string"
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unread_count": {
+            "title": "Unread Count",
+            "type": "integer"
           }
         },
         "required": [
-          "org_name",
-          "mobile_number"
+          "items",
+          "total",
+          "unread_count"
         ],
-        "title": "OrganisationUpdate",
+        "title": "NotificationList",
         "type": "object"
       },
       "Page_GivenRating_": {
@@ -1169,39 +2461,247 @@
         "title": "Page[SearchResult]",
         "type": "object"
       },
-      "Page_VouchedFreelancer_": {
+      "PersonDetail": {
+        "description": "One person in scope. This is the only response outside the reveal endpoint with a number.",
         "properties": {
-          "items": {
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          },
+          "can_admit_as_provider": {
+            "title": "Can Admit As Provider",
+            "type": "boolean"
+          },
+          "chain_of_trust": {
             "items": {
-              "$ref": "#/components/schemas/VouchedFreelancer"
+              "$ref": "#/components/schemas/ChainLink"
             },
-            "title": "Items",
+            "title": "Chain Of Trust",
             "type": "array"
           },
-          "page": {
-            "title": "Page",
-            "type": "integer"
+          "church": {
+            "$ref": "#/components/schemas/IdName"
           },
-          "page_size": {
-            "title": "Page Size",
-            "type": "integer"
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
           },
-          "total": {
-            "title": "Total",
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vouches": {
+            "items": {
+              "$ref": "#/components/schemas/Voucher"
+            },
+            "title": "Vouches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "mobile_number",
+          "status",
+          "requested_status",
+          "church",
+          "home_group",
+          "status_set_by",
+          "flagged_for_recheck",
+          "applied_at",
+          "history",
+          "chain_of_trust",
+          "vouches",
+          "can_admit_as_provider"
+        ],
+        "title": "PersonDetail",
+        "type": "object"
+      },
+      "PersonMeResponse": {
+        "description": "The calling person, as `GET /me` shows them (the status is never in the token).",
+        "properties": {
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leader": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "requested_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Status"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "status_set_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "user_type": {
+            "const": "person",
+            "default": "person",
+            "title": "User Type",
+            "type": "string"
+          },
+          "vouch_count": {
+            "minimum": 0.0,
+            "title": "Vouch Count",
             "type": "integer"
           }
         },
         "required": [
-          "items",
-          "total",
-          "page",
-          "page_size"
+          "id",
+          "full_name",
+          "email",
+          "mobile_number",
+          "status",
+          "requested_status",
+          "church",
+          "home_group",
+          "leader",
+          "status_set_by",
+          "flagged_for_recheck",
+          "vouch_count"
         ],
-        "title": "Page[VouchedFreelancer]",
+        "title": "PersonMeResponse",
+        "type": "object"
+      },
+      "PersonUpdate": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "mobile_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile Number"
+          }
+        },
+        "title": "PersonUpdate",
         "type": "object"
       },
       "PublicRating": {
-        "description": "A rating as others see it. The work host's identity is not shown.",
+        "description": "A rating as others see it. The rater is not shown.",
         "properties": {
           "comment": {
             "anyOf": [
@@ -1246,9 +2746,9 @@
             ],
             "title": "Comment"
           },
-          "freelancer_id": {
+          "provider_id": {
             "format": "uuid",
-            "title": "Freelancer Id",
+            "title": "Provider Id",
             "type": "string"
           },
           "rating": {
@@ -1259,7 +2759,7 @@
           }
         },
         "required": [
-          "freelancer_id",
+          "provider_id",
           "rating"
         ],
         "title": "RatingCreate",
@@ -1305,47 +2805,6 @@
           "refresh_token"
         ],
         "title": "RefreshRequest",
-        "type": "object"
-      },
-      "RegisterResponse": {
-        "properties": {
-          "approval_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Approval Status"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "user_type": {
-            "enum": [
-              "freelancer",
-              "workhost",
-              "organisation",
-              "admin"
-            ],
-            "title": "User Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "user_type",
-          "email"
-        ],
-        "title": "RegisterResponse",
         "type": "object"
       },
       "ReportInfo": {
@@ -1541,6 +3000,81 @@
         "title": "RevealedMobile",
         "type": "object"
       },
+      "RevokedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RevokedRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RevokedList",
+        "type": "object"
+      },
+      "RevokedRow": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "removed_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NameRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "removed_from",
+          "revoked_by",
+          "revoked_at"
+        ],
+        "title": "RevokedRow",
+        "type": "object"
+      },
       "RunRequest": {
         "description": "Whole days in the report time zone, both included.",
         "properties": {
@@ -1618,7 +3152,7 @@
         "type": "object"
       },
       "SearchResult": {
-        "description": "A freelancer in search results. Never contains email or mobile number.",
+        "description": "A provider in search results. Never contains email or mobile number.",
         "properties": {
           "average_rating": {
             "anyOf": [
@@ -1631,6 +3165,9 @@
             ],
             "title": "Average Rating"
           },
+          "church": {
+            "$ref": "#/components/schemas/IdName"
+          },
           "full_name": {
             "anyOf": [
               {
@@ -1641,6 +3178,9 @@
               }
             ],
             "title": "Full Name"
+          },
+          "home_group": {
+            "$ref": "#/components/schemas/IdName"
           },
           "id": {
             "format": "uuid",
@@ -1727,10 +3267,6 @@
             "title": "Timings",
             "type": "array"
           },
-          "vouch_count": {
-            "title": "Vouch Count",
-            "type": "integer"
-          },
           "whatsapp_availability": {
             "title": "Whatsapp Availability",
             "type": "boolean"
@@ -1739,6 +3275,8 @@
         "required": [
           "id",
           "full_name",
+          "church",
+          "home_group",
           "nationality",
           "primary_language",
           "whatsapp_availability",
@@ -1747,7 +3285,6 @@
           "is_rate_negotiable",
           "average_rating",
           "rating_count",
-          "vouch_count",
           "skills",
           "languages",
           "timings",
@@ -1778,6 +3315,187 @@
           "name"
         ],
         "title": "SearchSkill",
+        "type": "object"
+      },
+      "SignupRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "invitation_token": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitation Token"
+          },
+          "mobile_number": {
+            "title": "Mobile Number",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 10,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "requested_status": {
+            "enum": [
+              "searcher",
+              "provider"
+            ],
+            "title": "Requested Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "full_name",
+          "email",
+          "mobile_number",
+          "password",
+          "requested_status"
+        ],
+        "title": "SignupRequest",
+        "type": "object"
+      },
+      "SignupResponse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "pending",
+            "default": "pending",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "SignupResponse",
+        "type": "object"
+      },
+      "StatusRequest": {
+        "description": "Revoke (`to` is `revoked`) or reinstate (a revoked person, `to` the new status and the\nhome group they are placed in).",
+        "properties": {
+          "group_successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Successor Id"
+          },
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "successor_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Id"
+          },
+          "to": {
+            "enum": [
+              "revoked",
+              "searcher",
+              "provider"
+            ],
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "StatusRequest",
+        "type": "object"
+      },
+      "StatusResult": {
+        "properties": {
+          "flagged_for_recheck": {
+            "title": "Flagged For Recheck",
+            "type": "boolean"
+          },
+          "home_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Group Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "home_group_id",
+          "flagged_for_recheck"
+        ],
+        "title": "StatusResult",
         "type": "object"
       },
       "Terminology": {
@@ -1916,261 +3634,259 @@
         "title": "ValidationError",
         "type": "object"
       },
-      "VouchOut": {
+      "VouchCreated": {
         "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "VouchCreated",
+        "type": "object"
+      },
+      "VouchGiven": {
+        "properties": {
+          "applicant_name": {
+            "title": "Applicant Name",
             "type": "string"
           },
-          "is_active": {
-            "title": "Is Active",
+          "applicant_status": {
+            "title": "Applicant Status",
+            "type": "string"
+          },
+          "can_withdraw": {
+            "title": "Can Withdraw",
             "type": "boolean"
           },
-          "org_id": {
-            "format": "uuid",
-            "title": "Org Id",
-            "type": "string"
-          },
-          "org_name": {
-            "title": "Org Name",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "org_id",
-          "org_name",
-          "status",
-          "is_active",
-          "created_at"
-        ],
-        "title": "VouchOut",
-        "type": "object"
-      },
-      "VouchedFreelancer": {
-        "properties": {
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
-          },
-          "freelancer_id": {
-            "format": "uuid",
-            "title": "Freelancer Id",
-            "type": "string"
-          },
-          "full_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Full Name"
-          },
-          "is_active": {
-            "title": "Is Active",
-            "type": "boolean"
-          },
-          "nationality": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Nationality"
-          },
-          "primary_language": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Primary Language"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "freelancer_id",
-          "full_name",
-          "nationality",
-          "primary_language",
-          "status",
-          "is_active",
-          "created_at"
-        ],
-        "title": "VouchedFreelancer",
-        "type": "object"
-      },
-      "VouchingOrg": {
-        "properties": {
-          "org_id": {
-            "format": "uuid",
-            "title": "Org Id",
-            "type": "string"
-          },
-          "org_name": {
-            "title": "Org Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "org_id",
-          "org_name"
-        ],
-        "title": "VouchingOrg",
-        "type": "object"
-      },
-      "WorkHostMe": {
-        "properties": {
-          "available_days": {
-            "items": {
-              "enum": [
-                "sun",
-                "mon",
-                "tue",
-                "wed",
-                "thu",
-                "fri",
-                "sat"
-              ],
-              "type": "string"
-            },
-            "title": "Available Days",
-            "type": "array"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "full_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Full Name"
           },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
-          "mobile_number": {
-            "title": "Mobile Number",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "full_name",
-          "email",
-          "mobile_number",
-          "available_days",
-          "created_at"
-        ],
-        "title": "WorkHostMe",
-        "type": "object"
-      },
-      "WorkHostRegister": {
-        "properties": {
-          "email": {
-            "format": "email",
-            "title": "Email",
-            "type": "string"
-          },
-          "full_name": {
-            "maxLength": 200,
-            "minLength": 2,
-            "title": "Full Name",
-            "type": "string"
-          },
-          "mobile_number": {
-            "title": "Mobile Number",
-            "type": "string"
-          },
-          "password": {
-            "format": "password",
-            "maxLength": 128,
-            "minLength": 10,
-            "title": "Password",
-            "type": "string",
-            "writeOnly": true
-          }
-        },
-        "required": [
-          "email",
-          "mobile_number",
-          "password",
-          "full_name"
-        ],
-        "title": "WorkHostRegister",
-        "type": "object"
-      },
-      "WorkHostUpdate": {
-        "properties": {
-          "available_days": {
-            "default": [],
-            "items": {
-              "enum": [
-                "sun",
-                "mon",
-                "tue",
-                "wed",
-                "thu",
-                "fri",
-                "sat"
-              ],
-              "type": "string"
-            },
-            "title": "Available Days",
-            "type": "array"
-          },
-          "full_name": {
+          "requested_status": {
             "anyOf": [
               {
-                "maxLength": 200,
-                "minLength": 2,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Full Name"
+            "title": "Requested Status"
           },
-          "mobile_number": {
-            "title": "Mobile Number",
+          "withdrawn": {
+            "title": "Withdrawn",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "applicant_name",
+          "applicant_status",
+          "requested_status",
+          "withdrawn",
+          "can_withdraw",
+          "created_at"
+        ],
+        "title": "VouchGiven",
+        "type": "object"
+      },
+      "VouchGivenList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VouchGiven"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "VouchGivenList",
+        "type": "object"
+      },
+      "VouchLinkCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
             "type": "string"
           }
         },
         "required": [
-          "mobile_number"
+          "token",
+          "expires_at"
         ],
-        "title": "WorkHostUpdate",
+        "title": "VouchLinkCreated",
+        "type": "object"
+      },
+      "VouchLinkInfo": {
+        "description": "What the person opening a vouch link sees: who asks and what for, never a number.",
+        "properties": {
+          "already_vouched": {
+            "title": "Already Vouched",
+            "type": "boolean"
+          },
+          "applicant_name": {
+            "title": "Applicant Name",
+            "type": "string"
+          },
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "home_group_name": {
+            "title": "Home Group Name",
+            "type": "string"
+          },
+          "requested_status": {
+            "enum": [
+              "searcher",
+              "provider"
+            ],
+            "title": "Requested Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "applicant_name",
+          "church_name",
+          "home_group_name",
+          "requested_status",
+          "already_vouched"
+        ],
+        "title": "VouchLinkInfo",
+        "type": "object"
+      },
+      "VouchLinkState": {
+        "description": "Whether the caller has a vouch link that still works. The token is never shown again.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "required": [
+          "active",
+          "expires_at"
+        ],
+        "title": "VouchLinkState",
+        "type": "object"
+      },
+      "VouchLinkToken": {
+        "properties": {
+          "token": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "VouchLinkToken",
+        "type": "object"
+      },
+      "VouchReceived": {
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "voucher_name": {
+            "title": "Voucher Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "voucher_name",
+          "church_name",
+          "live",
+          "created_at"
+        ],
+        "title": "VouchReceived",
+        "type": "object"
+      },
+      "VouchReceivedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VouchReceived"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "VouchReceivedList",
+        "type": "object"
+      },
+      "Voucher": {
+        "properties": {
+          "church_name": {
+            "title": "Church Name",
+            "type": "string"
+          },
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "church_name",
+          "live"
+        ],
+        "title": "Voucher",
         "type": "object"
       }
     },
@@ -2187,55 +3903,26 @@
   },
   "openapi": "3.1.0",
   "paths": {
-    "/api/v1/admin/organisations": {
-      "get": {
-        "operationId": "list_organisations_api_v1_admin_organisations_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status",
-            "required": false,
-            "schema": {
-              "default": "pending",
-              "enum": [
-                "pending",
-                "approved",
-                "rejected"
-              ],
-              "title": "Status",
-              "type": "string"
+    "/api/v1/admin-invitations/accept": {
+      "post": {
+        "description": "Public: create the church, its first home group and its ADMIN, who leads it. The email\naddress is the one invited. Rate limited per IP like sign-up.",
+        "operationId": "accept_api_v1_admin_invitations_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInvitationAccept"
+              }
             }
           },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Page Size",
-              "type": "integer"
-            }
-          }
-        ],
+          "required": true
+        },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrganisationPage"
+                  "$ref": "#/components/schemas/AdminAccepted"
                 }
               }
             },
@@ -2252,38 +3939,32 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Organisations",
+        "summary": "Accept",
         "tags": [
-          "admin"
+          "admin-invitations"
         ]
       }
     },
-    "/api/v1/admin/organisations/{org_id}/approve": {
+    "/api/v1/admin-invitations/lookup": {
       "post": {
-        "operationId": "approve_organisation_api_v1_admin_organisations__org_id__approve_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Org Id",
-              "type": "string"
+        "description": "Public: the church and the domain the invitation went to. The token is in the body, so it\nnever reaches an access log of the API. Rate limited per IP; every failure is the same `404`.",
+        "operationId": "lookup_api_v1_admin_invitations_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInvitationLookup"
+              }
             }
-          }
-        ],
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrganisationSummary"
+                  "$ref": "#/components/schemas/AdminInvitationInfo"
                 }
               }
             },
@@ -2300,62 +3981,9 @@
             "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Approve Organisation",
+        "summary": "Lookup",
         "tags": [
-          "admin"
-        ]
-      }
-    },
-    "/api/v1/admin/organisations/{org_id}/reject": {
-      "post": {
-        "operationId": "reject_organisation_api_v1_admin_organisations__org_id__reject_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Org Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganisationSummary"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Reject Organisation",
-        "tags": [
-          "admin"
+          "admin-invitations"
         ]
       }
     },
@@ -2610,129 +4238,6 @@
         ]
       }
     },
-    "/api/v1/auth/register/freelancer": {
-      "post": {
-        "operationId": "register_freelancer_api_v1_auth_register_freelancer_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FreelancerRegister"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisterResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Register Freelancer",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/register/organisation": {
-      "post": {
-        "operationId": "register_organisation_api_v1_auth_register_organisation_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OrganisationRegister"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisterResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Register Organisation",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/register/workhost": {
-      "post": {
-        "operationId": "register_workhost_api_v1_auth_register_workhost_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkHostRegister"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisterResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Register Workhost",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
     "/api/v1/auth/reset-password": {
       "post": {
         "operationId": "reset_password_api_v1_auth_reset_password_post",
@@ -2764,6 +4269,173 @@
         "summary": "Reset Password",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "description": "Public. Creates a PENDING person in the chosen home group and tells its leader.",
+        "operationId": "signup_api_v1_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Signup",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/churches": {
+      "get": {
+        "description": "Public: the open churches by name. No contact details.",
+        "operationId": "list_churches_api_v1_churches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Churches",
+        "tags": [
+          "churches"
+        ]
+      }
+    },
+    "/api/v1/churches/{church_id}/admin": {
+      "put": {
+        "description": "The OWNER replaces the ADMIN of another church with one of its members, in one\ntransaction: the successor becomes the ADMIN directly (keeping any group they lead), the old\nADMIN stays as a provider or a searcher, set by the OWNER, and nobody is flagged. If the old\nADMIN leads a home group it passes to `group_successor_id`, or they keep leading it as a\nVERIFIER when they are alone in it. The OWNER's own church changes ADMIN only by a handover\n(`409 owner_church`).",
+        "operationId": "change_admin_api_v1_churches__church_id__admin_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "church_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Church Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Admin",
+        "tags": [
+          "churches"
+        ]
+      }
+    },
+    "/api/v1/churches/{church_id}/home-groups": {
+      "get": {
+        "description": "Public: the open home groups of an open church, each with its leader's name.",
+        "operationId": "list_home_groups_api_v1_churches__church_id__home_groups_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "church_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Church Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeGroupList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Home Groups",
+        "tags": [
+          "churches"
         ]
       }
     },
@@ -2839,7 +4511,7 @@
     },
     "/api/v1/freelancers/me/labels": {
       "put": {
-        "description": "Replace the freelancer's whole label set. Skill levels attach to a specific skill.",
+        "description": "Replace the person's whole label set. Skill levels attach to a specific skill.",
         "operationId": "replace_labels_api_v1_freelancers_me_labels_put",
         "requestBody": {
           "content": {
@@ -3059,132 +4731,6 @@
         ]
       }
     },
-    "/api/v1/freelancers/me/vouches": {
-      "get": {
-        "operationId": "list_vouches_api_v1_freelancers_me_vouches_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/VouchOut"
-                  },
-                  "title": "Response List Vouches Api V1 Freelancers Me Vouches Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Vouches",
-        "tags": [
-          "freelancers"
-        ]
-      }
-    },
-    "/api/v1/freelancers/me/vouches/{org_id}/accept": {
-      "post": {
-        "operationId": "accept_vouch_api_v1_freelancers_me_vouches__org_id__accept_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Org Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VouchOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Accept Vouch",
-        "tags": [
-          "freelancers"
-        ]
-      }
-    },
-    "/api/v1/freelancers/me/vouches/{org_id}/reject": {
-      "post": {
-        "operationId": "reject_vouch_api_v1_freelancers_me_vouches__org_id__reject_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "org_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Org Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VouchOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Reject Vouch",
-        "tags": [
-          "freelancers"
-        ]
-      }
-    },
     "/api/v1/freelancers/{freelancer_id}": {
       "get": {
         "operationId": "public_profile_api_v1_freelancers__freelancer_id__get",
@@ -3306,7 +4852,7 @@
     },
     "/api/v1/freelancers/{freelancer_id}/reveal-mobile": {
       "post": {
-        "description": "The only place a freelancer's mobile number is returned to anyone else.\n\nEvery call is recorded, and each work host has an hourly and a daily limit.",
+        "description": "The only place a provider's mobile number is returned to a member (the leaders' own\nscreens are the other, and are logged).\n\nEvery call is recorded, and each person has an hourly and a daily limit.",
         "operationId": "reveal_mobile_api_v1_freelancers__freelancer_id__reveal_mobile_post",
         "parameters": [
           {
@@ -3360,6 +4906,381 @@
         "summary": "Reveal Mobile",
         "tags": [
           "freelancers"
+        ]
+      }
+    },
+    "/api/v1/group-invitations/lookup": {
+      "post": {
+        "description": "Public: the church and group a link leads to, for the sign-up screen. The token is in the\nbody, not the path, so it never reaches an access log of the API. Rate limited per IP; every\nfailure (no such link, expired, revoked, group closed) is the same `404`.",
+        "operationId": "lookup_group_invitation_api_v1_group_invitations_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupInvitationLookup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupInvitationInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lookup Group Invitation",
+        "tags": [
+          "group-invitations"
+        ]
+      }
+    },
+    "/api/v1/group-requests": {
+      "get": {
+        "description": "An ADMIN sees the open requests of their church, the OWNER of every church; everyone else\ntheir own requests. Paged: `limit` (1 to 100, default 50) and `offset`.",
+        "operationId": "list_requests_api_v1_group_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Requests",
+        "tags": [
+          "group-requests"
+        ]
+      },
+      "post": {
+        "description": "Ask to start a home group. An ADMIN or the OWNER start it at once, and the answer holds\nthe group; if they lead a group now, `successor_id` names who leads it from now on (or it\ncloses when they are its only member: `409 successor_required` otherwise).",
+        "operationId": "ask_api_v1_group_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupRequestCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask",
+        "tags": [
+          "group-requests"
+        ]
+      }
+    },
+    "/api/v1/group-requests/{request_id}/approve": {
+      "post": {
+        "description": "Create the group and move the requester in as its leader (a VERIFIER unless higher). If the\nrequester leads a group now, `successor_id` names who leads it from now on, or the old group\ncloses when the requester is its only member (`409 successor_required` otherwise).",
+        "operationId": "approve_api_v1_group_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GroupRequestApprove"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve",
+        "tags": [
+          "group-requests"
+        ]
+      }
+    },
+    "/api/v1/group-requests/{request_id}/decline": {
+      "post": {
+        "operationId": "decline_api_v1_group_requests__request_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decline",
+        "tags": [
+          "group-requests"
+        ]
+      }
+    },
+    "/api/v1/home-groups/{group_id}/close": {
+      "post": {
+        "description": "The leader of a home group closes it, being its last member (`409 group_not_empty`\notherwise), by moving into another open group of the church, in one transaction. A VERIFIER\nbecomes a provider or a searcher, recorded as set by the church's ADMIN; an ADMIN or the OWNER\nkeeps their status (`former_leader_status: keep`). The group is kept, with the date it closed,\nand links to it and moves into it end. `404` for anyone but its leader.",
+        "operationId": "close_group_api_v1_home_groups__group_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Group Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupClose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupClosed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Group",
+        "tags": [
+          "home-groups"
+        ]
+      }
+    },
+    "/api/v1/home-groups/{group_id}/leader": {
+      "put": {
+        "description": "Replace the leader of a home group, or hand on your own, with a successor from its members\n(PENDING or above), in one transaction. The successor becomes a VERIFIER (unless higher); a\nstepping-down VERIFIER stays as a provider or a searcher, set by you, and nobody they admitted\nis flagged. An ADMIN of the group's church or the OWNER; `404` for any other. An ADMIN or the\nOWNER hand on only their own group, and keep their status (`former_leader_status: keep`).",
+        "operationId": "change_leader_api_v1_home_groups__group_id__leader_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Group Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaderChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Leader",
+        "tags": [
+          "home-groups"
         ]
       }
     },
@@ -3542,14 +5463,53 @@
       }
     },
     "/api/v1/me": {
+      "delete": {
+        "description": "Close your own account (this is the stores' \"delete account\"). The password is asked\nagain. The record stays, the personal details go. A leader steps down first; the OWNER hands\nover; a revoked person stays on their church's list.",
+        "operationId": "close_me_api_v1_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Me",
+        "tags": [
+          "me"
+        ]
+      },
       "get": {
+        "description": "The caller, as the church trust model shows them. A revoked person gets it too, to see why\nthey have no access.",
         "operationId": "me_api_v1_me_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeResponse"
+                  "$ref": "#/components/schemas/PersonMeResponse"
                 }
               }
             },
@@ -3565,71 +5525,15 @@
         "tags": [
           "me"
         ]
-      }
-    },
-    "/api/v1/organisations": {
-      "get": {
-        "description": "Approved organisations by name, so work hosts can filter a search by who vouches.",
-        "operationId": "directory_api_v1_organisations_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/OrganisationBrief"
-                  },
-                  "title": "Response Directory Api V1 Organisations Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Directory",
-        "tags": [
-          "organisations"
-        ]
-      }
-    },
-    "/api/v1/organisations/me": {
-      "get": {
-        "operationId": "get_me_api_v1_organisations_me_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OrganisationMe"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Me",
-        "tags": [
-          "organisations"
-        ]
       },
       "put": {
-        "operationId": "update_me_api_v1_organisations_me_put",
+        "description": "Change your own name or mobile number (a field left out keeps its value).",
+        "operationId": "update_me_api_v1_me_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrganisationUpdate"
+                "$ref": "#/components/schemas/PersonUpdate"
               }
             }
           },
@@ -3640,7 +5544,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrganisationMe"
+                  "$ref": "#/components/schemas/PersonMeResponse"
                 }
               }
             },
@@ -3664,44 +5568,30 @@
         ],
         "summary": "Update Me",
         "tags": [
-          "organisations"
+          "me"
         ]
       }
     },
-    "/api/v1/organisations/me/freelancers": {
-      "get": {
-        "operationId": "list_freelancers_api_v1_organisations_me_freelancers_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
+    "/api/v1/me/application": {
+      "put": {
+        "description": "While pending: choose another home group (even in another church) or another status to\napply for. Vouches already received still count; a newly chosen leader is notified.",
+        "operationId": "update_application_api_v1_me_application_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationUpdate"
+              }
             }
           },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Page Size",
-              "type": "integer"
-            }
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_VouchedFreelancer_"
+                  "$ref": "#/components/schemas/PersonMeResponse"
                 }
               }
             },
@@ -3723,23 +5613,142 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List Freelancers",
+        "summary": "Update Application",
         "tags": [
-          "organisations"
+          "me"
         ]
       }
     },
-    "/api/v1/organisations/me/freelancers/{freelancer_id}": {
-      "delete": {
-        "operationId": "revoke_api_v1_organisations_me_freelancers__freelancer_id__delete",
+    "/api/v1/me/apply-provider": {
+      "post": {
+        "description": "A searcher asks to become a provider. They keep searching, make a vouch link in the usual\nway, and their leader is notified. `409 not_searcher` for everyone else; asking again changes\nnothing.",
+        "operationId": "apply_provider_api_v1_me_apply_provider_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonMeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Provider",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/notifications": {
+      "get": {
+        "description": "Newest first. Clients poll this (every 60 seconds while open); `unread_count` is for a\nbadge. A notification holds a kind and the person it is about, never a number.",
+        "operationId": "list_notifications_api_v1_me_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Notifications",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/notifications/read-all": {
+      "post": {
+        "operationId": "read_all_notifications_api_v1_me_notifications_read_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read All Notifications",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/notifications/{notification_id}/read": {
+      "post": {
+        "operationId": "read_notification_api_v1_me_notifications__notification_id__read_post",
         "parameters": [
           {
             "in": "path",
-            "name": "freelancer_id",
+            "name": "notification_id",
             "required": true,
             "schema": {
               "format": "uuid",
-              "title": "Freelancer Id",
+              "title": "Notification Id",
               "type": "string"
             }
           }
@@ -3764,32 +5773,152 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Revoke",
+        "summary": "Read Notification",
         "tags": [
-          "organisations"
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/vouch-link": {
+      "get": {
+        "description": "Whether you have a vouch link that still works. The link itself is shown only when it is\nmade, because only a hash is kept; make a new one to share it again.",
+        "operationId": "vouch_link_state_api_v1_me_vouch_link_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchLinkState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouch Link State",
+        "tags": [
+          "me"
         ]
       },
       "post": {
-        "description": "Vouch for a freelancer. The vouch stays pending until the freelancer accepts it.",
-        "operationId": "vouch_api_v1_organisations_me_freelancers__freelancer_id__post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "freelancer_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Freelancer Id",
-              "type": "string"
-            }
-          }
-        ],
+        "description": "A new vouch link; the one before it stops working. The token is shown once. For a PENDING\napplicant, or a SEARCHER who applies to provide (`409 not_applying` otherwise).",
+        "operationId": "make_vouch_link_api_v1_me_vouch_link_post",
         "responses": {
           "201": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VouchedFreelancer"
+                  "$ref": "#/components/schemas/VouchLinkCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Make Vouch Link",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/vouches": {
+      "get": {
+        "operationId": "vouches_received_api_v1_me_vouches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchReceivedList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouches Received",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/vouches-given": {
+      "get": {
+        "operationId": "vouches_given_api_v1_me_vouches_given_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchGivenList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouches Given",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/move-requests": {
+      "get": {
+        "description": "The moves that concern you, as the member or as the leader of either group, newest first.",
+        "operationId": "list_moves_api_v1_move_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestList"
                 }
               }
             },
@@ -3811,15 +5940,679 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Vouch",
+        "summary": "List Moves",
         "tags": [
-          "organisations"
+          "move-requests"
+        ]
+      },
+      "post": {
+        "description": "Ask to move to another home group of your church. Asking is your agreement; the leader of\nthe group you leave and the leader of the group you join are told and must agree too. A leader\nsteps down through succession before moving (`409 leads_a_group`).",
+        "operationId": "ask_api_v1_move_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ask",
+        "tags": [
+          "move-requests"
+        ]
+      }
+    },
+    "/api/v1/move-requests/{request_id}/agree": {
+      "post": {
+        "description": "The leader of either group agrees (the member agreed by asking). The member moves in the\nsame transaction as the last agreement. `404` for anyone it does not concern.",
+        "operationId": "agree_api_v1_move_requests__request_id__agree_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Agree",
+        "tags": [
+          "move-requests"
+        ]
+      }
+    },
+    "/api/v1/move-requests/{request_id}/cancel": {
+      "post": {
+        "description": "The member or the leader of either group ends an open move; the other side is told.",
+        "operationId": "cancel_api_v1_move_requests__request_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel",
+        "tags": [
+          "move-requests"
+        ]
+      }
+    },
+    "/api/v1/owner/churches": {
+      "get": {
+        "description": "Every church (open ones first), with its ADMIN and counts of open groups, members and\nrevoked people. Paged: `limit` (1 to 100, default 50), `offset`.",
+        "operationId": "list_churches_api_v1_owner_churches_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchListOwner"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Churches",
+        "tags": [
+          "owner"
+        ]
+      },
+      "post": {
+        "description": "Invite the ADMIN of a new church. The church exists once they accept. The link token is\nshown once; only a hash is kept. There is no mail service yet, so the OWNER shares the link.",
+        "operationId": "invite_admin_api_v1_owner_churches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChurchInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchInvitationCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Invite Admin",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/churches/invitations": {
+      "get": {
+        "description": "The undecided invitations, newest first. Paged: `limit` (1 to 100, default 50), `offset`.",
+        "operationId": "list_invitations_api_v1_owner_churches_invitations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchInvitationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Invitations",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/churches/invitations/{invitation_id}": {
+      "delete": {
+        "operationId": "cancel_invitation_api_v1_owner_churches_invitations__invitation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Invitation",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/churches/{church_id}/close": {
+      "post": {
+        "description": "Close a church other than your own: it, all its home groups and all its members' accounts\nare closed together and kept, with the date, for the history. Nobody is revoked or flagged;\nthe church's revoked people stay on its list, so they still cannot sign up again. Former\nmembers sign up again in another church. `409 owner_church` for the OWNER's own church.",
+        "operationId": "close_church_api_v1_owner_churches__church_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "church_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Church Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChurchClosed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Church",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/contact-views": {
+      "get": {
+        "description": "Who looked at whose mobile number on a leader's screen, and when, newest first (never the\nnumber). Paged: `limit` (1 to 100, default 50), `offset`; filter by `viewer_id` or\n`person_id`. Rows older than the retention (12 months) are deleted by `purge-contact-views`.",
+        "operationId": "contact_views_list_api_v1_owner_contact_views_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "viewer_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Viewer Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "person_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactViewList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Contact Views List",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/handover": {
+      "get": {
+        "description": "The open proposal that concerns you (as the outgoing OWNER or the chosen ADMIN), if any.",
+        "operationId": "current_handover_api_v1_owner_handover_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverCurrent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Current Handover",
+        "tags": [
+          "owner"
+        ]
+      },
+      "post": {
+        "description": "Propose to hand the OWNER role to the ADMIN of another church. Name a new ADMIN for your own\nchurch and a new leader for your group (each may be left out only when nobody else is in the\nchurch or group, and you then keep that role). Nothing changes until the chosen ADMIN accepts;\none proposal is open at a time (`409 handover_open`).",
+        "operationId": "propose_handover_api_v1_owner_handover_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandoverPropose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Propose Handover",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/handover/{request_id}/accept": {
+      "post": {
+        "description": "The chosen ADMIN accepts. In one transaction they become the OWNER (and stay the ADMIN of\ntheir own church), the OWNER's church gets its new ADMIN and its group its new leader, and the\noutgoing OWNER becomes a provider or a searcher (or keeps a role nobody can take over).",
+        "operationId": "accept_handover_api_v1_owner_handover__request_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Handover",
+        "tags": [
+          "owner"
+        ]
+      }
+    },
+    "/api/v1/owner/handover/{request_id}/cancel": {
+      "post": {
+        "description": "Either side withdraws an open proposal; the other side is told.",
+        "operationId": "cancel_handover_api_v1_owner_handover__request_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Handover",
+        "tags": [
+          "owner"
         ]
       }
     },
     "/api/v1/ratings": {
       "post": {
-        "description": "Rate a freelancer 1 to 10. One rating per work host and freelancer; use PUT to change it.",
+        "description": "Rate a provider 1 to 10. One rating per person and provider; use PUT to change it.",
         "operationId": "create_rating_api_v1_ratings_post",
         "requestBody": {
           "content": {
@@ -3924,7 +6717,7 @@
     },
     "/api/v1/reports": {
       "get": {
-        "description": "The reports you may run. Organisations see only reports limited to their own data.",
+        "description": "The reports you may run. An ADMIN sees only those limited to their own church.",
         "operationId": "list_reports_api_v1_reports_get",
         "responses": {
           "200": {
@@ -4263,16 +7056,19 @@
           },
           {
             "in": "query",
-            "name": "user_type",
+            "name": "status",
             "required": false,
             "schema": {
               "anyOf": [
                 {
                   "enum": [
-                    "freelancer",
-                    "workhost",
-                    "organisation",
-                    "admin"
+                    "revoked",
+                    "pending",
+                    "searcher",
+                    "provider",
+                    "verifier",
+                    "admin",
+                    "owner"
                   ],
                   "type": "string"
                 },
@@ -4280,7 +7076,7 @@
                   "type": "null"
                 }
               ],
-              "title": "User Type"
+              "title": "Status"
             }
           },
           {
@@ -4332,7 +7128,7 @@
           },
           {
             "in": "query",
-            "name": "org_id",
+            "name": "church_id",
             "required": false,
             "schema": {
               "anyOf": [
@@ -4344,7 +7140,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Org Id"
+              "title": "Church Id"
             }
           }
         ],
@@ -4439,7 +7235,7 @@
     },
     "/api/v1/search/freelancers": {
       "get": {
-        "description": "Find freelancers. Freelancers with at least one skill are listed; a rate is not needed.",
+        "description": "Find providers: open accounts of PROVIDER or above with at least one skill.",
         "operationId": "search_api_v1_search_freelancers_get",
         "parameters": [
           {
@@ -4637,7 +7433,7 @@
           },
           {
             "in": "query",
-            "name": "org_id",
+            "name": "church_id",
             "required": false,
             "schema": {
               "anyOf": [
@@ -4649,7 +7445,24 @@
                   "type": "null"
                 }
               ],
-              "title": "Org Id"
+              "title": "Church Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "home_group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Home Group Id"
             }
           },
           {
@@ -4759,49 +7572,42 @@
         ]
       }
     },
-    "/api/v1/workhosts/me": {
+    "/api/v1/verifier/applicants": {
       "get": {
-        "operationId": "get_me_api_v1_workhosts_me_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkHostMe"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
+        "description": "PENDING applicants in scope, the most vouched first. No phone numbers.",
+        "operationId": "applicants_api_v1_verifier_applicants_get",
+        "parameters": [
           {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Me",
-        "tags": [
-          "work hosts"
-        ]
-      },
-      "put": {
-        "operationId": "update_me_api_v1_workhosts_me_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WorkHostUpdate"
-              }
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
             }
           },
-          "required": true
-        },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkHostMe"
+                  "$ref": "#/components/schemas/ApplicantList"
                 }
               }
             },
@@ -4823,14 +7629,805 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Update Me",
+        "summary": "Applicants",
         "tags": [
-          "work hosts"
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/flagged": {
+      "get": {
+        "operationId": "flagged_api_v1_verifier_flagged_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlaggedList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Flagged",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/group-invitations": {
+      "get": {
+        "description": "The links into your home group that still work (the tokens are not shown again).",
+        "operationId": "list_group_invitations_api_v1_verifier_group_invitations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupInvitationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Group Invitations",
+        "tags": [
+          "verifier"
+        ]
+      },
+      "post": {
+        "description": "A new link into your own home group. The token is shown once; only a hash is kept.",
+        "operationId": "create_group_invitation_api_v1_verifier_group_invitations_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupInvitationCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Group Invitation",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/group-invitations/{invitation_id}": {
+      "delete": {
+        "operationId": "revoke_group_invitation_api_v1_verifier_group_invitations__invitation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Group Invitation",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/members": {
+      "get": {
+        "description": "Admitted people in scope, by name. Filter by `status`, `home_group_id` or `church_id`.",
+        "operationId": "members_api_v1_verifier_members_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "searcher",
+                    "provider",
+                    "verifier",
+                    "admin",
+                    "owner"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "home_group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Home Group Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "church_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Church Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Members",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}": {
+      "get": {
+        "description": "One person in scope, with their history, chain of trust and mobile number. Each call is\nlogged (who looked at whom, never the number); `404` for anyone out of scope.",
+        "operationId": "person_api_v1_verifier_people__person_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Person",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/admit": {
+      "post": {
+        "description": "Admit an applicant as a searcher or a provider. A provider needs a live vouch from\nsomeone besides you (`409 not_enough_vouches`).",
+        "operationId": "admit_api_v1_verifier_people__person_id__admit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdmitResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Admit",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/decline": {
+      "post": {
+        "description": "Close an application. Nobody is revoked, and the person can sign up again.",
+        "operationId": "decline_api_v1_verifier_people__person_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decline",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/move": {
+      "post": {
+        "description": "An ADMIN (of the person's church) or the OWNER moves an admitted member to another open home\ngroup of the church, without the agreements a move by request needs. A leader steps down first\n(`409 leads_a_group`); the member is told, and so are both leaders.",
+        "operationId": "move_api_v1_verifier_people__person_id__move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectMove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Moved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Move",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/reconfirm": {
+      "post": {
+        "description": "Clear the re-check flag of a person in scope. You become the new link in their chain of\ntrust. `409 not_flagged` if there is no flag.",
+        "operationId": "reconfirm_api_v1_verifier_people__person_id__reconfirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reconfirm",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/people/{person_id}/status": {
+      "put": {
+        "description": "Revoke a person in scope who is below you, or reinstate a revoked one into a home group\n(`home_group_id`). A leader is replaced first (`409 successor_required`). A revocation made\nby a higher leader cannot be undone by a lower one (`403 status_not_allowed`).",
+        "operationId": "set_status_api_v1_verifier_people__person_id__status_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Status",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/verifier/revoked": {
+      "get": {
+        "operationId": "revoked_api_v1_verifier_revoked_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokedList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoked",
+        "tags": [
+          "verifier"
+        ]
+      }
+    },
+    "/api/v1/vouch-links/lookup": {
+      "post": {
+        "description": "Who a vouch link is for. The token is in the body, not the path, so it never reaches an\naccess log of the API. Rate limited per IP; every failure is the same `404`.",
+        "operationId": "lookup_vouch_link_api_v1_vouch_links_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VouchLinkToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchLinkInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lookup Vouch Link",
+        "tags": [
+          "vouching"
+        ]
+      }
+    },
+    "/api/v1/vouch-links/vouch": {
+      "post": {
+        "description": "Vouch for the person the link is for: once each, never for yourself, and at most\n`VOUCH_MAX_PER_DAY` a day.",
+        "operationId": "vouch_through_link_api_v1_vouch_links_vouch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VouchLinkToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VouchCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Vouch Through Link",
+        "tags": [
+          "vouching"
+        ]
+      }
+    },
+    "/api/v1/vouches/{vouch_id}": {
+      "delete": {
+        "description": "Take back your vouch, until the applicant is admitted.",
+        "operationId": "withdraw_vouch_api_v1_vouches__vouch_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vouch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Vouch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Withdraw Vouch",
+        "tags": [
+          "vouching"
         ]
       }
     },
     "/api/v1/workhosts/me/ratings": {
       "get": {
+        "description": "The ratings the caller gave (a SEARCHER or above). The path keeps its older name.",
         "operationId": "my_ratings_api_v1_workhosts_me_ratings_get",
         "parameters": [
           {
@@ -4886,7 +8483,7 @@
         ],
         "summary": "My Ratings",
         "tags": [
-          "work hosts"
+          "ratings"
         ]
       }
     },

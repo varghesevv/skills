@@ -1,9 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skills_app/app/router.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
@@ -45,7 +43,7 @@ Future<TestApp> openProfile(
     size: size,
     textScale: textScale,
     arrange: (adapter, store) {
-      signedInAs(adapter, store, 'freelancer');
+      signedInAsProvider(adapter, store);
       adapter.reply(
         'GET',
         '/freelancers/me',
@@ -53,7 +51,7 @@ Future<TestApp> openProfile(
       );
     },
   );
-  await tapTab(tester, 'Profile');
+  await tapKey(tester, 'provider-profile');
   return app;
 }
 
@@ -63,36 +61,6 @@ String fieldText(WidgetTester tester, String label) => tester
     .text;
 
 void main() {
-  group('navigation', () {
-    testWidgets('a freelancer has Home, Profile and Settings', (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'freelancer'));
-      Finder tab(String label) => find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text(label),
-      );
-      expect(tab('Home'), findsOneWidget);
-      expect(tab('Profile'), findsOneWidget);
-      expect(tab('Settings'), findsOneWidget);
-    });
-
-    testWidgets('a work host has no Profile tab yet', (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'workhost'));
-      expect(find.text('Profile'), findsNothing);
-      expect(find.text('Settings'), findsOneWidget);
-    });
-
-    testWidgets("another role's pages are never shown", (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'workhost'));
-      final router = ProviderScope.containerOf(
-        tester.element(find.byType(MaterialApp)),
-      ).read(routerProvider);
-      router.go('/freelancer/profile');
-      await tester.pumpAndSettle();
-      expect(find.text('Your profile'), findsNothing);
-      expect(find.text('Welcome, Pat Example'), findsOneWidget);
-    });
-  });
-
   group('profile screen', () {
     testWidgets('shows the saved values', (tester) async {
       await openProfile(tester);

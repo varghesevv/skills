@@ -1,110 +1,36 @@
-import type { RegisterType, UserType } from '../api/types'
-import type { StringKey } from '../i18n'
-import { slugOf, term } from '../terminology/terms'
-
-export type NavItem = { to: string; labelKey: StringKey; end?: boolean }
-
-export type Portal = {
-  userType: UserType
-  path: string
-  roleKey: StringKey
-  leadKey: StringKey
-  nav: readonly NavItem[]
-}
-
-// Later steps add each portal's pages to `nav` and to the routes in App.tsx.
-export const PORTALS: readonly Portal[] = [
-  {
-    userType: 'freelancer',
-    path: `/${slugOf('freelancer')}`,
-    roleKey: 'role.freelancer',
-    leadKey: 'dashboard.lead.freelancer',
-    nav: [
-      { to: `/${slugOf('freelancer')}`, labelKey: 'nav.dashboard', end: true },
-      { to: `/${slugOf('freelancer')}/profile`, labelKey: 'nav.profile' },
-      { to: `/${slugOf('freelancer')}/labels`, labelKey: 'nav.labels' },
-      { to: `/${slugOf('freelancer')}/availability`, labelKey: 'nav.availability' },
-      { to: `/${slugOf('freelancer')}/ratings`, labelKey: 'nav.ratings' },
-      { to: `/${slugOf('freelancer')}/vouches`, labelKey: 'nav.vouches' },
-    ],
-  },
-  {
-    userType: 'workhost',
-    path: `/${slugOf('workhost')}`,
-    roleKey: 'role.workhost',
-    leadKey: 'dashboard.lead.workhost',
-    nav: [
-      { to: `/${slugOf('workhost')}`, labelKey: 'nav.dashboard', end: true },
-      { to: `/${slugOf('workhost')}/search`, labelKey: 'nav.search' },
-      { to: `/${slugOf('workhost')}/ratings`, labelKey: 'nav.given' },
-      { to: `/${slugOf('workhost')}/profile`, labelKey: 'nav.profile' },
-    ],
-  },
-  {
-    userType: 'organisation',
-    path: `/${slugOf('organisation')}`,
-    roleKey: 'role.organisation',
-    leadKey: 'dashboard.lead.organisation',
-    nav: [
-      { to: `/${slugOf('organisation')}`, labelKey: 'nav.dashboard', end: true },
-      { to: `/${slugOf('organisation')}/${term('freelancers_path')}`, labelKey: 'nav.vouched' },
-      { to: `/${slugOf('organisation')}/search`, labelKey: 'nav.search' },
-      { to: `/${slugOf('organisation')}/reports`, labelKey: 'nav.reports' },
-      { to: `/${slugOf('organisation')}/profile`, labelKey: 'nav.profile' },
-    ],
-  },
-  {
-    userType: 'admin',
-    path: '/admin',
-    roleKey: 'role.admin',
-    leadKey: 'dashboard.lead.admin',
-    nav: [
-      { to: '/admin', labelKey: 'nav.dashboard', end: true },
-      { to: `/admin/${term('organisations_path')}`, labelKey: 'nav.orgs' },
-      { to: '/admin/reports', labelKey: 'nav.reports' },
-      { to: '/admin/report-history', labelKey: 'nav.runs' },
-      { to: '/admin/report-schedules', labelKey: 'nav.schedules' },
-      { to: '/admin/labels', labelKey: 'nav.adminLabels' },
-    ],
-  },
-]
-
-export function portalFor(userType: UserType): Portal {
-  const portal = PORTALS.find((item) => item.userType === userType)
-  if (!portal) throw new Error(`Unknown user type: ${userType}`)
-  return portal
-}
-
-export function homePath(userType: UserType): string {
-  return portalFor(userType).path
-}
-
-/** Where to go after login: the page the person wanted if it is in their portal, else home. */
-export function landingTarget(userType: UserType, from: unknown): string {
-  const home = homePath(userType)
-  if (typeof from === 'string' && (from === home || from.startsWith(`${home}/`))) return from
-  return home
-}
-
-/** An address inside a portal, for example portalPath('organisation', 'search'). */
-export function portalPath(userType: UserType, ...parts: string[]): string {
-  return ['', slugOf(userType), ...parts].join('/')
-}
-
-/** The address of the page where a kind of account registers. */
-export function registerPath(userType: RegisterType): string {
-  return `/register/${slugOf(userType)}`
-}
-
-/** The login page of each kind of account. Freelancers have the main /login page. */
-export function loginPath(userType: UserType): string {
-  return userType === 'freelancer' ? '/login' : `/login/${slugOf(userType)}`
-}
-
-/** The login page that fits a protected address, so an admin link leads to the admin login. */
-export function loginPathFor(pathname: string): string {
-  const portal = PORTALS.find(
-    (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
-  )
-  return portal ? loginPath(portal.userType) : '/login'
-}
+/** Where a person of the church trust model lives, and the screens that lead there. */
+export const PERSON_HOME = '/member'
+export const PERSON_SIGN_IN = '/sign-in'
+export const PERSON_SIGN_UP = '/sign-up'
+export const PERSON_VOUCHES = '/member/vouches'
+export const PERSON_NOTIFICATIONS = '/member/notifications'
+export const LEADER_APPLICANTS = '/member/applicants'
+export const LEADER_MEMBERS = '/member/members'
+export const PERSON_MOVES = '/member/moves'
+export const PERSON_GROUP_REQUESTS = '/member/group-requests'
+export const LEADER_GROUP = '/member/group'
+export const LEADER_INVITATIONS = '/member/invitations'
+export const OWNER_HANDOVER = '/member/handover'
+export const OWNER_VIEWS = '/member/views'
+export const OWNER_CHURCHES = '/member/churches'
+export const ADMIN_GROUPS = '/member/groups'
+export const PERSON_ACCOUNT = '/member/account'
+export const PERSON_SEARCH = '/member/search'
+export const PERSON_PROVIDERS = '/member/providers'
+export const PERSON_RATINGS_GIVEN = '/member/ratings-given'
+export const PERSON_PROFILE = '/member/profile'
+export const PERSON_SKILLS = '/member/skills'
+export const PERSON_AVAILABILITY = '/member/availability'
+export const PERSON_RATINGS = '/member/ratings'
+export const OWNER_LABELS = '/member/labels'
+export const ADMIN_REPORTS = '/member/reports'
+export const OWNER_REPORT_HISTORY = '/member/report-history'
+export const OWNER_REPORT_SCHEDULES = '/member/report-schedules'
+export const LEADER_REVOKED = '/member/revoked'
+export const LEADER_FLAGGED = '/member/flagged'
+export const LEADER_PERSON = '/member/people'
+/** A vouch link opens here; the token is the last part of the address. */
+export const INVITE_LINK_PREFIX = '/invite/'
+export const VOUCH_LINK_PREFIX = '/vouch/'
+/** A link to a home group opens the sign-up here; the token is the last part. */
+export const JOIN_LINK_PREFIX = '/join/'

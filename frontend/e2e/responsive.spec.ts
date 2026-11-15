@@ -17,73 +17,58 @@ type Scenario = {
 
 const SCENARIOS: Scenario[] = [
   {
-    name: 'login',
+    name: 'landing',
     role: null,
-    path: '/login',
-    ready: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Log in' })).toBeVisible()
-    },
-  },
-  {
-    name: 'work host login',
-    role: null,
-    path: '/login/workhost',
-    ready: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Log in' })).toBeVisible()
-    },
-  },
-  {
-    name: 'organisation login',
-    role: null,
-    path: '/login/organisation',
-    ready: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Organisation log in' })).toBeVisible()
-    },
-  },
-  {
-    name: 'admin login',
-    role: null,
-    path: '/login/admin',
-    ready: async (page) => {
-      await expect(page.getByRole('heading', { name: 'Admin log in' })).toBeVisible()
-    },
-  },
-  {
-    name: 'register',
-    role: null,
-    path: '/register/freelancer',
-    ready: async (page) => {
-      await expect(page.getByLabel('Full name')).toBeVisible()
-    },
-  },
-  {
-    name: 'dashboard',
-    role: 'freelancer',
-    path: '/freelancer',
+    path: '/',
     ready: async (page) => {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     },
   },
   {
+    name: 'member home',
+    role: 'searcher',
+    path: '/member',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    },
+  },
+  {
+    name: 'member sign in',
+    role: null,
+    path: '/sign-in',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+    },
+  },
+  {
+    name: 'member sign up',
+    role: null,
+    path: '/sign-up',
+    ready: async (page) => {
+      await expect(page.getByRole('heading', { name: 'Join' })).toBeVisible()
+      await expect(page.getByLabel('New password')).toBeVisible()
+    },
+  },
+  {
     name: 'form page (profile)',
-    role: 'freelancer',
-    path: '/freelancer/profile',
+    role: 'provider',
+    path: '/member/profile',
     ready: async (page) => {
       await expect(page.getByLabel('Rate per hour')).toBeVisible()
     },
   },
   {
     name: 'search',
-    role: 'workhost',
-    path: '/workhost/search',
+    role: 'searcher',
+    path: '/member/search',
     ready: async (page) => {
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
     },
   },
   {
     name: 'search with the filter panel open',
-    role: 'workhost',
-    path: '/workhost/search',
+    role: 'searcher',
+    path: '/member/search',
     ready: async (page) => {
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
       const toggle = page.getByRole('button', { name: 'Filters', exact: true })
@@ -93,8 +78,8 @@ const SCENARIOS: Scenario[] = [
   },
   {
     name: 'report page',
-    role: 'admin',
-    path: '/admin/reports',
+    role: 'owner',
+    path: '/member/reports',
     ready: async (page) => {
       await page.getByRole('button', { name: 'Run report' }).first().click()
       await expect(page.getByRole('table')).toBeVisible()
@@ -136,18 +121,6 @@ async function smallTargets(page: Page): Promise<string[]> {
   })
 }
 
-async function checkNavigation(page: Page) {
-  const width = page.viewportSize()?.width ?? 0
-  const menuButton = page.getByRole('button', { name: 'Open menu' })
-  const nav = page.getByRole('navigation', { name: 'Main navigation' })
-  if (width < 640) {
-    await expect(menuButton, 'phones keep the navigation behind a menu button').toBeVisible()
-  } else if (width >= 1024) {
-    await expect(nav, 'desktops show the navigation all the time').toBeVisible()
-    await expect(menuButton).toBeHidden()
-  }
-}
-
 async function keepScreenshot(page: Page, testInfo: TestInfo, name: string) {
   const path = testInfo.outputPath(`${name.replace(/[^a-z0-9]+/gi, '-')}.png`)
   await page.screenshot({ path, fullPage: true })
@@ -162,7 +135,8 @@ for (const scenario of SCENARIOS) {
 
     expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
     expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
-    if (scenario.role) await checkNavigation(page)
+    // The member pages show their menus in the top bar all the time (there is no menu button), so
+    // the overflow and target-size checks above already cover them.
     await keepScreenshot(page, testInfo, scenario.name)
   })
 }
@@ -171,8 +145,8 @@ for (const scenario of SCENARIOS) {
 test('narrowest supported width (320 px)', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'phone-small-360x640', 'run once')
   await page.setViewportSize({ width: 320, height: 640 })
-  await mockApi(page, 'workhost')
-  await page.goto('/workhost/search')
+  await mockApi(page, 'searcher')
+  await page.goto('/member/search')
   await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
   expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
 })

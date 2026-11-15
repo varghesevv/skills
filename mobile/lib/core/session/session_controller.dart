@@ -2,16 +2,17 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/me.dart';
-import '../auth/user_type.dart';
+import '../auth/person_me.dart';
 import '../providers.dart';
 
 /// Who is signed in: loading at start-up, then the account or null (signed out).
-class SessionController extends AsyncNotifier<Me?> {
+class SessionController extends AsyncNotifier<PersonMe?> {
   @override
-  Future<Me?> build() async {
+  Future<PersonMe?> build() async {
     // The API client signals when the server rejects the refresh token: the session is over.
     ref.listen(sessionExpiredProvider, (_, _) => expire());
+    // A refused call because of the status means the status changed: ask who the person is.
+    ref.listen(accessDeniedProvider, (_, _) => unawaited(refreshPerson()));
     try {
       return await ref.read(authRepositoryProvider).restoreSession();
     } on Exception {
@@ -21,15 +22,36 @@ class SessionController extends AsyncNotifier<Me?> {
   }
 
   /// Throws `ApiException` on a wrong password and so on; the caller shows the message.
-  Future<void> login({
+  Future<void> loginPerson({
     required String email,
     required String password,
-    required UserType type,
   }) async {
-    final me = await ref
+    final person = await ref
         .read(authRepositoryProvider)
-        .login(email: email, password: password, type: type);
-    state = AsyncData(me);
+        .loginPerson(email: email, password: password);
+    state = AsyncData(person);
+  }
+
+  /// A change of the person's own data (the application, for example) came back from the server.
+  void setPerson(PersonMe person) => state = AsyncData(person);
+
+  Future<void>? _refreshing;
+
+  /// Asks the server again who the signed-in person is, so a change made by someone else (a
+  /// leader admitted or declined them) shows. Calls that overlap share one request. A rejected
+  /// session is not handled here: the API client signals it and the session ends through
+  /// [expire]. Any other failure keeps what is shown; the next ask tries again.
+  Future<void> refreshPerson() =>
+      _refreshing ??= _refreshPerson().whenComplete(() => _refreshing = null);
+
+  Future<void> _refreshPerson() async {
+    if (state.value == null) return;
+    try {
+      final person = await ref.read(authRepositoryProvider).me();
+      if (state.value != null) state = AsyncData(person);
+    } on Exception {
+      // The screen keeps the last answer.
+    }
   }
 
   Future<void> logout() async {
@@ -41,6 +63,11 @@ class SessionController extends AsyncNotifier<Me?> {
   void expire() => state = const AsyncData(null);
 }
 
-final sessionProvider = AsyncNotifierProvider<SessionController, Me?>(
+final sessionProvider = AsyncNotifierProvider<SessionController, PersonMe?>(
   SessionController.new,
+);
+
+/// The signed-in person of the church trust model, or null.
+final personProvider = Provider<PersonMe?>(
+  (ref) => ref.watch(sessionProvider).value,
 );

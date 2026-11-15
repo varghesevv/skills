@@ -28,17 +28,15 @@ class Label(UUIDPrimaryKeyMixin, Base):
     )
 
 
-class FreelancerLabel(Base):
-    """A label chosen by a freelancer. For skills, level_label_id holds the skill level.
+class PersonLabel(Base):
+    """A label chosen by a person with a provider profile. For skills, level_label_id holds the
+    skill level. A database trigger (migration 0014) guarantees that level_label_id is only set
+    on skill labels and always points at a skill_level label."""
 
-    A database trigger (see migration 0001) guarantees that level_label_id is only set on
-    skill labels and always points at a skill_level label.
-    """
+    __tablename__ = "person_labels"
 
-    __tablename__ = "freelancer_labels"
-
-    freelancer_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("freelancers.id", ondelete="CASCADE"), primary_key=True
+    person_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("people.id", ondelete="CASCADE"), primary_key=True
     )
     label_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("labels.id", ondelete="RESTRICT"), primary_key=True

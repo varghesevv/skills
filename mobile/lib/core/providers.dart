@@ -1,9 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api/api_client.dart';
 import 'auth/auth_repository.dart';
 import 'auth/token_store.dart';
+import '../features/groups/data/group_repository.dart';
+import '../features/leader/data/leader_repository.dart';
+import '../features/person/data/person_repository.dart';
 import 'env.dart';
 import 'terminology/app_config.dart';
 import 'strings/app_text.dart';
@@ -18,12 +22,38 @@ class SessionExpiry extends Notifier<int> {
   void signal() => state++;
 }
 
+/// Counts the times the server refused a call because of the person's status. The session
+/// controller listens to it and asks who the person is again.
+class AccessDenied extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void signal() => state++;
+}
+
+final accessDeniedProvider = NotifierProvider<AccessDenied, int>(
+  AccessDenied.new,
+);
+
 final sessionExpiredProvider = NotifierProvider<SessionExpiry, int>(
   SessionExpiry.new,
 );
 
 /// The running app's version (`X.Y.Z`); empty in debug and test runs. Overridden in tests.
 final appVersionProvider = Provider<String>((ref) => Env.appVersion);
+
+/// The address of the privacy statement, or empty when the build has none. A provider so tests
+/// can set it.
+final privacyUrlProvider = Provider<String>((ref) {
+  final url = Env.privacyUrl;
+  return Env.isPrivacyAddress(url) ? url : '';
+});
+
+/// Opens a web address in the phone's browser; false when nothing could open it. A provider so
+/// tests can replace it.
+final webLauncherProvider = Provider<Future<bool> Function(Uri address)>((ref) {
+  return (address) => launchUrl(address, mode: LaunchMode.externalApplication);
+});
 
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 
@@ -43,6 +73,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     tokens: ref.watch(tokenStoreProvider),
     appVersion: Env.appVersion,
     onSessionExpired: () => ref.read(sessionExpiredProvider.notifier).signal(),
+    onAccessDenied: () => ref.read(accessDeniedProvider.notifier).signal(),
   );
 });
 
@@ -51,6 +82,18 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     ref.watch(apiClientProvider),
     ref.watch(tokenStoreProvider),
   );
+});
+
+final personRepositoryProvider = Provider<PersonRepository>((ref) {
+  return PersonRepository(ref.watch(apiClientProvider));
+});
+
+final leaderRepositoryProvider = Provider<LeaderRepository>((ref) {
+  return LeaderRepository(ref.watch(apiClientProvider));
+});
+
+final groupRepositoryProvider = Provider<GroupRepository>((ref) {
+  return GroupRepository(ref.watch(apiClientProvider));
 });
 
 final appConfigRepositoryProvider = Provider<AppConfigRepository>((ref) {

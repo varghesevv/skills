@@ -22,9 +22,9 @@ def test_labels_are_seeded(session: Session) -> None:
 
 def test_report_schedules_are_seeded(session: Session) -> None:
     names = set(session.scalars(select(ReportSchedule.report_name)))
-    assert {"users_registered_daily", "weekly_summary", "monthly_summary"} <= names
+    assert {"signups_daily", "weekly_summary", "monthly_summary"} <= names
     daily = session.scalars(
-        select(ReportSchedule).where(ReportSchedule.report_name == "users_registered_daily")
+        select(ReportSchedule).where(ReportSchedule.report_name == "signups_daily")
     ).one()
     assert daily.cron_expression == "5 0 * * *"
     assert daily.timezone == "Asia/Dubai"

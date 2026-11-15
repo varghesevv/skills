@@ -1,22 +1,17 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 import { forgotPasswordRequest } from '../api/auth'
 import { t } from '../i18n'
+import { PERSON_SIGN_IN } from '../portals/config'
 import { errorMessage } from '../shared/errors'
-import { Alert, SelectField, TextField } from '../shared/ui'
+import { Alert, TextField } from '../shared/ui'
 import { usePageTitle } from '../shared/usePageTitle'
 import { forgotPasswordSchema, validate, type FieldErrors } from '../shared/validation'
-import { USER_TYPE_OPTIONS, isUserType } from './userTypes'
 
 export default function ForgotPassword() {
   usePageTitle(t('forgot.title'))
-  const [params] = useSearchParams()
-  const typeParam = params.get('type')
-  const [values, setValues] = useState<{ email: string; user_type: string }>({
-    email: '',
-    user_type: isUserType(typeParam) ? typeParam : 'freelancer',
-  })
+  const [values, setValues] = useState({ email: '', user_type: 'person' })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -57,14 +52,6 @@ export default function ForgotPassword() {
                   {formError}
                 </Alert>
               )}
-              <SelectField
-                label={t('field.userType')}
-                name="user_type"
-                value={values.user_type}
-                onChange={(value) => setValues((current) => ({ ...current, user_type: value }))}
-                options={USER_TYPE_OPTIONS}
-                error={errors.user_type}
-              />
               <TextField
                 label={t('field.email')}
                 name="email"
@@ -82,7 +69,7 @@ export default function ForgotPassword() {
           </>
         )}
         <p>
-          <Link to="/login">{t('forgot.back')}</Link>
+          <Link to={PERSON_SIGN_IN}>{t('forgot.back')}</Link>
         </p>
       </div>
     </div>

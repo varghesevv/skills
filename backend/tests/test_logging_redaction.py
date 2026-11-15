@@ -52,3 +52,39 @@ def test_formatter_redacts_messages_and_tracebacks() -> None:
             "test", logging.ERROR, __file__, 1, "login failed password=%s", (value,), sys.exc_info()
         )
     assert value not in formatter.format(record)
+
+
+def test_the_access_log_never_shows_a_query_string() -> None:
+    """uvicorn logs the whole address; a name typed into a search must not reach the log."""
+    from app.core.logging_config import configure_logging
+
+    configure_logging()
+    record = logging.LogRecord(
+        "uvicorn.access",
+        logging.INFO,
+        __file__,
+        1,
+        '%s - "%s %s HTTP/%s" %d',
+        (
+            "203.0.113.7:50000",
+            "GET",
+            "/api/v1/search/freelancers?name=Anna+Smith&skills=x",
+            "1.1",
+            200,
+        ),
+        None,
+    )
+    assert logging.getLogger("uvicorn.access").filter(record)
+    line = RedactingFormatter("%(message)s").format(record)
+    assert "Anna" not in line and "?" not in line
+    assert '"GET /api/v1/search/freelancers HTTP/1.1" 200' in line
+
+
+def test_a_line_without_a_query_string_is_left_alone() -> None:
+    from app.core.logging_config import StripQueryString
+
+    record = logging.LogRecord(
+        "uvicorn.access", logging.INFO, __file__, 1, "%s %s", ("a", "b"), None
+    )
+    assert StripQueryString().filter(record)
+    assert record.getMessage() == "a b"

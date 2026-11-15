@@ -7,24 +7,14 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
 
-from app.core.errors import ApiError
-from app.core.security import Principal
-from app.models.labels import FreelancerLabel, Label
-from app.models.ratings import UserRating
+from app.models.labels import Label, PersonLabel
+from app.models.ratings import Rating
 from app.schemas.common import LabelOut
 from app.schemas.profiles import FreelancerLabelOut
 
 
 def to_float(value: Decimal | None) -> float | None:
     return float(value) if value is not None else None
-
-
-def current_account[M](db: Session, model: type[M], principal: Principal) -> M:
-    """The logged-in user's own record (401 if the account no longer exists)."""
-    account = db.get(model, principal.user_id)
-    if account is None:
-        raise ApiError(401, "invalid_token", "The account no longer exists")
-    return account
 
 
 def label_out(label: Label) -> LabelOut:
@@ -36,14 +26,15 @@ def label_out(label: Label) -> LabelOut:
     )
 
 
-def freelancer_labels(db: Session, freelancer_id: uuid.UUID) -> list[FreelancerLabelOut]:
+def person_labels(db: Session, person_id: uuid.UUID) -> list[FreelancerLabelOut]:
+    """The labels a person has chosen for their provider profile, with skill levels."""
     level = aliased(Label)
     rows = db.execute(
         select(Label, level)
-        .select_from(FreelancerLabel)
-        .join(Label, Label.id == FreelancerLabel.label_id)
-        .outerjoin(level, level.id == FreelancerLabel.level_label_id)
-        .where(FreelancerLabel.freelancer_id == freelancer_id)
+        .select_from(PersonLabel)
+        .join(Label, Label.id == PersonLabel.label_id)
+        .outerjoin(level, level.id == PersonLabel.level_label_id)
+        .where(PersonLabel.person_id == person_id)
         .order_by(Label.label_type, Label.label_name)
     ).all()
     return [
@@ -54,10 +45,10 @@ def freelancer_labels(db: Session, freelancer_id: uuid.UUID) -> list[FreelancerL
     ]
 
 
-def rating_summary(db: Session, freelancer_id: uuid.UUID) -> tuple[float | None, int]:
+def person_rating_summary(db: Session, provider_id: uuid.UUID) -> tuple[float | None, int]:
     average, count = db.execute(
-        select(func.avg(UserRating.rating), func.count(UserRating.id)).where(
-            UserRating.freelancer_id == freelancer_id
+        select(func.avg(Rating.rating), func.count(Rating.id)).where(
+            Rating.provider_id == provider_id
         )
     ).one()
     return (round(float(average), 2) if average is not None else None), int(count)

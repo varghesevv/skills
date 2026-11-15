@@ -7,10 +7,9 @@ from typing import Annotated, Literal, Self
 from pydantic import AwareDatetime, BaseModel, Field, StringConstraints, model_validator
 
 from app.schemas.auth import Mobile, PersonName
+from app.schemas.church import IdName
 from app.schemas.common import LabelOut
 
-Day = Literal["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-DAYS: tuple[str, ...] = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
 _CURRENCY = re.compile(r"^[A-Z]{3}$")
 
 
@@ -84,33 +83,20 @@ class UnavailabilityOut(BaseModel):
     unavailable_to: datetime
 
 
-class VouchOut(BaseModel):
-    org_id: uuid.UUID
-    org_name: str
-    status: str
-    is_active: bool
-    created_at: datetime
-
-
 class PublicRating(BaseModel):
-    """A rating as others see it. The work host's identity is not shown."""
+    """A rating as others see it. The rater is not shown."""
 
     rating: int
     comment: str | None
     rated_on: datetime
 
 
-class VouchingOrg(BaseModel):
-    org_id: uuid.UUID
-    org_name: str
-
-
 class GivenRating(BaseModel):
-    """A rating a work host gave, with the freelancer's name so the host can recognise it."""
+    """A rating a person gave, with the provider's name so they can recognise it."""
 
     id: uuid.UUID
-    freelancer_id: uuid.UUID
-    freelancer_name: str | None
+    provider_id: uuid.UUID
+    provider_name: str | None
     rating: int
     comment: str | None
     rated_on: datetime
@@ -118,7 +104,7 @@ class GivenRating(BaseModel):
 
 
 class FreelancerPublic(BaseModel):
-    """What work hosts, organisations and admins see. Never the email."""
+    """What a SEARCHER or above sees of a provider. Never the email or the mobile number."""
 
     id: uuid.UUID
     full_name: str | None
@@ -131,31 +117,14 @@ class FreelancerPublic(BaseModel):
     labels: list[FreelancerLabelOut]
     average_rating: float | None
     rating_count: int
-    vouched_by: list[VouchingOrg]
+    church: IdName
+    home_group: IdName
     unavailable: list[UnavailabilityOut]  # upcoming periods
-    my_rating: GivenRating | None = None  # only for the work host who rated this person
-
-
-# ---- work host --------------------------------------------------------------------------
-
-
-class WorkHostUpdate(BaseModel):
-    full_name: PersonName | None = None  # left unchanged when omitted
-    mobile_number: Mobile
-    available_days: list[Day] = []
-
-
-class WorkHostMe(BaseModel):
-    id: uuid.UUID
-    full_name: str | None
-    email: str
-    mobile_number: str
-    available_days: list[Day]
-    created_at: datetime
+    my_rating: GivenRating | None = None  # only for the person who rated this provider
 
 
 class RatingCreate(BaseModel):
-    freelancer_id: uuid.UUID
+    provider_id: uuid.UUID
     rating: Annotated[int, Field(ge=1, le=10)]
     comment: Annotated[str, Field(max_length=2000)] | None = None
 
@@ -163,40 +132,6 @@ class RatingCreate(BaseModel):
 class RatingUpdate(BaseModel):
     rating: Annotated[int, Field(ge=1, le=10)]
     comment: Annotated[str, Field(max_length=2000)] | None = None
-
-
-# ---- organisation -----------------------------------------------------------------------
-
-
-class OrganisationUpdate(BaseModel):
-    org_name: Annotated[str, Field(min_length=2, max_length=200)]
-    mobile_number: Mobile
-
-
-class OrganisationMe(BaseModel):
-    id: uuid.UUID
-    email: str
-    org_name: str
-    mobile_number: str
-    approval_status: str
-    created_at: datetime
-
-
-class OrganisationBrief(BaseModel):
-    """An approved organisation as listed in the directory (no contact details)."""
-
-    id: uuid.UUID
-    org_name: str
-
-
-class VouchedFreelancer(BaseModel):
-    freelancer_id: uuid.UUID
-    full_name: str | None
-    nationality: str | None
-    primary_language: str | None
-    status: str  # pending, approved or revoked
-    is_active: bool
-    created_at: datetime
 
 
 # ---- labels -----------------------------------------------------------------------------

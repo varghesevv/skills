@@ -52,7 +52,7 @@ Future<TestApp> openLabels(
     size: size,
     textScale: textScale,
     arrange: (adapter, store) {
-      signedInAs(adapter, store, 'freelancer');
+      signedInAsProvider(adapter, store);
       adapter
         ..reply(
           'GET',
@@ -80,18 +80,7 @@ Future<TestApp> openLabels(
         );
     },
   );
-  final shortcut = find.text('Skills and labels');
-  if (shortcut.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      shortcut,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-  }
-  await tester.ensureVisible(shortcut);
-  await tester.pumpAndSettle();
-  await tester.tap(shortcut);
-  await tester.pumpAndSettle();
+  await tapKey(tester, 'provider-skills');
   return app;
 }
 
@@ -141,7 +130,7 @@ void main() {
   });
 
   group('labels screen', () {
-    testWidgets('is reached from the dashboard and shows the saved choice', (
+    testWidgets('is reached from the member home and shows the saved choice', (
       tester,
     ) async {
       await openLabels(tester);
@@ -413,26 +402,20 @@ void main() {
         tester,
         size: const Size(400, 900),
         arrange: (adapter, store) {
-          signedInAs(adapter, store, 'freelancer');
+          signedInAsProvider(adapter, store);
           adapter
             ..reply('GET', '/freelancers/me', FakeReply(200, withLabels([])))
             ..reply('GET', '/labels', FakeReply(200, catalog));
         },
       );
-      await tapTab(tester, 'Profile');
+      await tapKey(tester, 'provider-profile');
       await tester.tap(find.byKey(const Key('open-labels')));
       await tester.pumpAndSettle();
       expect(find.text('Skills (0 selected)'), findsOneWidget);
-      expect(
-        find.byType(NavigationBar),
-        findsOneWidget,
-      ); // the bottom bar stays
-    });
-
-    testWidgets('a work host has no such shortcut', (tester) async {
-      await pumpApp(tester, arrange: (a, s) => signedInAs(a, s, 'workhost'));
-      expect(find.text('Skills and labels'), findsNothing);
-      expect(find.text('Where to go next'), findsNothing);
+      // Back returns to the profile.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('open-labels')), findsOneWidget);
     });
   });
 }

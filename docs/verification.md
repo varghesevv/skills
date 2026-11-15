@@ -125,7 +125,7 @@ A VERIFIER sees the members of their home group, an ADMIN sees everyone in their
 ### Owner succession
 
 1. **Planned handover.** The OWNER chooses an ADMIN to succeed them. They also name a new ADMIN for their own church, since they will no longer be its ADMIN, and a new leader for their own group if they lead it. The handover completes, in one step, when the chosen ADMIN accepts it. The new OWNER stays in their own home group and remains their own church's ADMIN, as every OWNER is, keeping any group they led.
-2. The outgoing OWNER becomes a PROVIDER (or SEARCHER) in their home group, set by the new OWNER, as in [Succession](#succession).
+2. The outgoing OWNER becomes a PROVIDER (or SEARCHER, as they choose when they propose the handover) in their home group, set by the new OWNER, as in [Succession](#succession). If they keep a role because nobody can take it over, they are an ADMIN (they keep their church) or a VERIFIER (they keep only their group) instead.
 3. **Fallback.** If the OWNER is unavailable and cannot hand over, or has breached trust, the platform operators change the OWNER directly in the database, outside the app. They make the same appointments in one change: a new OWNER from the ADMINs, a new ADMIN for the old OWNER's church, and a new leader for any group the old OWNER led. This is recorded in the history like any other status change.
 4. An OWNER replaced for a breach of trust is REVOKED, as in [Revocation](#revocation), and the new OWNER clears the resulting flags.
 
@@ -167,7 +167,7 @@ A searcher has a lighter check than a provider, because a provider is the role o
 
 10. The church's ADMIN can also admit members of any home group in their church. The ADMIN's vouch then counts as the home group leader's.
 11. **Declining.** If the leader does not know an applicant, they can decline the application. This closes it entirely, like [leaving](#leaving): nobody is put on the revoked list, and the person can sign up again later. If the applicant has simply chosen the wrong group, the leader can tell them instead, and they choose again while still PENDING.
-12. **Searcher to provider.** An existing searcher who wants to become a provider needs the same vouches as a new provider applicant. They get a vouch link in the same way, and keep searching while they collect vouches.
+12. **Searcher to provider.** An existing searcher who wants to become a provider needs the same vouches as a new provider applicant. They get a vouch link in the same way, and keep searching while they collect vouches. Their home group's leader (or the ADMIN or OWNER) admits them as a provider once they have the vouches, or declines the request. Declining a request only ends the request: the person stays a searcher, their vouch link stops working, the vouches stay on record and they are told; they may ask again. It is not a change of status, so it writes no history row, and nothing is closed.
 13. Verifiers should be readily available, so applicants are not left waiting.
 
 ## Leaving
@@ -285,6 +285,7 @@ interface HandoverRequest {      // the OWNER proposes, the chosen ADMIN accepts
   successorAdminId: Id | null;   // a member (PENDING or above) of the outgoing OWNER's church, becomes its ADMIN; null if nobody else is in the church
   successorLeaderId: Id | null;  // a member of the outgoing OWNER's group, if they lead it; null if nobody else is in the group
   // With no successor, the outgoing OWNER keeps that role: ADMIN of their church and/or leader of their group
+  formerOwnerStatus: Status.PROVIDER | Status.SEARCHER;  // what the outgoing OWNER becomes if they keep neither role; chosen when proposing
   acceptedAt: Date | null;
 }
 
@@ -372,6 +373,8 @@ Every operation marked † appoints a successor in the same transaction (see [Su
 | Vouch / withdraw | SEARCHER or above, not REVOKED | Adds or withdraws a `Vouch` via the applicant's vouch link |
 | Admit | Group leader, ADMIN, OWNER | PENDING → SEARCHER/PROVIDER, or SEARCHER → PROVIDER, if `canAdmit` |
 | Decline | Group leader, ADMIN, OWNER | Sets `closedAt` on the application; not revoked; can sign up again |
+| Apply to provide | SEARCHER | Sets `requestedStatus` to PROVIDER; status unchanged; notifies the group's leader; vouch link as for an applicant |
+| Decline a provider request | Group leader, ADMIN, OWNER | Clears `requestedStatus` on a SEARCHER; status unchanged, no history row, nothing closed; the vouch link ends; notifies the person |
 | Move member | Member + leader of the group they leave + leader of the group they join (`MoveRequest`), or the ADMIN / OWNER directly | Moves an admitted member to another group in the same church. Leaders step down as group leader first †; an ADMIN or the OWNER hands their group on and keeps their status. |
 | Leave | PENDING, SEARCHER or PROVIDER | Sets `closedAt` (account kept for history); not revoked; nobody flagged; can sign up again as a new account. Leaders step down first †; the OWNER hands over |
 | Step down / replace VERIFIER † | ADMIN, OWNER | Old VERIFIER → PROVIDER (or SEARCHER); successor, a member of the same group (PENDING or above) → VERIFIER; if no other member and the old leader is leaving the group, the group closes (otherwise they close it themselves) |

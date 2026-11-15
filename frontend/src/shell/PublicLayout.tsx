@@ -2,7 +2,7 @@ import { Link, Outlet } from 'react-router-dom'
 
 import { useAuth } from '../auth/AuthContext'
 import { t } from '../i18n'
-import { homePath } from '../portals/config'
+import { PERSON_HOME, PERSON_SIGN_IN, PERSON_SIGN_UP } from '../portals/config'
 
 export default function PublicLayout() {
   const { status, user } = useAuth()
@@ -17,16 +17,16 @@ export default function PublicLayout() {
         </Link>
         <nav className="topbar-user" aria-label={t('nav.main')}>
           {user ? (
-            <Link className="btn btn-quiet" to={homePath(user.user_type)}>
+            <Link className="btn btn-quiet" to={PERSON_HOME}>
               {t('nav.dashboard')}
             </Link>
           ) : (
             status !== 'loading' && (
               <>
-                <Link className="btn btn-quiet" to="/login">
+                <Link className="btn btn-quiet" to={PERSON_SIGN_IN}>
                   {t('nav.logIn')}
                 </Link>
-                <Link className="btn btn-primary" to="/register">
+                <Link className="btn btn-primary" to={PERSON_SIGN_UP}>
                   {t('nav.register')}
                 </Link>
               </>

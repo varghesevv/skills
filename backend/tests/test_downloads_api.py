@@ -8,9 +8,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.testclient import TestClient
 
-from app.core.config import get_settings
+from app.api.deps import _decode, get_principal
+from app.core.config import Settings, get_settings
 from app.core.errors import ApiError
 from app.core.security import Principal, create_access_token
 from app.main import app
@@ -19,6 +22,7 @@ from app.services import downloads
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "add-download.py"
 APK_BYTES = b"PK-fake-apk-bytes-for-tests"
 LIST_URL = "/api/v1/app/downloads"
+_BEARER = HTTPBearer(auto_error=False)
 
 
 def publish(folder: Path, apk: Path, version: str, build: int, notes: str = "") -> None:
@@ -48,13 +52,26 @@ def folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def client() -> Iterator[TestClient]:
+    """No database here: only the token is read, the person behind it is not looked up. (How a
+    person is checked on every request is tested with the other endpoints.)"""
+
+    def token_only(
+        credentials: HTTPAuthorizationCredentials | None = Depends(_BEARER),
+        settings: Settings = Depends(get_settings),
+    ) -> Principal:
+        return _decode(credentials, settings)
+
+    app.dependency_overrides[get_principal] = token_only
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.pop(get_principal, None)
 
 
-def auth(user_type: str = "freelancer", user_id: uuid.UUID | None = None) -> dict[str, str]:
+def auth(user_id: uuid.UUID | None = None) -> dict[str, str]:
     token, _ = create_access_token(
-        Principal(user_type=user_type, user_id=user_id or uuid.uuid4()),
+        Principal(user_id=user_id or uuid.uuid4()),
         secret=get_settings().require_jwt_secret(),
         lifetime_minutes=5,
     )
@@ -75,10 +92,9 @@ def test_a_login_is_required(client: TestClient, folder: Path, path: str) -> Non
     assert client.get(path, headers={"Authorization": "Bearer not-a-token"}).status_code == 401
 
 
-@pytest.mark.parametrize("role", ["freelancer", "workhost", "organisation", "admin"])
-def test_every_role_can_list_and_download(client: TestClient, folder: Path, role: str) -> None:
-    assert client.get(LIST_URL, headers=auth(role)).status_code == 200
-    assert client.get(f"{LIST_URL}/android/1.10.0", headers=auth(role)).content == APK_BYTES
+def test_a_person_can_list_and_download(client: TestClient, folder: Path) -> None:
+    assert client.get(LIST_URL, headers=auth()).status_code == 200
+    assert client.get(f"{LIST_URL}/android/1.10.0", headers=auth()).content == APK_BYTES
 
 
 def test_list_is_newest_first_by_number(client: TestClient, folder: Path) -> None:
@@ -196,8 +212,8 @@ def test_downloads_are_limited_per_person(
 ) -> None:
     monkeypatch.setenv("DOWNLOAD_MAX_PER_HOUR", "2")
     get_settings.cache_clear()
-    person = auth("workhost", uuid.uuid4())
-    other = auth("workhost", uuid.uuid4())
+    person = auth(user_id=uuid.uuid4())
+    other = auth(user_id=uuid.uuid4())
     url = f"{LIST_URL}/android/1.10.0"
     assert client.get(url, headers=person).status_code == 200
     assert client.get(url, headers=person).status_code == 200
@@ -223,7 +239,7 @@ def test_the_limit_frees_up_after_an_hour() -> None:
 def test_a_download_is_logged_without_the_person_or_the_token(
     client: TestClient, folder: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    headers = auth("freelancer", uuid.uuid4())
+    headers = auth(user_id=uuid.uuid4())
     with caplog.at_level(logging.INFO, logger="app.api.v1.app_info"):
         client.get(f"{LIST_URL}/android/1.10.0", headers=headers)
     assert "download android version=1.10.0" in caplog.text
@@ -273,7 +289,7 @@ def test_a_refused_download_is_not_logged_as_a_download(
 ) -> None:
     monkeypatch.setenv("DOWNLOAD_MAX_PER_HOUR", "1")
     get_settings.cache_clear()
-    headers = auth("workhost", uuid.uuid4())
+    headers = auth(user_id=uuid.uuid4())
     url = f"{LIST_URL}/android/1.10.0"
     with caplog.at_level(logging.INFO, logger="app.api.v1.app_info"):
         assert client.get(url, headers=headers).status_code == 200

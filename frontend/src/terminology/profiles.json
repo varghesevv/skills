@@ -13,7 +13,15 @@
     "freelancers_path": "freelancers",
     "badge_organisation": "Organisation",
     "badge_workhost": "Work host",
-    "badge_freelancer": "Freelancer"
+    "badge_freelancer": "Freelancer",
+    "homegroup": "Home group",
+    "homegroups": "Home groups",
+    "verifier": "Verifier",
+    "verifiers": "Verifiers",
+    "admin": "Admin",
+    "admins": "Admins",
+    "owner": "Owner",
+    "owners": "Owners"
   },
   "church": {
     "organisation": "Church",
@@ -29,6 +37,14 @@
     "freelancers_path": "providers",
     "badge_organisation": "Church",
     "badge_workhost": "Searcher",
-    "badge_freelancer": "Provider"
+    "badge_freelancer": "Provider",
+    "homegroup": "Home group",
+    "homegroups": "Home groups",
+    "verifier": "Group leader",
+    "verifiers": "Group leaders",
+    "admin": "Church admin",
+    "admins": "Church admins",
+    "owner": "Owner",
+    "owners": "Owners"
   }
 }

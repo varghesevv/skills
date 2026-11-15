@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:skills_app/core/auth/user_type.dart';
 
 /// Checks what the app sends and reads against the committed API contract (`docs/openapi.json`,
 /// kept current by `ci-backend`). When the backend changes an endpoint or a field the app uses,
@@ -42,6 +41,22 @@ void main() {
   Set<String> properties(String schema) =>
       (schemaNamed(schema)['properties'] as Map).keys.cast<String>().toSet();
 
+  /// The schemas a property refers to (directly, or inside `anyOf` for an optional one).
+  Set<String> refsOf(String schema, String field) {
+    final property = Map<String, Object?>.from(
+      (schemaNamed(schema)['properties'] as Map)[field] as Map,
+    );
+    final candidates = [
+      property,
+      for (final option in (property['anyOf'] as List?) ?? const [])
+        Map<String, Object?>.from(option as Map),
+    ];
+    return {
+      for (final c in candidates)
+        if (c[r'$ref'] != null) (c[r'$ref'] as String).split('/').last,
+    };
+  }
+
   Set<String> required(String schema) =>
       ((schemaNamed(schema)['required'] as List?) ?? const [])
           .cast<String>()
@@ -79,6 +94,26 @@ void main() {
     );
   }
 
+  /// Every schema an answer may have: one `$ref`, or the `$ref`s inside `anyOf`.
+  Set<String> responseSchemas(String method, String path, String status) {
+    final response =
+        (operation(method, path)['responses'] as Map)[status] as Map?;
+    expect(response, isNotNull, reason: '$method $path has no $status answer');
+    final schema =
+        ((response!['content'] as Map?)?['application/json']
+            as Map?)?['schema'];
+    final names = <String>{};
+    final direct = refName(schema);
+    if (direct != null) names.add(direct);
+    if (schema is Map) {
+      for (final option in (schema['anyOf'] as List? ?? const [])) {
+        final name = refName(option);
+        if (name != null) names.add(name);
+      }
+    }
+    return names;
+  }
+
   group('endpoints the app calls exist', () {
     const calls = {
       'GET /app/config': '200',
@@ -86,19 +121,65 @@ void main() {
       'POST /auth/refresh': '200',
       'POST /auth/logout': '204',
       'POST /auth/forgot-password': '202',
-      'POST /auth/register/freelancer': '201',
-      'POST /auth/register/workhost': '201',
-      'POST /auth/register/organisation': '201',
       'GET /me': '200',
       'GET /freelancers/me': '200',
       'PUT /freelancers/me': '200',
       'GET /labels': '200',
       'GET /freelancers/{freelancer_id}/ratings': '200',
+      'GET /search/freelancers': '200',
+      'GET /freelancers/{freelancer_id}': '200',
+      'POST /freelancers/{freelancer_id}/reveal-mobile': '200',
+      'POST /ratings': '201',
+      'PUT /ratings/{rating_id}': '200',
       'PUT /freelancers/me/labels': '200',
       'GET /freelancers/me/unavailability': '200',
       'POST /freelancers/me/unavailability': '201',
       'PUT /freelancers/me/unavailability/{period_id}': '200',
       'DELETE /freelancers/me/unavailability/{period_id}': '204',
+      // The church trust model (docs/specification/04-api.md).
+      'POST /auth/signup': '201',
+      'GET /churches': '200',
+      'GET /churches/{church_id}/home-groups': '200',
+      'POST /group-invitations/lookup': '200',
+      'PUT /me/application': '200',
+      'DELETE /me': '204',
+      'PUT /me': '200',
+      'GET /workhosts/me/ratings': '200',
+      // Vouching, notifications and the screens of a leader.
+      'POST /me/apply-provider': '200',
+      'GET /me/vouch-link': '200',
+      'POST /me/vouch-link': '201',
+      'GET /me/vouches': '200',
+      'GET /me/vouches-given': '200',
+      'POST /vouch-links/lookup': '200',
+      'POST /vouch-links/vouch': '201',
+      'DELETE /vouches/{vouch_id}': '204',
+      'GET /me/notifications': '200',
+      'POST /me/notifications/{notification_id}/read': '204',
+      'POST /me/notifications/read-all': '204',
+      'GET /verifier/applicants': '200',
+      'GET /verifier/members': '200',
+      'GET /verifier/people/{person_id}': '200',
+      'POST /verifier/people/{person_id}/admit': '200',
+      'POST /verifier/people/{person_id}/decline': '204',
+      'GET /verifier/revoked': '200',
+      'GET /verifier/flagged': '200',
+      'PUT /verifier/people/{person_id}/status': '200',
+      'POST /verifier/people/{person_id}/reconfirm': '200',
+      'GET /group-requests': '200',
+      'POST /group-requests': '201',
+      'POST /group-requests/{request_id}/approve': '200',
+      'POST /group-requests/{request_id}/decline': '204',
+      'GET /move-requests': '200',
+      'POST /move-requests': '201',
+      'POST /move-requests/{request_id}/agree': '200',
+      'POST /move-requests/{request_id}/cancel': '200',
+      'PUT /home-groups/{group_id}/leader': '200',
+      'POST /verifier/people/{person_id}/move': '200',
+      'GET /verifier/group-invitations': '200',
+      'POST /verifier/group-invitations': '201',
+      'DELETE /verifier/group-invitations/{invitation_id}': '204',
+      'POST /home-groups/{group_id}/close': '200',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -113,25 +194,497 @@ void main() {
     });
   });
 
-  group('requests the app sends', () {
-    test('login body', () {
-      expect(requestSchema('POST', '/auth/login'), 'LoginRequest');
-      expect(required('LoginRequest'), {'email', 'password', 'user_type'});
+  group('the church trust model', () {
+    test('a person answer has the fields `PersonMe` reads', () {
+      expect(
+        properties('PersonMeResponse'),
+        containsAll([
+          'user_type',
+          'id',
+          'full_name',
+          'email',
+          'mobile_number',
+          'status',
+          'requested_status',
+          'church',
+          'home_group',
+          'leader',
+          'status_set_by',
+          'flagged_for_recheck',
+          'vouch_count',
+        ]),
+      );
+      expect(
+        responseSchema('PUT', '/me/application', '200'),
+        'PersonMeResponse',
+      );
+    });
+
+    test('the sign-up body carries what the wizard sends', () {
+      expect(requestSchema('POST', '/auth/signup'), 'SignupRequest');
+      expect(
+        properties('SignupRequest'),
+        containsAll([
+          'full_name',
+          'email',
+          'mobile_number',
+          'password',
+          'requested_status',
+          'home_group_id',
+          'invitation_token',
+        ]),
+      );
+      expect(required('SignupRequest'), {
+        'full_name',
+        'email',
+        'mobile_number',
+        'password',
+        'requested_status',
+      });
+    });
+
+    test('the lists the wizard reads', () {
+      expect(responseSchema('GET', '/churches', '200'), 'ChurchList');
+      expect(properties('ChurchSummary'), {'id', 'name'});
+      expect(properties('HomeGroupSummary'), {'id', 'name', 'leader_name'});
+      expect(properties('GroupInvitationInfo'), {
+        'church_name',
+        'home_group_name',
+        'leader_name',
+      });
+    });
+
+    test('a link token travels in the body, not in an address', () {
+      expect(
+        requestSchema('POST', '/group-invitations/lookup'),
+        'GroupInvitationLookup',
+      );
+      expect(properties('GroupInvitationLookup'), {'token'});
     });
 
     test(
-      'every user type the app sends is accepted, and the app has no admin',
+      'the account page changes name and mobile; the ratings given are paged',
       () {
-        final userType =
-            (schemaNamed('LoginRequest')['properties'] as Map)['user_type']
-                as Map;
-        final accepted = userType['enum'] as List;
-        for (final type in UserType.values) {
-          expect(accepted, contains(type.wire));
-        }
-        expect(UserType.values.map((t) => t.wire), isNot(contains('admin')));
+        expect(requestSchema('PUT', '/me'), 'PersonUpdate');
+        expect(properties('PersonUpdate'), {'full_name', 'mobile_number'});
+        // The person shape that `GET /me` also gives a person of the church trust model.
+        expect(responseSchemas('PUT', '/me', '200'), {'PersonMeResponse'});
+        expect(
+          responseSchemas('GET', '/me', '200'),
+          contains('PersonMeResponse'),
+        );
+        expect(
+          responseSchema('GET', '/workhosts/me/ratings', '200'),
+          'Page_GivenRating_',
+        );
+        expect(
+          properties('Page_GivenRating_'),
+          containsAll(['items', 'total', 'page', 'page_size']),
+        );
       },
     );
+
+    test('closing the account sends the password', () {
+      expect(requestSchema('DELETE', '/me'), 'CloseAccountRequest');
+      expect(properties('CloseAccountRequest'), {'password'});
+    });
+  });
+
+  group('vouching and notifications', () {
+    test('a link is made once, and its token is not in the state answer', () {
+      expect(
+        responseSchema('POST', '/me/vouch-link', '201'),
+        'VouchLinkCreated',
+      );
+      expect(properties('VouchLinkCreated'), {'token', 'expires_at'});
+      expect(responseSchema('GET', '/me/vouch-link', '200'), 'VouchLinkState');
+      expect(properties('VouchLinkState'), {'active', 'expires_at'});
+    });
+
+    test('the token travels in the body of the lookup and of the vouch', () {
+      for (final path in ['/vouch-links/lookup', '/vouch-links/vouch']) {
+        expect(requestSchema('POST', path), 'VouchLinkToken', reason: path);
+      }
+      expect(properties('VouchLinkToken'), {'token'});
+    });
+
+    test('the page a link opens has the fields `VouchLinkInfo` reads', () {
+      expect(properties('VouchLinkInfo'), {
+        'applicant_name',
+        'church_name',
+        'home_group_name',
+        'requested_status',
+        'already_vouched',
+      });
+    });
+
+    test('the vouches received and given have the fields the app reads', () {
+      expect(
+        properties('VouchReceived'),
+        containsAll([
+          'id',
+          'voucher_name',
+          'church_name',
+          'live',
+          'created_at',
+        ]),
+      );
+      expect(
+        properties('VouchGiven'),
+        containsAll([
+          'id',
+          'applicant_name',
+          'applicant_status',
+          'withdrawn',
+          'can_withdraw',
+          'created_at',
+        ]),
+      );
+      expect(properties('VouchCreated'), {'id'});
+    });
+
+    test('a notification has the fields the list reads', () {
+      expect(
+        responseSchema('GET', '/me/notifications', '200'),
+        'NotificationList',
+      );
+      expect(properties('NotificationList'), {
+        'items',
+        'total',
+        'unread_count',
+      });
+      expect(
+        properties('NotificationItem'),
+        containsAll(['id', 'kind', 'subject', 'created_at', 'read']),
+      );
+    });
+
+    test('applying to provide answers with the person', () {
+      expect(
+        responseSchema('POST', '/me/apply-provider', '200'),
+        'PersonMeResponse',
+      );
+    });
+  });
+
+  group('the screens of a leader', () {
+    test('the applicants list has the fields `ApplicantRow` reads', () {
+      expect(
+        responseSchema('GET', '/verifier/applicants', '200'),
+        'ApplicantList',
+      );
+      expect(properties('ApplicantList'), {'items', 'total'});
+      expect(
+        properties('ApplicantRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'status',
+          'requested_status',
+          'home_group',
+          'applied_at',
+          'vouch_count',
+          'vouchers',
+          'can_admit_as_provider',
+        ]),
+      );
+      expect(properties('Voucher'), {'name', 'church_name', 'live'});
+    });
+
+    test('the members list has the fields `MemberRow` reads', () {
+      expect(responseSchema('GET', '/verifier/members', '200'), 'MemberList');
+      expect(
+        properties('MemberRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'status',
+          'home_group',
+          'status_set_by',
+          'flagged_for_recheck',
+        ]),
+      );
+    });
+
+    test('one person has the fields `PersonDetail` reads, with the flag', () {
+      expect(
+        responseSchema('GET', '/verifier/people/{person_id}', '200'),
+        'PersonDetail',
+      );
+      expect(
+        properties('PersonDetail'),
+        containsAll([
+          'id',
+          'full_name',
+          'mobile_number',
+          'status',
+          'requested_status',
+          'church',
+          'home_group',
+          'status_set_by',
+          'applied_at',
+          'history',
+          'chain_of_trust',
+          'vouches',
+          'can_admit_as_provider',
+          'flagged_for_recheck',
+        ]),
+      );
+      expect(
+        properties('HistoryEntry'),
+        containsAll(['kind', 'from_status', 'to_status', 'changed_by', 'at']),
+      );
+      expect(properties('ChainLink'), {'id', 'full_name', 'status'});
+    });
+
+    test('admitting sends the status and reads the new one', () {
+      expect(
+        requestSchema('POST', '/verifier/people/{person_id}/admit'),
+        'AdmitRequest',
+      );
+      expect(properties('AdmitRequest'), {'to'});
+      expect(
+        responseSchema('POST', '/verifier/people/{person_id}/admit', '200'),
+        'AdmitResult',
+      );
+      expect(
+        properties('AdmitResult'),
+        containsAll(['status', 'requested_status']),
+      );
+    });
+
+    test('the revoked and the flagged lists have the fields the app reads', () {
+      expect(responseSchema('GET', '/verifier/revoked', '200'), 'RevokedList');
+      expect(properties('RevokedList'), {'items', 'total'});
+      expect(
+        properties('RevokedRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'removed_from',
+          'revoked_by',
+          'revoked_at',
+        ]),
+      );
+      expect(responseSchema('GET', '/verifier/flagged', '200'), 'FlaggedList');
+      expect(properties('FlaggedList'), {'items', 'total'});
+      expect(
+        properties('FlaggedRow'),
+        containsAll([
+          'id',
+          'full_name',
+          'status',
+          'home_group',
+          'status_set_by',
+        ]),
+      );
+    });
+
+    test(
+      'revoking and reinstating send a status, and answer with the new one',
+      () {
+        expect(
+          requestSchema('PUT', '/verifier/people/{person_id}/status'),
+          'StatusRequest',
+        );
+        // The app sends `to` and, to reinstate, `home_group_id`; the successors are for leaders.
+        expect(
+          properties('StatusRequest'),
+          containsAll([
+            'to',
+            'home_group_id',
+            'successor_id',
+            'group_successor_id',
+          ]),
+        );
+        expect(
+          responseSchema('PUT', '/verifier/people/{person_id}/status', '200'),
+          'StatusResult',
+        );
+        expect(
+          responseSchema(
+            'POST',
+            '/verifier/people/{person_id}/reconfirm',
+            '200',
+          ),
+          'StatusResult',
+        );
+        expect(
+          properties('StatusResult'),
+          containsAll(['id', 'status', 'home_group_id', 'flagged_for_recheck']),
+        );
+      },
+    );
+
+    test('the group requests have the fields the app reads and sends', () {
+      expect(
+        responseSchema('GET', '/group-requests', '200'),
+        'GroupRequestList',
+      );
+      expect(properties('GroupRequestList'), {'items', 'total'});
+      expect(
+        properties('GroupRequestOut'),
+        containsAll([
+          'id',
+          'group_name',
+          'church',
+          'requester',
+          'state',
+          'created_at',
+          'requester_leads_a_group',
+          'requester_group',
+        ]),
+      );
+      expect(
+        responseSchema('POST', '/group-requests', '201'),
+        'GroupRequestCreated',
+      );
+      expect(properties('GroupRequestCreated'), {'request', 'group'});
+      expect(properties('GroupRequestCreate'), {'group_name', 'successor_id'});
+      expect(properties('GroupRequestApprove'), {'successor_id'});
+      expect(
+        responseSchema('POST', '/group-requests/{request_id}/approve', '200'),
+        'GroupStarted',
+      );
+      expect(properties('GroupStarted'), {'group'});
+      // The nested names the app reads (who asks, which church, which group) are all `IdName`,
+      // which has exactly the `id` and `name` it reads.
+      expect(properties('IdName'), {'id', 'name'});
+      for (final field in ['church', 'requester', 'requester_group']) {
+        expect(refsOf('GroupRequestOut', field), {'IdName'}, reason: field);
+      }
+      expect(refsOf('GroupRequestCreated', 'group'), {'IdName'});
+      expect(refsOf('GroupRequestCreated', 'request'), {'GroupRequestOut'});
+      expect(refsOf('GroupStarted', 'group'), {'IdName'});
+    });
+
+    test('the move requests have the fields the app reads and sends', () {
+      expect(responseSchema('GET', '/move-requests', '200'), 'MoveRequestList');
+      expect(properties('MoveRequestList'), {'items', 'total'});
+      expect(
+        properties('MoveRequestOut'),
+        containsAll([
+          'id',
+          'person',
+          'from_group',
+          'to_group',
+          'agreed',
+          'state',
+          'created_at',
+        ]),
+      );
+      for (final field in ['person', 'from_group', 'to_group']) {
+        expect(refsOf('MoveRequestOut', field), {'IdName'}, reason: field);
+      }
+      expect(refsOf('MoveRequestOut', 'agreed'), {'MoveAgreements'});
+      expect(properties('MoveAgreements'), {
+        'person',
+        'from_leader',
+        'to_leader',
+      });
+      expect(properties('MoveRequestCreate'), {'home_group_id'});
+      expect(responseSchema('POST', '/move-requests', '201'), 'MoveRequestOut');
+      expect(
+        responseSchema('POST', '/move-requests/{request_id}/agree', '200'),
+        'MoveRequestOut',
+      );
+      expect(
+        responseSchema('POST', '/move-requests/{request_id}/cancel', '200'),
+        'MoveRequestOut',
+      );
+    });
+
+    test(
+      'changing a leader and moving a member have the fields the app uses',
+      () {
+        expect(properties('LeaderChange'), {
+          'successor_id',
+          'former_leader_status',
+        });
+        expect(
+          responseSchema('PUT', '/home-groups/{group_id}/leader', '200'),
+          'LeaderChanged',
+        );
+        expect(properties('LeaderChanged'), {'group', 'leader'});
+        expect(refsOf('LeaderChanged', 'group'), {'IdName'});
+        expect(refsOf('LeaderChanged', 'leader'), {'IdName'});
+        expect(properties('DirectMove'), {'home_group_id'});
+        expect(
+          responseSchema('POST', '/verifier/people/{person_id}/move', '200'),
+          'Moved',
+        );
+        expect(properties('Moved'), {'person', 'home_group'});
+        expect(refsOf('Moved', 'home_group'), {'IdName'});
+      },
+    );
+
+    test('the group invitation links have the fields the app reads', () {
+      expect(
+        responseSchema('GET', '/verifier/group-invitations', '200'),
+        'GroupInvitationList',
+      );
+      expect(properties('GroupInvitationList'), {'items'});
+      expect(properties('GroupInvitationSummary'), {
+        'id',
+        'created_at',
+        'expires_at',
+      });
+      expect(
+        responseSchema('POST', '/verifier/group-invitations', '201'),
+        'GroupInvitationCreated',
+      );
+      expect(properties('GroupInvitationCreated'), {
+        'id',
+        'token',
+        'expires_at',
+      });
+      // The list never carries a token: it was shown once, when the link was made.
+      expect(properties('GroupInvitationSummary'), isNot(contains('token')));
+    });
+
+    test('closing one\'s own group has the fields the app uses', () {
+      expect(properties('GroupClose'), {
+        'move_to_group_id',
+        'former_leader_status',
+      });
+      expect(
+        responseSchema('POST', '/home-groups/{group_id}/close', '200'),
+        'GroupClosed',
+      );
+      expect(properties('GroupClosed'), {
+        'closed_group',
+        'joined_group',
+        'status',
+      });
+      expect(refsOf('GroupClosed', 'closed_group'), {'IdName'});
+      expect(refsOf('GroupClosed', 'joined_group'), {'IdName'});
+    });
+
+    test('only the person page has a number', () {
+      for (final schema in [
+        'ApplicantRow',
+        'MemberRow',
+        'FlaggedRow',
+        'Voucher',
+        'VouchReceived',
+        'VouchGiven',
+        'VouchLinkInfo',
+        'ChainLink',
+        'HistoryEntry',
+        'NotificationItem',
+      ]) {
+        expect(properties(schema), isNot(contains('mobile_number')));
+      }
+      expect(properties('PersonDetail'), contains('mobile_number'));
+    });
+  });
+
+  group('requests the app sends', () {
+    test('login body', () {
+      expect(requestSchema('POST', '/auth/login'), 'LoginRequest');
+      // The app logs in as a person: no account type is sent (ADR-0017).
+      expect(required('LoginRequest'), {'email', 'password'});
+    });
 
     test('refresh and logout bodies', () {
       expect(requestSchema('POST', '/auth/refresh'), 'RefreshRequest');
@@ -140,30 +693,7 @@ void main() {
     });
 
     test('forgot-password body', () {
-      expect(required('ForgotPasswordRequest'), {'email', 'user_type'});
-    });
-
-    test('registration bodies carry the fields the forms send', () {
-      expect(
-        properties('FreelancerRegister'),
-        containsAll([
-          'full_name',
-          'email',
-          'mobile_number',
-          'password',
-          'nationality',
-          'primary_language',
-          'whatsapp_availability',
-        ]),
-      );
-      expect(
-        properties('WorkHostRegister'),
-        containsAll(['full_name', 'email', 'mobile_number', 'password']),
-      );
-      expect(
-        properties('OrganisationRegister'),
-        containsAll(['org_name', 'email', 'mobile_number', 'password']),
-      );
+      expect(required('ForgotPasswordRequest'), {'email'});
     });
   });
 
@@ -177,29 +707,11 @@ void main() {
       );
     });
 
-    test('the account answer has the fields `Me` reads', () {
-      expect(responseSchema('GET', '/me', '200'), 'MeResponse');
+    test('the account answer is the person the app reads', () {
       expect(
-        properties('MeResponse'),
-        containsAll([
-          'id',
-          'user_type',
-          'email',
-          'mobile_number',
-          'full_name',
-          'org_name',
-          'approval_status',
-          'created_at',
-        ]),
+        responseSchemas('GET', '/me', '200'),
+        contains('PersonMeResponse'),
       );
-    });
-
-    test('registration answer has the approval status', () {
-      expect(
-        responseSchema('POST', '/auth/register/organisation', '201'),
-        'RegisterResponse',
-      );
-      expect(properties('RegisterResponse'), contains('approval_status'));
     });
 
     test('app config has the words and versions', () {
@@ -367,6 +879,153 @@ void main() {
                     as Map)['unavailable_from']
                 as Map;
         expect(property['format'], 'date-time');
+      },
+    );
+  });
+
+  group('search', () {
+    test('the filters are the parameters the app sends', () {
+      final names = {
+        for (final p
+            in (operation('GET', '/search/freelancers')['parameters'] as List)
+                .cast<Map>())
+          p['name'] as String,
+      };
+      expect(
+        names,
+        containsAll([
+          'skill',
+          'skill_match',
+          'skill_level',
+          'language',
+          'timing',
+          'nativity',
+          'max_rate',
+          'currency',
+          'negotiable',
+          'available_from',
+          'available_to',
+          'min_rating',
+          'church_id',
+          'home_group_id',
+          'name',
+          'sort',
+          'page',
+          'page_size',
+        ]),
+      );
+    });
+
+    test('a result has the fields the app reads, and no way to a number', () {
+      expect(
+        responseSchema('GET', '/search/freelancers', '200'),
+        'Page_SearchResult_',
+      );
+      expect(
+        properties('SearchResult'),
+        containsAll([
+          'id',
+          'full_name',
+          'church',
+          'home_group',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+          'average_rating',
+          'rating_count',
+          'skills',
+          'languages',
+        ]),
+      );
+      expect(properties('SearchResult'), isNot(contains('mobile_number')));
+      expect(properties('SearchResult'), isNot(contains('email')));
+    });
+  });
+
+  group('a provider, rating and Reveal', () {
+    test('the page has the fields the app reads, and no way to a number', () {
+      expect(
+        properties('FreelancerPublic'),
+        containsAll([
+          'id',
+          'full_name',
+          'whatsapp_availability',
+          'nationality',
+          'primary_language',
+          'rate_per_hour',
+          'rate_currency',
+          'is_rate_negotiable',
+          'labels',
+          'average_rating',
+          'rating_count',
+          'church',
+          'home_group',
+          'unavailable',
+          'my_rating',
+        ]),
+      );
+      expect(properties('FreelancerPublic'), isNot(contains('mobile_number')));
+      expect(properties('FreelancerPublic'), isNot(contains('email')));
+    });
+
+    test('a rating is sent and answered with the fields the app uses', () {
+      expect(requestSchema('POST', '/ratings'), 'RatingCreate');
+      expect(
+        properties('RatingCreate'),
+        containsAll(['provider_id', 'rating', 'comment']),
+      );
+      expect(responseSchema('POST', '/ratings', '201'), 'GivenRating');
+      expect(
+        properties('GivenRating'),
+        containsAll([
+          'id',
+          'provider_id',
+          'provider_name',
+          'rating',
+          'comment',
+          'rated_on',
+        ]),
+      );
+    });
+
+    test(
+      'changing a rating sends the score and comment and gets the rating back',
+      () {
+        expect(requestSchema('PUT', '/ratings/{rating_id}'), 'RatingUpdate');
+        expect(properties('RatingUpdate'), containsAll(['rating', 'comment']));
+        expect(
+          responseSchema('PUT', '/ratings/{rating_id}', '200'),
+          'GivenRating',
+        );
+        expect(
+          responseSchema('GET', '/freelancers/{freelancer_id}', '200'),
+          'FreelancerPublic',
+        );
+        expect(
+          responseSchema(
+            'POST',
+            '/freelancers/{freelancer_id}/reveal-mobile',
+            '200',
+          ),
+          'RevealedMobile',
+        );
+      },
+    );
+
+    test(
+      'Reveal takes the channel and source, and answers with the number only',
+      () {
+        expect(
+          requestSchema('POST', '/freelancers/{freelancer_id}/reveal-mobile'),
+          'RevealRequest',
+        );
+        expect(
+          properties('RevealRequest'),
+          containsAll(['channel', 'source', 'searched_skills']),
+        );
+        expect(properties('RevealedMobile'), {'mobile_number'});
       },
     );
   });

@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -15,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.logging_config import redact
 from app.models.reports import ReportRun
-from app.reports.definitions import get_definition
+from app.reports.definitions import REGISTRY, get_definition
 from app.reports.render import to_csv, to_html
 from app.reports.types import ReportParams, ReportResult
 
@@ -29,9 +30,15 @@ def build_report(db: Session, name: str, params: ReportParams) -> ReportResult:
     return ReportResult(get_definition(name).build(db, params))
 
 
+_REPORT_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
+
+
 def output_paths(output_dir: Path, name: str, start: datetime, end: datetime) -> tuple[Path, Path]:
+    # Report names come from the registry, but they become folder names: never trust a name.
+    if not _REPORT_NAME.fullmatch(name) or name not in REGISTRY:
+        raise ValueError("not a report name")
     stem = f"{start:%Y%m%dT%H%M}_{end:%Y%m%dT%H%M}"
-    folder = output_dir / name
+    folder = output_dir / REGISTRY[name].name  # the registry's own name, not the caller's
     return folder / f"{stem}.csv", folder / f"{stem}.html"
 
 

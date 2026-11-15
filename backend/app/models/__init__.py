@@ -1,28 +1,47 @@
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
-from app.models.availability import FreelancerUnavailability
+from app.models.availability import PersonUnavailability
 from app.models.base import Base
-from app.models.labels import FreelancerLabel, Label
-from app.models.ratings import UserRating
+from app.models.church import Church, HomeGroup, Person
+from app.models.labels import Label, PersonLabel
+from app.models.ratings import Rating
 from app.models.reports import ReportRun, ReportSchedule
 from app.models.reveals import PhoneReveal
-from app.models.users import Admin, Freelancer, Organisation, WorkHost
-from app.models.vouching import OrgFreelancer
+from app.models.trust import (
+    AdminInvitation,
+    ContactView,
+    GroupInvitation,
+    GroupRequest,
+    HandoverRequest,
+    MoveRequest,
+    Notification,
+    StatusChange,
+    Vouch,
+    VouchLink,
+)
 
 __all__ = [
-    "Admin",
+    "AdminInvitation",
+    "Church",
+    "ContactView",
+    "GroupInvitation",
+    "GroupRequest",
+    "HandoverRequest",
+    "HomeGroup",
+    "MoveRequest",
+    "Notification",
+    "Person",
+    "StatusChange",
+    "Vouch",
+    "VouchLink",
     "Base",
-    "Freelancer",
-    "FreelancerLabel",
-    "FreelancerUnavailability",
+    "PersonLabel",
+    "PersonUnavailability",
     "Label",
     "LoginHistory",
-    "OrgFreelancer",
-    "Organisation",
     "PasswordResetToken",
     "PhoneReveal",
     "RefreshToken",
     "ReportRun",
     "ReportSchedule",
-    "UserRating",
-    "WorkHost",
+    "Rating",
 ]

@@ -16,6 +16,20 @@ export function errorMessage(error: unknown): string {
         return t('error.tooManyAttempts', {
           minutes: Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)),
         })
+      case 'account_exists':
+        return t('error.accountExists')
+      case 'invalid_choice':
+        return t('error.invalidChoice')
+      case 'account_revoked':
+        return t('error.accountRevoked')
+      case 'not_pending':
+        return t('error.notPending')
+      case 'invalid_password':
+        return t('error.invalidPassword')
+      case 'rate_limited':
+        return t('error.rateLimited', {
+          minutes: Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)),
+        })
       case 'email_taken':
         return t('error.emailTaken')
       case 'invalid_reset_token':

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/auth/user_type.dart';
 import '../../core/providers.dart';
 import '../../core/validation/validators.dart';
 import '../../shared/widgets/app_text_field.dart';
@@ -12,9 +11,7 @@ import 'auth_widgets.dart';
 /// Asks for a reset link. The answer is always the same text, whether or not an account exists.
 /// The link itself opens in the browser (version 1).
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
-  const ForgotPasswordScreen({super.key, required this.type});
-
-  final UserType type;
+  const ForgotPasswordScreen({super.key});
 
   @override
   ConsumerState<ForgotPasswordScreen> createState() =>
@@ -47,7 +44,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           .read(apiClientProvider)
           .post(
             '/auth/forgot-password',
-            body: {'email': _email.text.trim(), 'user_type': widget.type.wire},
+            body: {'email': _email.text.trim()},
             auth: false,
           );
       if (mounted) setState(() => _sent = true);

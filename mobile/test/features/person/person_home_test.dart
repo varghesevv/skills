@@ -1,0 +1,452 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/fake_api.dart';
+import '../../support/test_app.dart';
+
+const _churches = {
+  'items': [
+    {'id': 'church-1', 'name': 'Grace Church'},
+    {'id': 'church-2', 'name': 'Hope Church'},
+  ],
+};
+const _groups = {
+  'items': [
+    {'id': 'group-1', 'name': 'Riverside', 'leader_name': 'Lena Leader'},
+    {'id': 'group-2', 'name': 'Hilltop', 'leader_name': 'Hari Host'},
+  ],
+};
+
+void _lists(FakeAdapter adapter) => adapter
+  ..reply('GET', '/churches', FakeReply(200, _churches))
+  ..reply('GET', '/churches/church-1/home-groups', FakeReply(200, _groups))
+  ..reply(
+    'GET',
+    '/churches/church-2/home-groups',
+    FakeReply(200, {
+      'items': [
+        {'id': 'group-9', 'name': 'Harbour', 'leader_name': 'Hana Leader'},
+      ],
+    }),
+  );
+
+/// The page is a lazy list: scroll until the part under test has been built.
+Future<void> _reveal(WidgetTester tester, String key) async {
+  final finder = find.byKey(Key(key));
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  group('the home of a person by status', () {
+    testWidgets('shows an applicant where they applied and the vouches', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store, personJson(vouches: 1));
+        },
+      );
+      expect(find.text('Grace Church'), findsWidgets);
+      expect(find.text('Riverside'), findsWidgets);
+      expect(find.text('Lena Leader'), findsOneWidget);
+      expect(find.text('1 vouch'), findsOneWidget);
+    });
+
+    testWidgets('shows a revoked person that they have no access', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) => signedInAsPerson(
+          adapter,
+          store,
+          personJson(status: 'revoked', group: null, leader: null),
+        ),
+      );
+      expect(find.text('No access'), findsWidgets);
+      expect(find.byKey(const Key('leave-open')), findsNothing);
+    });
+
+    testWidgets('welcomes an admitted person with their status', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        words: churchWords,
+        arrange: (adapter, store) => signedInAsPerson(
+          adapter,
+          store,
+          personJson(status: 'provider', name: 'Pia Provider'),
+        ),
+      );
+      expect(find.text('Welcome, Pia Provider'), findsOneWidget);
+      expect(find.text('Your status: Provider'), findsOneWidget);
+    });
+
+    testWidgets('signing out returns to the welcome screen', (tester) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter.reply('POST', '/auth/logout', FakeReply(204));
+        },
+      );
+      await tapKey(tester, 'log-out');
+      expect(find.byKey(const Key('member-join')), findsOneWidget);
+    });
+  });
+
+  group('change of choice', () {
+    testWidgets('moves an applicant to another group', (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter.reply(
+            'PUT',
+            '/me/application',
+            FakeReply(
+              200,
+              personJson(
+                group: {'id': 'group-2', 'name': 'Hilltop'},
+                leader: 'Hari Host',
+              ),
+            ),
+          );
+        },
+      );
+      await _reveal(tester, 'change-church');
+      await tester.tap(find.byKey(const Key('change-group-church-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Hilltop').last);
+      await tester.pumpAndSettle();
+      await tapKey(tester, 'change-save');
+      expect(find.text('Your choice was saved.'), findsOneWidget);
+      final put = app.adapter.seen.firstWhere((r) => r.method == 'PUT');
+      expect(put.body, {
+        'home_group_id': 'group-2',
+        'requested_status': 'searcher',
+      });
+      await tester.drag(find.byType(ListView), const Offset(0, 1500));
+      await tester.pumpAndSettle();
+      expect(find.text('Hari Host'), findsOneWidget);
+    });
+
+    testWidgets('changes only what they apply for', (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter.reply(
+            'PUT',
+            '/me/application',
+            FakeReply(200, personJson(requested: 'provider')),
+          );
+        },
+      );
+      await _reveal(tester, 'change-save');
+      final save = find.byKey(const Key('change-save'));
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+      await tapKey(tester, 'change-apply-provider');
+      await tapKey(tester, 'change-save');
+      expect(app.adapter.seen.firstWhere((r) => r.method == 'PUT').body, {
+        'requested_status': 'provider',
+      });
+    });
+
+    testWidgets('says when the application was decided in the meantime', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter.reply(
+            'PUT',
+            '/me/application',
+            FakeReply(409, apiError('not_pending')),
+          );
+        },
+      );
+      await tapKey(tester, 'change-apply-provider');
+      await tapKey(tester, 'change-save');
+      expect(
+        find.text('Your application has already been decided.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('says so when the churches cannot be loaded', (tester) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          adapter
+            ..reply(
+              'GET',
+              '/churches',
+              FakeReply(503, apiError('service_unavailable')),
+            )
+            ..reply(
+              'GET',
+              '/churches/church-1/home-groups',
+              FakeReply(200, _groups),
+            );
+          signedInAsPerson(adapter, store);
+        },
+      );
+      await _reveal(tester, 'change-church');
+      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
+      final save = find.byKey(const Key('change-save'));
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+    });
+  });
+
+  group('leaving', () {
+    testWidgets('closes the account after the password, then signs out', (
+      tester,
+    ) async {
+      final password = fresh('pw');
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter
+            ..reply('DELETE', '/me', FakeReply(204))
+            ..reply('POST', '/auth/logout', FakeReply(204));
+        },
+      );
+      expect(find.byKey(const Key('leave-submit')), findsNothing);
+      await tapKey(tester, 'leave-open');
+      await typeInto(tester, 'Your password, to confirm', password);
+      await tapKey(tester, 'leave-submit');
+      final delete = app.adapter.seen.firstWhere((r) => r.method == 'DELETE');
+      expect(delete.path, '/me');
+      expect(delete.body, {'password': password});
+      expect(find.byKey(const Key('member-join')), findsOneWidget);
+      expect(await app.store.readRefreshToken(), isNull);
+    });
+
+    testWidgets('is signed out even if the sign-out call fails afterwards', (
+      tester,
+    ) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter
+            ..reply('DELETE', '/me', FakeReply(204))
+            ..reply(
+              'POST',
+              '/auth/logout',
+              FakeReply(503, apiError('service_unavailable')),
+            );
+        },
+      );
+      await tapKey(tester, 'leave-open');
+      await typeInto(tester, 'Your password, to confirm', fresh('pw'));
+      await tapKey(tester, 'leave-submit');
+      expect(find.byKey(const Key('member-join')), findsOneWidget);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsNothing,
+      );
+      expect(await app.store.readRefreshToken(), isNull);
+    });
+
+    testWidgets('stays signed in and says so when the password is wrong', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+          adapter.reply(
+            'DELETE',
+            '/me',
+            FakeReply(403, apiError('invalid_password')),
+          );
+        },
+      );
+      await tapKey(tester, 'leave-open');
+      await typeInto(tester, 'Your password, to confirm', fresh('pw'));
+      await tapKey(tester, 'leave-submit');
+      expect(find.text('The password is not correct.'), findsOneWidget);
+      expect(find.byKey(const Key('leave-open')), findsNothing);
+      expect(find.byKey(const Key('leave-submit')), findsOneWidget);
+    });
+
+    testWidgets('does not call the server without a password', (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+        },
+      );
+      await tapKey(tester, 'leave-open');
+      await tapKey(tester, 'leave-submit');
+      expect(app.adapter.seen.where((r) => r.method == 'DELETE'), isEmpty);
+    });
+
+    testWidgets('moves focus to the confirmation and back when cancelled', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+        },
+      );
+      await tapKey(tester, 'leave-open');
+      await tester.pumpAndSettle();
+      final confirmation = find.ancestor(
+        of: find.text('Your password, to confirm'),
+        matching: find.byType(Focus),
+      );
+      expect(
+        Focus.of(tester.element(find.text('Your password, to confirm')))
+                .hasFocus ||
+            confirmation.evaluate().isNotEmpty,
+        isTrue,
+      );
+      await tapKey(tester, 'leave-cancel');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('leave-open')), findsOneWidget);
+      final trigger = tester.widget<OutlinedButton>(
+        find.byKey(const Key('leave-open')),
+      );
+      expect(trigger.focusNode?.hasFocus, isTrue);
+    });
+  });
+
+  group('large text on a small phone', () {
+    testWidgets('the application screen and the leave form still fit', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        textScale: 2.0,
+        size: const Size(360, 640),
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+        },
+      );
+      await tapKey(tester, 'leave-open');
+      expect(find.byKey(const Key('leave-submit')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('every button is at least 48 by 48', (tester) async {
+      await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          _lists(adapter);
+          signedInAsPerson(adapter, store);
+        },
+      );
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    });
+  });
+
+  testWidgets(
+    'a person revoked while using the app is shown the notice on their next call',
+    (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          signedInAsPerson(
+            adapter,
+            store,
+            personJson(status: 'searcher', requested: null),
+          );
+          adapter
+            ..reply(
+              'GET',
+              '/me/notifications',
+              FakeReply(200, {'items': [], 'total': 0, 'unread_count': 0}),
+            )
+            ..reply(
+              'GET',
+              '/workhosts/me/ratings',
+              FakeReply(403, apiError('account_revoked')),
+            )
+            // The second answer to `GET /me`: the status changed in the meantime.
+            ..reply(
+              'GET',
+              '/me',
+              FakeReply(
+                200,
+                personJson(status: 'revoked', group: null, leader: null),
+              ),
+            );
+        },
+      );
+      await tapKey(tester, 'ratings-given');
+      expect(app.adapter.count('GET', '/me'), 2);
+      expect(find.text('No access'), findsWidgets);
+      expect(find.byKey(const Key('ratings-given')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a leader who is no longer one is taken home from a leader page',
+    (tester) async {
+      final app = await pumpApp(
+        tester,
+        arrange: (adapter, store) {
+          signedInAsPerson(
+            adapter,
+            store,
+            personJson(
+              status: 'verifier',
+              requested: null,
+              name: 'Lena Leader',
+            ),
+          );
+          adapter
+            ..reply(
+              'GET',
+              '/me/notifications',
+              FakeReply(200, {'items': [], 'total': 0, 'unread_count': 0}),
+            )
+            ..reply(
+              'GET',
+              '/verifier/applicants',
+              FakeReply(403, apiError('not_admitted')),
+            )
+            // The second answer to `GET /me`: the leader was replaced and is a searcher now.
+            ..reply(
+              'GET',
+              '/me',
+              FakeReply(200, personJson(status: 'searcher', requested: null)),
+            );
+        },
+      );
+      await tapKey(tester, 'leader-applicants');
+      expect(app.adapter.count('GET', '/me'), 2);
+      expect(find.byKey(const Key('ratings-given')), findsOneWidget);
+      expect(find.byKey(const Key('leader-applicants')), findsNothing);
+      expect(find.byKey(const Key('provider-search')), findsOneWidget);
+    },
+  );
+}

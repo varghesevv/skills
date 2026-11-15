@@ -162,9 +162,9 @@ Close codes: `4401` not authenticated or token expired, `4403` role not allowed,
 
 ## 7. Moderation and admin
 
-- A report stores a row; the web admin gets a **Chat reports** report (new, RP-09: reports per week, per reason, open vs handled) and an admin-only endpoint `GET /admin/chat-reports` and `GET /admin/chat-reports/{id}/messages` that returns the reported conversation, **each access logged** with the admin id. Admins cannot browse other conversations (open question Q-A3).
+- A report stores a row; the web admin gets a **Chat reports** report (new, RP-10: reports per week, per reason, open vs handled) and an admin-only endpoint `GET /admin/chat-reports` and `GET /admin/chat-reports/{id}/messages` that returns the reported conversation, **each access logged** with the admin id. Admins cannot browse other conversations (open question Q-A3).
 - Blocking a freelancer-side conversation makes `POST .../messages` from the work host return `403 chat_blocked`. The work host is not told more than that.
-- Chat metrics report (new, RP-10): conversations started, messages per day, first reply rate and median time to first reply, per work host and per skill (through the freelancer's skills), reveal-to-conversation conversion (a conversation started after a reveal of the same freelancer by the same host). This extends the reveal analysis (RP-08).
+- Chat metrics report (new, RP-11): conversations started, messages per day, first reply rate and median time to first reply, per work host and per skill (through the freelancer's skills), reveal-to-conversation conversion (a conversation started after a reveal of the same freelancer by the same host). This extends the reveal analysis (RP-08).
 
 ## 8. Privacy, deletion and retention
 

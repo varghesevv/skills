@@ -45,8 +45,8 @@ Contents
 
 | Part | What it is | Where the code is |
 |---|---|---|
-| **web** | The site you click around in. Four areas (portals): freelancer, work host, organisation, admin. | `frontend/` |
-| **api** | The server that holds the rules. The web site (and later a mobile app) only talk to it over HTTP. | `backend/` |
+| **web** | The site you click around in. One login; the pages you see depend on your status (applicant, searcher, provider, group leader, church admin, owner). | `frontend/` |
+| **api** | The server that holds the rules. The web site and the Android app only talk to it over HTTP. | `backend/` |
 | **worker** | A small program that runs reports on a schedule (for example every morning). | `backend/app/worker` |
 | **db** | PostgreSQL, the only place data is stored. | started from `docker-compose.yml` |
 
@@ -216,7 +216,7 @@ The site starts empty. Open a **second terminal**, `cd skills`, and create peopl
 
 The demo data commands need the demo password from `.env`. The one-liner below reads it for that single command without printing it.
 
-### 5.1 A few ready-made accounts (quickest)
+### 5.1 A few ready-made people (quickest)
 
 ```bash
 docker compose exec \
@@ -224,14 +224,17 @@ docker compose exec \
   api python -m app.cli seed-demo
 ```
 
-(Type it as one line if your terminal does not accept the line breaks.) It prints `Demo users created: 8`. The accounts are:
+(Type it as one line if your terminal does not accept the line breaks.) It creates two churches with two home groups each and 24 people of every status, and prints the named cast:
 
-| Account type | Email |
+| Role | Person |
 |---|---|
-| admin | `admin@example.com` |
-| freelancer | `anita.plumber@example.com`, `joseph.electrician@example.com`, `maria.carer@example.com` |
-| work host | `host.one@example.com`, `host.two@example.com` |
-| organisation | `org.approved@example.com` (can log in), `org.pending@example.com` (waits for admin approval) |
+| OWNER | `olive.owner@demo.example.com` |
+| ADMIN of the second church | `ada.admin@demo.example.com` |
+| leader (VERIFIER) | `lena.leader@demo.example.com` |
+| provider | `priya.provider@demo.example.com` |
+| searcher | `sam.searcher@demo.example.com` |
+| applicant (waiting) | `ann.applicant@demo.example.com` |
+| revoked | `rex.revoked@demo.example.com` |
 
 Password for all of them: the value of `DEMO_USER_PASSWORD` in your `.env`. To read it on your own computer only:
 
@@ -239,40 +242,43 @@ Password for all of them: the value of `DEMO_USER_PASSWORD` in your `.env`. To r
 sed -n 's/^DEMO_USER_PASSWORD=//p' .env
 ```
 
-### 5.2 A large realistic data set (about 260 people)
+If an OWNER exists already (you set up Skills first, section 5.3), that OWNER keeps their church and the demo adds to it; no second OWNER is made. The demo is made once: the history of people is append-only, so it cannot be removed row by row. To start over, wipe the database (`make reset-db`).
 
-This creates 10 organisations (8 approved, 1 pending, 1 rejected), 50 work hosts and 200 freelancers with varied skills, skill levels, timings, languages and nativity, plus vouches, ratings and planned time off. It writes a login list as a CSV file:
+### 5.2 A large realistic data set (about 200 people)
+
+5.1 and 5.2 are alternatives: run one of them on a fresh database. To switch from one to the other, wipe the database first (`make reset-db`).
+
+This creates 3 churches with 3 home groups each and 200 people (providers with varied skills, skill levels, timings, languages and nativity; searchers; applicants with vouches; a few revoked people), plus ratings, number reveals and planned time off, and the named cast of 5.1. It writes a login list as a CSV file:
 
 ```bash
 docker compose exec -T \
   -e DEMO_USER_PASSWORD="$(sed -n 's/^DEMO_USER_PASSWORD=//p' .env)" \
-  api python -m app.cli generate-demo-data --csv - --reset > demo-logins.csv
+  api python -m app.cli generate-demo-data --csv - > demo-logins.csv
 ```
 
-Check it: `wc -l demo-logins.csv` should say `261` (260 accounts plus a header).
+Check it: `wc -l demo-logins.csv` should say `210` (209 people, that is the 200, the OWNER, 2 ADMINs and 6 group leaders, plus a header).
 
-`demo-logins.csv` has the columns `user_type, email, password, name, status`. **It contains the demo password.** Git ignores files with this name, but never share it. `--reset` removes earlier generated people first, so you can run the command again any time for a fresh set. Open the CSV in a spreadsheet and pick any row to log in as that person.
+`demo-logins.csv` has the columns `status, email, password, name, church, home_group`. **It contains the demo password.** Git ignores files with this name, but never share it. The command refuses when demo people already exist (see 5.1 for starting over). Open the CSV in a spreadsheet and pick any row to log in as that person.
 
-### 5.3 Create your own admin account
+### 5.3 Create your own OWNER account
 
 ```bash
-docker compose exec api python -m app.cli create-admin --email you@example.com --mobile +971500000000
+docker compose exec api python -m app.cli create-owner --name "Your Name" --email you@example.com --mobile +971500000000 --church "Your church" --group "Your home group"
 ```
 
-It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters.
+It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters. It refuses when an OWNER already exists, and the demo data (5.2) makes one. So run it **before** generating the demo data if you want your own OWNER (the demo then adds to your church); otherwise skip it and sign in as the demo OWNER from `demo-logins.csv`.
 
 ### 5.4 Log in
 
-1. Open <http://localhost:5173>. There are three login pages:
-   - **Log in** (`/login`) for freelancers and work hosts. Switch between the two with the links **Freelancer** and **Work host** at the top of the form.
-   - **Organisation log in** (`/login/organisation`), only for organisations. Open it by address; the main login page does not link to it.
-   - **Admin log in** (`/login/admin`), only for administrators. Open it by address; no page links to it.
-2. Enter the email and password of that kind of account. An account of another kind is rejected on the wrong page.
-3. Try each type to see its area:
-   - **Freelancer**: profile, skills and labels, availability calendar, vouches, ratings.
-   - **Work host**: search freelancers, rate them.
-   - **Organisation**: vouch for freelancers. A new organisation cannot log in until an admin approves it.
-   - **Admin**: approve organisations, manage labels, run and download reports, schedules.
+1. Open <http://localhost:5173> and choose **Sign in** (`/sign-in`). There is one sign-in page for everyone; **Join** (`/sign-up`) is for a new person.
+2. Enter the email and password of one of the people from 5.1 or 5.2 (or your own OWNER from 5.3). The page you land on (`/member`) and its menu depend on that person's status.
+3. Try each status to see its pages (a higher status sees what the lower ones see):
+   - **Applicant** (`ann.applicant@...`): the application, the vouches received, a vouch link to share, change or leave.
+   - **Searcher** (`sam.searcher@...`): find providers, a provider's page, rate, Reveal a number, ratings I gave, vouch for others.
+   - **Provider** (`priya.provider@...`): profile and rate, skills and labels, time off, ratings received.
+   - **Group leader** (`lena.leader@...`): applicants (admit or decline), members, people to re-check, revoked, invite to the group, moves.
+   - **Church admin** (`ada.admin@...`): the whole church: groups and their leaders, group requests, church reports.
+   - **Owner** (`olive.owner@...`): all churches and invitations, labels, all reports with history and schedules, handover.
 
 "Forgot password" does not send email locally. The reset link is written to the API log:
 
@@ -315,7 +321,7 @@ Where things live:
 
 | I want to change... | Look in |
 |---|---|
-| a page or a form | `frontend/src/pages/`, `frontend/src/portals/<portal>/` |
+| a page or a form | `frontend/src/pages/person/` (and `provider/`, `search/`, `leader/`, `owner/` below it) |
 | text on screen | `frontend/src/i18n/index.ts` |
 | colours, spacing, layout | `frontend/src/styles/global.css` |
 | an API endpoint | `backend/app/api/v1/` |
@@ -420,11 +426,11 @@ Open the new file in `backend/migrations/versions/` and read it. Automatic gener
 
 ## 10. Reports
 
-Admins create and download reports in the web site (Admin → Reports, Report history and Schedules). From the command line:
+The OWNER runs and downloads reports in the web site (Reports, Report history and Schedules); an ADMIN runs the reports limited to their church, and does not see run history or schedules. From the command line:
 
 ```bash
 docker compose exec api python -m app.reports list
-docker compose exec api python -m app.reports run users_registered_daily --from 2026-10-20 --to 2026-10-20
+docker compose exec api python -m app.reports run signups_daily --from 2026-10-20 --to 2026-10-20
 ```
 
 Files are written to the reports folder inside the container. The `worker` container runs the scheduled reports (daily, weekly, monthly); `docker compose logs -f worker` shows when it runs. Only one worker should ever run.
@@ -442,8 +448,8 @@ Files are written to the reports folder inside the container. The `worker` conta
 | Browser shows nothing at port 5173 | The web container is still running `npm install`. Watch `docker compose logs -f web` until it says `ready`. |
 | `DEMO_USER_PASSWORD is not set` | The value is empty in `.env`. Run `make env` (it fills empty secrets), then retry. Remember the `-e DEMO_USER_PASSWORD=...` part of the command. |
 | `In demo, DEMO_USER_PASSWORD must be strong...` | `ENVIRONMENT` in `.env` is `demo`. Local development uses `ENVIRONMENT=local`. |
-| `An admin with this email already exists` | It is already created. Log in, or use another email. |
-| Login says the account is not approved | An organisation needs admin approval. Log in as admin → Organisations → approve it. |
+| `An OWNER already exists` | Only one OWNER can exist. Log in as that OWNER, or start over with `make reset-db` (this deletes all local data). |
+| A person cannot reach a page | Their status does not allow it: they are sent to their home. A leader admits people (Applicants); the OWNER and the admins see more. |
 | Error "Too many failed attempts" (HTTP 429) | Five wrong passwords for the same email lock that login for 15 minutes, by design. Wait, or use another account. |
 | `demo-logins.csv` is empty | The command failed before writing. Run it without `> demo-logins.csv` to read the error message. |
 | Changes in `backend/` are not picked up | Check `docker compose logs api` for a syntax error. The API reloads only when the file is valid. |
@@ -466,9 +472,9 @@ Still stuck? Copy the error text (never the contents of `.env`), look in `docker
 | **Docker Compose** | The tool that starts all containers together from `docker-compose.yml`. |
 | **Migration** | A versioned script that changes the database structure (Alembic). |
 | **Seed** | Creating starting or demo data. |
-| **Label** | A choice such as a skill, language, timing, nativity or skill level that describes a freelancer. |
-| **Vouch** | An approved organisation saying "we stand behind this freelancer". |
-| **Portal** | One role's area of the site (freelancer, work host, organisation, admin). |
+| **Label** | A choice such as a skill, language, timing, nativity or skill level that describes a provider. |
+| **Vouch** | A member of a church saying "I know this person", for someone who has applied (an applicant, or a searcher who asks to become a provider). |
+| **Status** | What a person may do: applicant (pending), searcher, provider, group leader (verifier), church admin or owner. Applicants and members are admitted, revoked or reinstated by their group leader; leaders are appointed by their church admin, and church admins by the owner ([verification rules](verification.md)). The status is read from the database on every request. |
 | **Token** | The proof of login the site sends with every request. The API is stateless: no server-side sessions. |
 | **Worker** | A background program that does scheduled jobs, here the reports. |
 | **ADR** | Architecture Decision Record: a short note explaining why a technical choice was made. |

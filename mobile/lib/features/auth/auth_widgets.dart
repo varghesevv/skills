@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/auth/user_type.dart';
-
 /// Page layout shared by the signed-out screens: scrollable, centred column that keeps the
 /// keyboard from hiding the form and stays readable at large text sizes.
 class AuthPage extends StatelessWidget {
@@ -40,12 +38,4 @@ class AuthPage extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The user type in a route like `/login/workhost`, or null if it is not one of the three.
-UserType? userTypeFromRoute(String? value) {
-  for (final type in UserType.values) {
-    if (type.wire == value) return type;
-  }
-  return null;
 }

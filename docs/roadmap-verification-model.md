@@ -5,9 +5,13 @@ Status: plan, version 2, 2026-11-12. Rules being built: [verification rules](ver
 ## 0. State (update in every pull request)
 
 - Done: S0.1 (pull request 101), S0.2 (102), S0.3 (103); mobile ratings (100).
-- In progress: S0.4 (decision log), branch `docs/verification-decisions`.
-- Next: the branch `model/verification` and S1 (specification).
-- Waiting on the owner: see section 7. The planning answers were not given in writing, so the defaults of section 8 are in force. The owner allowed merging with the administrator override while the review rule stays in place (2026-11-12).
+- Done also: S0.4 (104), S1.1 (105), S1.2 (106), S1.3 (107), S1.4 (108), S1.5 (109); S1 (specification) is complete. The owner confirmed the defaults of section 8 on 2026-11-13 and asked to proceed with S2.
+- Done also: S2.1 (110), S2.2 (111), S2.3 (112), S2.4 (113), S2.5 (114), S2.6 (115), S2.7 (116, 117), S2.8 (118), S2.9 (119); S2 (identity and sign-up) is complete.
+- Done also: S3.1 (120), S3.2 (122), S3.3 (123), S3.4 (124), S3.5a (125), S3.5 (126), S3.6 (128), S3.9 backend (127), S3.7 (129), S3.9b web (130), S3.9 mobile (131), S3.8 (133 backend journey, 134 mobile contract); S3 (trust: vouching and admission) is complete.
+- Done also: S4.1 (135), S4.2a (136), S4.2b (137), S4.3a (138), S4.3b (139), S4.4a (141), S4.4b (142), S4.4c (143), S4.5a (144), S4.5b (146), S4.6 (the random-sequence test), S4.7a (148), S4.7b (149), S4.8a (152, the groups of the church, change a leader, move a member), S4.8b-1 (153, move requests and their agreements), S4.8b-2 (156, revoke a VERIFIER with a successor, close one's own group), S4.9a (157, the OWNER's churches and invitations), S4.9b (158, the page an invited ADMIN opens), S4.9c backend (159, church filter and the ADMIN's id), S4.9c web (160, handover), S4.9d (161, replace an ADMIN), S4.9e backend (162, the log of phone number views, D-40), S4.9e web log (163), the shared confirmation question (164), S4.9e-2 (165, the OWNER revokes an ADMIN); item 4.9 is complete; S4.10a (166, mobile: revoke, reinstate, re-check flags), S4.10b-1 (167, mobile: group requests), S4.10b-2 (168, mobile: moves), S4.10c-1 (169, mobile: the ADMIN's groups, change a leader, move a member, revoke a VERIFIER), S4.10c-2 (170, mobile: the leader's group invitation link), S4.10d-1 (171, mobile: a leader closes their own group), S4.10d-2 (172, mobile: every admitted member can close their account), S4.10e (173, the leader's group invitation link on the web, and the own-group page for an ADMIN who does not lead), S4.11 (the slice check: `backend/tests/test_church_life_journey.py`); S4 (church structure and life cycle) is complete. S5.1 (175, D-41), S5.2a (176, the search over people and the `ratings` table; D-42), S5.2b (177, the rating endpoints, the public profile and Reveal on people; D-43), S5.3a (178, the reports on people; D-44), S5.3b (179, the demo data and the seed on people; D-45), D-46 (180, the removal of the older accounts moved to 5.12a), S5.4a (181, the web provider pages and the OWNER's labels), S5.5a (182, the web search, a provider's page, rating, Reveal and the ratings given; 183, the layout checks follow), S5.5b (184, the web account page and leaving for every status), S5.4c (185, the web reports for the OWNER and an ADMIN), S5.6 (186, the older web portals and their login and register pages removed; D-47), S5.7 (187, the mobile provider screens for the person), S5.8 (188, the mobile search), S5.9 (189, the mobile provider page, rating and Reveal), S5.10 (191, the mobile ratings given and account page), S5.11 (192, the mobile settings), S5.12 part 1 (193, the older accounts, their screens, bottom bar and calls removed from the app), S5.12 part 2 (194, the accessibility sweep over every member screen, the status read again after a refused call), S5.12a part 1 (195, the older endpoints, the older login path and `create-admin` removed; no database change, D-48), S5.12a part 2 (196, migration 0018: the older tables dropped, the authentication tables reshaped to people, `phone_reveals` renamed; D-49), S5.13 (197, the endpoint matrix test and the access log without query strings; D-50), S5.14 (198, the documentation pass: README, local guide, runbook with the reset of the demo, specification overview, Makefile target for the OWNER). The end-of-slice report was given to the owner in the working session.
+- In progress: nothing.
+- Next: S6.2 (the cut-over pull request; S6.1 is 199; the owner approved on 2026-11-15; backup and checklist in the runbook, D-49). Owner: write the privacy statement page and give its address to the app build (`PRIVACY_URL`), and hide the token in `/join/`, `/vouch/` and `/invite/` addresses in the reverse proxy's access log (`infra/`; S5.13, D-50). S5.3c (removing the older accounts, endpoints and tables) moved to the end of S5, as S5.12a, after the clients have moved (D-46).
+- Waiting on the owner: see section 7. The owner confirmed the defaults of section 8 on 2026-11-13 (decision D-21) and allowed merging with the administrator override while the review rule stays in place.
 ## 1. Why this shape (changes from the first draft)
 
 The first draft built all of the backend, then the web, then the mobile app. That proves nothing end to end until about the 35th pull request, so a wrong design choice would show up late and cost a lot. It is replaced by **vertical slices**: each slice delivers one capability on the backend, the web and the mobile app, with tests, and ends with a flow that can be shown. Also added after review:
@@ -51,70 +55,74 @@ Counts are targets; a pull request may split.
 - [x] 0.4 Decision log (`docs/verification-decisions.md`): where every choice the model leaves open is recorded, with date and pull request.
 
 ### S1. Specification (on `model/verification`) — 5 pull requests, documents only
-- [ ] 1.1 Functional requirements (02): replace organisation and vouching requirements with sign-up, vouching, admission, succession, revocation, moving, leaving; keep the provider and searcher requirements.
-- [ ] 1.2 Data model (03): `people`, `churches`, `home_groups`, `status_changes`, `vouches`, `group_requests`, `admin_invitations`, `handover_requests`, `move_requests`, `notifications`; the fate of each old table; the six invariants as database constraints; indexes.
-- [ ] 1.3 API (04): the target contract: sign-up, session, `/me`, churches and groups, membership and verifier operations, search, detail, ratings and Reveal by status, notifications. Resource paths for providers and searchers stay (compatibility); authorisation changes to status.
-- [ ] 1.4 Reports (05), frontend (06), non-functional (07): reports redefined, screens by status, terminology keys, privacy of verifier views (who may see phone numbers and how it is logged), abuse limits for links, notification delivery.
-- [ ] 1.5 Android documents and parity table rewritten for the new screens (replaces the older phase 3 and 4 descriptions).
+- [x] 1.1 Functional requirements (02): replace organisation and vouching requirements with sign-up, vouching, admission, succession, revocation, moving, leaving; keep the provider and searcher requirements.
+- [x] 1.2 Data model (03): `people`, `churches`, `home_groups`, `status_changes`, `vouches`, `group_requests`, `admin_invitations`, `handover_requests`, `move_requests`, `notifications`; the fate of each old table; the six invariants as database constraints; indexes.
+- [x] 1.3 API (04): the target contract: sign-up, session, `/me`, churches and groups, membership and verifier operations, search, detail, ratings and Reveal by status, notifications. Resource paths for providers and searchers stay (compatibility); authorisation changes to status.
+- [x] 1.4 Reports (05), frontend (06), non-functional (07): reports redefined, screens by status, terminology keys, privacy of verifier views (who may see phone numbers and how it is logged), abuse limits for links, notification delivery.
+- [x] 1.5 Android documents and parity table rewritten for the new screens (replaces the older phase 3 and 4 descriptions).
 
 ### S2. Identity and sign-up — 9 pull requests
 Backend first, then web and mobile.
-- [ ] 2.1 Backend: migration to the new schema (destructive for the demo; old organisation, vouch and admin tables removed) with the invariants as constraints.
-- [ ] 2.2 Backend: models and the permission module (`inScope`, `canSetStatus`, `canAdmit`, settable statuses) mirroring the model; one test per invariant; the permission matrix test.
-- [ ] 2.3 Backend: authentication on the new identity per ADR-0017: one login (email and password), password reset, refresh tokens and login history by person, live status check on every request.
-- [ ] 2.4 Backend: operator commands: create the OWNER with the first church and group; operator change; the old admin command removed.
-- [ ] 2.5 Backend: `/me`, list of churches and their home groups with leaders (open to pending applicants).
-- [ ] 2.6 Backend: sign-up (church, group, searcher or provider), change of choice while pending, group invitation link with abuse limits.
-- [ ] 2.7 Web: login, forgot and reset, sign-up wizard, applicant home (status, change choice, leave).
-- [ ] 2.8 Mobile: data layer on the new API, single login, navigation by status instead of user type, sign-up wizard, applicant home.
-- [ ] 2.9 Slice check: end-to-end test of create OWNER, sign up, log in on web and mobile; terminology profiles (backend and web copies kept equal) get the keys for searcher, provider, verifier, admin, owner, church, home group.
+- [x] 2.1 Backend: migration `0007` adds the new identity schema (churches, home groups, people, status history, vouching, requests, notifications) next to the old tables, with the invariants as constraints and one test per rule. **Changed from the first plan** (decision D-20): the old tables are not dropped here, because dropping them would break the working code and tests; each old table is dropped in the pull request that moves its feature (tokens and login history in 2.3, identity tables with 2.6, labels and unavailability in 5.3 (D-41), ratings and reveals in 5.2), and the last one removes the old identity tables.
+- [x] 2.2 Backend: models (done in 2.1) and the permission module (`in_scope`, `can_set_status`, `can_admit`, `can_decline`, `can_vouch`, settable statuses in `app/services/permissions.py`) mirroring the model; one test per invariant (2.1); the permission matrix test (every actor status against every target status and every new status, with the expected answers written out from the rules, checked by mutating the code).
+- [x] 2.3 Backend: authentication on the new identity per ADR-0017: one login (email and password, `user_type` optional and defaulting to the person identity), password reset, refresh tokens and login history for people, live status check on every request (`current_person`, and `get_principal` for person tokens). Transitional dual use of the auth tables: decision D-22.
+- [x] 2.4 Backend: operator command `create-owner` (the OWNER with the first church and group, one transaction, refused when an OWNER exists; runbook section 9). The operator change of the OWNER moves to 4.5, where it shares its logic with the handover; the older `create-admin` stays until the older accounts go (D-20).
+- [x] 2.5 Backend: `GET /me` (person view, readable by a revoked person) and `PUT /me`, and the public, rate-limited list of churches and their home groups with leaders (decision D-19).
+- [x] 2.6 Backend: `POST /auth/signup`, `PUT /me/application` (change of choice while pending), the group invitation link (`POST /group-invitations/lookup`, `/verifier/group-invitations`), with the abuse limits of specification 07. Migration `0009` fixes a flaw of 0007 found by the sign-up tests: the people rules checked the row as it was when changed, not as it is at commit. The older register routes and account tables stay until the older accounts go (D-20, S5.2).
+- [x] 2.7 Web: sign in (one login, no account type), forgot and reset password for people, the sign-up wizard (also through an invitation link), the home of a person by status (applicant with change of choice and leave, revoked, a placeholder for admitted people), at transitional addresses next to the older pages (specification 06). Backend `DELETE /me` came first (pull request 116).
+- [x] 2.8 Mobile: data layer on the new API (`PersonRepository`, `PersonMe`, `Account`), single login (`/sign-in`, no account type), navigation by status (the router sends a person to `/member`; applicant, revoked and admitted screens), sign-up wizard (also through a pasted invitation link), applicant home with change of choice and leave. At transitional addresses next to the older screens, like the web (S2.7).
+- [x] 2.9 Slice check: an end-to-end journey test through the real API and database (set up Skills, list churches, sign up by group and by link, log in, read the application, change it, reset a password, leave, join again), which is what the web and the mobile app call (their own tests check the screens against the same contract; a browser and a phone run against the demo are left to the cut-over rehearsal, S6.1); terminology keys for the home group, verifier, admin and owner in the backend and web profiles (D-24; searcher, provider and church are the existing `workhost`, `freelancer` and `organisation` words).
 
 ### S3. Trust: vouching and admission — 9 pull requests
-- [ ] 3.1 Backend: vouch link per applicant; vouch and withdraw; who may vouch; abuse limits and token entropy.
-- [ ] 3.2 Backend: admit and decline (`canAdmit`), status history, verifier lists (applicants with vouches, members, revoked, flagged); access to phone numbers in scope is logged.
-- [ ] 3.3 Backend: in-app notifications (outbox, list, mark read) for the events the model names.
-- [ ] 3.4 Web: vouch page opened from a link; share my vouch link; notifications.
-- [ ] 3.5 Web: verifier screens: applicants and vouches, admit and decline, members.
-- [ ] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
-- [ ] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
-- [ ] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider.
-- [ ] 3.9 Searcher-to-provider upgrade path.
+- [x] 3.1 Backend: vouch link per applicant; vouch and withdraw; who may vouch; abuse limits and token entropy.
+- [x] 3.2 Backend: admit and decline (`canAdmit`), status history, verifier lists (applicants with vouches, members, revoked, flagged); access to phone numbers in scope is logged.
+- [x] 3.3 Backend: in-app notifications (outbox, list, mark read) for the events the model names.
+- [x] 3.4 Web: vouch page opened from a link; share my vouch link; vouches received and given (withdraw); notifications (top bar count, list, mark read). Browser run: S6.1.
+- [x] 3.5 Web: verifier screens: applicants and vouches, admit and decline, members, and one person's page (number, history, chain of trust). Revoked and flagged lists come with revoke and reinstate (4.7). Browser run: S6.1.
+- [x] 3.5a Backend: tell the verifier on each applicant whether admitting as a provider will work now (`can_admit_as_provider`), so the screens show the button only when it does (125).
+- [x] 3.6 Mobile: share my vouch link; vouch from a received link; notifications list.
+- [x] 3.7 Mobile: verifier screens: applicants and vouches, admit and decline, members.
+- [x] 3.8 Slice check: end-to-end test of apply, collect vouches, admit as searcher and as provider. The backend journey (`backend/tests/test_trust_journey.py`: four people apply, vouch links and vouching, the leader's own vouch not enough, admission as searcher and as provider, a searcher asks to become a provider, decline of an application and of a request, notifications, the number view logged, and the rules of the model hold at the end) is what the web and the mobile app call; their own tests check the screens against the same contract, and the mobile contract test (`mobile/test/contract/api_contract_test.dart`) now holds every call and field of S3 (pull request 134). A browser and a phone run against the demo are left to the cut-over rehearsal (S6.1).
+- [x] 3.9 Searcher-to-provider upgrade path, backend: `POST /me/apply-provider`, the applicants list holds the searchers who ask, declining a request ends it only (D-29). Web screens for it: 3.9b, done (pull request 130). Mobile screens for it: done (pull request 131).
 
 ### S4. Church structure and life cycle — 11 pull requests
-- [ ] 4.1 Backend: revoke, reinstate, re-check flags, re-confirm.
-- [ ] 4.2 Backend: start a home group (request and approval); invite an ADMIN, which creates a church.
-- [ ] 4.3 Backend: succession (step down and replace a leader, hand a group on) with same-transaction guarantees.
-- [ ] 4.4 Backend: move between groups by agreement; leave; close a group; close a church; closing an account keeps the trust record and removes personal details.
-- [ ] 4.5 Backend: OWNER handover; operator change.
-- [ ] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step.
-- [ ] 4.7 Web: revoke and reinstate, flags, group requests.
-- [ ] 4.8 Web: ADMIN screens: succession, the church's people and revoked list.
-- [ ] 4.9 Web: OWNER screens: churches, invitations, labels management, handover.
-- [ ] 4.10 Mobile: revoke and reinstate, flags; ADMIN screens (group requests, succession); close account.
-- [ ] 4.11 Slice check: end-to-end tests of a leader leaving, a revocation with flags, and an OWNER handover.
+- [x] 4.1 Backend: revoke, reinstate, re-confirm, and the flagging function (revoking a VERIFIER or ADMIN, which sets the flags, comes with succession in 4.3; decision D-30).
+- [x] 4.2 Backend: start a home group (request and approval): 4.2a (D-31); invite an ADMIN, which creates a church: 4.2b (D-32).
+- [x] 4.3 Backend: succession with same-transaction guarantees: 4.3a: replace or hand on a group's leader, revoke a VERIFIER with a successor (flags set), a leader asks to start a group (D-33); 4.3b: an ADMIN's succession (`PUT /churches/{id}/admin`, revoking an ADMIN; D-34).
+- [x] 4.4 Backend: move between groups by agreement (4.4a; D-35); close a group (4.4b; D-36); close a church (4.4c; D-37), with the OWNER's list of churches. (Leave, which is `DELETE /me` for people who do not lead, was done early for the web applicant home: pull request in S2.7.)
+- [x] 4.5 Backend: OWNER handover (4.5a; D-38); operator change (4.5b; D-39).
+- [x] 4.6 Backend: seeded random-sequence test over all operations checking the invariants after each step (`backend/tests/test_random_sequence.py`; it found no hole in S4).
+- [x] 4.7 Web: revoke and reinstate, flags (4.7a); group requests (4.7b).
+- [x] 4.8 Web: ADMIN screens: the groups of the church and change of leader (4.8a), moves (4.8b-1), revoke a leader with a successor and close one's own group (4.8b-2). The church's people and revoked list are the Members and Revoked pages (3.5, 4.7a), which an ADMIN sees for the whole church. The OWNER's replacement of an ADMIN is in 4.9.
+- [x] 4.9 Web: OWNER screens: churches, invitations, the page an invited ADMIN opens, handover, replace and revoke an ADMIN, and the log of phone number views (backend endpoint and O-03 retention first: D-40). Label management moved to S5.4: the label endpoints are the old administrator's until S5.1.
+- [x] 4.10 Mobile: revoke and reinstate, flags (4.10a); group requests and moves (4.10b); the ADMIN screens and the leader's group invitation link (4.10c); close one's own group and leave (4.10d).
+- [x] 4.10e Web: the leader's group invitation link (it was missing from the web; found while building 4.10c).
+- [x] 4.11 Slice check: end-to-end tests of a leader leaving, a revocation with flags, and an OWNER handover (`backend/tests/test_church_life_journey.py`, through the real endpoints and a real database).
 
 ### S5. Product features on the new identity — 14 pull requests
-- [ ] 5.1 Backend: provider profile, labels, unavailability owned by the person (paths unchanged).
-- [ ] 5.2 Backend: search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers.
-- [ ] 5.3 Backend: reports redefined (verification reports; the Reveal report stays); schedules; demo data generator and seed; OpenAPI export and contract.
-- [ ] 5.4 Web: member shell and navigation by status; provider pages (profile, labels, availability, ratings received).
-- [ ] 5.5 Web: searcher pages (search, detail, rate, Reveal, ratings given); settings and account.
-- [ ] 5.6 Web: old portals removed; responsive and end-to-end tests updated.
-- [ ] 5.7 Mobile: provider screens moved to the person endpoints.
-- [ ] 5.8 Mobile: search (list, filter sheet, chips, name search, sort, paging).
-- [ ] 5.9 Mobile: detail, rate and edit a rating, Reveal (number only in memory, dialler).
-- [ ] 5.10 Mobile: ratings given; searcher profile.
-- [ ] 5.11 Mobile: settings, privacy link, update hint.
-- [ ] 5.12 Mobile: accessibility and parity pass; the parity table reconciled.
-- [ ] 5.13 Security review pass: every endpoint against the permission matrix, log review for personal data.
-- [ ] 5.14 Documentation pass: runbook (operator procedures, reset of the demo, creating the OWNER), specification reconciled.
+- [x] 5.1 Backend: provider profile, labels, unavailability owned by the person (paths unchanged; D-41: new `person_labels` and `person_unavailability` tables next to the older ones, which go in 5.3; labels managed by the OWNER).
+- [x] 5.2 Backend (5.2a, 176: search and the `ratings` table; 5.2b, 177: rating endpoints, public profile, Reveal): search, detail, ratings and Reveal authorised by status (searcher or above); only admitted providers listed; detail shows church and home group instead of vouching organisations; search performance measured at 10 000 people and 4 000 providers. Closed accounts keep their status as history, so every query and the reveal and rating paths must exclude `closed_at IS NOT NULL`, with a test for a closed provider.
+- [x] 5.3 Backend (5.3a, 178: reports redefined on people and the schedule renamed; 5.3b, 179: demo data generator and seed; the removal of the older accounts and tables moved to 5.12a, D-46): reports redefined (verification reports; the Reveal report stays); schedules; demo data generator and seed; OpenAPI export and contract.
+- [x] 5.4 Web (the member shell and its menus by status were built piece by piece in 5.4a, 5.5a and 5.4c, so there is no 5.4b; 5.4c, 185: reports for the OWNER and an ADMIN, moved from the older administrator portal; 5.4a, 181: the provider menu and pages: profile, skills and labels, availability, ratings received; label management for the OWNER; a planned 5.4b, the member shell and the home of each status, was folded into these): member shell and navigation by status; provider pages (profile, labels, availability, ratings received); label management for the OWNER (moved from 4.9).
+- [x] 5.5 Web (5.5a, 182: search, a provider's page, rate, Reveal, ratings given; 5.5b, 184: settings and account): searcher pages (search, detail, rate, Reveal, ratings given); settings and account.
+- [x] 5.6 Web (186): old portals removed; responsive and end-to-end tests updated.
+- [x] 5.7 Mobile (187): provider screens moved to the person endpoints.
+- [x] 5.8 Mobile (188): search (list, filter sheet, chips, name search, sort, paging).
+- [x] 5.9 Mobile (189): detail, rate and edit a rating, Reveal (number only in memory, dialler).
+- [x] 5.10 Mobile: ratings given; account page (name, mobile).
+- [x] 5.11 Mobile: settings, privacy link (shown when the build has `PRIVACY_URL`), update hint.
+- [x] 5.12 Mobile: accessibility and parity pass; the parity table reconciled. Part 1 (193): the older accounts' screens (login and register by type, the dashboard, the bottom bar, the older settings), calls and tests are removed from the app; a saved session of an older account is forgotten at start; the profile's link to the labels page now opens the member address. Part 2: `test/accessibility/member_screens_test.dart` opens every member screen (tap targets, labels, 2.0 text on a small phone, contrast in light and dark), one dropdown that overflowed is fixed, and a refused call because of the status (`not_admitted`, `account_revoked`) makes the app ask `GET /me` again and close a page the new status does not allow.
+- [x] 5.12a Backend (195 and 196): remove the older accounts, endpoints and tables (`work_hosts`, `freelancers`, `organisations`, `org_freelancers`, `admins`, `user_ratings`, `phone_reveals` and the older labels and unavailability tables, the older registration, login types, `require_roles`, the organisation and administrator routers, the `create-admin` command and the older helpers of the tests), reshape `login_history`, `refresh_tokens` and `password_reset_tokens` to the person (D-46), and rename `person_phone_reveals` to `phone_reveals`. After the web (5.6) and the app (5.12) no longer call them.
+- [x] 5.13 (197) Security review pass: every endpoint against the permission matrix, log review for personal data.
+- [x] 5.14 (198) Documentation pass: runbook (operator procedures, reset of the demo, creating the OWNER), specification reconciled.
 
 ### S6. Cut-over — 2 pull requests
-- [ ] 6.1 Rehearsal on the integration branch: full CI, end-to-end run, migration on a fresh database; backup and rollback steps in the runbook; the minimum app version raised so old app builds ask to update; release version chosen.
+- [x] 6.1 (199) Rehearsal on the integration branch: full CI on every pull request, the whole migration chain run from the live schema with older data on a throwaway database, the cut-over checklist, backup and rollback steps in the runbook. Not done here: raising the minimum app version needs the deploy workflow to pass `APP_MIN_VERSION` and `APP_LATEST_VERSION` (a `.github/` change, now item 7.2a); the release version is chosen by the release pull request that follows the merge.
 - [ ] 6.2 The pull request `model/verification` into `main` (owner approves), then the demo deploy and smoke test, then a check on a phone.
 
-### S7. Release pipeline (on `main`, may run in parallel) — 4 pull requests
+### S7. Release pipeline (on `main`, may run in parallel) — 5 pull requests
 - [ ] 7.1 Web Downloads page (the API already exists).
+- [ ] 7.2a The deploy workflow passes `APP_MIN_VERSION` and `APP_LATEST_VERSION` from the environment (owner approves `.github/`), so old app builds are asked to update.
 - [ ] 7.2 `mobile-release` workflow: signed build, upload to the server folder, release asset (owner approves `.github/`).
 - [ ] 7.3 Signing and environment documentation (values supplied by the owner as environment secrets).
 - [ ] 7.4 Privacy page text (accounts, closure, messages, push tokens).

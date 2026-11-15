@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { downloadReportCsv, runReport, type ReportFilters, type ReportWindow } from '../api/reports'
-import type { OrgBrief, ReportData, ReportInfo } from '../api/types'
+import type { IdName, ReportData, ReportInfo } from '../api/types'
 import { t } from '../i18n'
 import { saveFile } from './download'
 import { errorMessage } from './errors'
@@ -73,21 +73,29 @@ export function checkWindow(
   return { window: { from, to }, errors: {} }
 }
 
-const USER_TYPES = ['freelancer', 'workhost', 'organisation', 'admin'] as const
+const STATUSES = [
+  'pending',
+  'searcher',
+  'provider',
+  'verifier',
+  'admin',
+  'owner',
+  'revoked',
+] as const
 
 type FilterState = {
-  user_type: string
+  status: string
   skill: string
   currency: string
   min_ratings: string
-  org_id: string
+  church_id: string
 }
 const NO_FILTERS: FilterState = {
-  user_type: '',
+  status: '',
   skill: '',
   currency: '',
   min_ratings: '',
-  org_id: '',
+  church_id: '',
 }
 
 function checkFilters(
@@ -96,8 +104,8 @@ function checkFilters(
 ): { filters: ReportFilters; errors: FieldErrors } {
   const errors: FieldErrors = {}
   const filters: ReportFilters = {}
-  if (report.filters.includes('user_type') && values.user_type) filters.user_type = values.user_type
-  if (report.filters.includes('org_id') && values.org_id) filters.org_id = values.org_id
+  if (report.filters.includes('status') && values.status) filters.status = values.status
+  if (values.church_id) filters.church_id = values.church_id
   if (report.filters.includes('skill') && values.skill.trim()) filters.skill = values.skill.trim()
   if (report.filters.includes('currency') && values.currency.trim()) {
     if (/^[A-Za-z]{3}$/.test(values.currency.trim()))
@@ -114,16 +122,17 @@ function checkFilters(
 
 /**
  * Run one report for a date range and show it as a table, with a CSV download.
- * `withFilters` adds the report's own filters (admins); organisations only get the dates.
+ * `withFilters` adds the report's own filters, and the church for the OWNER (`churches` is empty
+ * for an ADMIN, whose reports are always their own church's).
  */
 export function ReportCard({
   report,
   withFilters = false,
-  organisations = [],
+  churches = [],
 }: {
   report: ReportInfo
   withFilters?: boolean
-  organisations?: OrgBrief[]
+  churches?: IdName[]
 }) {
   const [data, setData] = useState<ReportData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -186,27 +195,27 @@ export function ReportCard({
           onChange={setTo}
           error={errors.to}
         />
-        {has('user_type') && (
+        {has('status') && (
           <SelectField
-            label={t('reports.userType')}
-            name={`user_type-${report.name}`}
-            value={values.user_type}
-            onChange={set('user_type')}
+            label={t('reports.status')}
+            name={`status-${report.name}`}
+            value={values.status}
+            onChange={set('status')}
             options={[
-              { value: '', label: t('reports.anyUserType') },
-              ...USER_TYPES.map((type) => ({ value: type, label: t(`role.${type}`) })),
+              { value: '', label: t('reports.anyStatus') },
+              ...STATUSES.map((status) => ({ value: status, label: t(`status.${status}`) })),
             ]}
           />
         )}
-        {has('org_id') && organisations.length > 0 && (
+        {withFilters && churches.length > 0 && (
           <SelectField
-            label={t('reports.organisation')}
-            name={`org_id-${report.name}`}
-            value={values.org_id}
-            onChange={set('org_id')}
+            label={t('reports.church')}
+            name={`church_id-${report.name}`}
+            value={values.church_id}
+            onChange={set('church_id')}
             options={[
               { value: '', label: t('search.anyOrg') },
-              ...organisations.map((item) => ({ value: item.id, label: item.org_name })),
+              ...churches.map((item) => ({ value: item.id, label: item.name })),
             ]}
           />
         )}

@@ -81,8 +81,8 @@ cd /opt/skills
 It prints how long the restore took and the row counts. Compare with the live database:
 
 ```bash
-dc exec -T db psql -U skills -d skills -c "SELECT count(*) FROM freelancers"
-dc exec -T db psql -U skills -d skills_restore -c "SELECT count(*) FROM freelancers"
+dc exec -T db psql -U skills -d skills -c "SELECT count(*) FROM people"
+dc exec -T db psql -U skills -d skills_restore -c "SELECT count(*) FROM people"
 ```
 
 The numbers match if no one registered since that backup. Clean up afterwards:
@@ -149,12 +149,26 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 - **Several API instances:** the hourly counter lives in each process's memory, so each instance allows its own share. Before running more than one API task (ECS, ADR-0012), replace it with a shared counter (for example a database table, like the reveal limits).
 - **Install on a phone:** the web **Downloads page is not built yet** (it is a separate change), and the API needs the bearer token, so a phone browser cannot fetch the APK on its own. Until the page exists, the operator gives testers the file directly (for example `adb install`, or a file transfer) and testers compare the SHA-256 from the list. After the page ships: log in, open Downloads, install, allow "install from this source" once.
 
+### Privacy statement in the mobile app
+
+The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement itself is written by the owner.
+
+### What the logs hold
+
+The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The reverse proxy's access log is different: it writes the whole address of every request, so it holds the link tokens of the `/join/`, `/vouch/` and `/invite/` pages until the owner changes the proxy to hide them (an item on the roadmap's owner list). Treat the proxy log as holding secrets: keep it readable by the operators only, do not paste it into a ticket or a chat, and do not keep it longer than needed. A token seen there is a link that anyone who finds the log could use; cancel the link (the leader or the OWNER can end it) if the log has been shared.
+
 ## 8. Security headers and limits
 
 - Caddy adds HSTS, `nosniff`, a strict Content-Security-Policy (everything from the site's own origin), `X-Frame-Options: DENY`, a Permissions-Policy and removes the `Server` header. A page that suddenly breaks after a change may be blocked by the policy: open the browser developer console and look for "Content Security Policy" messages, then fix the page rather than loosening the policy.
 - Login throttling: five failed passwords for the same email and account type from the same address lock that login for 15 minutes (HTTP 429). There is no general request rate limit at the proxy in the demo; production adds one at the edge (ADR-0012).
+- Public list of churches and home groups (the sign-up screen reads it before anyone has an account): each IP address may ask `PUBLIC_LIST_MAX_PER_MINUTE` times per minute (default 60); beyond that HTTP 429 `rate_limited` with `Retry-After`. The count is kept in the memory of one API process. The setting is not in the compose files; set it in the environment only to change the default.
+- Sign-up and links: each IP address may sign up `SIGNUP_MAX_PER_HOUR` times per hour (default 10) and look up links `LINK_LOOKUP_MAX_PER_HOUR` times per hour (default 30), with HTTP 429 `rate_limited` and `Retry-After`; a home group invitation link lives `INVITATION_LINK_DAYS` days (default 30) and a vouch link `VOUCH_LINK_DAYS` days (default 30); a person may vouch `VOUCH_MAX_PER_DAY` times in 24 hours (default 20, counted in the database, so it holds across API processes). The per-IP counts (sign-up, link lookup, vouch attempts) are kept in the memory of one API process; the daily vouch count is in the database. None of these settings is in the compose files.
+- Notifications: kept 12 calendar months (decision D-28). Delete older ones with `python -m app.cli purge-notifications` (`--months N` to change it); run it by hand or from a scheduled job, for example monthly. Nothing deletes them automatically yet.
+- Inviting an ADMIN: the OWNER creates the invitation on the web (roadmap 4.9) or through `POST /owner/churches` and shares the link; it lives `ADMIN_INVITATION_DAYS` days (default 14). Accepting is limited per IP address like a sign-up (`SIGNUP_MAX_PER_HOUR`) and looking a link up like the other links (`LINK_LOOKUP_MAX_PER_HOUR`); both counts are kept in the memory of one API process, like the other per-IP counts. An expired invitation stays in the list until the OWNER cancels it (which clears the invited address); nothing deletes them automatically yet (open detail O-07). `/invite/<token>` is one of the three link paths for the proxy log change (see "Links in addresses").
+- Phone number views: each `GET /verifier/people/{id}` adds a row to `contact_views` (who, whom, when, never the number). The OWNER reads the log at `GET /owner/contact-views`. It is kept 12 calendar months (decision O-03, D-40): delete older rows with `python -m app.cli purge-contact-views` (`--months N` to change it; run it by hand or from a scheduled job, for example monthly). Nothing deletes them automatically.
+- Links in addresses: the home group invitation, the vouch link and the invitation to be an ADMIN are shared as web addresses (`/join/<token>`, `/vouch/<token>`, `/invite/<token>`), so the web server's own access log records them. The API never has the token in an address (the lookups take it in the body). To keep the tokens out of the proxy logs as well, drop the path of these three routes from the Caddy and nginx log format; that is an infrastructure change for the owner, and this is the one place that lists the paths. The web server sends `Referrer-Policy: strict-origin-when-cross-origin`, so other sites only ever get the origin, never the path with a token.
 - Downloads of mobile test builds: each person may download `DOWNLOAD_MAX_PER_HOUR` files per hour (default 20); beyond that HTTP 429 `download_limit_reached` with `Retry-After`. The count is kept in the memory of one API process, so with several instances each allows its own share.
-- Mobile number reveals: each work host may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `phone_reveals` (no number is stored); the admin report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per work host".
+- Mobile number reveals: each person (a SEARCHER or above) may reveal `REVEAL_MAX_PER_HOUR` numbers per hour and `REVEAL_MAX_PER_DAY` per day (default: 10 and 20 when not set); beyond that the API answers HTTP 429 `reveal_limit_reached` with `Retry-After`. Every reveal is a row in `phone_reveals` (no number is stored); the OWNER's report RP-08 "Mobile number reveals" shows the activity. To investigate misuse, run RP-08 for the period and look at "Reveals per searcher" (people are shown by a short code; the log of reveals ties the code to the person).
 - Port 22 is open only to your addresses; ports 80 and 443 to the world.
 
 ## 9. Data tasks
@@ -162,12 +176,88 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 Run these on the server in `/opt/skills` (see the [local guide](local-development.md) for what they create). The `tools` service gives the commands the demo password without exposing it to the running API:
 
 ```bash
-dc run --rm -T tools python -m app.cli generate-demo-data --csv - --reset > demo-logins.csv   # umask 077 first
-dc run --rm tools python -m app.cli create-admin --email you@example.com --mobile +971500000000
+dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # umask 077 first; refuses when demo people exist (the demo is made once, see below)
 dc run --rm tools python -m app.cli seed-demo
 ```
 
+Starting the demo over means wiping the demo database, because the history of people is append-only and cannot be removed row by row (D-45). `generate-demo-data` on a server that has demo people refuses, and `seed-demo` says that they exist and does nothing.
+
+### Reset the demo (the owner's action on the live server)
+
+This **deletes every person, group, rating and report run in the demo**, real sign-ups included. Do it only on the demo, only when the owner has agreed, and not on a server that holds anything that must be kept.
+
+```bash
+cd /opt/skills
+dc() { docker compose --env-file .env -f compose.demo.yml "$@"; }
+
+./backup.sh                                   # 1. a backup first (it is kept 30 days, section 6)
+dc stop api worker                            # 2. nothing writes while the database is replaced
+dc exec -T db psql -U skills -d postgres \
+  -c 'DROP DATABASE skills WITH (FORCE)' \
+  -c 'CREATE DATABASE skills OWNER skills'    # 3. an empty database
+dc run --rm api alembic upgrade head          # 4. the schema (also the labels the app needs)
+dc run --rm tools python -m app.cli create-owner --name "Your Name" --email you@example.com \
+  --mobile "<+country-code-number>" --church "Your church" --group "Your home group"   # 5. asks for the password twice
+umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # 6. optional: the 200 demo people
+dc up -d                                      # 7. start everything again
+curl -fsS https://<demo-domain>/health/ready   # 8. it answers ok (the domain is in the quick reference above)
+```
+
+Check: sign in as the OWNER from step 5 and open the churches page. `demo-logins.csv` contains the demo password: keep it on the server, never share it, and delete it when done. To go back, restore the backup of step 1 (section 6, disaster recovery) and start the stack again.
+
+### The migration that removes the older accounts (migration 0018, at the cut-over)
+
+Migration `0018` drops the tables of freelancers, work hosts, organisations and administrators with their data, and ends the sessions and reset links of those accounts. It is destructive: the downgrade brings the older tables back **empty**, never their data. It belongs to the cut-over to the church model (roadmap S6) and is run only with the owner's approval:
+
+1. Make a backup now and check it can be restored (section 6). The deploy takes one too, but this one is yours to keep until the new model has run for a while.
+2. Get the owner's approval to remove the older accounts.
+3. Deploy as usual (section 3); `deploy.sh` runs the migration. Afterwards create the OWNER (next section) if the database has none.
+4. To go back, restore the backup of step 1 (section 6) with the previous release; do not rely on the downgrade for data.
+
+### Cut-over checklist (merging `model/verification` into `main`)
+
+Merging to `main` builds the images and deploys the demo on its own, and the deploy runs migration `0018` (above). What was rehearsed (2026-11-15): the whole migration chain from the schema the demo runs today, with rows in every older table, ends at revision `0018` with the older tables gone and the labels and report schedules kept.
+
+Before: all required checks green on the pull request; a backup is taken by the deploy itself (`deploy.sh` runs `backup.sh` first), and you may take one by hand (section 6). The demo holds no real users (decision 2 of the roadmap).
+
+After the deploy the people and everything about them are gone (the labels and the report schedules are kept): **there is no OWNER and nobody can sign in** until an operator creates one on the server:
+
+1. `dc run --rm tools python -m app.cli create-owner ...` (the command in "Set up Skills: the first OWNER" below).
+2. Optional: `umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv`.
+3. Smoke test: `curl -fsS https://<demo-domain>/health/ready`; sign in as the OWNER on the web; open the churches page; sign in on the phone app (version 1.0.0 or later) and open the member home.
+
+Old app builds cannot sign in any more (their requests name an account type the API no longer has) and show a message; install the new build. Builds are published to the server's downloads folder (section 7, test builds of the mobile app) and listed by `GET /app/downloads` for a signed-in person; the web Downloads page is S7.1, so until then give the person the file directly. `APP_MIN_VERSION` and `APP_LATEST_VERSION` are read from the environment but the deploy workflow does not pass them (a `.github/` change, S7); until it does, an old build is not asked to update.
+
+Rollback: restore the backup taken by the deploy (section 6, disaster recovery) and deploy the previous image tag (section 4). The migration's downgrade brings the older tables back empty and is not a rollback of data.
+
+### Set up Skills: the first OWNER (church trust model)
+
+Once per installation, on a database that has the church trust schema (migration `0007` and later), the operators create the OWNER with the first church and home group. The command asks for the password (twice) or reads one line with `--password-stdin`; it is never a command-line argument and is never printed.
+
+```bash
+dc run --rm tools python -m app.cli create-owner --name "Full Name" --email you@example.com \
+    --mobile +971500000000 --church "Church name" --group "Home group name"
+```
+
+It creates the OWNER, the church (the OWNER is its ADMIN) and the home group (the OWNER leads it) in one transaction, and records an operator change in the status history. It refuses when an OWNER already exists; replacing the OWNER is a handover, or an operator change (next section). In `demo` and `prod` the password must be strong and long enough.
+
 Copy `demo-logins.csv` to your computer with `scp` and delete it from the server. It contains the shared demo password.
+
+### Change the OWNER when they cannot hand over (church trust model)
+
+Normally the OWNER hands the role over in the app (a proposal the chosen ADMIN accepts). When the OWNER is unavailable and cannot, or has breached trust, the operators change the OWNER on the server. Back up the database first (the usual dump, see above): the command changes several people in one transaction, and a refusal changes nothing.
+
+```bash
+dc run --rm tools python -m app.cli change-owner --new-owner minister@example.org \
+    --church-admin new-admin@example.com --group-leader new-leader@example.com
+```
+
+- `--new-owner`: the email of an ADMIN of **another** church. They become the OWNER and stay the ADMIN of their own church.
+- `--church-admin` and `--group-leader`: members of the old OWNER's church and of the group they led, who take those roles over. Each may be left out only when nobody else is in the church (or the group); the old OWNER then keeps that role.
+- `--former-status provider|searcher` (default `provider`): what the old OWNER becomes when they keep neither role.
+- `--revoke-old-owner`: for a breach of trust. The old OWNER is revoked (they cannot keep a role: both successors are needed, or the group closes if they were alone in it), and everyone whose status they set is flagged for re-checking; they keep their access, and the new OWNER (or an ADMIN at that level) re-confirms them in the app (`POST /verifier/people/{id}/reconfirm`).
+
+The command prints the new and the old OWNER's ids and what the old OWNER is now, and how many people are flagged; it prints no password or address. The change is recorded in the status history as an operator change (no person behind it), a handover the old OWNER proposed and the new OWNER has not accepted is cancelled, and the sessions of everyone stay valid (they carry only the person; the new statuses show at once). Not for planned changes: those are a handover in the app.
 
 ### Look at or edit the database with pgAdmin
 

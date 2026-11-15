@@ -9,20 +9,24 @@ import {
   type ReactNode,
 } from 'react'
 
-import { fetchMe, loginRequest, logoutRequest } from '../api/auth'
+import { fetchMe, logoutRequest } from '../api/auth'
+import { personLoginRequest } from '../api/person'
 import { onSessionExpired, refreshSession } from '../api/http'
-import type { Me, UserType } from '../api/types'
+import type { PersonMe } from '../api/types'
 import { clearTokens, getRefreshToken, setTokens } from './tokenStore'
 
 type AuthState =
   | { status: 'loading'; user: null }
   | { status: 'anonymous'; user: null }
-  | { status: 'authenticated'; user: Me }
+  | { status: 'authenticated'; user: PersonMe }
 
-type Credentials = { email: string; password: string; user_type: UserType }
+type PersonCredentials = { email: string; password: string }
 
 type AuthValue = AuthState & {
-  signIn: (credentials: Credentials) => Promise<Me>
+  /** The one login of the church trust model (no account type). */
+  signInPerson: (credentials: PersonCredentials) => Promise<PersonMe>
+  /** Read the person again after a change (status, application). */
+  setPerson: (person: PersonMe) => void
   signOut: () => Promise<void>
 }
 
@@ -45,10 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
     async function restore() {
-      let user: Me | null = null
+      let user: PersonMe | null = null
       if (getRefreshToken() && (await refreshSession())) {
         try {
-          user = await fetchMe()
+          const me = await fetchMe()
+          // A token of an account of the older kind opens nothing here.
+          user = me.user_type === 'person' ? me : null
         } catch {
           user = null
         }
@@ -63,17 +69,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const signIn = useCallback(async (credentials: Credentials) => {
-    const tokens = await loginRequest(credentials)
+  const signInPerson = useCallback(async (credentials: PersonCredentials) => {
+    const tokens = await personLoginRequest(credentials)
     setTokens(tokens.access_token, tokens.refresh_token)
     try {
       const user = await fetchMe()
+      if (user.user_type !== 'person') throw new Error('Expected a person')
       setState({ status: 'authenticated', user })
       return user
     } catch (error) {
       clearTokens()
       throw error
     }
+  }, [])
+
+  const setPerson = useCallback((person: PersonMe) => {
+    setState({ status: 'authenticated', user: person })
   }, [])
 
   const signOut = useCallback(async () => {
@@ -90,7 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [queryClient])
 
-  const value = useMemo<AuthValue>(() => ({ ...state, signIn, signOut }), [state, signIn, signOut])
+  const value = useMemo<AuthValue>(
+    () => ({ ...state, signInPerson, setPerson, signOut }),
+    [state, signInPerson, setPerson, signOut],
+  )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
@@ -100,9 +114,9 @@ export function useAuth(): AuthValue {
   return value
 }
 
-/** The signed-in user. Only call this below RequireAuth. */
-export function useUser(): Me {
+/** The signed-in person. Only call this below RequireAuth. */
+export function usePerson(): PersonMe {
   const { user } = useAuth()
-  if (!user) throw new Error('useUser needs a signed-in user')
+  if (!user) throw new Error('usePerson needs a signed-in person')
   return user
 }

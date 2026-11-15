@@ -6,16 +6,15 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_principal, require_roles
+from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
-from app.core.security import Principal
-from app.models.availability import FreelancerUnavailability
-from app.models.labels import FreelancerLabel, Label
-from app.models.ratings import UserRating
-from app.models.users import Freelancer, Organisation
-from app.models.vouching import OrgFreelancer
+from app.models.availability import PersonUnavailability
+from app.models.church import Church, HomeGroup, Person
+from app.models.labels import Label, PersonLabel
+from app.models.ratings import Rating
+from app.schemas.church import IdName
 from app.schemas.common import Page, Pagination, pagination
 from app.schemas.profiles import (
     FreelancerLabelOut,
@@ -29,78 +28,75 @@ from app.schemas.profiles import (
     RevealRequest,
     UnavailabilityIn,
     UnavailabilityOut,
-    VouchingOrg,
-    VouchOut,
 )
+from app.services.locks import lock_people
 from app.services.profiles import (
-    current_account,
-    freelancer_labels,
-    rating_summary,
+    person_labels,
+    person_rating_summary,
     to_float,
     utc_now,
 )
+from app.services.providers import visible_provider
 from app.services.reveals import reveal_mobile_number
 
 router = APIRouter(prefix="/freelancers", tags=["freelancers"])
 
-FreelancerOnly = Annotated[Principal, Depends(require_roles("freelancer"))]
-Viewer = Annotated[Principal, Depends(require_roles("workhost", "organisation", "admin"))]
-Authenticated = Annotated[Principal, Depends(get_principal)]
+ProviderOrAbove = Annotated[Person, Depends(current_person("provider"))]
 
 
-def _me(db: Session, principal: Principal) -> Freelancer:
-    return current_account(db, Freelancer, principal)
-
-
-def _me_response(db: Session, me: Freelancer) -> FreelancerMe:
+def _me_response(db: Session, me: Person) -> FreelancerMe:
     return FreelancerMe(
         id=me.id,
         full_name=me.full_name,
-        email=me.user_email,
-        mobile_number=me.mobile_number,
+        email=me.email or "",
+        mobile_number=me.mobile_number or "",
         whatsapp_availability=me.whatsapp_availability,
         nationality=me.nationality,
         primary_language=me.primary_language,
         rate_per_hour=to_float(me.rate_per_hour),
         rate_currency=me.rate_currency,
         is_rate_negotiable=me.is_rate_negotiable,
-        labels=freelancer_labels(db, me.id),
+        labels=person_labels(db, me.id),
         created_at=me.created_at,
     )
 
 
-# ---- own profile --------------------------------------------------------------------------
+# ---- own profile (the person's, for a provider or above) ----------------------------------
 
 
 @router.get("/me")
-def get_me(principal: FreelancerOnly, db: Session = Depends(get_session)) -> FreelancerMe:
-    return _me_response(db, _me(db, principal))
+def get_me(provider: ProviderOrAbove, db: Session = Depends(get_session)) -> FreelancerMe:
+    return _me_response(db, provider)
 
 
 @router.put("/me")
 def update_me(
-    body: FreelancerUpdate, principal: FreelancerOnly, db: Session = Depends(get_session)
+    body: FreelancerUpdate, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> FreelancerMe:
-    me = _me(db, principal)
     if body.full_name is not None:
-        me.full_name = body.full_name
-    me.mobile_number = body.mobile_number
-    me.whatsapp_availability = body.whatsapp_availability
-    me.nationality = body.nationality
-    me.primary_language = body.primary_language
-    me.rate_per_hour = body.rate_per_hour
-    me.rate_currency = body.rate_currency
-    me.is_rate_negotiable = body.is_rate_negotiable
-    db.commit()
-    return _me_response(db, me)
+        provider.full_name = body.full_name
+    provider.mobile_number = body.mobile_number
+    provider.whatsapp_availability = body.whatsapp_availability
+    provider.nationality = body.nationality
+    provider.primary_language = body.primary_language
+    provider.rate_per_hour = body.rate_per_hour
+    provider.rate_currency = body.rate_currency
+    provider.is_rate_negotiable = body.is_rate_negotiable
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise ApiError(
+            409, "account_exists", "An account with these details already exists"
+        ) from None
+    return _me_response(db, provider)
 
 
 @router.put("/me/labels")
 def replace_labels(
-    body: LabelsUpdate, principal: FreelancerOnly, db: Session = Depends(get_session)
+    body: LabelsUpdate, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> list[FreelancerLabelOut]:
-    """Replace the freelancer's whole label set. Skill levels attach to a specific skill."""
-    me = _me(db, principal)
+    """Replace the person's whole label set. Skill levels attach to a specific skill."""
     chosen = [selection.label_id for selection in body.labels]
     if len(set(chosen)) != len(chosen):
         raise ApiError(422, "duplicate_label", "A label was selected more than once")
@@ -122,19 +118,21 @@ def replace_labels(
             raise ApiError(
                 422, "invalid_level", "Only skills take a level, and it must be a skill level"
             )
-    db.execute(delete(FreelancerLabel).where(FreelancerLabel.freelancer_id == me.id))
+    # One replacement at a time per person: a double submit waits instead of failing on the key.
+    lock_people(db, [provider.id])
+    db.execute(delete(PersonLabel).where(PersonLabel.person_id == provider.id))
     db.add_all(
-        FreelancerLabel(freelancer_id=me.id, label_id=s.label_id, level_label_id=s.level_label_id)
+        PersonLabel(person_id=provider.id, label_id=s.label_id, level_label_id=s.level_label_id)
         for s in body.labels
     )
     db.commit()
-    return freelancer_labels(db, me.id)
+    return person_labels(db, provider.id)
 
 
 # ---- unavailability -----------------------------------------------------------------------
 
 
-def _unavailability_out(row: FreelancerUnavailability) -> UnavailabilityOut:
+def _unavailability_out(row: PersonUnavailability) -> UnavailabilityOut:
     return UnavailabilityOut(
         id=row.id, unavailable_from=row.unavailable_from, unavailable_to=row.unavailable_to
     )
@@ -150,31 +148,31 @@ def _commit_unavailability(db: Session) -> None:
         ) from None
 
 
-def _own_period(db: Session, me: Freelancer, period_id: uuid.UUID) -> FreelancerUnavailability:
-    row = db.get(FreelancerUnavailability, period_id)
-    if row is None or row.freelancer_id != me.id:
+def _own_period(db: Session, me: Person, period_id: uuid.UUID) -> PersonUnavailability:
+    row = db.get(PersonUnavailability, period_id)
+    if row is None or row.person_id != me.id:
         raise ApiError(404, "not_found", "Unavailability period not found")
     return row
 
 
 @router.get("/me/unavailability")
 def list_unavailability(
-    principal: FreelancerOnly, db: Session = Depends(get_session)
+    provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> list[UnavailabilityOut]:
     rows = db.scalars(
-        select(FreelancerUnavailability)
-        .where(FreelancerUnavailability.freelancer_id == principal.user_id)
-        .order_by(FreelancerUnavailability.unavailable_from)
+        select(PersonUnavailability)
+        .where(PersonUnavailability.person_id == provider.id)
+        .order_by(PersonUnavailability.unavailable_from)
     ).all()
     return [_unavailability_out(row) for row in rows]
 
 
 @router.post("/me/unavailability", status_code=status.HTTP_201_CREATED)
 def add_unavailability(
-    body: UnavailabilityIn, principal: FreelancerOnly, db: Session = Depends(get_session)
+    body: UnavailabilityIn, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> UnavailabilityOut:
-    row = FreelancerUnavailability(
-        freelancer_id=_me(db, principal).id,
+    row = PersonUnavailability(
+        person_id=provider.id,
         unavailable_from=body.unavailable_from,
         unavailable_to=body.unavailable_to,
     )
@@ -187,10 +185,10 @@ def add_unavailability(
 def update_unavailability(
     period_id: uuid.UUID,
     body: UnavailabilityIn,
-    principal: FreelancerOnly,
+    provider: ProviderOrAbove,
     db: Session = Depends(get_session),
 ) -> UnavailabilityOut:
-    row = _own_period(db, _me(db, principal), period_id)
+    row = _own_period(db, provider, period_id)
     row.unavailable_from = body.unavailable_from
     row.unavailable_to = body.unavailable_to
     _commit_unavailability(db)
@@ -199,154 +197,86 @@ def update_unavailability(
 
 @router.delete("/me/unavailability/{period_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_unavailability(
-    period_id: uuid.UUID, principal: FreelancerOnly, db: Session = Depends(get_session)
+    period_id: uuid.UUID, provider: ProviderOrAbove, db: Session = Depends(get_session)
 ) -> Response:
-    db.delete(_own_period(db, _me(db, principal), period_id))
+    db.delete(_own_period(db, provider, period_id))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# ---- vouches ------------------------------------------------------------------------------
+# ---- what others see (a SEARCHER or above looks at an open PROVIDER or above) ---------------
+
+Searcher = Annotated[Person, Depends(current_person("searcher"))]
 
 
-@router.get("/me/vouches")
-def list_vouches(principal: FreelancerOnly, db: Session = Depends(get_session)) -> list[VouchOut]:
-    rows = db.execute(
-        select(OrgFreelancer, Organisation.org_name)
-        .join(Organisation, Organisation.id == OrgFreelancer.org_id)
-        .where(OrgFreelancer.freelancer_id == principal.user_id)
-        .order_by(OrgFreelancer.created_at)
-    ).all()
-    return [
-        VouchOut(
-            org_id=link.org_id,
-            org_name=name,
-            status=link.status,
-            is_active=link.is_active,
-            created_at=link.created_at,
-        )
-        for link, name in rows
-    ]
-
-
-def _decide_vouch(
-    db: Session, principal: Principal, org_id: uuid.UUID, *, accept: bool
-) -> VouchOut:
-    link = db.get(OrgFreelancer, (org_id, principal.user_id))
-    org = db.get(Organisation, org_id)
-    if link is None or org is None:
-        raise ApiError(404, "not_found", "Vouch not found")
-    if link.status != "pending":
-        raise ApiError(409, "vouch_not_pending", "This vouch has already been decided")
-    link.status = "approved" if accept else "revoked"
-    link.is_active = accept
-    db.commit()
-    return VouchOut(
-        org_id=org_id,
-        org_name=org.org_name,
-        status=link.status,
-        is_active=link.is_active,
-        created_at=link.created_at,
+def _given(rating: Rating, provider_name: str | None) -> GivenRating:
+    return GivenRating(
+        id=rating.id,
+        provider_id=rating.provider_id,
+        provider_name=provider_name,
+        rating=rating.rating,
+        comment=rating.comment,
+        rated_on=rating.rated_on,
+        updated_at=rating.updated_at,
     )
-
-
-@router.post("/me/vouches/{org_id}/accept")
-def accept_vouch(
-    org_id: uuid.UUID, principal: FreelancerOnly, db: Session = Depends(get_session)
-) -> VouchOut:
-    return _decide_vouch(db, principal, org_id, accept=True)
-
-
-@router.post("/me/vouches/{org_id}/reject")
-def reject_vouch(
-    org_id: uuid.UUID, principal: FreelancerOnly, db: Session = Depends(get_session)
-) -> VouchOut:
-    return _decide_vouch(db, principal, org_id, accept=False)
-
-
-# ---- what others see ----------------------------------------------------------------------
 
 
 @router.get("/{freelancer_id}")
 def public_profile(
-    freelancer_id: uuid.UUID, principal: Viewer, db: Session = Depends(get_session)
+    freelancer_id: uuid.UUID, viewer: Searcher, db: Session = Depends(get_session)
 ) -> FreelancerPublic:
-    freelancer = db.get(Freelancer, freelancer_id)
-    if freelancer is None:
-        raise ApiError(404, "not_found", "Freelancer not found")
-    average, count = rating_summary(db, freelancer.id)
-    orgs = db.execute(
-        select(Organisation.id, Organisation.org_name)
-        .join(OrgFreelancer, OrgFreelancer.org_id == Organisation.id)
-        .where(
-            OrgFreelancer.freelancer_id == freelancer.id,
-            OrgFreelancer.status == "approved",
-            OrgFreelancer.is_active.is_(True),
-        )
-        .order_by(Organisation.org_name)
-    ).all()
+    provider = visible_provider(db, freelancer_id)
+    average, count = person_rating_summary(db, provider.id)
+    church = db.get(Church, provider.church_id)
+    group = db.get(HomeGroup, provider.home_group_id) if provider.home_group_id else None
+    if church is None or group is None:  # an open provider always has both (database rules)
+        raise ApiError(404, "not_found", "Provider not found")
     upcoming = db.scalars(
-        select(FreelancerUnavailability)
+        select(PersonUnavailability)
         .where(
-            FreelancerUnavailability.freelancer_id == freelancer.id,
-            FreelancerUnavailability.unavailable_to > utc_now(),
+            PersonUnavailability.person_id == provider.id,
+            PersonUnavailability.unavailable_to > utc_now(),
         )
-        .order_by(FreelancerUnavailability.unavailable_from)
+        .order_by(PersonUnavailability.unavailable_from)
     ).all()
-    mine = None
-    if principal.user_type == "workhost":
-        given = db.scalar(
-            select(UserRating).where(
-                UserRating.work_host_id == principal.user_id,
-                UserRating.freelancer_id == freelancer.id,
-            )
-        )
-        if given is not None:
-            mine = GivenRating(
-                id=given.id,
-                freelancer_id=given.freelancer_id,
-                freelancer_name=freelancer.full_name,
-                rating=given.rating,
-                comment=given.comment,
-                rated_on=given.rated_on,
-                updated_at=given.updated_at,
-            )
+    given = db.scalar(
+        select(Rating).where(Rating.rater_id == viewer.id, Rating.provider_id == provider.id)
+    )
     return FreelancerPublic(
-        id=freelancer.id,
-        full_name=freelancer.full_name,
-        whatsapp_availability=freelancer.whatsapp_availability,
-        nationality=freelancer.nationality,
-        primary_language=freelancer.primary_language,
-        rate_per_hour=to_float(freelancer.rate_per_hour),
-        rate_currency=freelancer.rate_currency,
-        is_rate_negotiable=freelancer.is_rate_negotiable,
-        labels=freelancer_labels(db, freelancer.id),
+        id=provider.id,
+        full_name=provider.full_name,
+        whatsapp_availability=provider.whatsapp_availability,
+        nationality=provider.nationality,
+        primary_language=provider.primary_language,
+        rate_per_hour=to_float(provider.rate_per_hour),
+        rate_currency=provider.rate_currency,
+        is_rate_negotiable=provider.is_rate_negotiable,
+        labels=person_labels(db, provider.id),
         average_rating=average,
         rating_count=count,
-        vouched_by=[VouchingOrg(org_id=org_id, org_name=name) for org_id, name in orgs],
+        church=IdName(id=church.id, name=church.name),
+        home_group=IdName(id=group.id, name=group.name),
         unavailable=[_unavailability_out(row) for row in upcoming],
-        my_rating=mine,
+        my_rating=_given(given, provider.full_name) if given is not None else None,
     )
-
-
-HostOnly = Annotated[Principal, Depends(require_roles("workhost"))]
 
 
 @router.post("/{freelancer_id}/reveal-mobile")
 def reveal_mobile(
     freelancer_id: uuid.UUID,
     body: RevealRequest,
-    principal: HostOnly,
+    viewer: Searcher,
     response: Response,
     db: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> RevealedMobile:
-    """The only place a freelancer's mobile number is returned to anyone else.
+    """The only place a provider's mobile number is returned to a member (the leaders' own
+    screens are the other, and are logged).
 
-    Every call is recorded, and each work host has an hourly and a daily limit.
+    Every call is recorded, and each person has an hourly and a daily limit.
     """
     number = reveal_mobile_number(
-        db, settings, host_id=principal.user_id, freelancer_id=freelancer_id, body=body
+        db, settings, revealer=viewer, provider_id=freelancer_id, body=body
     )
     response.headers["Cache-Control"] = "no-store"
     return RevealedMobile(mobile_number=number)
@@ -355,18 +285,17 @@ def reveal_mobile(
 @router.get("/{freelancer_id}/ratings")
 def freelancer_ratings(
     freelancer_id: uuid.UUID,
-    _: Authenticated,
+    _: Searcher,
     db: Session = Depends(get_session),
     paging: Pagination = Depends(pagination),
 ) -> Page[PublicRating]:
-    if db.get(Freelancer, freelancer_id) is None:
-        raise ApiError(404, "not_found", "Freelancer not found")
-    where = UserRating.freelancer_id == freelancer_id
-    total = db.scalar(select(func.count()).select_from(UserRating).where(where)) or 0
+    provider = visible_provider(db, freelancer_id)
+    where = Rating.provider_id == provider.id
+    total = db.scalar(select(func.count()).select_from(Rating).where(where)) or 0
     rows = db.scalars(
-        select(UserRating)
+        select(Rating)
         .where(where)
-        .order_by(UserRating.rated_on.desc(), UserRating.id)
+        .order_by(Rating.rated_on.desc(), Rating.id)
         .offset(paging.offset)
         .limit(paging.page_size)
     ).all()

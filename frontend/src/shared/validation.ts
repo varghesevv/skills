@@ -84,16 +84,6 @@ export const freelancerProfileSchema = z
     }
   })
 
-export const hostProfileSchema = z.object({
-  full_name: fullName,
-  mobile_number: mobile,
-})
-
-export const orgProfileSchema = z.object({
-  org_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
-  mobile_number: mobile,
-})
-
 export const labelNameSchema = z.object({
   label_name: z.string().trim().min(1, 'validation.required').max(100, 'validation.tooLong'),
 })
@@ -106,7 +96,35 @@ export const ratingSchema = z.object({
   comment: z.string().trim().max(2000, 'validation.commentLong'),
 })
 
-export const forgotPasswordSchema = z.object({ email, user_type: userType })
+export const forgotPasswordSchema = z.object({
+  email,
+  user_type: z.literal('person'),
+})
+
+/** The login of the church trust model: no account type. */
+export const personLoginSchema = z.object({
+  email,
+  password: z.string().min(1, 'validation.required').max(1024, 'validation.tooLong'),
+})
+
+/** About you, in the sign-up wizard; the church, group and status are chosen in other steps. */
+export const signupDetailsSchema = z.object({
+  full_name: fullName,
+  email,
+  mobile_number: mobile,
+  password: newPassword,
+})
+
+/** One's own name and mobile number, on the account page. */
+export const accountDetailsSchema = z.object({ full_name: fullName, mobile_number: mobile })
+
+/** An invited ADMIN: about them and the first home group; the address is the one invited. */
+export const acceptInvitationSchema = z.object({
+  full_name: fullName,
+  mobile_number: mobile,
+  password: newPassword,
+  home_group_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
+})
 
 export const resetPasswordSchema = z.object({ new_password: newPassword })
 

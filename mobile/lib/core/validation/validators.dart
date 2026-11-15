@@ -68,6 +68,19 @@ FieldKeys validateLogin({required String email, required String password}) =>
       'password': () => requiredPassword(password),
     });
 
+/// About you, in the sign-up wizard (the church, home group and status are chosen elsewhere).
+FieldKeys validateSignupDetails({
+  required String name,
+  required String email,
+  required String mobileNumber,
+  required String password,
+}) => _collect({
+  'full_name': () => fullName(name),
+  'email': () => requiredEmail(email),
+  'mobile_number': () => mobile(mobileNumber),
+  'password': () => newPassword(password),
+});
+
 FieldKeys validateForgotPassword({required String email}) =>
     _collect({'email': () => requiredEmail(email)});
 

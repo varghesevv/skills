@@ -1,16 +1,14 @@
-"""Small helpers for API tests: create users directly and get ready-to-use auth headers."""
+"""Small helpers for API tests: labels, and a token of an older kind that opens nothing."""
 
-import secrets
 import uuid
 from dataclasses import dataclass
 
-from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
+from app.core.security import Principal, create_access_token
 from app.models.labels import Label
-from app.models.users import Organisation
-from app.services.accounts import create_account
 
 API = "/api/v1"
 
@@ -21,30 +19,16 @@ class Actor:
     headers: dict[str, str]
 
 
-def signup(
-    client: TestClient,
-    session: Session,
-    user_type: str,
-    email: str,
-    *,
-    approved: bool = True,
-    **extra: object,
-) -> Actor:
-    password = secrets.token_urlsafe(16)
-    if user_type == "organisation":
-        extra.setdefault("org_name", "Test Org")
-    account = create_account(
-        session, user_type, email=email, mobile_number="+971500000099", password=password, **extra
+def ghost_actor() -> Actor:
+    """A valid token for a person who does not exist (for example an account of the older kind,
+    which is gone). It opens nothing: every endpoint answers 401 `invalid_token`."""
+    account_id = uuid.uuid4()
+    token, _ = create_access_token(
+        Principal(account_id),
+        secret=get_settings().require_jwt_secret(),
+        lifetime_minutes=5,
     )
-    if isinstance(account, Organisation) and approved:
-        account.approval_status = "approved"
-        session.commit()
-    response = client.post(
-        f"{API}/auth/login", json={"email": email, "password": password, "user_type": user_type}
-    )
-    if response.status_code != 200:
-        return Actor(account.id, {})
-    return Actor(account.id, {"Authorization": f"Bearer {response.json()['access_token']}"})
+    return Actor(account_id, {"Authorization": f"Bearer {token}"})
 
 
 def label_id(session: Session, label_type: str, name: str) -> str:

@@ -1,7 +1,7 @@
 """Command line: run a report for a date range, or list the reports.
 
     python -m app.reports list
-    python -m app.reports run users_registered_daily --from 2026-10-20 --to 2026-10-20
+    python -m app.reports run signups_daily --from 2026-10-20 --to 2026-10-20
 
 Dates are whole days in the report time zone, both included. Running the same report and
 window again does nothing if the earlier run succeeded.

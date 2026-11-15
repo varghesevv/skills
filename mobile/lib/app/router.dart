@@ -2,22 +2,85 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/auth/user_type.dart';
+import '../core/auth/person_me.dart';
 import '../core/session/session_controller.dart';
-import '../features/auth/auth_widgets.dart';
 import '../features/auth/forgot_password_screen.dart';
-import '../features/auth/login_screen.dart';
-import '../features/auth/register_screen.dart';
 import '../features/auth/welcome_screen.dart';
-import 'destinations.dart';
-import 'shell.dart';
+import '../features/freelancer/availability/availability_screen.dart';
+import '../features/freelancer/labels/labels_screen.dart';
+import '../features/freelancer/profile/profile_screen.dart';
+import '../features/freelancer/ratings/ratings_screen.dart';
+import '../features/person/account_screen.dart';
+import '../features/person/person_settings_screen.dart';
+import '../features/search/provider_screen.dart';
+import '../features/search/ratings_given_screen.dart';
+import '../features/search/search_screen.dart';
+import '../features/leader/applicants_screen.dart';
+import '../features/leader/leader_paths.dart';
+import '../features/groups/group_requests_screen.dart';
+import '../features/groups/invitations_screen.dart';
+import '../features/groups/my_group_screen.dart';
+import '../features/groups/moves_screen.dart';
+import '../features/leader/admin_groups_screen.dart';
+import '../features/leader/flagged_screen.dart';
+import '../features/leader/members_screen.dart';
+import '../features/leader/revoked_screen.dart';
+import '../features/leader/person_detail_screen.dart';
+import '../features/person/my_vouches_screen.dart';
+import '../features/person/notifications_screen.dart';
+import '../features/person/person_home_screen.dart';
+import '../features/person/person_router_paths.dart';
+import '../features/person/person_sign_in_screen.dart';
+import '../features/person/sign_up_screen.dart';
+import '../features/person/vouch_screen.dart';
 
 const _signedOutPrefixes = [
   '/welcome',
-  '/login',
-  '/register',
   '/forgot-password',
+  '/sign-in',
+  '/sign-up',
+  '/join',
 ];
+
+/// Where a person may be: the router sends them home from any other address.
+@visibleForTesting
+bool personMayVisit(PersonMe person, String path) {
+  if (path == personHome) return true;
+  // The leader screens: applicants, members, the revoked, the flagged and one person's page.
+  final isLeaderPage =
+      path == leaderApplicants ||
+      path == leaderMembers ||
+      path == leaderRevoked ||
+      path == leaderFlagged ||
+      path == leaderInvitations ||
+      path == leaderGroup ||
+      path.startsWith('$leaderPeople/');
+  // A provider's own pages are for a PROVIDER or above.
+  final isProviderPage =
+      path == personProfile ||
+      path == personSkills ||
+      path == personAvailability ||
+      path == personRatings;
+  // Finding providers is for a SEARCHER or above.
+  final isSearchPage =
+      path == personSearch ||
+      path == personRatingsGiven ||
+      path.startsWith('$personProviders/');
+  // The groups of the church are for an ADMIN or the OWNER only.
+  final isAdminPage = path == adminGroups;
+  return switch (person.status) {
+    PersonStatus.revoked => false,
+    PersonStatus.pending => path == personNotifications,
+    _ =>
+      (path.startsWith('$personHome/') || path == vouchLinkPath) &&
+          (!isLeaderPage || person.status.isLeader) &&
+          (!isProviderPage || person.status.isProvider) &&
+          (!isSearchPage || person.status.isSearcher) &&
+          (!isAdminPage ||
+              person.status == PersonStatus.admin ||
+              person.status == PersonStatus.owner),
+  };
+}
 
 /// Tells the router to re-run its redirect when the session changes.
 class _SessionListenable extends ChangeNotifier {
@@ -30,25 +93,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   final listenable = _SessionListenable(ref);
   ref.onDispose(listenable.dispose);
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/home',
     refreshListenable: listenable,
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
       if (session.isLoading) return '/splash';
-      final me = session.value;
+      final person = session.value;
       final path = state.matchedLocation;
       final onSignedOut = _signedOutPrefixes.any(path.startsWith);
-      if (me == null) return onSignedOut ? null : '/welcome';
-      final home = '/${me.userType.wire}/home';
-      if (onSignedOut || path == '/splash' || path == '/home') return home;
-      // Each role lives below its own prefix; another role's pages are never shown.
-      for (final type in UserType.values) {
-        if (path.startsWith('/${type.wire}/') && type != me.userType) {
-          return home;
-        }
-      }
-      return null;
+      if (person == null) return onSignedOut ? null : '/welcome';
+      // A person lives below /member; the pages for signing in and up send them home.
+      return personMayVisit(person, path) ? null : personHome;
     },
     routes: [
       GoRoute(
@@ -61,47 +117,134 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const WelcomeScreen(),
       ),
       GoRoute(
-        path: '/login/:type',
-        builder: (context, state) =>
-            _forType(state, (type) => LoginScreen(type: type)),
+        path: '/sign-in',
+        builder: (context, state) => const PersonSignInScreen(),
       ),
       GoRoute(
-        path: '/register/:type',
-        builder: (context, state) =>
-            _forType(state, (type) => RegisterScreen(type: type)),
+        path: '/sign-up',
+        builder: (context, state) => const SignUpScreen(),
       ),
       GoRoute(
-        path: '/forgot-password/:type',
+        path: '/join/:token',
         builder: (context, state) =>
-            _forType(state, (type) => ForgotPasswordScreen(type: type)),
+            SignUpScreen(invitationToken: state.pathParameters['token']),
       ),
-      for (final type in UserType.values) _shellFor(type),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: personHome,
+        builder: (context, state) => const PersonHomeScreen(),
+        routes: [
+          GoRoute(
+            path: 'vouches',
+            builder: (context, state) => const MyVouchesScreen(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'ratings-given',
+            builder: (context, state) => const RatingsGivenScreen(),
+          ),
+          GoRoute(
+            path: 'settings',
+            builder: (context, state) => const PersonSettingsScreen(),
+          ),
+          GoRoute(
+            path: 'account',
+            builder: (context, state) => const AccountScreen(),
+          ),
+          GoRoute(
+            path: 'search',
+            builder: (context, state) => const SearchScreen(),
+          ),
+          GoRoute(
+            path: 'providers/:id',
+            builder: (context, state) =>
+                ProviderScreen(id: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'profile',
+            builder: (context, state) => const FreelancerProfileScreen(),
+          ),
+          GoRoute(
+            path: 'skills',
+            builder: (context, state) => const FreelancerLabelsScreen(),
+          ),
+          GoRoute(
+            path: 'availability',
+            builder: (context, state) => const AvailabilityScreen(),
+          ),
+          GoRoute(
+            path: 'ratings',
+            builder: (context, state) => const RatingsScreen(),
+          ),
+          GoRoute(
+            path: 'applicants',
+            builder: (context, state) => const ApplicantsScreen(),
+          ),
+          GoRoute(
+            path: 'members',
+            builder: (context, state) => const MembersScreen(),
+          ),
+          GoRoute(
+            path: 'group-requests',
+            builder: (context, state) => const GroupRequestsScreen(),
+          ),
+          GoRoute(
+            path: 'moves',
+            builder: (context, state) => const MovesScreen(),
+          ),
+          GoRoute(
+            path: 'groups',
+            builder: (context, state) => const AdminGroupsScreen(),
+          ),
+          GoRoute(
+            path: 'invitations',
+            builder: (context, state) => const InvitationsScreen(),
+          ),
+          GoRoute(
+            path: 'group',
+            builder: (context, state) => const MyGroupScreen(),
+          ),
+          GoRoute(
+            path: 'flagged',
+            builder: (context, state) => const FlaggedScreen(),
+          ),
+          GoRoute(
+            path: 'revoked',
+            builder: (context, state) => const RevokedScreen(),
+          ),
+          GoRoute(
+            path: 'people/:id',
+            builder: (context, state) =>
+                PersonDetailScreen(id: state.pathParameters['id']!),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: vouchLinkPath,
+        // Without the token (the app was restarted on this page) there is nothing to show.
+        redirect: (context, state) => state.extra is String ? null : personHome,
+        builder: (context, state) => VouchScreen(token: state.extra! as String),
+      ),
     ],
   );
+
+  // The redirect above sees the address the router started from, not a page pushed on top of it.
+  // When the status changes (a leader revokes someone who has a page open) the page on top is
+  // checked here, and the person goes home if their new status does not allow it.
+  ref.listen(personProvider, (previous, next) {
+    if (next == null || previous?.status == next.status) return;
+    final matches = router.routerDelegate.currentConfiguration.matches;
+    if (matches.isEmpty) return;
+    if (!personMayVisit(next, matches.last.matchedLocation)) {
+      router.go(personHome);
+    }
+  });
+
+  return router;
 });
-
-StatefulShellRoute _shellFor(UserType type) {
-  final destinations = destinationsFor(type);
-  return StatefulShellRoute.indexedStack(
-    builder: (context, state, shell) =>
-        AppShell(navigationShell: shell, destinations: destinations),
-    branches: [
-      for (final destination in destinations)
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/${type.wire}/${destination.path}',
-              builder: (context, state) => destination.builder(),
-              routes: destination.routes,
-            ),
-          ],
-        ),
-    ],
-  );
-}
-
-Widget _forType(GoRouterState state, Widget Function(UserType type) build) {
-  final type = userTypeFromRoute(state.pathParameters['type']);
-  // An unknown role in the address goes back to the start; nothing is guessed.
-  return type == null ? const WelcomeScreen() : build(type);
-}
