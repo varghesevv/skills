@@ -121,6 +121,7 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
             select(func.count())
             .select_from(LoginHistory)
             .where(
+                LoginHistory.user_type == "person",  # until the older rows go (S5.12a part 2)
                 LoginHistory.user_id.is_(None),
                 LoginHistory.succeeded.is_(False),
                 LoginHistory.login_time >= p.start,

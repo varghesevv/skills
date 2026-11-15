@@ -84,7 +84,10 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
     ):  # attempts before the person was recognised carry only the address
         db.execute(
             update(LoginHistory)
-            .where(func.lower(LoginHistory.login_email).in_(chunk))
+            .where(
+                LoginHistory.user_type == "person",  # until the older rows go (S5.12a part 2)
+                func.lower(LoginHistory.login_email).in_(chunk),
+            )
             .values(login_email=None, ip_address=None, user_agent=None)
         )
 

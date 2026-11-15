@@ -86,6 +86,7 @@ def check_throttle(
     last_success = db.scalar(
         select(func.max(LoginHistory.login_time)).where(
             LoginHistory.login_email == email,
+            LoginHistory.user_type == "person",  # until the older rows go (S5.12a part 2)
             _ip_filter(ip),
             LoginHistory.succeeded.is_(True),
         )
@@ -97,6 +98,7 @@ def check_throttle(
         select(LoginHistory.login_time)
         .where(
             LoginHistory.login_email == email,
+            LoginHistory.user_type == "person",
             _ip_filter(ip),
             LoginHistory.succeeded.is_(False),
             LoginHistory.login_time > since,

@@ -93,6 +93,24 @@ def test_throttle_counts_per_email(client: TestClient, session: Session) -> None
     assert login(client, "b@example.com", password).status_code == 200
 
 
+def test_failures_of_an_older_account_do_not_count_against_a_person(
+    client: TestClient, session: Session
+) -> None:
+    register(session, "mixed@example.com", (password := new_password()))
+    for _ in range(get_settings().login_max_failures):
+        session.add(
+            LoginHistory(
+                user_type="workhost",
+                login_email="mixed@example.com",
+                succeeded=False,
+                login_time=datetime.now(UTC),
+                ip_address="203.0.113.7",  # the address the test client logs in from
+            )
+        )
+    session.flush()
+    assert login(client, "mixed@example.com", password).status_code == 200
+
+
 def test_failures_older_than_the_window_do_not_count(client: TestClient, session: Session) -> None:
     password = new_password()
     register(session, "old@example.com", password)

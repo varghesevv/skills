@@ -266,7 +266,7 @@ Check it: `wc -l demo-logins.csv` should say `210` (209 people, that is the 200,
 docker compose exec api python -m app.cli create-owner --name "Your Name" --email you@example.com --mobile +971500000000 --church "Your church" --group "Your home group"
 ```
 
-It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters. It refuses when an OWNER already exists (the demo data has one).
+It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters. It refuses when an OWNER already exists, and the demo data (5.2) makes one. So run it **before** generating the demo data if you want your own OWNER (the demo then adds to your church); otherwise skip it and sign in as the demo OWNER from `demo-logins.csv`.
 
 ### 5.4 Log in
 

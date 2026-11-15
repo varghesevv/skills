@@ -250,3 +250,29 @@ def test_wrong_passwords_are_counted_and_then_throttled(client: TestClient, worl
         )
     ).all()
     assert len(failures) == 5
+
+
+def test_the_login_trail_of_an_older_account_with_the_same_address_is_kept(
+    session: Session, world: World, client: TestClient
+) -> None:
+    """Rows of the older kind stay until the table is reshaped; closing a person's account must
+    not erase them, whatever the address."""
+    session.add(
+        LoginHistory(
+            user_type="workhost",
+            login_email="shared@example.com",
+            succeeded=True,
+            login_time=datetime.now(UTC),
+        )
+    )
+    member = add_member(world, "searcher", email="shared@example.com")
+    client.post(f"{API}/auth/login", json={"email": "Shared@Example.com", "password": "x" * 12})
+    assert close(client, member).status_code == 204  # type: ignore[attr-defined]
+    kept = session.scalars(
+        select(LoginHistory).where(
+            LoginHistory.user_type == "workhost", LoginHistory.login_email == "shared@example.com"
+        )
+    ).all()
+    assert kept, "the older account's login history was erased"
+    cleared = session.scalars(select(LoginHistory).where(LoginHistory.user_type == "person")).all()
+    assert cleared and all(r.login_email is None for r in cleared)
