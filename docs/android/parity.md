@@ -40,10 +40,10 @@ The per-church ADMIN and the VERIFIER use the app; only the OWNER is web only (d
 
 | Screen | Web counterpart | Slice | Status | Test file |
 |---|---|---|---|---|
-| Profile and rate | `ProfilePage.tsx` | S5.7 | done on `/freelancers/me`, moved to the person endpoints | `test/features/freelancer/profile_test.dart` |
-| Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | S5.7 | done | `test/features/freelancer/labels_test.dart` |
-| Availability list with add, edit, delete | `AvailabilityPage.tsx` | S5.7 | done (month calendar is for larger screens, not built) | `test/features/freelancer/availability_test.dart` |
-| Ratings received | `RatingsPage.tsx` | S5.7 | done | `test/features/freelancer/ratings_test.dart` |
+| Profile and rate | `ProfilePage.tsx` | S5.7 | done: the person's own profile at `/member/profile` for a PROVIDER or above, on `/freelancers/me` (D-41); the older account screens stay until S5.12a | `test/features/freelancer/profile_test.dart`, `test/features/person/provider_pages_test.dart` |
+| Labels (skills with level, languages, timings, nativity) | `LabelsPage.tsx` | S5.7 | done at `/member/skills` | `test/features/freelancer/labels_test.dart`, `test/features/person/provider_pages_test.dart` |
+| Availability list with add, edit, delete | `AvailabilityPage.tsx` | S5.7 | done at `/member/availability` (month calendar is for larger screens, not built) | `test/features/freelancer/availability_test.dart`, `test/features/person/provider_pages_test.dart` |
+| Ratings received | `RatingsPage.tsx` | S5.7 | done at `/member/ratings`, with the person's own id | `test/features/freelancer/ratings_test.dart`, `test/features/person/provider_pages_test.dart` |
 | Who vouched for me | `/me/vouches` | S3.6 | done on the applicant home (no organisation vouches screen any more) | `test/features/person/vouching_test.dart` |
 
 ### Searcher screens (SEARCHER and above)
@@ -128,7 +128,7 @@ Status column: "at least X" means that status or higher.
 | POST, GET `/group-requests`; POST `.../{id}/approve`, `/decline` | at least SEARCHER / ADMIN | Start a group, approve | S4.10b | done |
 | POST, GET `/move-requests`; POST `.../{id}/agree`, `/cancel` | admitted | Moves | S4.10b | done |
 | PUT `/home-groups/{id}/leader`; POST `/home-groups/{id}/close`; PUT `/churches/{id}/admin` | ADMIN, leader, OWNER | Succession | S4.10c (leader), S4.10d-1 (close; the OWNER's `/churches/{id}/admin` is web only, decision D-11) | done |
-| GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done on the older rules (role -> status) |
+| GET, PUT `/freelancers/me`; PUT `/freelancers/me/labels`; unavailability endpoints | at least PROVIDER | Provider screens | S5.7 | done: a PROVIDER or above opens them from the member home |
 | GET `/labels?type=` | at least SEARCHER | Labels, filter sheet | S5.7, S5.8 | in progress: labels screen done |
 | GET `/freelancers/{id}`; GET `/freelancers/{id}/ratings` | at least SEARCHER | Detail, ratings | S5.9 | ratings received done; detail not started |
 | POST `/freelancers/{id}/reveal-mobile` | at least SEARCHER | Reveal (dial). The number is never logged, sent to crash or analytics tools, or written to disk or cache; rules: [spec 07](../specification/07-non-functional.md), [ADR-0011](../adr/0011-secrets-from-environment-only.md), [plan](plan.md) sections 4 and 6 | S5.9 | not started |

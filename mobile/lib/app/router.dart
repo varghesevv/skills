@@ -11,6 +11,10 @@ import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/welcome_screen.dart';
+import '../features/freelancer/availability/availability_screen.dart';
+import '../features/freelancer/labels/labels_screen.dart';
+import '../features/freelancer/profile/profile_screen.dart';
+import '../features/freelancer/ratings/ratings_screen.dart';
 import '../features/leader/applicants_screen.dart';
 import '../features/leader/leader_paths.dart';
 import '../features/groups/group_requests_screen.dart';
@@ -55,6 +59,12 @@ bool personMayVisit(PersonMe person, String path) {
       path == leaderInvitations ||
       path == leaderGroup ||
       path.startsWith('$leaderPeople/');
+  // A provider's own pages are for a PROVIDER or above.
+  final isProviderPage =
+      path == personProfile ||
+      path == personSkills ||
+      path == personAvailability ||
+      path == personRatings;
   // The groups of the church are for an ADMIN or the OWNER only.
   final isAdminPage = path == adminGroups;
   return switch (person.status) {
@@ -63,6 +73,7 @@ bool personMayVisit(PersonMe person, String path) {
     _ =>
       (path.startsWith('$personHome/') || path == vouchLinkPath) &&
           (!isLeaderPage || person.status.isLeader) &&
+          (!isProviderPage || person.status.isProvider) &&
           (!isAdminPage ||
               person.status == PersonStatus.admin ||
               person.status == PersonStatus.owner),
@@ -144,6 +155,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'profile',
+            builder: (context, state) => const FreelancerProfileScreen(),
+          ),
+          GoRoute(
+            path: 'skills',
+            builder: (context, state) => const FreelancerLabelsScreen(),
+          ),
+          GoRoute(
+            path: 'availability',
+            builder: (context, state) => const AvailabilityScreen(),
+          ),
+          GoRoute(
+            path: 'ratings',
+            builder: (context, state) => const RatingsScreen(),
           ),
           GoRoute(
             path: 'applicants',
