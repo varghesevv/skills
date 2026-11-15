@@ -1,6 +1,6 @@
 # Android application: understanding
 
-Status: written 2026-10-29. **Retargeted 2026-11-12** to the church trust model ([ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md), [roadmap](../roadmap-verification-model.md)): where this file says freelancer, work host, organisation or `user_type`, read provider, searcher, church and a member's status; one login, one account, one status per person. Screens by status and the new sign-up are specified in slice S1.5.
+Status: written 2026-10-29; the parity part of the app is built (see [parity](parity.md)), chat is not. **Retargeted 2026-11-12** to the church trust model ([ADR-0016](../adr/0016-church-trust-hierarchy-verification-model.md), [ADR-0017](../adr/0017-authorisation-by-status.md), [roadmap](../roadmap-verification-model.md)): where this file says freelancer, work host, organisation or `user_type`, read provider, searcher, church and a member's status; one login, one account, one status per person. Screens by status and the new sign-up are specified in slice S1.5.
 Companions: [plan](plan.md), [chat design](chat-design.md), [kick-off prompt](kickoff-prompt.md).
 Builds on: [mobile-app-plan.md](../mobile-app-plan.md) (the earlier Flutter plan, iOS and Android). Where the two differ, this folder wins for Android work and `mobile-app-plan.md` stays the reference for iPhone and the store rules.
 
