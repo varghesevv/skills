@@ -17,7 +17,7 @@ from app.models import (
     Vouch,
     VouchLink,
 )
-from tests.api_helpers import API, signup
+from tests.api_helpers import API, older_actor
 from tests.test_person_auth import Member, add_member, bearer, login
 from tests.trust_helpers import World, check_rules
 
@@ -218,15 +218,15 @@ def test_a_revoked_person_cannot_close_their_account(client: TestClient, world: 
     assert member.person.closed_at is None
 
 
-def test_closing_needs_a_token_and_is_not_for_older_accounts(
-    client: TestClient, session: Session
+def test_closing_needs_a_token_and_a_token_of_an_older_kind_does_not_do(
+    client: TestClient,
 ) -> None:
     assert client.request("DELETE", f"{API}/me", json={"password": "x" * 12}).status_code == 401
-    older = signup(client, session, "workhost", "old-host4@example.com")
+    older = older_actor("workhost")
     response = client.request(
         "DELETE", f"{API}/me", headers=older.headers, json={"password": "x" * 12}
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_wrong_passwords_are_counted_and_then_throttled(client: TestClient, world: World) -> None:
@@ -252,11 +252,19 @@ def test_wrong_passwords_are_counted_and_then_throttled(client: TestClient, worl
     assert len(failures) == 5
 
 
-def test_an_older_account_with_the_same_address_keeps_its_login_trail(
-    client: TestClient, session: Session, world: World
+def test_the_login_trail_of_an_older_account_with_the_same_address_is_kept(
+    session: Session, world: World, client: TestClient
 ) -> None:
-    older = signup(client, session, "workhost", "shared@example.com")
-    assert older.headers
+    """Rows of the older kind stay until the table is reshaped; closing a person's account must
+    not erase them, whatever the address."""
+    session.add(
+        LoginHistory(
+            user_type="workhost",
+            login_email="shared@example.com",
+            succeeded=True,
+            login_time=datetime.now(UTC),
+        )
+    )
     member = add_member(world, "searcher", email="shared@example.com")
     client.post(f"{API}/auth/login", json={"email": "Shared@Example.com", "password": "x" * 12})
     assert close(client, member).status_code == 204  # type: ignore[attr-defined]

@@ -4,14 +4,13 @@
         --mobile +971500000000 --church "Church name" --group "Home group name"
     python -m app.cli change-owner --new-owner you@example.com [--church-admin ...] \
         [--group-leader ...] [--revoke-old-owner]
-    python -m app.cli create-admin --email you@example.com --mobile +971500000000
     python -m app.cli purge-notifications [--months 12]
     python -m app.cli purge-contact-views [--months 12]
     python -m app.cli seed-demo
     python -m app.cli generate-demo-data --csv logins.csv
 
 Passwords are never accepted as command-line arguments (they would end up in shell history and
-process lists): create-owner and create-admin ask for it (or read one line from stdin), and
+process lists): create-owner asks for it (or read one line from stdin), and
 seed-demo reads DEMO_USER_PASSWORD from the environment. Passwords are never printed or logged.
 """
 
@@ -38,7 +37,6 @@ from app.schemas.auth import (
     check_mobile,
 )
 from app.services import contact_views, notifications
-from app.services.accounts import create_account, get_by_email
 from app.services.operators import SetupError, change_owner, create_first_owner
 
 DEMO_DOMAIN = "example.com"
@@ -114,19 +112,6 @@ def create_owner(
             print(error, file=sys.stderr)
             return 1
     print(f"OWNER created: {email.strip().lower()}, church {church.strip()!r}")
-    return 0
-
-
-def create_admin(email: str, mobile: str, use_stdin: bool) -> int:
-    password = _ask_password(use_stdin)
-    if password is None:
-        return 1
-    with sessionmaker(bind=get_engine(), expire_on_commit=False)() as db:
-        if get_by_email(db, "admin", email) is not None:
-            print("An admin with this email already exists.", file=sys.stderr)
-            return 1
-        create_account(db, "admin", email=email, mobile_number=mobile, password=password)
-    print(f"Admin created: {email.lower()}")
     return 0
 
 
@@ -273,10 +258,6 @@ def main(argv: list[str] | None = None) -> int:
     owner.add_argument("--church", required=True, help="name of the first church")
     owner.add_argument("--group", required=True, help="name of the OWNER's home group")
     owner.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
-    admin = sub.add_parser("create-admin", help="create an admin account (older model)")
-    admin.add_argument("--email", required=True)
-    admin.add_argument("--mobile", required=True)
-    admin.add_argument("--password-stdin", action="store_true", help="read one line from stdin")
     change = sub.add_parser(
         "change-owner",
         help="change the OWNER when they cannot hand over, or have breached trust",
@@ -317,8 +298,6 @@ def main(argv: list[str] | None = None) -> int:
         return create_owner(
             args.name, args.email, args.mobile, args.church, args.group, args.password_stdin
         )
-    if args.command == "create-admin":
-        return create_admin(args.email, args.mobile, args.password_stdin)
     if args.command == "change-owner":
         return change_owner_command(
             args.new_owner,

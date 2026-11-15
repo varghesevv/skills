@@ -9,7 +9,7 @@ from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.models import Person, PersonLabel, PersonUnavailability, Rating
-from tests.api_helpers import API, label_id
+from tests.api_helpers import API, label_id, older_actor
 from tests.test_admission import headers_of
 from tests.test_person_auth import Member, add_member
 from tests.trust_helpers import World
@@ -152,11 +152,9 @@ def test_a_person_revoked_after_logging_in_may_not_search(client: TestClient, wo
 
 
 def test_search_needs_a_token_and_a_person(client: TestClient, world: World) -> None:
-    from tests.api_helpers import signup
-
     assert client.get(SEARCH).status_code == 401
-    old = signup(client, world.session, "workhost", "old.search@example.com")
-    assert client.get(SEARCH, headers=old.headers).status_code == 403
+    old = older_actor("workhost")
+    assert client.get(SEARCH, headers=old.headers).status_code == 401
     assert client.get(SEARCH, headers=viewer(client, world)).status_code == 200
 
 

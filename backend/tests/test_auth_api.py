@@ -1,9 +1,8 @@
-"""Registration, login, refresh, logout, password reset and admin approval over HTTP."""
+"""Login, refresh, logout and password reset over HTTP, for people (ADR-0017)."""
 
 import logging
 import re
 import secrets
-import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -12,97 +11,32 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.security import hash_password
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
-from app.models.users import Organisation
-from app.services.accounts import create_account
+from tests.trust_helpers import World
 
 API = "/api/v1"
+
+pytestmark = pytest.mark.db
 
 
 def new_password() -> str:
     return secrets.token_urlsafe(16)
 
 
-def register(client: TestClient, user_type: str, email: str, password: str, **extra: object):
-    body = {"email": email, "mobile_number": "+971501234567", "password": password, **extra}
-    if user_type != "organisation":
-        body.setdefault("full_name", "Test Person")
-    return client.post(f"{API}/auth/register/{user_type}", json=body)
+def register(session: Session, email: str, password: str) -> None:
+    """A person who can log in (a SEARCHER of the first church)."""
+    world = World(session)
+    world.add_person("searcher", email=email, password_hash=hash_password(password))
+    session.flush()
 
 
-def login(client: TestClient, email: str, password: str, user_type: str = "freelancer"):
-    return client.post(
-        f"{API}/auth/login", json={"email": email, "password": password, "user_type": user_type}
-    )
+def login(client: TestClient, email: str, password: str):
+    return client.post(f"{API}/auth/login", json={"email": email, "password": password})
 
 
 def bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
-
-
-# ---- registration -------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("user_type", "extra"),
-    [("freelancer", {}), ("workhost", {}), ("organisation", {"org_name": "Acme Staffing"})],
-)
-def test_register_each_user_type(client: TestClient, user_type: str, extra: dict[str, str]) -> None:
-    response = register(client, user_type, f"New.{user_type}@Example.com", new_password(), **extra)
-    assert response.status_code == 201
-    body = response.json()
-    assert body["email"] == f"new.{user_type}@example.com"  # stored lowercase
-    assert "password" not in str(body).lower()
-    assert body["approval_status"] == ("pending" if user_type == "organisation" else None)
-
-
-@pytest.mark.parametrize("user_type", ["freelancer", "workhost"])
-def test_people_must_give_a_name_and_it_is_returned_by_me(
-    client: TestClient, user_type: str
-) -> None:
-    password = new_password()
-    email = f"named.{user_type}@example.com"
-    body = {"email": email, "mobile_number": "+971501234567", "password": password}
-    url = f"{API}/auth/register/{user_type}"
-
-    assert client.post(url, json=body).status_code == 422  # no name
-    assert client.post(url, json={**body, "full_name": " A "}).status_code == 422  # too short
-    assert client.post(url, json={**body, "full_name": "x" * 201}).status_code == 422
-    assert client.post(url, json={**body, "full_name": "  Amina Yusuf  "}).status_code == 201
-
-    token = login(client, email, password, user_type).json()["access_token"]
-    me = client.get(f"{API}/me", headers=bearer(token)).json()
-    assert me["full_name"] == "Amina Yusuf"  # trimmed
-    assert me["org_name"] is None
-
-
-def test_organisations_use_org_name_not_a_person_name(client: TestClient) -> None:
-    url = f"{API}/auth/register/organisation"
-    body = {"email": "o@example.com", "mobile_number": "+971501234567", "password": new_password()}
-    assert client.post(url, json=body).status_code == 422  # org_name is required
-    assert client.post(url, json={**body, "org_name": "Acme Staffing"}).status_code == 201
-
-
-def test_duplicate_email_is_rejected_but_allowed_for_another_user_type(client: TestClient) -> None:
-    password = new_password()
-    assert register(client, "freelancer", "dup@example.com", password).status_code == 201
-    again = register(client, "freelancer", "dup@example.com", password)
-    assert again.status_code == 409
-    assert again.json()["error"]["code"] == "email_taken"
-    assert register(client, "workhost", "dup@example.com", password).status_code == 201
-
-
-def test_weak_input_is_rejected_without_echoing_the_password(client: TestClient) -> None:
-    short = secrets.token_hex(3)  # 6 characters: below the minimum
-    response = register(client, "freelancer", "x@example.com", short)
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "validation_error"
-    assert short not in response.text
-    assert register(client, "freelancer", "not-an-email", new_password()).status_code == 422
-
-
-def test_organisation_needs_a_name(client: TestClient) -> None:
-    assert register(client, "organisation", "o@example.com", new_password()).status_code == 422
 
 
 # ---- login --------------------------------------------------------------------------------
@@ -110,7 +44,7 @@ def test_organisation_needs_a_name(client: TestClient) -> None:
 
 def test_login_returns_tokens_and_me_works(client: TestClient, session: Session) -> None:
     password = new_password()
-    register(client, "freelancer", "f@example.com", password)
+    register(session, "f@example.com", password)
     response = login(client, "F@Example.com", password)
     assert response.status_code == 200
     tokens = response.json()
@@ -120,31 +54,29 @@ def test_login_returns_tokens_and_me_works(client: TestClient, session: Session)
     me = client.get(f"{API}/me", headers=bearer(tokens["access_token"]))
     assert me.status_code == 200
     assert me.json()["email"] == "f@example.com"
-    assert me.json()["user_type"] == "freelancer"
+    assert me.json()["user_type"] == "person"
 
     history = session.scalars(select(LoginHistory)).all()
     assert [(h.login_email, h.succeeded) for h in history] == [("f@example.com", True)]
     assert str(history[0].ip_address) == "203.0.113.7"
 
 
-def test_wrong_password_and_unknown_email_look_the_same(client: TestClient) -> None:
+def test_wrong_password_and_unknown_email_look_the_same(
+    client: TestClient, session: Session
+) -> None:
     password = new_password()
-    register(client, "freelancer", "known@example.com", password)
+    register(session, "known@example.com", password)
     wrong = login(client, "known@example.com", new_password())
     unknown = login(client, "nobody@example.com", new_password())
     assert wrong.status_code == unknown.status_code == 401
     assert wrong.json() == unknown.json()
 
 
-def test_a_user_type_cannot_log_in_as_another(client: TestClient) -> None:
+def test_failed_logins_are_throttled_then_429_with_retry_after(
+    client: TestClient, session: Session
+) -> None:
     password = new_password()
-    register(client, "freelancer", "typed@example.com", password)
-    assert login(client, "typed@example.com", password, "workhost").status_code == 401
-
-
-def test_failed_logins_are_throttled_then_429_with_retry_after(client: TestClient) -> None:
-    password = new_password()
-    register(client, "freelancer", "limit@example.com", password)
+    register(session, "limit@example.com", password)
     for _ in range(get_settings().login_max_failures):
         assert login(client, "limit@example.com", new_password()).status_code == 401
     blocked = login(client, "limit@example.com", password)  # even the right password
@@ -153,87 +85,40 @@ def test_failed_logins_are_throttled_then_429_with_retry_after(client: TestClien
     assert blocked.json()["error"]["code"] == "too_many_attempts"
 
 
-def test_throttle_counts_per_email(client: TestClient) -> None:
+def test_throttle_counts_per_email(client: TestClient, session: Session) -> None:
     for _ in range(get_settings().login_max_failures):
         login(client, "a@example.com", new_password())
     password = new_password()
-    register(client, "freelancer", "b@example.com", password)
+    register(session, "b@example.com", password)
     assert login(client, "b@example.com", password).status_code == 200
+
+
+def test_failures_of_an_older_account_do_not_count_against_a_person(
+    client: TestClient, session: Session
+) -> None:
+    register(session, "mixed@example.com", (password := new_password()))
+    for _ in range(get_settings().login_max_failures):
+        session.add(
+            LoginHistory(
+                user_type="workhost",
+                login_email="mixed@example.com",
+                succeeded=False,
+                login_time=datetime.now(UTC),
+                ip_address="203.0.113.7",  # the address the test client logs in from
+            )
+        )
+    session.flush()
+    assert login(client, "mixed@example.com", password).status_code == 200
 
 
 def test_failures_older_than_the_window_do_not_count(client: TestClient, session: Session) -> None:
     password = new_password()
-    register(client, "freelancer", "old@example.com", password)
+    register(session, "old@example.com", password)
     for _ in range(get_settings().login_max_failures):
         login(client, "old@example.com", new_password())
     old = datetime.now(UTC) - timedelta(minutes=get_settings().login_window_minutes + 1)
     session.execute(update(LoginHistory).values(login_time=old))
     assert login(client, "old@example.com", password).status_code == 200
-
-
-# ---- organisation approval ----------------------------------------------------------------
-
-
-def test_organisation_cannot_log_in_until_approved(client: TestClient, session: Session) -> None:
-    org_password, admin_password = new_password(), new_password()
-    registered = register(client, "organisation", "org@example.com", org_password, org_name="Acme")
-    org_id = registered.json()["id"]
-
-    pending = login(client, "org@example.com", org_password, "organisation")
-    assert pending.status_code == 403
-    assert pending.json()["error"]["code"] == "organisation_pending"
-    # A wrong password still gives the generic answer, not the status.
-    assert login(client, "org@example.com", new_password(), "organisation").status_code == 401
-
-    create_account(
-        session,
-        "admin",
-        email="boss@example.com",
-        mobile_number="+971500000000",
-        password=admin_password,
-    )
-    admin_token = login(client, "boss@example.com", admin_password, "admin").json()["access_token"]
-
-    listing = client.get(f"{API}/admin/organisations", headers=bearer(admin_token))
-    assert listing.status_code == 200
-    assert [item["id"] for item in listing.json()["items"]] == [org_id]
-
-    approved = client.post(
-        f"{API}/admin/organisations/{org_id}/approve", headers=bearer(admin_token)
-    )
-    assert approved.status_code == 200
-    assert approved.json()["approval_status"] == "approved"
-    org = session.get(Organisation, uuid.UUID(org_id))
-    assert org is not None
-    assert org.approved_by_admin_id is not None
-    assert login(client, "org@example.com", org_password, "organisation").status_code == 200
-
-
-def test_rejected_organisation_cannot_log_in(client: TestClient, session: Session) -> None:
-    org_password, admin_password = new_password(), new_password()
-    org_id = register(
-        client, "organisation", "no@example.com", org_password, org_name="Nope"
-    ).json()["id"]
-    create_account(
-        session,
-        "admin",
-        email="boss2@example.com",
-        mobile_number="+971500000000",
-        password=admin_password,
-    )
-    admin_token = login(client, "boss2@example.com", admin_password, "admin").json()["access_token"]
-    client.post(f"{API}/admin/organisations/{org_id}/reject", headers=bearer(admin_token))
-    response = login(client, "no@example.com", org_password, "organisation")
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "organisation_rejected"
-
-
-def test_admin_endpoints_need_the_admin_role(client: TestClient) -> None:
-    assert client.get(f"{API}/admin/organisations").status_code == 401
-    password = new_password()
-    register(client, "freelancer", "plain@example.com", password)
-    token = login(client, "plain@example.com", password).json()["access_token"]
-    assert client.get(f"{API}/admin/organisations", headers=bearer(token)).status_code == 403
 
 
 def test_me_rejects_missing_and_bad_tokens(client: TestClient) -> None:
@@ -246,7 +131,7 @@ def test_me_rejects_missing_and_bad_tokens(client: TestClient) -> None:
 
 def test_refresh_rotates_and_old_token_is_dead(client: TestClient, session: Session) -> None:
     password = new_password()
-    register(client, "freelancer", "r@example.com", password)
+    register(session, "r@example.com", password)
     first = login(client, "r@example.com", password).json()
     second = client.post(f"{API}/auth/refresh", json={"refresh_token": first["refresh_token"]})
     assert second.status_code == 200
@@ -264,16 +149,16 @@ def test_refresh_rotates_and_old_token_is_dead(client: TestClient, session: Sess
 
 def test_refresh_tokens_are_stored_only_as_hashes(client: TestClient, session: Session) -> None:
     password = new_password()
-    register(client, "freelancer", "h@example.com", password)
+    register(session, "h@example.com", password)
     tokens = login(client, "h@example.com", password).json()
     stored = session.scalars(select(RefreshToken.token_hash)).all()
     assert tokens["refresh_token"] not in stored
     assert len(stored) == 1
 
 
-def test_logout_revokes_the_refresh_token(client: TestClient) -> None:
+def test_logout_revokes_the_refresh_token(client: TestClient, session: Session) -> None:
     password = new_password()
-    register(client, "freelancer", "l@example.com", password)
+    register(session, "l@example.com", password)
     tokens = login(client, "l@example.com", password).json()
     body = {"refresh_token": tokens["refresh_token"]}
     assert client.post(f"{API}/auth/logout", json=body).status_code == 204
@@ -282,7 +167,7 @@ def test_logout_revokes_the_refresh_token(client: TestClient) -> None:
 
 def test_expired_refresh_token_is_rejected(client: TestClient, session: Session) -> None:
     password = new_password()
-    register(client, "freelancer", "e@example.com", password)
+    register(session, "e@example.com", password)
     tokens = login(client, "e@example.com", password).json()
     session.execute(update(RefreshToken).values(expires_at=datetime.now(UTC) - timedelta(days=1)))
     response = client.post(f"{API}/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
@@ -302,13 +187,13 @@ def test_password_reset_flow(
     client: TestClient, session: Session, caplog: pytest.LogCaptureFixture
 ) -> None:
     old, new = new_password(), new_password()
-    register(client, "freelancer", "reset@example.com", old)
+    register(session, "reset@example.com", old)
     session_tokens = login(client, "reset@example.com", old).json()
 
     with caplog.at_level(logging.INFO):
         response = client.post(
             f"{API}/auth/forgot-password",
-            json={"email": "reset@example.com", "user_type": "freelancer"},
+            json={"email": "reset@example.com"},
         )
     assert response.status_code == 202
     token = reset_token_from_log(caplog.text)
@@ -335,7 +220,7 @@ def test_forgot_password_gives_the_same_answer_for_unknown_email(
     with caplog.at_level(logging.INFO):
         response = client.post(
             f"{API}/auth/forgot-password",
-            json={"email": "ghost@example.com", "user_type": "freelancer"},
+            json={"email": "ghost@example.com"},
         )
     assert response.status_code == 202
     assert response.json() == {"status": "accepted"}
@@ -345,11 +230,11 @@ def test_forgot_password_gives_the_same_answer_for_unknown_email(
 def test_expired_or_unknown_reset_token_is_rejected(
     client: TestClient, session: Session, caplog: pytest.LogCaptureFixture
 ) -> None:
-    register(client, "freelancer", "exp@example.com", new_password())
+    register(session, "exp@example.com", new_password())
     with caplog.at_level(logging.INFO):
         client.post(
             f"{API}/auth/forgot-password",
-            json={"email": "exp@example.com", "user_type": "freelancer"},
+            json={"email": "exp@example.com"},
         )
     token = reset_token_from_log(caplog.text)
     past = datetime.now(UTC) - timedelta(minutes=1)
@@ -361,10 +246,10 @@ def test_expired_or_unknown_reset_token_is_rejected(
 
 
 def test_nothing_secret_is_logged_during_login(
-    client: TestClient, caplog: pytest.LogCaptureFixture
+    client: TestClient, caplog: pytest.LogCaptureFixture, session: Session
 ) -> None:
     password = new_password()
-    register(client, "freelancer", "quiet@example.com", password)
+    register(session, "quiet@example.com", password)
     with caplog.at_level(logging.DEBUG):
         tokens = login(client, "quiet@example.com", password).json()
         login(client, "quiet@example.com", new_password())

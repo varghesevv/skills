@@ -5,6 +5,7 @@ a change of status takes effect on the next request without a new token.
 """
 
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -19,7 +20,7 @@ from app.api.deps import current_person
 from app.core.security import hash_password
 from app.models import LoginHistory, Person, RefreshToken
 from app.models.church import Person as PersonModel
-from tests.api_helpers import API, signup
+from tests.api_helpers import API
 from tests.trust_helpers import World
 
 pytestmark = pytest.mark.db
@@ -105,18 +106,15 @@ def test_one_login_for_every_status(client: TestClient, world: World) -> None:
         assert tokens["refresh_token"]
 
 
-def test_login_needs_no_user_type_and_old_accounts_still_log_in(
-    client: TestClient, session: Session, world: World
+def test_login_needs_no_user_type_and_ignores_one_that_older_clients_send(
+    client: TestClient, world: World
 ) -> None:
-    host = signup(client, session, "workhost", "old-host@example.com")
-    assert host.headers  # the older login with user_type still works
     member = add_member(world, "searcher")
-    assert (
-        client.post(
-            f"{API}/auth/login", json={"email": member.email, "password": member.password}
-        ).status_code
-        == 200
-    )
+    for extra in ({}, {"user_type": "freelancer"}):
+        response = client.post(
+            f"{API}/auth/login", json={"email": member.email, "password": member.password, **extra}
+        )
+        assert response.status_code == 200, extra
 
 
 def test_the_access_token_carries_no_status(client: TestClient, world: World) -> None:
@@ -361,18 +359,37 @@ def test_other_endpoints_refuse_revoked_people_too(client: TestClient, world: Wo
     assert (response.status_code, response.json()["error"]["code"]) == (403, "account_revoked")
 
 
-def test_old_account_tokens_do_not_open_person_endpoints(
-    guarded: TestClient, session: Session
-) -> None:
-    host = signup(guarded, session, "workhost", "old-host2@example.com")
-    assert guarded.get(f"{API}/test/anyone", headers=host.headers).status_code == 403
+@pytest.mark.parametrize("role", ["freelancer", "workhost", "organisation", "admin"])
+def test_a_token_of_an_older_kind_opens_nothing(guarded: TestClient, role: str) -> None:
+    from app.core.config import get_settings
+    from app.core.security import Principal, create_access_token
+
+    token, _ = create_access_token(
+        Principal(role, uuid.uuid4()),
+        secret=get_settings().require_jwt_secret(),
+        lifetime_minutes=5,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    for path in ("/test/anyone", "/me", "/labels"):
+        response = guarded.get(f"{API}{path}", headers=headers)
+        assert response.status_code == 401, (role, path)
+        assert response.json()["error"]["code"] == "invalid_token"
 
 
-def test_a_person_token_does_not_open_old_role_endpoints(client: TestClient, world: World) -> None:
-    member = add_member(world, "provider")
-    headers = bearer(login(client, member))
-    for path in ("/workhosts/me", "/organisations/me", "/admin/organisations"):
-        assert client.get(f"{API}{path}", headers=headers).status_code == 403, path
+def test_the_older_endpoints_are_gone(client: TestClient, world: World) -> None:
+    headers = bearer(login(client, add_member(world, "owner")))
+    for method, path in (
+        ("GET", "/workhosts/me"),
+        ("GET", "/organisations/me"),
+        ("GET", "/organisations"),
+        ("GET", "/admin/organisations"),
+        ("POST", "/auth/register/freelancer"),
+        ("POST", "/auth/register/workhost"),
+        ("POST", "/auth/register/organisation"),
+        ("GET", "/freelancers/me/vouches"),
+    ):
+        response = client.request(method, f"{API}{path}", headers=headers)
+        assert response.status_code in (404, 405), (method, path, response.status_code)
 
 
 def test_an_expired_or_forged_token_is_refused(guarded: TestClient, world: World) -> None:
@@ -404,7 +421,7 @@ def test_an_account_without_a_password_hash_costs_the_same_as_an_unknown_email(
 
     member = add_member(world, "searcher")
     stub = type("Stub", (), {"id": member.person.id, "password_hash": None})()
-    monkeypatch.setattr(auth_service, "get_by_email", lambda *_args, **_kwargs: stub)
+    monkeypatch.setattr(auth_service, "_person_by_email", lambda *_args, **_kwargs: stub)
     calls: list[int] = []
     monkeypatch.setattr(auth_service, "verify_dummy", lambda _password: calls.append(1))
     response = client.post(f"{API}/auth/login", json={"email": member.email, "password": "x" * 12})
@@ -412,7 +429,7 @@ def test_an_account_without_a_password_hash_costs_the_same_as_an_unknown_email(
     assert calls == [1]
 
 
-def test_forgot_password_accepts_the_person_type_the_web_sends(
+def test_forgot_password_ignores_a_user_type_that_older_clients_send(
     client: TestClient, world: World, caplog: pytest.LogCaptureFixture
 ) -> None:
     member = add_member(world, "searcher")

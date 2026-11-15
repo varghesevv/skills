@@ -501,6 +501,13 @@ def test_reports_limited_to_a_church_hold_only_that_church(world: World) -> None
             user_type="person", login_email="nobody@example.com", succeeded=False, login_time=now
         )
     )
+    # A failed attempt of an account of the older kind (rows that stay until the table is
+    # reshaped) is not a person's and is not counted.
+    session.add(
+        LoginHistory(
+            user_type="workhost", login_email="older@example.com", succeeded=False, login_time=now
+        )
+    )
     session.flush()
     window = params(date(2026, 10, 10), date(2026, 10, 10))
     limited = params(date(2026, 10, 10), date(2026, 10, 10), church_id=other_church.id)

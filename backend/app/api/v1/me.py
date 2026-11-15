@@ -11,8 +11,6 @@ from app.core.db import get_session
 from app.core.errors import ApiError
 from app.core.security import Principal
 from app.models.church import Person
-from app.models.users import Organisation
-from app.schemas.auth import MeResponse
 from app.schemas.church import CloseAccountRequest, PersonMeResponse, PersonUpdate
 from app.schemas.notifications import NotificationList
 from app.schemas.signup import ApplicationUpdate
@@ -30,7 +28,6 @@ from app.services import (
     signup,
     vouching,
 )
-from app.services.accounts import get_by_id
 
 router = APIRouter(tags=["me"])
 
@@ -42,25 +39,13 @@ Member = Annotated[Person, Depends(current_person("pending"))]
 def me(
     principal: Annotated[Principal, Depends(get_principal_even_if_revoked)],
     db: Annotated[Session, Depends(get_session)],
-) -> MeResponse | PersonMeResponse:
-    """The caller. A person gets the view of the church trust model (a revoked person too, to see
-    why they have no access); the older accounts keep their older answer until they are gone."""
-    account = get_by_id(db, principal.user_type, principal.user_id)
-    if account is None:
+) -> PersonMeResponse:
+    """The caller, as the church trust model shows them. A revoked person gets it too, to see why
+    they have no access."""
+    person = db.get(Person, principal.user_id)
+    if person is None:
         raise ApiError(401, "invalid_token", "The account no longer exists")
-    if isinstance(account, Person):
-        return directory.person_view(db, account)
-    org = account if isinstance(account, Organisation) else None
-    return MeResponse(
-        id=account.id,
-        user_type=principal.user_type,
-        email=account.user_email,
-        mobile_number=account.mobile_number,
-        full_name=getattr(account, "full_name", None),
-        org_name=org.org_name if org else None,
-        approval_status=org.approval_status if org else None,
-        created_at=account.created_at,
-    )
+    return directory.person_view(db, person)
 
 
 @router.put("/me")

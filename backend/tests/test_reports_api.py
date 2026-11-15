@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.security import hash_password
 from app.models.church import Church, HomeGroup, Person
 from app.models.reports import ReportRun
-from tests.api_helpers import API
+from tests.api_helpers import API, older_actor
 from tests.test_admission import headers_of, owner_member
 from tests.test_person_auth import Member, add_member
 from tests.test_search_api import provider
@@ -91,11 +91,9 @@ def test_nobody_below_an_admin_reads_reports(client: TestClient, world: World, s
 
 
 def test_no_token_and_older_account_tokens_read_nothing(client: TestClient, world: World) -> None:
-    from tests.api_helpers import signup
-
     assert client.get(REPORTS).status_code == 401
-    old = signup(client, world.session, "admin", "old.admin.reports@example.com")
-    assert client.get(REPORTS, headers=old.headers).status_code == 403
+    old = older_actor("admin")
+    assert client.get(REPORTS, headers=old.headers).status_code == 401
 
 
 def test_an_admin_runs_only_reports_limited_to_their_church(

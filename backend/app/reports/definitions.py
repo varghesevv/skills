@@ -106,7 +106,6 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
             .select_from(LoginHistory)
             .join(Person, Person.id == LoginHistory.user_id)
             .where(
-                LoginHistory.user_type == "person",
                 Person.status == status,
                 LoginHistory.login_time >= p.start,
                 LoginHistory.login_time < p.end,
@@ -122,7 +121,7 @@ def active_users(db: Session, p: ReportParams) -> list[Section]:
             select(func.count())
             .select_from(LoginHistory)
             .where(
-                LoginHistory.user_type == "person",
+                LoginHistory.user_type == "person",  # until the older rows go (S5.12a part 2)
                 LoginHistory.user_id.is_(None),
                 LoginHistory.succeeded.is_(False),
                 LoginHistory.login_time >= p.start,
