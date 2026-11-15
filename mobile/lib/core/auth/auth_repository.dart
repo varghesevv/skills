@@ -4,6 +4,18 @@ import '../api/parse.dart';
 import 'person_me.dart';
 import 'token_store.dart';
 
+/// `GET /me` answered with an account of the older kind (a freelancer, work host or
+/// organisation). The app has no screens for it. It is not an [ApiException]: only this exact
+/// answer ends a saved session; any other unreadable answer keeps it.
+class OlderAccountException implements Exception {
+  const OlderAccountException();
+
+  @override
+  String toString() => 'OlderAccountException';
+}
+
+const _olderAccountTypes = {'freelancer', 'workhost', 'organisation'};
+
 /// Login, logout and the current account. Passwords are passed through and never stored.
 class AuthRepository {
   AuthRepository(this._api, this._tokens);
@@ -29,15 +41,22 @@ class AuthRepository {
     await _tokens.save(accessToken: access, refreshToken: refresh);
     try {
       return await me();
+    } on OlderAccountException {
+      // No screens for it: the same as any answer the app cannot use.
+      await _tokens.clear();
+      throw const ApiException.badResponse();
     } catch (_) {
       await _tokens.clear();
       rethrow;
     }
   }
 
-  /// The signed-in person. An answer that is not a person (an account of the older kind, which
-  /// the server no longer serves) is a bad response.
+  /// The signed-in person. Throws [OlderAccountException] for an account of the older kind, and
+  /// an `ApiException` (`bad_response`) for any other answer the app cannot read.
   Future<PersonMe> me() async => parseResponse(await _api.get('/me'), (json) {
+    if (_olderAccountTypes.contains(json['user_type'])) {
+      throw const OlderAccountException();
+    }
     if (json['user_type'] != 'person') {
       throw const FormatException('Not a person');
     }
@@ -52,11 +71,10 @@ class AuthRepository {
     }
     try {
       return await me();
-    } on ApiException catch (error) {
+    } on OlderAccountException {
       // A session of an account of the older kind cannot be used any more: end it (the refresh
       // token is revoked on the server, best effort) so the app opens at the welcome screen
-      // instead of failing at every start.
-      if (error.code != 'bad_response') rethrow;
+      // instead of failing at every start. Any other failure keeps the saved session.
       await logout();
       return null;
     }

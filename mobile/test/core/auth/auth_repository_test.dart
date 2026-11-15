@@ -134,12 +134,7 @@ void main() {
       '/me',
       FakeReply(200, {'id': 'u1', 'user_type': 'freelancer'}),
     );
-    await expectLater(
-      auth.me(),
-      throwsA(
-        isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
-      ),
-    );
+    await expectLater(auth.me(), throwsA(isA<OlderAccountException>()));
   });
 
   test('restoreSession returns null without a saved session', () async {
@@ -193,6 +188,71 @@ void main() {
     expect(await coldStart.readRefreshToken(), isNull);
     // The abandoned refresh token is revoked on the server too.
     expect(adapter.count('POST', '/auth/logout'), 1);
+  });
+
+  group('a saved session is kept when /me cannot be read, but not for an older account', () {
+    Future<(AuthRepository, _ColdStartStore)> coldRepo(FakeReply me) async {
+      final store = _ColdStartStore('saved-refresh');
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.test/api/v1'))
+        ..httpClientAdapter = adapter;
+      adapter
+        ..reply(
+          'POST',
+          '/auth/refresh',
+          FakeReply(200, tokens(fresh('a'), fresh('r'))),
+        )
+        ..reply('GET', '/me', me);
+      return (AuthRepository(ApiClient(dio: dio, tokens: store), store), store);
+    }
+
+    final cases = {
+      'an unknown status': FakeReply(200, {
+        ...personJson(),
+        'status': 'archangel',
+      }),
+      'a page that is not JSON': FakeReply(
+        200,
+        '<html>sign in to the wifi</html>',
+      ),
+      'an answer without an account type': FakeReply(200, {'id': 'u1'}),
+    };
+    cases.forEach((name, reply) {
+      test('$name keeps the session and asks again next time', () async {
+        final (repo, store) = await coldRepo(reply);
+        await expectLater(
+          repo.restoreSession(),
+          throwsA(
+            isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
+          ),
+        );
+        expect(await store.readRefreshToken(), isNotNull);
+        expect(adapter.count('POST', '/auth/logout'), 0);
+      });
+    });
+
+    test(
+      'an older account at login is refused and leaves no session',
+      () async {
+        adapter
+          ..reply(
+            'POST',
+            '/auth/login',
+            FakeReply(200, tokens(fresh('a'), fresh('r'))),
+          )
+          ..reply(
+            'GET',
+            '/me',
+            FakeReply(200, {'id': 'u1', 'user_type': 'workhost'}),
+          );
+        await expectLater(
+          auth.loginPerson(email: 'person@example.test', password: fresh('pw')),
+          throwsA(
+            isA<ApiException>().having((e) => e.code, 'code', 'bad_response'),
+          ),
+        );
+        expect(await store.readRefreshToken(), isNull);
+      },
+    );
   });
 
   test(
