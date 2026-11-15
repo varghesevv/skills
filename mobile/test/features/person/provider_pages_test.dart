@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/router.dart';
 import 'package:skills_app/core/auth/person_me.dart';
+import 'package:skills_app/core/session/session_controller.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/test_app.dart';
@@ -133,6 +137,40 @@ void main() {
       await tapKey(tester, 'provider-ratings');
       expect(find.text('Very good'), findsOneWidget);
       expect(app.adapter.count('GET', '/freelancers/p1/ratings'), 1);
+    });
+
+    testWidgets('a refresh of the person does not reload the ratings', (
+      tester,
+    ) async {
+      final app = await _open(
+        tester,
+        'provider',
+        arrange: (a) => a.reply(
+          'GET',
+          '/freelancers/p1/ratings',
+          FakeReply(200, {
+            'items': [
+              {
+                'rating': 7,
+                'comment': 'Fine',
+                'rated_on': '2026-11-01T10:00:00Z',
+              },
+            ],
+            'total': 1,
+            'page': 1,
+            'page_size': 10,
+          }),
+        ),
+      );
+      await tapKey(tester, 'provider-ratings');
+      expect(app.adapter.count('GET', '/freelancers/p1/ratings'), 1);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      unawaited(container.read(sessionProvider.notifier).refreshPerson());
+      await tester.pumpAndSettle();
+      expect(app.adapter.count('GET', '/freelancers/p1/ratings'), 1);
+      expect(find.text('Fine'), findsOneWidget);
     });
 
     testWidgets('the availability lists the periods', (tester) async {
