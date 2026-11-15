@@ -350,6 +350,30 @@ void main() {
       );
     });
 
+    testWidgets(
+      'a dialler that answers false is explained like one that throws',
+      (tester) async {
+        await _open(
+          tester,
+          dialerBehaviour: (number) async => false,
+          arrange: (a) => a.reply(
+            'POST',
+            '/freelancers/$_id/reveal-mobile',
+            FakeReply(200, {'mobile_number': _number}),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('reveal')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            'The phone could not open the dialler. The number is shown below.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('revealed-number')), findsOneWidget);
+      },
+    );
+
     testWidgets('says so when the limit is reached', (tester) async {
       await _open(
         tester,

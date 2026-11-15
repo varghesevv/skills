@@ -187,8 +187,14 @@ class _ContactState extends ConsumerState<_Contact> {
     final number = _number;
     if (number == null) return;
     try {
-      await ref.read(dialerProvider)(number);
-      if (mounted) setState(() => _error = null);
+      // launchUrl answers false when no app handles a `tel:` address, and may throw as well.
+      final opened = await ref.read(dialerProvider)(number);
+      if (!mounted) return;
+      setState(
+        () => _error = opened
+            ? null
+            : ref.read(appTextProvider)('reveal.dialFailed'),
+      );
     } catch (_) {
       if (mounted) {
         setState(() => _error = ref.read(appTextProvider)('reveal.dialFailed'));
