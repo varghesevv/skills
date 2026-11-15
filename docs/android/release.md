@@ -55,6 +55,13 @@ gh secret set ANDROID_KEY_PASSWORD --env demo
 3. When it is green, open the Android app page of the web app, or ask the API: the new version is listed with its SHA-256. A tester can check it with `sha256sum`.
 4. To make older builds ask people to update, set `APP_MIN_VERSION` (and `APP_LATEST_VERSION`) in the Environment and run `deploy-demo` again.
 
+## How this follows ADR-0011 (secrets from the environment only)
+
+- **No secret in the repository** (1): the workflow only names secrets (`secrets.ANDROID_*`); the key, its passwords and the SSH key exist only in the Environment. `*.jks`, `*.keystore` and `key.properties` are git-ignored, and `scripts/check-secrets.sh` (the required `secrets-scan` check) refuses them if they are added anyway.
+- **Environment variables only, no defaults, a clear error** (2, 3): Gradle reads the key from `ANDROID_KEYSTORE_FILE` and the three other `ANDROID_*` variables; if one is missing the build stops and names it. The workflow checks every setting first and refuses a value that is not one line, as `deploy-demo` does.
+- **Nothing in logs** (5): secrets are passed as step environment variables (GitHub masks them), never on a command line or in a printed line; the decoded key is written with mode 600 in the runner's temporary folder and deleted in the build step and again in the last step, which always runs. The signature check prints the certificate's name and SHA-256 only, which are public.
+- **Nothing to run from outside**: the workflow starts only by hand (`workflow_dispatch`), the release notes and the tag are read through the environment, never pasted into a script, and the tag is checked before use.
+
 ## Things to know
 
 - **The application ID is a placeholder** (`com.example.skills.dev`, open question Q-A1). It cannot change once a build is installed or uploaded to a store: a new ID is a different app. Decide the name and ID before testers depend on the app, and before any store upload.

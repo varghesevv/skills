@@ -54,10 +54,13 @@ android {
     if (!keystoreFile.isNullOrEmpty()) {
         signingConfigs {
             create("release") {
+                // No defaults for secrets: a missing one stops the build and names the variable.
+                fun required(name: String): String =
+                    requireNotNull(System.getenv(name)) { "$name is not set (see docs/android/release.md)" }
                 storeFile = file(keystoreFile)
-                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                storePassword = required("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = required("ANDROID_KEY_ALIAS")
+                keyPassword = required("ANDROID_KEY_PASSWORD")
             }
         }
     }

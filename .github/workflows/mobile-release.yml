@@ -59,6 +59,11 @@ jobs:
                    DEPLOY_SSH_PRIVATE_KEY AWS_DEPLOY_ROLE_ARN SERVER_HOST SITE_ADDRESS; do
             if [ -z "${!v}" ]; then echo "Missing Environment setting: $v" >&2; missing=1; fi
           done
+          # A secret must be one line (the keystore is base64 on one line): a pasted newline or a
+          # stray space would only fail later, with a message that could show part of it.
+          for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            case "${!v}" in *$'\n'*|*$'\r'*) echo "$v must be a single line." >&2; missing=1;; esac
+          done
           exit $missing
 
       - name: Read the version
