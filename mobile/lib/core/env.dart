@@ -17,17 +17,28 @@ class Env {
   /// `demo` or `prod`; matches the Gradle product flavor.
   static const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'demo');
 
+  /// True for an address the app may open: `https://` and something after it.
+  static bool isPrivacyAddress(String value) =>
+      value.startsWith('https://') && value.length > 'https://'.length;
+
   static final _version = RegExp(r'^\d+\.\d+\.\d+(\+\d+)?$');
 
   /// Names of the build settings that are missing or wrong. Empty when the build is configured.
   /// Release builds refuse to start with a non-empty list; debug and test builds may leave the
   /// settings out.
-  static List<String> problems({String? apiBase, String? version}) {
+  static List<String> problems({
+    String? apiBase,
+    String? version,
+    String? privacy,
+  }) {
     final base = apiBase ?? apiBaseUrl;
     final appVer = version ?? appVersion;
+    final privacyAddress = privacy ?? privacyUrl;
     return [
       if (base.isEmpty) 'API_BASE_URL',
       if (!_version.hasMatch(appVer)) 'APP_VERSION',
+      if (privacyAddress.isNotEmpty && !isPrivacyAddress(privacyAddress))
+        'PRIVACY_URL',
     ];
   }
 }

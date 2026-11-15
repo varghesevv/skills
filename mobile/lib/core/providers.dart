@@ -33,7 +33,7 @@ final appVersionProvider = Provider<String>((ref) => Env.appVersion);
 /// can set it.
 final privacyUrlProvider = Provider<String>((ref) {
   final url = Env.privacyUrl;
-  return url.startsWith('https://') ? url : '';
+  return Env.isPrivacyAddress(url) ? url : '';
 });
 
 /// Opens a web address in the phone's browser; false when nothing could open it. A provider so
