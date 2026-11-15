@@ -178,6 +178,15 @@ dc run --rm tools python -m app.cli seed-demo
 
 Starting the demo over means wiping the demo database, because the history of people is append-only and cannot be removed row by row (D-45). That is an action on the live server that the owner takes; its step-by-step procedure (the reset of the demo) is written in slice S5.14 of the roadmap. Until then, `generate-demo-data` on a server that has demo people refuses, and `seed-demo` says that they exist and does nothing.
 
+### The migration that removes the older accounts (migration 0018, at the cut-over)
+
+Migration `0018` drops the tables of freelancers, work hosts, organisations and administrators with their data, and ends the sessions and reset links of those accounts. It is destructive: the downgrade brings the older tables back **empty**, never their data. It belongs to the cut-over to the church model (roadmap S6) and is run only with the owner's approval:
+
+1. Make a backup now and check it can be restored (section 6). The deploy takes one too, but this one is yours to keep until the new model has run for a while.
+2. Get the owner's approval to remove the older accounts.
+3. Deploy as usual (section 3); `deploy.sh` runs the migration. Afterwards create the OWNER (next section) if the database has none.
+4. To go back, restore the backup of step 1 (section 6) with the previous release; do not rely on the downgrade for data.
+
 ### Set up Skills: the first OWNER (church trust model)
 
 Once per installation, on a database that has the church trust schema (migration `0007` and later), the operators create the OWNER with the first church and home group. The command asks for the password (twice) or reads one line with `--password-stdin`; it is never a command-line argument and is never printed.
