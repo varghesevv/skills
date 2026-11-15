@@ -2,11 +2,29 @@ import type { Page, Route } from '@playwright/test'
 
 // A tiny fake of the API, so the layout checks need no backend or database.
 
-export type Role = 'freelancer' | 'workhost' | 'organisation' | 'admin'
+export type Role = 'freelancer' | 'workhost' | 'organisation' | 'admin' | 'searcher'
 
 const ID = '11111111-1111-1111-1111-111111111111'
 
 function me(role: Role) {
+  if (role === 'searcher') {
+    // A person of the church trust model (the member pages), not an older account.
+    return {
+      user_type: 'person',
+      id: ID,
+      full_name: 'Fatima Alexandrina Khan-Smithsonian',
+      email: 'person@example.com',
+      mobile_number: '+971500000001',
+      status: 'searcher',
+      requested_status: null,
+      church: { id: 'church-1', name: 'Grace Community Church of the Valley' },
+      home_group: { id: 'group-1', name: 'Riverside' },
+      leader: { name: 'Lena Leader' },
+      status_set_by: { name: 'Lena Leader' },
+      flagged_for_recheck: false,
+      vouch_count: 0,
+    }
+  }
   return {
     id: ID,
     user_type: role,
@@ -57,7 +75,8 @@ const RESULTS = Array.from({ length: 6 }, (_, index) => ({
   is_rate_negotiable: index % 2 === 0,
   average_rating: 8.5,
   rating_count: 4,
-  vouch_count: 2,
+  church: { id: 'church-1', name: 'Grace Community Church of the Valley' },
+  home_group: { id: 'group-1', name: 'Riverside' },
   skills: [
     { name: 'electrical installation and repair', level: '80%' },
     { name: 'plumbing', level: 'basic' },
@@ -157,6 +176,14 @@ export async function mockApi(page: Page, role: Role | null) {
     if (path === '/me' && role) return body(route, 200, me(role))
     if (path === '/labels') return body(route, 200, LABELS)
     if (path === '/freelancers/me') return body(route, 200, PROFILE)
+    if (path === '/me/notifications') {
+      return body(route, 200, { items: [], total: 0, unread_count: 0 })
+    }
+    if (path === '/churches') {
+      return body(route, 200, {
+        items: [{ id: 'church-1', name: 'Grace Community Church of the Valley' }],
+      })
+    }
     if (path === '/organisations') {
       return body(route, 200, [{ id: 'org-1', org_name: 'Acme Training and Development' }])
     }
