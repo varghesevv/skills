@@ -130,6 +130,8 @@ profile. In the `default` profile they are Organisation, Work host and Freelance
 
 ### Test builds of the mobile app (Downloads)
 
+Signed builds are made and published by the `mobile-release` workflow (how: [docs/android/release.md](android/release.md)). The by-hand steps below are the fallback.
+
 Logged-in people (any role) can list and download Android test builds through the API; there is no public file address and the proxy does not serve the folder.
 
 | Setting | Default | Meaning |

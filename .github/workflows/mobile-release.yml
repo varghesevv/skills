@@ -1,0 +1,218 @@
+name: mobile-release
+
+# Builds the signed Android app, publishes it to the demo server's downloads folder (the Android
+# app page of the web app and GET /api/v1/app/downloads list it) and, when a release tag is given,
+# attaches it to that GitHub release. Run by hand: Actions > mobile-release > Run workflow.
+# The signing key and the server settings come only from the GitHub Environment `demo` and are
+# never echoed (see docs/android/release.md).
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "Release notes shown next to the build on the Android app page (plain text, up to 4000 characters)."
+        required: false
+        type: string
+      release_tag:
+        description: "Optional: a published GitHub release (for example skills-v1.0.0) to attach the APK to."
+        required: false
+        type: string
+
+permissions:
+  contents: write # only to attach the APK to a release the person named
+  id-token: write
+
+# The same group as deploy-demo: both change the SSH rule of the server, so they never overlap.
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-south-1
+  INSTANCE_NAME: skills
+  # Flutter is cloned from the official repository at a fixed release tag (no third-party action).
+  FLUTTER_VERSION: "3.47.8"
+  FLUTTER_SHA: "737ba8f885dc774b53b442759999a312c9461e4e"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: demo
+    timeout-minutes: 45
+    steps:
+      # A build that carries the release key is made from reviewed code only.
+      - name: Only from main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "mobile-release runs only on main (this run is on $GITHUB_REF)." >&2; exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check required settings
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          ANDROID_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          missing=0
+          for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD \
+                   DEPLOY_SSH_PRIVATE_KEY AWS_DEPLOY_ROLE_ARN SERVER_HOST SITE_ADDRESS ANDROID_CERT_SHA256; do
+            if [ -z "${!v}" ]; then echo "Missing Environment setting: $v" >&2; missing=1; fi
+          done
+          # A secret must be one line (the keystore is base64 on one line): a pasted newline or a
+          # stray space would only fail later, with a message that could show part of it.
+          for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            case "${!v}" in *$'\n'*|*$'\r'*) echo "$v must be a single line." >&2; missing=1;; esac
+          done
+          exit $missing
+
+      - name: Read the version
+        id: version
+        run: |
+          line="$(sed -n 's/^version: *//p' mobile/pubspec.yaml | head -1)"
+          if [[ ! "$line" =~ ^([0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5})(\+[0-9]+)?$ ]]; then
+            echo "mobile/pubspec.yaml needs a version such as 1.2.3 or 1.2.3+4." >&2; exit 1
+          fi
+          # The build number must grow with every build: the run number does.
+          echo "name=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          echo "build=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "Building ${BASH_REMATCH[1]} (build ${GITHUB_RUN_NUMBER})"
+
+      - name: Install Flutter
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$HOME/flutter"
+          test "$(git -C "$HOME/flutter" rev-parse HEAD)" = "$FLUTTER_SHA"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+
+      # No cache here: this job holds the signing key, and a cache written by another workflow
+      # must not run in it.
+
+      - name: Build the signed release APK
+        working-directory: mobile
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build }}
+        run: |
+          set -euo pipefail
+          umask 077
+          keystore="${RUNNER_TEMP}/release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$keystore"
+          export ANDROID_KEYSTORE_FILE="$keystore"
+          flutter build apk --release --flavor demo \
+            --build-name "$VERSION_NAME" --build-number "$BUILD_NUMBER" \
+            --obfuscate --split-debug-info="${RUNNER_TEMP}/symbols" \
+            --dart-define=FLAVOR=demo \
+            --dart-define="API_BASE_URL=https://${SITE_ADDRESS}/api/v1" \
+            --dart-define="APP_VERSION=${VERSION_NAME}+${BUILD_NUMBER}" \
+            --dart-define="PRIVACY_URL=https://${SITE_ADDRESS}/privacy"
+          rm -f "$keystore"
+
+      - name: Check that the APK is signed with the release key
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          EXPECTED_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          apk=mobile/build/app/outputs/flutter-apk/app-demo-release.apk
+          apksigner="$(ls "${ANDROID_HOME}"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$apksigner" verify "$apk"
+          certs="$("$apksigner" verify --print-certs "$apk")"
+          actual="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | tr -d ':' | tr 'A-F' 'a-f')"
+          expected="$(printf '%s' "$EXPECTED_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')"
+          if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
+            echo "The APK is not signed with the release certificate (ANDROID_CERT_SHA256)." >&2; exit 1
+          fi
+          echo "Signed with the release certificate ${actual}"
+          cp "$apk" "${RUNNER_TEMP}/skills-demo-${VERSION_NAME}.apk"
+
+      # The symbols that turn a crash trace back into names; not secret, kept for 90 days.
+      - name: Keep the debug symbols
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: skills-demo-symbols-${{ steps.version.outputs.name }}-${{ steps.version.outputs.build }}
+          path: ${{ runner.temp }}/symbols
+          retention-days: 90
+
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          ssh-keyscan -T 10 -t ed25519 "$SERVER_HOST" > ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Open SSH for this runner
+        run: |
+          ip="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')"
+          echo "::add-mask::$ip"
+          aws lightsail open-instance-public-ports --instance-name "$INSTANCE_NAME" \
+            --port-info "fromPort=22,toPort=22,protocol=tcp,cidrs=${ip}/32" > /dev/null
+          sleep 10
+
+      - name: Publish to the downloads folder of the server
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          umask 077
+          ssh_opts=(-i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20)
+          target="deploy@${SERVER_HOST}"
+          notes_file="$(mktemp)"
+          printf '%s' "${NOTES:0:4000}" > "$notes_file"
+          remote="/opt/skills/data/incoming-${GITHUB_RUN_ID}"
+          ssh "${ssh_opts[@]}" "$target" "mkdir -p '$remote'"
+          scp "${ssh_opts[@]}" "${RUNNER_TEMP}/skills-demo-${VERSION_NAME}.apk" "${target}:${remote}/app.apk"
+          scp "${ssh_opts[@]}" "$notes_file" "${target}:${remote}/notes.txt"
+          scp "${ssh_opts[@]}" scripts/add-download.py "${target}:${remote}/add-download.py"
+          rm -f "$notes_file"
+          ssh "${ssh_opts[@]}" "$target" "cd '$remote' && python3 add-download.py --dir /opt/skills/data/downloads --apk app.apk --version '$VERSION_NAME' --build '$BUILD_NUMBER' --notes-file notes.txt; status=\$?; cd / && rm -rf '$remote'; exit \$status"
+
+      - name: Attach to the GitHub release
+        if: inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          case "$TAG" in *[!A-Za-z0-9._-]*|"") echo "Not a release tag." >&2; exit 1;; esac
+          gh release upload "$TAG" "${RUNNER_TEMP}/skills-demo-${VERSION_NAME}.apk" --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Restore the normal SSH rule
+        if: always()
+        env:
+          ALLOWED: ${{ vars.TF_SSH_ALLOWED_CIDRS }}
+        run: |
+          rm -f ~/.ssh/deploy_key "${RUNNER_TEMP}/release.jks"
+          # Back to what Terraform manages (see deploy-demo): your own addresses plus the
+          # Lightsail browser SSH; without a valid list, port 22 is closed completely.
+          if info="$(jq -ce '{fromPort:22,toPort:22,protocol:"tcp",cidrs:.,cidrListAliases:["lightsail-connect"]}' <<<"${ALLOWED:-[]}" 2>/dev/null)"; then
+            aws lightsail open-instance-public-ports --instance-name "$INSTANCE_NAME" --port-info "$info" > /dev/null \
+              || echo "::warning::Could not restore the SSH rule; run terraform apply."
+          else
+            aws lightsail close-instance-public-ports --instance-name "$INSTANCE_NAME" \
+              --port-info "fromPort=22,toPort=22,protocol=tcp" > /dev/null \
+              || echo "::warning::Could not close port 22; check the firewall."
+          fi
