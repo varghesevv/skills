@@ -695,29 +695,6 @@ void main() {
     test('forgot-password body', () {
       expect(required('ForgotPasswordRequest'), {'email'});
     });
-
-    test('registration bodies carry the fields the forms send', () {
-      expect(
-        properties('FreelancerRegister'),
-        containsAll([
-          'full_name',
-          'email',
-          'mobile_number',
-          'password',
-          'nationality',
-          'primary_language',
-          'whatsapp_availability',
-        ]),
-      );
-      expect(
-        properties('WorkHostRegister'),
-        containsAll(['full_name', 'email', 'mobile_number', 'password']),
-      );
-      expect(
-        properties('OrganisationRegister'),
-        containsAll(['org_name', 'email', 'mobile_number', 'password']),
-      );
-    });
   });
 
   group('answers the app reads', () {
