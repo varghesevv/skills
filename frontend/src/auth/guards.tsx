@@ -56,6 +56,14 @@ export function RequirePerson() {
   return <Outlet />
 }
 
+/** The screens every person has except one who was revoked, who goes to their home. */
+export function RequireOpenAccount() {
+  const { user } = useAuth()
+  if (!user) return <LoadingScreen />
+  const open = user.user_type === 'person' && user.status !== 'revoked'
+  return open ? <Outlet /> : <Navigate to={PERSON_HOME} replace />
+}
+
 /** The screens of a SEARCHER, and of everyone above: an applicant goes home. */
 export function RequireSearcher() {
   const { user } = useAuth()

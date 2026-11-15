@@ -97,6 +97,11 @@ export function updateApplication(body: {
   return request<PersonMe>('/me/application', { method: 'PUT', body })
 }
 
+/** Change one's own name or number; a field left out keeps its value. */
+export function updateMe(body: { full_name?: string; mobile_number?: string }) {
+  return request<PersonMe>('/me', { method: 'PUT', body })
+}
+
 export function closeAccount(password: string) {
   return request<void>('/me', { method: 'DELETE', body: { password } })
 }

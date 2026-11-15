@@ -5,6 +5,7 @@ import {
   RequireAuth,
   RequireAdmin,
   RequireLeader,
+  RequireOpenAccount,
   RequireOwner,
   RequireOlderAccount,
   RequirePerson,
@@ -26,6 +27,7 @@ import AdminLabelsPage from './portals/admin/AdminLabelsPage'
 import AvailabilityPage from './portals/freelancer/AvailabilityPage'
 import LabelsPage from './portals/freelancer/LabelsPage'
 import ProfilePage from './portals/freelancer/ProfilePage'
+import Account from './pages/person/Account'
 import Frame from './pages/person/provider/Frame'
 import ProviderPage from './pages/person/search/ProviderPage'
 import RatingsGiven from './pages/person/search/RatingsGiven'
@@ -59,6 +61,7 @@ import {
   LEADER_GROUP,
   LEADER_INVITATIONS,
   OWNER_LABELS,
+  PERSON_ACCOUNT,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
   PERSON_PROVIDERS,
@@ -121,6 +124,9 @@ export default function App() {
               <Route path={PERSON_VOUCHES.slice(1)} element={<MyVouches />} />
               <Route path={PERSON_NOTIFICATIONS.slice(1)} element={<Notifications />} />
               <Route path="vouch/:token" element={<VouchPage />} />
+              <Route element={<RequireOpenAccount />}>
+                <Route path={PERSON_ACCOUNT.slice(1)} element={<Account />} />
+              </Route>
               <Route element={<RequireSearcher />}>
                 <Route path={PERSON_SEARCH.slice(1)} element={<SearchPage />} />
                 <Route path={`${PERSON_PROVIDERS.slice(1)}/:id`} element={<ProviderPage />} />

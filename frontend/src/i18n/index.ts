@@ -68,6 +68,16 @@ const en = {
   'applicant.change.saved': 'Your choice was saved.',
   'applicant.change.church': 'Another {organisation}',
   'applicant.change.keep': 'Keep my current {homegroup}',
+  'account.link': 'My account',
+  'account.title': 'My account',
+  'account.lead': 'Your details, and how to leave.',
+  'account.details': 'Your details',
+  'account.email': 'Email address',
+  'account.emailHint': 'The address you sign in with cannot be changed here.',
+  'account.save': 'Save',
+  'account.saving': 'Saving…',
+  'account.saved': 'Saved.',
+  'account.error.taken': 'This mobile number belongs to another account.',
   'applicant.leave.title': 'Leave',
   'applicant.leave.text':
     'Closing your account removes your name, email and mobile number. You can apply again later.',
@@ -77,6 +87,11 @@ const en = {
   'applicant.leave.open': 'I want to leave',
   'applicant.leave.warning': 'This closes your account for good. Enter your password to confirm.',
   'applicant.leave.cancel': 'Cancel',
+  'applicant.leave.error.leadsGroup':
+    'You lead a {homegroup}. Ask your {admin} to choose someone else to lead it first, then you can leave. If nobody else is in it, close it from the page of your own {homegroup} instead.',
+  'applicant.leave.error.leadsChurch':
+    'You are the {admin} of a {organisation}. Hand that role on first, then you can leave.',
+  'applicant.leave.error.revoked': 'This account cannot be closed.',
   // Vouching and notifications (roadmap S3.4).
   'vouch.share.title': 'Ask people who know you to vouch',
   'vouch.share.text':
