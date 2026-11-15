@@ -173,7 +173,6 @@ Run these on the server in `/opt/skills` (see the [local guide](local-developmen
 
 ```bash
 dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv   # umask 077 first; refuses when demo people exist (the demo is made once, see below)
-dc run --rm tools python -m app.cli create-admin --email you@example.com --mobile +971500000000
 dc run --rm tools python -m app.cli seed-demo
 ```
 
@@ -188,7 +187,7 @@ dc run --rm tools python -m app.cli create-owner --name "Full Name" --email you@
     --mobile +971500000000 --church "Church name" --group "Home group name"
 ```
 
-It creates the OWNER, the church (the OWNER is its ADMIN) and the home group (the OWNER leads it) in one transaction, and records an operator change in the status history. It refuses when an OWNER already exists; replacing the OWNER is a handover, or an operator change (next section). In `demo` and `prod` the password must be strong and long enough. The older `create-admin` command stays until the older accounts go (decision D-20).
+It creates the OWNER, the church (the OWNER is its ADMIN) and the home group (the OWNER leads it) in one transaction, and records an operator change in the status history. It refuses when an OWNER already exists; replacing the OWNER is a handover, or an operator change (next section). In `demo` and `prod` the password must be strong and long enough.
 
 Copy `demo-logins.csv` to your computer with `scp` and delete it from the server. It contains the shared demo password.
 

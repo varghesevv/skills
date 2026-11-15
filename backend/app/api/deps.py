@@ -26,11 +26,19 @@ def _decode(credentials: HTTPAuthorizationCredentials | None, settings: Settings
     if credentials is None:
         raise ApiError(401, "not_authenticated", "Authentication required", headers=challenge)
     try:
-        return decode_access_token(credentials.credentials, secret=settings.require_jwt_secret())
+        principal = decode_access_token(
+            credentials.credentials, secret=settings.require_jwt_secret()
+        )
     except TokenError:
         raise ApiError(
             401, "invalid_token", "The access token is invalid or expired", headers=challenge
         ) from None
+    if principal.user_type != "person":
+        # A token of an account of the older kind (there are none any more): nobody to serve.
+        raise ApiError(
+            401, "invalid_token", "The access token is invalid or expired", headers=challenge
+        )
+    return principal
 
 
 def _load_person(db: Session, principal: Principal, *, allow_revoked: bool) -> Person:
@@ -61,8 +69,7 @@ def get_principal_even_if_revoked(
     Only for the few endpoints a revoked person may use (`/me`). A closed account is still a 401.
     """
     principal = _decode(credentials, settings)
-    if principal.user_type == "person":
-        _load_person(db, principal, allow_revoked=True)
+    _load_person(db, principal, allow_revoked=True)
     return principal
 
 
@@ -73,12 +80,11 @@ def get_principal(
 ) -> Principal:
     """The caller, from a valid `Authorization: Bearer <access token>` header.
 
-    For a person the account is checked in the database too: a closed account is a 401 and a
-    revoked one a 403, whatever the endpoint.
+    The person is checked in the database too: a closed account is a 401 and a revoked one a 403,
+    whatever the endpoint.
     """
     principal = _decode(credentials, settings)
-    if principal.user_type == "person":
-        _load_person(db, principal, allow_revoked=False)
+    _load_person(db, principal, allow_revoked=False)
     return principal
 
 
@@ -100,22 +106,9 @@ def current_person(
         db: Session = Depends(get_session),
     ) -> Person:
         principal = _decode(credentials, settings)
-        if principal.user_type != "person":
-            raise ApiError(403, "forbidden", "You are not allowed to do this")
         person = _load_person(db, principal, allow_revoked=allow_revoked)
         if person.status != "revoked" and STATUS_RANK[person.status] < STATUS_RANK[min_status]:
             raise ApiError(403, "not_admitted", "This is not available to you yet")
         return person
-
-    return check
-
-
-def require_roles(*roles: str) -> Callable[[Principal], Principal]:
-    """Dependency that allows only the given user types (403 for everyone else)."""
-
-    def check(principal: Principal = Depends(get_principal)) -> Principal:
-        if principal.user_type not in roles:
-            raise ApiError(403, "forbidden", "You are not allowed to do this")
-        return principal
 
     return check

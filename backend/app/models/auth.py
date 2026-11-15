@@ -14,7 +14,7 @@ class LoginHistory(UUIDPrimaryKeyMixin, Base):
 
     __tablename__ = "login_history"
 
-    user_type: Mapped[str] = mapped_column(String(20))
+    user_type: Mapped[str] = mapped_column(String(20), default="person")
     user_id: Mapped[uuid.UUID | None]
     # Cleared (with the address and the browser) when the person closes their account.
     login_email: Mapped[str | None] = mapped_column(String(320))
@@ -35,7 +35,7 @@ class PasswordResetToken(UUIDPrimaryKeyMixin, Base):
 
     __tablename__ = "password_reset_tokens"
 
-    user_type: Mapped[str] = mapped_column(String(20))
+    user_type: Mapped[str] = mapped_column(String(20), default="person")
     user_id: Mapped[uuid.UUID]
     token_hash: Mapped[str] = mapped_column(String(128), unique=True)
     expires_at: Mapped[datetime]
@@ -53,7 +53,7 @@ class RefreshToken(UUIDPrimaryKeyMixin, Base):
 
     __tablename__ = "refresh_tokens"
 
-    user_type: Mapped[str] = mapped_column(String(20))
+    user_type: Mapped[str] = mapped_column(String(20), default="person")
     user_id: Mapped[uuid.UUID]
     token_hash: Mapped[str] = mapped_column(String(128), unique=True)
     expires_at: Mapped[datetime]

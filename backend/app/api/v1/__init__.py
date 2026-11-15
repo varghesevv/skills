@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
-    admin,
     admin_invitations,
     app_info,
     auth,
@@ -13,7 +12,6 @@ from app.api.v1 import (
     labels,
     me,
     move_requests,
-    organisations,
     owner,
     ratings,
     reports,
@@ -35,10 +33,8 @@ ROUTERS = (
     me,
     move_requests,
     owner,
-    admin,
     freelancers,
     workhosts,
-    organisations,
     labels,
     ratings,
     search,

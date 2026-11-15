@@ -13,7 +13,7 @@ from app.core.errors import ApiError
 from app.models.reveals import PersonPhoneReveal
 from app.schemas.profiles import RevealRequest
 from app.services.reveals import reveal_mobile_number
-from tests.api_helpers import API
+from tests.api_helpers import API, older_actor
 from tests.test_admission import headers_of
 from tests.test_person_auth import Member, add_member
 from tests.trust_helpers import World
@@ -87,13 +87,11 @@ def test_a_revoked_person_may_not(client: TestClient, world: World) -> None:
 
 
 def test_no_token_and_older_account_tokens_are_refused(client: TestClient, world: World) -> None:
-    from tests.api_helpers import signup
-
     provider = add_member(world, "provider")
     assert client.post(url_of(provider.person.id), json=BODY).status_code == 401
-    old = signup(client, world.session, "workhost", "old.reveal@example.com")
+    old = older_actor("workhost")
     assert (
-        client.post(url_of(provider.person.id), json=BODY, headers=old.headers).status_code == 403
+        client.post(url_of(provider.person.id), json=BODY, headers=old.headers).status_code == 401
     )
     assert reveals(world.session) == 0
 

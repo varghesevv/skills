@@ -6,17 +6,14 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import current_person, get_principal, require_roles
+from app.api.deps import current_person
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
 from app.core.errors import ApiError
-from app.core.security import Principal
-from app.models.availability import FreelancerUnavailability, PersonUnavailability
+from app.models.availability import PersonUnavailability
 from app.models.church import Church, HomeGroup, Person
 from app.models.labels import Label, PersonLabel
 from app.models.ratings import Rating
-from app.models.users import Organisation
-from app.models.vouching import OrgFreelancer
 from app.schemas.church import IdName
 from app.schemas.common import Page, Pagination, pagination
 from app.schemas.profiles import (
@@ -31,7 +28,6 @@ from app.schemas.profiles import (
     RevealRequest,
     UnavailabilityIn,
     UnavailabilityOut,
-    VouchOut,
 )
 from app.services.locks import lock_people
 from app.services.profiles import (
@@ -45,10 +41,7 @@ from app.services.reveals import reveal_mobile_number
 
 router = APIRouter(prefix="/freelancers", tags=["freelancers"])
 
-FreelancerOnly = Annotated[Principal, Depends(require_roles("freelancer"))]
 ProviderOrAbove = Annotated[Person, Depends(current_person("provider"))]
-Viewer = Annotated[Principal, Depends(require_roles("workhost", "organisation", "admin"))]
-Authenticated = Annotated[Principal, Depends(get_principal)]
 
 
 def _me_response(db: Session, me: Person) -> FreelancerMe:
@@ -139,7 +132,7 @@ def replace_labels(
 # ---- unavailability -----------------------------------------------------------------------
 
 
-def _unavailability_out(row: PersonUnavailability | FreelancerUnavailability) -> UnavailabilityOut:
+def _unavailability_out(row: PersonUnavailability) -> UnavailabilityOut:
     return UnavailabilityOut(
         id=row.id, unavailable_from=row.unavailable_from, unavailable_to=row.unavailable_to
     )
@@ -209,64 +202,6 @@ def delete_unavailability(
     db.delete(_own_period(db, provider, period_id))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ---- vouches ------------------------------------------------------------------------------
-
-
-@router.get("/me/vouches")
-def list_vouches(principal: FreelancerOnly, db: Session = Depends(get_session)) -> list[VouchOut]:
-    rows = db.execute(
-        select(OrgFreelancer, Organisation.org_name)
-        .join(Organisation, Organisation.id == OrgFreelancer.org_id)
-        .where(OrgFreelancer.freelancer_id == principal.user_id)
-        .order_by(OrgFreelancer.created_at)
-    ).all()
-    return [
-        VouchOut(
-            org_id=link.org_id,
-            org_name=name,
-            status=link.status,
-            is_active=link.is_active,
-            created_at=link.created_at,
-        )
-        for link, name in rows
-    ]
-
-
-def _decide_vouch(
-    db: Session, principal: Principal, org_id: uuid.UUID, *, accept: bool
-) -> VouchOut:
-    link = db.get(OrgFreelancer, (org_id, principal.user_id))
-    org = db.get(Organisation, org_id)
-    if link is None or org is None:
-        raise ApiError(404, "not_found", "Vouch not found")
-    if link.status != "pending":
-        raise ApiError(409, "vouch_not_pending", "This vouch has already been decided")
-    link.status = "approved" if accept else "revoked"
-    link.is_active = accept
-    db.commit()
-    return VouchOut(
-        org_id=org_id,
-        org_name=org.org_name,
-        status=link.status,
-        is_active=link.is_active,
-        created_at=link.created_at,
-    )
-
-
-@router.post("/me/vouches/{org_id}/accept")
-def accept_vouch(
-    org_id: uuid.UUID, principal: FreelancerOnly, db: Session = Depends(get_session)
-) -> VouchOut:
-    return _decide_vouch(db, principal, org_id, accept=True)
-
-
-@router.post("/me/vouches/{org_id}/reject")
-def reject_vouch(
-    org_id: uuid.UUID, principal: FreelancerOnly, db: Session = Depends(get_session)
-) -> VouchOut:
-    return _decide_vouch(db, principal, org_id, accept=False)
 
 
 # ---- what others see (a SEARCHER or above looks at an open PROVIDER or above) ---------------

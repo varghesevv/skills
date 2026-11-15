@@ -10,8 +10,6 @@ from app.schemas.auth import Mobile, PersonName
 from app.schemas.church import IdName
 from app.schemas.common import LabelOut
 
-Day = Literal["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-DAYS: tuple[str, ...] = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
 _CURRENCY = re.compile(r"^[A-Z]{3}$")
 
 
@@ -85,14 +83,6 @@ class UnavailabilityOut(BaseModel):
     unavailable_to: datetime
 
 
-class VouchOut(BaseModel):
-    org_id: uuid.UUID
-    org_name: str
-    status: str
-    is_active: bool
-    created_at: datetime
-
-
 class PublicRating(BaseModel):
     """A rating as others see it. The rater is not shown."""
 
@@ -133,24 +123,6 @@ class FreelancerPublic(BaseModel):
     my_rating: GivenRating | None = None  # only for the person who rated this provider
 
 
-# ---- work host --------------------------------------------------------------------------
-
-
-class WorkHostUpdate(BaseModel):
-    full_name: PersonName | None = None  # left unchanged when omitted
-    mobile_number: Mobile
-    available_days: list[Day] = []
-
-
-class WorkHostMe(BaseModel):
-    id: uuid.UUID
-    full_name: str | None
-    email: str
-    mobile_number: str
-    available_days: list[Day]
-    created_at: datetime
-
-
 class RatingCreate(BaseModel):
     provider_id: uuid.UUID
     rating: Annotated[int, Field(ge=1, le=10)]
@@ -160,40 +132,6 @@ class RatingCreate(BaseModel):
 class RatingUpdate(BaseModel):
     rating: Annotated[int, Field(ge=1, le=10)]
     comment: Annotated[str, Field(max_length=2000)] | None = None
-
-
-# ---- organisation -----------------------------------------------------------------------
-
-
-class OrganisationUpdate(BaseModel):
-    org_name: Annotated[str, Field(min_length=2, max_length=200)]
-    mobile_number: Mobile
-
-
-class OrganisationMe(BaseModel):
-    id: uuid.UUID
-    email: str
-    org_name: str
-    mobile_number: str
-    approval_status: str
-    created_at: datetime
-
-
-class OrganisationBrief(BaseModel):
-    """An approved organisation as listed in the directory (no contact details)."""
-
-    id: uuid.UUID
-    org_name: str
-
-
-class VouchedFreelancer(BaseModel):
-    freelancer_id: uuid.UUID
-    full_name: str | None
-    nationality: str | None
-    primary_language: str | None
-    status: str  # pending, approved or revoked
-    is_active: bool
-    created_at: datetime
 
 
 # ---- labels -----------------------------------------------------------------------------

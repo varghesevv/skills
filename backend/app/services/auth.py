@@ -28,9 +28,7 @@ from app.core.security import (
 )
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
 from app.models.church import Person
-from app.models.users import Organisation
 from app.schemas.auth import TokenResponse
-from app.services.accounts import Account, get_by_email, get_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +52,14 @@ def _ip_filter(ip: str | None) -> ColumnElement[bool]:
     return column.is_(None) if ip is None else column == ip
 
 
+def _person_by_email(db: Session, email: str) -> Person | None:
+    # A closed account has no address, so it never matches.
+    return db.scalar(select(Person).where(Person.email == email.lower()))
+
+
 def record_attempt(
     db: Session,
     *,
-    user_type: str,
     user_id: uuid.UUID | None,
     email: str,
     succeeded: bool,
@@ -66,7 +68,6 @@ def record_attempt(
 ) -> None:
     db.add(
         LoginHistory(
-            user_type=user_type,
             user_id=user_id,
             login_email=email,
             succeeded=succeeded,
@@ -78,14 +79,13 @@ def record_attempt(
 
 
 def check_throttle(
-    db: Session, settings: Settings, *, user_type: str, email: str, ip: str | None, now: datetime
+    db: Session, settings: Settings, *, email: str, ip: str | None, now: datetime
 ) -> None:
     """Too many recent failures for this email and IP: answer 429 before checking the password."""
     window = timedelta(minutes=settings.login_window_minutes)
     last_success = db.scalar(
         select(func.max(LoginHistory.login_time)).where(
             LoginHistory.login_email == email,
-            LoginHistory.user_type == user_type,
             _ip_filter(ip),
             LoginHistory.succeeded.is_(True),
         )
@@ -97,7 +97,6 @@ def check_throttle(
         select(LoginHistory.login_time)
         .where(
             LoginHistory.login_email == email,
-            LoginHistory.user_type == user_type,
             _ip_filter(ip),
             LoginHistory.succeeded.is_(False),
             LoginHistory.login_time > since,
@@ -120,7 +119,6 @@ def _issue_refresh_token(
     token = new_opaque_token()
     row = RefreshToken(
         id=uuid.uuid4(),
-        user_type=principal.user_type,
         user_id=principal.user_id,
         token_hash=hash_token(token),
         expires_at=now + timedelta(days=settings.refresh_token_days),
@@ -142,15 +140,9 @@ def _token_response(
     return TokenResponse(access_token=access, refresh_token=refresh, expires_in=expires_in), row
 
 
-def _can_log_in(account: Account) -> ApiError | None:
-    if isinstance(account, Person) and account.closed_at is not None:
+def _can_log_in(person: Person) -> ApiError | None:
+    if person.closed_at is not None:
         return _invalid_credentials()  # a closed account is gone; revoked ones may still log in
-    if isinstance(account, Organisation) and account.approval_status != "approved":
-        if account.approval_status == "rejected":
-            return ApiError(403, "organisation_rejected", "This organisation was not approved")
-        return ApiError(
-            403, "organisation_pending", "This organisation is waiting for admin approval"
-        )
     return None
 
 
@@ -160,19 +152,17 @@ def login(
     *,
     email: str,
     password: str,
-    user_type: str,
     ip: str | None,
     user_agent: str | None,
 ) -> TokenResponse:
     now = datetime.now(UTC)
     ip = clean_ip(ip)
-    check_throttle(db, settings, user_type=user_type, email=email, ip=ip, now=now)
-    account = get_by_email(db, user_type, email)
+    check_throttle(db, settings, email=email, ip=ip, now=now)
+    account = _person_by_email(db, email)
 
     def record(user_id: uuid.UUID | None, *, succeeded: bool) -> None:
         record_attempt(
             db,
-            user_type=user_type,
             user_id=user_id,
             email=email,
             succeeded=succeeded,
@@ -198,16 +188,15 @@ def login(
         account.password_hash = hash_password(password)
     account.last_login_at = now
     record(account.id, succeeded=True)
-    tokens, _ = _token_response(db, settings, Principal(user_type, account.id), now)
+    tokens, _ = _token_response(db, settings, Principal("person", account.id), now)
     db.commit()
     return tokens
 
 
-def _revoke_all(db: Session, user_type: str, user_id: uuid.UUID, now: datetime) -> None:
+def _revoke_all(db: Session, user_id: uuid.UUID, now: datetime) -> None:
     db.execute(
         update(RefreshToken)
         .where(
-            RefreshToken.user_type == user_type,
             RefreshToken.user_id == user_id,
             RefreshToken.revoked_at.is_(None),
         )
@@ -226,15 +215,15 @@ def refresh(db: Session, settings: Settings, *, refresh_token: str) -> TokenResp
         raise invalid
     if row.revoked_at is not None:
         # A rotated or logged-out token came back: assume it was stolen, end every session.
-        _revoke_all(db, row.user_type, row.user_id, now)
+        _revoke_all(db, row.user_id, now)
         db.commit()
         raise invalid
     if row.expires_at <= now:
         raise invalid
-    account = get_by_id(db, row.user_type, row.user_id)
+    account = db.get(Person, row.user_id)
     if account is None or _can_log_in(account) is not None:
         raise invalid
-    tokens, new_row = _token_response(db, settings, Principal(row.user_type, row.user_id), now)
+    tokens, new_row = _token_response(db, settings, Principal("person", row.user_id), now)
     db.flush()  # the new token must exist before the old one can point at it
     row.revoked_at = now
     row.replaced_by_id = new_row.id
@@ -251,16 +240,15 @@ def logout(db: Session, *, refresh_token: str) -> None:
         db.commit()
 
 
-def forgot_password(db: Session, settings: Settings, *, email: str, user_type: str) -> None:
+def forgot_password(db: Session, settings: Settings, *, email: str) -> None:
     """Create a reset token and log the reset link. Behaves the same for unknown emails."""
-    account = get_by_email(db, user_type, email)
+    account = _person_by_email(db, email)
     if account is None:
         return
     now = datetime.now(UTC)
     token = new_opaque_token()
     db.add(
         PasswordResetToken(
-            user_type=user_type,
             user_id=account.id,
             token_hash=hash_token(token),
             expires_at=now + timedelta(minutes=settings.reset_token_minutes),
@@ -271,9 +259,8 @@ def forgot_password(db: Session, settings: Settings, *, email: str, user_type: s
     # The reset link is the one secret that is deliberately logged: there is no email delivery
     # yet. Replace this with email sending when SMTP is added (open question Q7).
     logger.info(
-        "Password reset link for %s (%s), valid %s minutes: %s",
+        "Password reset link for %s, valid %s minutes: %s",
         email,
-        user_type,
         settings.reset_token_minutes,
         link,
         extra={"reset_link": link},
@@ -289,19 +276,18 @@ def reset_password(db: Session, *, token: str, new_password: str) -> None:
     )
     if row is None or row.used_at is not None or row.expires_at <= now:
         raise ApiError(400, "invalid_reset_token", "The reset link is invalid or has expired")
-    account = get_by_id(db, row.user_type, row.user_id)
-    if account is None or (isinstance(account, Person) and account.closed_at is not None):
+    account = db.get(Person, row.user_id)
+    if account is None or account.closed_at is not None:
         raise ApiError(400, "invalid_reset_token", "The reset link is invalid or has expired")
     account.password_hash = hash_password(new_password)
     # Use up every outstanding reset link for this user and end all sessions.
     db.execute(
         update(PasswordResetToken)
         .where(
-            PasswordResetToken.user_type == row.user_type,
             PasswordResetToken.user_id == row.user_id,
             PasswordResetToken.used_at.is_(None),
         )
         .values(used_at=now)
     )
-    _revoke_all(db, row.user_type, row.user_id, now)
+    _revoke_all(db, row.user_id, now)
     db.commit()

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.v1 import churches
 from app.core.config import get_settings
 from app.models import HomeGroup, Person, Vouch
-from tests.api_helpers import API, signup
+from tests.api_helpers import API, older_actor
 from tests.test_person_auth import Member, add_member, bearer, login
 from tests.trust_helpers import World, check_rules
 
@@ -104,15 +104,6 @@ def test_a_closed_account_cannot_read_me(client: TestClient, world: World) -> No
     assert client.get(f"{API}/me", headers=bearer(tokens)).status_code == 401
 
 
-def test_me_still_answers_the_older_accounts_in_their_older_shape(
-    client: TestClient, session: Session
-) -> None:
-    host = signup(client, session, "workhost", "old-host3@example.com", full_name="Old Host")
-    body = client.get(f"{API}/me", headers=host.headers).json()
-    assert body["user_type"] == "workhost" and body["full_name"] == "Old Host"
-    assert "church" not in body
-
-
 def test_me_needs_a_token(client: TestClient) -> None:
     assert client.get(f"{API}/me").status_code == 401
 
@@ -182,17 +173,13 @@ def test_put_me_needs_a_token(client: TestClient) -> None:
 
 
 @pytest.mark.parametrize("user_type", ["workhost", "freelancer", "organisation", "admin"])
-def test_put_me_refuses_the_older_accounts(
-    client: TestClient, session: Session, user_type: str
-) -> None:
-    older = signup(client, session, user_type, f"old-{user_type}@example.com")
+def test_put_me_refuses_a_token_of_an_older_kind(client: TestClient, user_type: str) -> None:
+    older = older_actor(user_type)
     response = client.put(f"{API}/me", headers=older.headers, json={"full_name": "Changed Name"})
-    assert response.status_code == 403
-    after = client.get(f"{API}/me", headers=older.headers).json()
-    assert after.get("full_name") != "Changed Name"
+    assert response.status_code == 401
 
 
-def test_the_two_answers_of_me_can_be_told_apart(client: TestClient, world: World) -> None:
+def test_me_says_it_is_a_person(client: TestClient, world: World) -> None:
     assert me(client, add_member(world, "searcher"))["user_type"] == "person"
 
 

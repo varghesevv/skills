@@ -200,12 +200,14 @@ def test_a_weak_password_is_refused_in_prod(
         get_settings.cache_clear()
 
 
-def test_create_admin_still_works_after_the_shared_password_check(
-    command: Any, capsys: pytest.CaptureFixture[str]
-) -> None:
-    password = secrets.token_urlsafe(16)
-    args = ("create-admin", "--email", "old-admin@example.com", "--mobile", "+971500000150")
-    assert command(*args, password=password) == 0
-    assert command(*args, password=password) == 1  # the second one is refused
-    output = capsys.readouterr()
-    assert "already exists" in output.err and password not in output.out + output.err
+def test_create_admin_is_gone(command: Any, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        command(
+            "create-admin",
+            "--email",
+            "old-admin@example.com",
+            "--mobile",
+            "+971500000150",
+            password=secrets.token_urlsafe(16),
+        )
+    assert "invalid choice" in capsys.readouterr().err

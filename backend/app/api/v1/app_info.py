@@ -48,9 +48,7 @@ def download_android(
 ) -> FileResponse:
     """The APK of one published version, with the bearer token like every other request."""
     path, entry = downloads.android_file(settings, version)
-    downloads.limiter.check(
-        f"{principal.user_type}:{principal.user_id}", settings.download_max_per_hour
-    )
+    downloads.limiter.check(str(principal.user_id), settings.download_max_per_hour)
     # Logged only after the limit check passed, and only the version: no person, no token.
     logger.info("download android version=%s", entry.version)
     return FileResponse(

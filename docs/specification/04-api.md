@@ -16,7 +16,7 @@ This file is the **target** contract of the church trust model. `/api/v1` is cha
 
 ## Transition (until the cut-over)
 
-While the older accounts still exist (decision D-20), `POST /auth/login` and `POST /auth/forgot-password` accept an optional `user_type`. Without it, or with `person`, they use the one identity of the church trust model; with `freelancer`, `workhost`, `organisation` or `admin` they use the older accounts. Tokens of a person carry no role or status, and every request reads the person from the database (`403 account_revoked` for a revoked person on every endpoint but the few that allow it, `401` for a closed account). The field is removed with the last older account type (S5.2). `GET /me` answers a person with `PersonMeResponse` (the shape below) and an older account with the older `MeResponse` until the older accounts are gone; a revoked person can still read it. `PUT /me` is for people only.
+`POST /auth/login` and `POST /auth/forgot-password` are for people only; a `user_type` field that an older client still sends is ignored. Tokens of a person carry no status, and every request reads the person from the database (`403 account_revoked` for a revoked person on every endpoint but the few that allow it, `401` for a closed account). A token of an account of the older kind (there are none any more) is `401 invalid_token` everywhere. `GET /me` answers `PersonMeResponse` (the shape below); a revoked person can still read it. `PUT /me` is for people only.
 
 ## Authorisation by status
 
@@ -154,7 +154,7 @@ GET `/labels?type=skill|language|timing|nativity|skill_level` (at least SEARCHER
 ### Search
 GET `/search/freelancers` (at least SEARCHER) with query parameters: `skill` (repeatable), `skill_match=any|all`, `skill_level`, `language`, `timing`, `nativity`, `max_rate`, `currency`, `negotiable`, `available_from`, `available_to`, `church_id`, `home_group_id`, `min_rating`, `sort=rating|rate|newest`, `page`, `page_size`.
 
-Search behaviour (built in S5.2a, D-42; a token of an older account type is `403 forbidden`, an applicant `403 not_admitted`, a revoked person `403 account_revoked`): only open, non-revoked people of status PROVIDER or above who have at least one skill are listed, in every church, each with their `church` and `home_group` (id and name; no vouching organisations); a rate and ratings are not needed (newcomers appear too). `max_rate` and `negotiable` only match providers who have a rate; `sort=rate` puts those without a rate last. `skill`, `language`, `timing` and `nativity` can be repeated and match case-insensitively by label name. `skill_match=any` (default) or `all`. `skill_level` applies to the chosen skills (or to any skill when none is given). `max_rate` needs `currency`. `available_from` and `available_to` must be given together and exclude providers with an overlapping unavailability period. `min_rating` excludes unrated providers. `church_id` and `home_group_id` narrow the list to one church or one home group; the older `org_id` is no longer a parameter. Default sort is `newest`. Results never contain email or mobile number (use the reveal endpoint).
+Search behaviour (built in S5.2a, D-42; a token of an older account type is `401 invalid_token`, an applicant `403 not_admitted`, a revoked person `403 account_revoked`): only open, non-revoked people of status PROVIDER or above who have at least one skill are listed, in every church, each with their `church` and `home_group` (id and name; no vouching organisations); a rate and ratings are not needed (newcomers appear too). `max_rate` and `negotiable` only match providers who have a rate; `sort=rate` puts those without a rate last. `skill`, `language`, `timing` and `nativity` can be repeated and match case-insensitively by label name. `skill_match=any` (default) or `all`. `skill_level` applies to the chosen skills (or to any skill when none is given). `max_rate` needs `currency`. `available_from` and `available_to` must be given together and exclude providers with an overlapping unavailability period. `min_rating` excludes unrated providers. `church_id` and `home_group_id` narrow the list to one church or one home group; the older `org_id` is no longer a parameter. Default sort is `newest`. Results never contain email or mobile number (use the reveal endpoint).
 
 ### Ratings
 POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
@@ -172,7 +172,7 @@ POST `/ratings` (at least SEARCHER), PUT `/ratings/{id}` (own rating).
 
 ## Removed from the older contract
 
-`POST /auth/register/freelancer|workhost|organisation`, the `user_type` field of login, `/admin/organisations*`, `/organisations*`, `/freelancers/me/vouches*`, `/workhosts/me` and the `org_id` and `vouch_count` search parameters. The app and web stop using them in slices S2 to S5; old app builds are forced to update at the cut-over (S6).
+`POST /auth/register/freelancer|workhost|organisation`, the `user_type` field of login, `/admin/organisations*`, `/organisations*`, `/freelancers/me/vouches*`, `/workhosts/me` and the `org_id` and `vouch_count` search parameters. They are removed (S5.12a, first slice): the web and the app no longer call them; old app builds are forced to update at the cut-over (S6). `create-admin` is removed from the operator commands.
 
 ## Error codes added by the model
 

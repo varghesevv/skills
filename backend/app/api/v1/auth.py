@@ -1,76 +1,22 @@
-from typing import Any
-
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import client_address
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
-from app.models.users import Organisation
 from app.schemas.auth import (
     ForgotPasswordRequest,
-    FreelancerRegister,
     LoginRequest,
-    OrganisationRegister,
     RefreshRequest,
-    RegisterBase,
-    RegisterResponse,
     ResetPasswordRequest,
     TokenResponse,
-    WorkHostRegister,
 )
 from app.schemas.signup import SignupRequest, SignupResponse
-from app.services import accounts, auth
+from app.services import auth
 from app.services import signup as signup_service
 from app.services.rate_limit import signup_limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _register(db: Session, user_type: str, body: RegisterBase, **extra: Any) -> RegisterResponse:
-    account = accounts.create_account(
-        db,
-        user_type,
-        email=body.email,
-        mobile_number=body.mobile_number,
-        password=body.password.get_secret_value(),
-        **extra,
-    )
-    return RegisterResponse(
-        id=account.id,
-        user_type=user_type,
-        email=account.user_email,
-        approval_status=account.approval_status if isinstance(account, Organisation) else None,
-    )
-
-
-@router.post("/register/freelancer", status_code=status.HTTP_201_CREATED)
-def register_freelancer(
-    body: FreelancerRegister, db: Session = Depends(get_session)
-) -> RegisterResponse:
-    return _register(
-        db,
-        "freelancer",
-        body,
-        full_name=body.full_name,
-        nationality=body.nationality,
-        primary_language=body.primary_language,
-        whatsapp_availability=body.whatsapp_availability,
-    )
-
-
-@router.post("/register/workhost", status_code=status.HTTP_201_CREATED)
-def register_workhost(
-    body: WorkHostRegister, db: Session = Depends(get_session)
-) -> RegisterResponse:
-    return _register(db, "workhost", body, full_name=body.full_name)
-
-
-@router.post("/register/organisation", status_code=status.HTTP_201_CREATED)
-def register_organisation(
-    body: OrganisationRegister, db: Session = Depends(get_session)
-) -> RegisterResponse:
-    return _register(db, "organisation", body, org_name=body.org_name)
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
@@ -108,7 +54,6 @@ def login(
         settings,
         email=body.email,
         password=body.password.get_secret_value(),
-        user_type=body.user_type,
         ip=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
@@ -135,7 +80,7 @@ def forgot_password(
     db: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, str]:
-    auth.forgot_password(db, settings, email=body.email, user_type=body.user_type)
+    auth.forgot_password(db, settings, email=body.email)
     # Same answer whether or not the email exists.
     return {"status": "accepted"}
 

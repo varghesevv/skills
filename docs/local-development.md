@@ -260,13 +260,13 @@ Check it: `wc -l demo-logins.csv` should say `210` (209 people, that is the 200,
 
 `demo-logins.csv` has the columns `status, email, password, name, church, home_group`. **It contains the demo password.** Git ignores files with this name, but never share it. The command refuses when demo people already exist (see 5.1 for starting over). Open the CSV in a spreadsheet and pick any row to log in as that person.
 
-### 5.3 Create your own admin account
+### 5.3 Create your own OWNER account
 
 ```bash
-docker compose exec api python -m app.cli create-admin --email you@example.com --mobile +971500000000
+docker compose exec api python -m app.cli create-owner --name "Your Name" --email you@example.com --mobile +971500000000 --church "Your church" --group "Your home group"
 ```
 
-It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters.
+It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters. It refuses when an OWNER already exists (the demo data has one).
 
 ### 5.4 Log in
 

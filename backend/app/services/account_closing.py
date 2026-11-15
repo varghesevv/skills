@@ -51,7 +51,6 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
         db.execute(
             update(RefreshToken)
             .where(
-                RefreshToken.user_type == "person",
                 RefreshToken.user_id.in_(chunk),
                 RefreshToken.revoked_at.is_(None),
             )
@@ -60,7 +59,6 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
         db.execute(
             update(PasswordResetToken)
             .where(
-                PasswordResetToken.user_type == "person",
                 PasswordResetToken.user_id.in_(chunk),
                 PasswordResetToken.used_at.is_(None),
             )
@@ -78,7 +76,7 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
         )
         db.execute(
             update(LoginHistory)
-            .where(LoginHistory.user_type == "person", LoginHistory.user_id.in_(chunk))
+            .where(LoginHistory.user_id.in_(chunk))
             .values(login_email=None, ip_address=None, user_agent=None)
         )
     for chunk in _slices(
@@ -86,10 +84,7 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
     ):  # attempts before the person was recognised carry only the address
         db.execute(
             update(LoginHistory)
-            .where(
-                LoginHistory.user_type == "person",  # an older account keeps its own trail
-                func.lower(LoginHistory.login_email).in_(chunk),
-            )
+            .where(func.lower(LoginHistory.login_email).in_(chunk))
             .values(login_email=None, ip_address=None, user_agent=None)
         )
 
@@ -117,13 +112,12 @@ def close_account(
     now = datetime.now(UTC)
     # The password is asked again, so a stolen access token must not let anyone guess it: the
     # same throttle as login counts the failures (per address and network address).
-    check_throttle(db, settings, user_type="person", email=email, ip=ip, now=now)
+    check_throttle(db, settings, email=email, ip=ip, now=now)
     if person.password_hash is None:
         verify_dummy(password)  # not reachable for an open account, but costs the same
     if person.password_hash is None or not verify_password(person.password_hash, password):
         record_attempt(
             db,
-            user_type="person",
             user_id=person.id,
             email=email,
             succeeded=False,
