@@ -182,6 +182,8 @@ main:focus {
 .topbar-user {
   margin-inline-start: auto;
   display: flex;
+  flex-wrap: wrap; /* notifications, account and log out together do not fit a 320 px phone */
+  justify-content: flex-end;
   align-items: center;
   gap: 0.5rem;
 }
