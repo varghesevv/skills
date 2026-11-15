@@ -10,6 +10,7 @@ import {
   ADMIN_GROUPS,
   LEADER_GROUP,
   LEADER_INVITATIONS,
+  ADMIN_REPORTS,
   OWNER_LABELS,
   PERSON_ACCOUNT,
   PERSON_AVAILABILITY,
@@ -113,6 +114,11 @@ export default function PersonLayout() {
             {person.status === 'owner' && (
               <Link className="btn btn-quiet" to={OWNER_CHURCHES}>
                 {t('owner.nav.churches')}
+              </Link>
+            )}
+            {admin && (
+              <Link className="btn btn-quiet" to={ADMIN_REPORTS}>
+                {t('nav.reports')}
               </Link>
             )}
             {admin && (

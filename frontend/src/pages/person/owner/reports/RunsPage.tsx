@@ -7,17 +7,17 @@ import {
   listReports,
   listRuns,
   runAndKeep,
-} from '../../api/reports'
-import type { ReportRun } from '../../api/types'
-import { t, type StringKey } from '../../i18n'
-import { formatDate, formatDateTime } from '../../shared/dates'
-import { saveFile } from '../../shared/download'
-import { errorMessage } from '../../shared/errors'
-import { checkWindow, maxDaysFor } from '../../shared/ReportCard'
-import { Alert, Badge, Pager, QueryBoundary, SelectField, TextField } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
-import type { FieldErrors } from '../../shared/validation'
-import { ADMIN_REPORTS_KEY, ADMIN_RUNS_KEY } from './keys'
+} from '../../../../api/reports'
+import type { ReportRun } from '../../../../api/types'
+import { t, type StringKey } from '../../../../i18n'
+import { formatDate, formatDateTime } from '../../../../shared/dates'
+import { saveFile } from '../../../../shared/download'
+import { errorMessage } from '../../../../shared/errors'
+import { checkWindow, maxDaysFor } from '../../../../shared/ReportCard'
+import { Alert, Badge, Pager, QueryBoundary, SelectField, TextField } from '../../../../shared/ui'
+import { usePageTitle } from '../../../../shared/usePageTitle'
+import type { FieldErrors } from '../../../../shared/validation'
+import { REPORTS_KEY, RUNS_KEY } from './keys'
 
 const STATUS_TEXT: Record<ReportRun['status'], StringKey> = {
   running: 'runs.status.running',
@@ -32,7 +32,7 @@ const STATUS_TONE: Record<ReportRun['status'], 'neutral' | 'good' | 'warn'> = {
 
 function KeepRun() {
   const queryClient = useQueryClient()
-  const reports = useQuery({ queryKey: ADMIN_REPORTS_KEY, queryFn: listReports })
+  const reports = useQuery({ queryKey: REPORTS_KEY, queryFn: listReports })
   const [name, setName] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -46,7 +46,7 @@ function KeepRun() {
     onSuccess: async (run) => {
       setResult(run.status === 'failed' ? null : 'created')
       if (run.status === 'failed') setError(run.error_message ?? t('error.generic'))
-      await queryClient.invalidateQueries({ queryKey: ADMIN_RUNS_KEY })
+      await queryClient.invalidateQueries({ queryKey: RUNS_KEY })
     },
     onError: (failure) => setError(errorMessage(failure)),
   })
@@ -176,10 +176,10 @@ export default function RunsPage() {
   const [page, setPage] = useState(1)
   const [reportName, setReportName] = useState('')
   const [status, setStatus] = useState('')
-  const reports = useQuery({ queryKey: ADMIN_REPORTS_KEY, queryFn: listReports })
+  const reports = useQuery({ queryKey: REPORTS_KEY, queryFn: listReports })
   const titles = new Map((reports.data ?? []).map((report) => [report.name, report.title]))
   const query = useQuery({
-    queryKey: [...ADMIN_RUNS_KEY, page, reportName, status],
+    queryKey: [...RUNS_KEY, page, reportName, status],
     queryFn: () => listRuns(page, reportName, status),
     placeholderData: (previous) => previous,
   })

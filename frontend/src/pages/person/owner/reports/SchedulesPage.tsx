@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
-import { listReports, listSchedules, updateSchedule } from '../../api/reports'
-import type { ReportSchedule } from '../../api/types'
-import { t } from '../../i18n'
-import { errorMessage } from '../../shared/errors'
-import { Alert, CheckboxField, QueryBoundary, TextField } from '../../shared/ui'
-import { usePageTitle } from '../../shared/usePageTitle'
-import type { FieldErrors } from '../../shared/validation'
-import { ADMIN_REPORTS_KEY, ADMIN_SCHEDULES_KEY } from './keys'
+import { listReports, listSchedules, updateSchedule } from '../../../../api/reports'
+import type { ReportSchedule } from '../../../../api/types'
+import { t } from '../../../../i18n'
+import { errorMessage } from '../../../../shared/errors'
+import { Alert, CheckboxField, QueryBoundary, TextField } from '../../../../shared/ui'
+import { usePageTitle } from '../../../../shared/usePageTitle'
+import type { FieldErrors } from '../../../../shared/validation'
+import { REPORTS_KEY, SCHEDULES_KEY } from './keys'
 
 function ScheduleCard({ schedule, title }: { schedule: ReportSchedule; title: string }) {
   const queryClient = useQueryClient()
@@ -28,7 +28,7 @@ function ScheduleCard({ schedule, title }: { schedule: ReportSchedule; title: st
       }),
     onSuccess: async () => {
       setSaved(true)
-      await queryClient.invalidateQueries({ queryKey: ADMIN_SCHEDULES_KEY })
+      await queryClient.invalidateQueries({ queryKey: SCHEDULES_KEY })
     },
     onError: (failure) => setError(errorMessage(failure)),
   })
@@ -101,8 +101,8 @@ function ScheduleCard({ schedule, title }: { schedule: ReportSchedule; title: st
 
 export default function SchedulesPage() {
   usePageTitle(t('schedules.title'))
-  const query = useQuery({ queryKey: ADMIN_SCHEDULES_KEY, queryFn: listSchedules })
-  const reports = useQuery({ queryKey: ADMIN_REPORTS_KEY, queryFn: listReports })
+  const query = useQuery({ queryKey: SCHEDULES_KEY, queryFn: listSchedules })
+  const reports = useQuery({ queryKey: REPORTS_KEY, queryFn: listReports })
   const titles = new Map((reports.data ?? []).map((report) => [report.name, report.title]))
   return (
     <>

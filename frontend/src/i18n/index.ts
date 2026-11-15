@@ -152,6 +152,12 @@ const en = {
   // The screens of a leader (roadmap S3.5).
   'leader.nav.label': 'Leader',
   'provider.nav.label': 'My profile',
+  'reports.leadAdmin': 'Reports about your own {organisation}.',
+  'reports.history.link': 'Report history',
+  'reports.schedules.link': 'Schedules',
+  'reports.status': 'Status',
+  'reports.anyStatus': 'Any status',
+  'reports.church': '{Organisation}',
   'member.nav.label': 'Find {freelancers}',
   'leader.nav.applicants': 'Applicants',
   'leader.nav.members': 'Members',
