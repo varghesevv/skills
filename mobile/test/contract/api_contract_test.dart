@@ -278,6 +278,10 @@ void main() {
           contains('PersonMeResponse'),
         );
         expect(
+          responseSchema('GET', '/workhosts/me/ratings', '200'),
+          'Page_GivenRating_',
+        );
+        expect(
           properties('Page_GivenRating_'),
           containsAll(['items', 'total', 'page', 'page_size']),
         );
