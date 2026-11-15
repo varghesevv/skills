@@ -6,6 +6,7 @@
 - Secrets, password hashes, tokens and full database URLs are never logged. Secret settings use `SecretStr`; SQL parameters are hidden; all log output passes through a redacting formatter.
 - `ci-secrets` (repository rules and Gitleaks, redacted output) is a required check before merge; `make install-hooks` runs the same rules before each commit.
 - A secret that reaches git history is treated as leaked and rotated.
+- Personal data in logs (reviewed in S5.13): the API's own log lines name no person except one, the password reset link, which carries the address because there is no email delivery yet (open question Q7) and goes with the link in the one deliberate exception of the redacting formatter. The access log shows each request's path and never its query string (a name typed into a search is not for the operators to read), and it carries the caller's network address, as any access log does. Nothing logs a request body, a token, a number or a name. The reverse proxy writes its own access log with the whole address, including the token in `/join/`, `/vouch/` and `/invite/` pages; hiding those parts of the address in the proxy log is an infrastructure change for the owner.
 
 ## Security
 - Passwords: argon2id, minimum 10 characters. Never logged or returned.
@@ -15,7 +16,7 @@
 - Rate limiting and login throttling. Generic error messages on login and forgot-password (no user enumeration).
 - Secrets only in environment variables; `.env` never committed.
 - Personal data (email, mobile) limited to the people who need it (see Privacy below). Provide a way to close an account that clears the personal details and keeps the trust record (FR-X-03).
-- Authorisation reads the person's status from the database on every request; the token carries none (ADR-0017).
+- Authorisation reads the person's status from the database on every request; the token carries none (ADR-0017). The lowest status that may call each endpoint is written out in `backend/tests/test_endpoint_matrix.py` from this specification: a test fails when an endpoint is not in the table, and for every endpoint it checks the answer to no token and to a person of every status (S5.13).
 - Dependency scanning in CI.
 
 ## Privacy of verifier views

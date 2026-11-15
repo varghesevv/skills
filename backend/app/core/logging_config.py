@@ -51,6 +51,21 @@ class RedactingFormatter(logging.Formatter):
         return redact(text)
 
 
+class StripQueryString(logging.Filter):
+    """The access log shows the path and never the query string.
+
+    A search for a person by name, a date range or a status filter is not something the operators
+    need to read, and a name typed into a search box is personal data. uvicorn logs the whole
+    address as the third argument of the line.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) >= 3 and isinstance(args[2], str):
+            record.args = (*args[:2], args[2].split("?", 1)[0], *args[3:])
+        return True
+
+
 def configure_logging(level: int = logging.INFO) -> None:
     """Send all logs (application, uvicorn, SQLAlchemy) through one redacting handler."""
     handler = logging.StreamHandler()
@@ -62,5 +77,8 @@ def configure_logging(level: int = logging.INFO) -> None:
         logger = logging.getLogger(name)
         logger.handlers.clear()
         logger.propagate = True
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, StripQueryString) for f in access.filters):
+        access.addFilter(StripQueryString())
     # SQL statements with bound parameters can contain secrets and hashes.
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
