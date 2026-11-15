@@ -169,7 +169,7 @@ void main() {
     expect((await repo.restoreSession())?.id, personJson()['id']);
   });
 
-  test('a saved session of an older account is forgotten, not kept', () async {
+  test('a saved session of an older account is ended, not kept', () async {
     final coldStart = _ColdStartStore('saved-refresh');
     final dio = Dio(BaseOptions(baseUrl: 'https://api.test/api/v1'))
       ..httpClientAdapter = adapter;
@@ -187,9 +187,12 @@ void main() {
         'GET',
         '/me',
         FakeReply(200, {'id': 'u1', 'user_type': 'workhost'}),
-      );
+      )
+      ..reply('POST', '/auth/logout', FakeReply(204));
     expect(await repo.restoreSession(), isNull);
     expect(await coldStart.readRefreshToken(), isNull);
+    // The abandoned refresh token is revoked on the server too.
+    expect(adapter.count('POST', '/auth/logout'), 1);
   });
 
   test(

@@ -53,10 +53,11 @@ class AuthRepository {
     try {
       return await me();
     } on ApiException catch (error) {
-      // A session of an account of the older kind cannot be used any more: forget it, so the
-      // app opens at the welcome screen instead of failing at every start.
+      // A session of an account of the older kind cannot be used any more: end it (the refresh
+      // token is revoked on the server, best effort) so the app opens at the welcome screen
+      // instead of failing at every start.
       if (error.code != 'bad_response') rethrow;
-      await _tokens.clear();
+      await logout();
       return null;
     }
   }

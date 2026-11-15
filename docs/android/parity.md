@@ -112,8 +112,8 @@ Status column: "at least X" means that status or higher.
 | Method and path | Who | App use | Slice | Status |
 |---|---|---|---|---|
 | POST `/auth/signup` | public | Sign-up wizard | S2.8 | done |
-| POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8 | done: the person login, no `user_type` is sent |
-| POST `/auth/forgot-password` | public | Forgot password | | done |
+| POST `/auth/login`, `/auth/refresh`, `/auth/logout` | public / any | Login, refresh, logout | S2.8, S5.12 | done: the person login, no `user_type` is sent; a saved session of an older account is ended with a logout call at start |
+| POST `/auth/forgot-password` | public | Forgot password | S5.12 | done: the email only, no `user_type` is sent |
 | POST `/auth/reset-password` | public | browser in v1 | | n/a (v1) |
 | GET `/churches`, GET `/churches/{id}/home-groups`, POST `/group-invitations/lookup` | public | Sign-up wizard, join link | S2.8 | done |
 | GET, PUT `/me`; PUT `/me/application` | any, PENDING | Session, applicant home | S2.8 | GET `/me` (both shapes) and `PUT /me/application` done; `PUT /me` (name, mobile) done with the account page (S5.10) |
