@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
@@ -7,6 +8,7 @@ import '../../core/strings/app_text.dart';
 import '../../shared/widgets/async_view.dart';
 import '../../shared/widgets/message_banner.dart';
 import '../person/person_providers.dart';
+import '../person/person_router_paths.dart';
 import 'filter_sheet.dart';
 import 'search_controller.dart';
 import 'search_models.dart';
@@ -314,48 +316,51 @@ class _ResultCard extends StatelessWidget {
             'currency': item.rateCurrency ?? '',
           });
     return Card(
-      child: MergeSemantics(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.fullName ?? text('search.noName'),
-                style: theme.textTheme.titleMedium,
-              ),
-              Text(
-                '${item.church.name} · ${item.homeGroup.name}',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.isRateNegotiable
-                    ? '$rate · ${text('search.negotiableTag')}'
-                    : rate,
-              ),
-              Text(
-                item.averageRating == null
-                    ? text('search.noRatings')
-                    : text('search.average', {
-                        'average': item.averageRating!.toStringAsFixed(1),
-                        'count': '${item.ratingCount}',
-                      }),
-              ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final s in item.skills)
-                    Chip(
-                      label: Text(
-                        s.level == null ? s.name : '${s.name} · ${s.level}',
+      child: InkWell(
+        onTap: () => context.push('$personProviders/${item.id}'),
+        child: MergeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.fullName ?? text('search.noName'),
+                  style: theme.textTheme.titleMedium,
+                ),
+                Text(
+                  '${item.church.name} · ${item.homeGroup.name}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.isRateNegotiable
+                      ? '$rate · ${text('search.negotiableTag')}'
+                      : rate,
+                ),
+                Text(
+                  item.averageRating == null
+                      ? text('search.noRatings')
+                      : text('search.average', {
+                          'average': item.averageRating!.toStringAsFixed(1),
+                          'count': '${item.ratingCount}',
+                        }),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final s in item.skills)
+                      Chip(
+                        label: Text(
+                          s.level == null ? s.name : '${s.name} · ${s.level}',
+                        ),
                       ),
-                    ),
-                ],
-              ),
-              if (own) Text(text('search.own')),
-            ],
+                  ],
+                ),
+                if (own) Text(text('search.own')),
+              ],
+            ),
           ),
         ),
       ),

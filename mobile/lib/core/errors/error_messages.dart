@@ -29,6 +29,10 @@ String? _byCode(ApiException e) {
       return 'Too many failed attempts. Try again in ${_minutes(e)} minute(s).';
     case 'reveal_limit_reached':
       return 'You have revealed many numbers recently. Try again in ${_minutes(e)} minute(s).';
+    case 'cannot_rate_self':
+      return 'You cannot rate yourself.';
+    case 'own_number':
+      return 'This is your own number.';
     case 'account_exists':
       return 'An account with these details already exists. Try signing in instead.';
     case 'invalid_choice':
