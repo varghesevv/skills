@@ -153,7 +153,7 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 
 ### Privacy statement in the mobile app
 
-The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement itself is written by the owner.
+The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement is the web page `https://<demo-domain>/privacy` (S7.4); the owner reads it, changes the wording if needed (`privacy.*` in `frontend/src/i18n/index.ts`) and gives that address as `PRIVACY_URL`.
 
 ### What the logs hold
 
@@ -228,7 +228,7 @@ After the deploy the people and everything about them are gone (the labels and t
 2. Optional: `umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv`.
 3. Smoke test: `curl -fsS https://<demo-domain>/health/ready`; sign in as the OWNER on the web; open the churches page; sign in on the phone app (version 1.0.0 or later) and open the member home.
 
-Old app builds cannot sign in any more (their requests name an account type the API no longer has) and show a message; install the new build. Builds are published to the server's downloads folder (section 7, test builds of the mobile app) and listed by `GET /app/downloads` for a signed-in person; the web Downloads page is S7.1, so until then give the person the file directly. `APP_MIN_VERSION` and `APP_LATEST_VERSION` are read from the environment but the deploy workflow does not pass them (a `.github/` change, S7); until it does, an old build is not asked to update.
+Old app builds cannot sign in any more (their requests name an account type the API no longer has) and show a message; install the new build. Builds are published to the server's downloads folder (section 7, test builds of the mobile app) and listed by `GET /app/downloads` for a signed-in person; the web Downloads page is S7.1, so until then give the person the file directly. `APP_MIN_VERSION` and `APP_LATEST_VERSION` are passed by the deploy workflow from the repository variables of the same names in the `demo` Environment (default `0.0.0`, which asks nobody to update; the format is `1.2.3`). Set `APP_MIN_VERSION` to the first build that works with the church model, and `APP_LATEST_VERSION` to the newest build (it must not be older than the minimum: the deploy refuses), then deploy again, and old builds are asked to update.
 
 Rollback: restore the backup taken by the deploy (section 6, disaster recovery) and deploy the previous image tag (section 4). The migration's downgrade brings the older tables back empty and is not a rollback of data.
 

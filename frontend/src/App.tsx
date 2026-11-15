@@ -12,10 +12,12 @@ import {
 } from './auth/guards'
 import ForgotPassword from './pages/ForgotPassword'
 import Landing from './pages/Landing'
+import Privacy from './pages/Privacy'
 import NotFound from './pages/NotFound'
 import Applicants from './pages/person/leader/Applicants'
 import MyGroup from './pages/person/leader/MyGroup'
 import Account from './pages/person/Account'
+import Downloads from './pages/person/Downloads'
 import AdminLabelsPage from './pages/person/owner/Labels'
 import AvailabilityPage from './pages/person/provider/AvailabilityPage'
 import Frame from './pages/person/provider/Frame'
@@ -60,6 +62,7 @@ import {
   OWNER_REPORT_HISTORY,
   OWNER_REPORT_SCHEDULES,
   PERSON_ACCOUNT,
+  PERSON_DOWNLOADS,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
   PERSON_PROVIDERS,
@@ -77,6 +80,7 @@ import {
   PERSON_NOTIFICATIONS,
   PERSON_SIGN_IN,
   PERSON_SIGN_UP,
+  PRIVACY,
   PERSON_VOUCHES,
 } from './portals/config'
 import PersonLayout from './shell/PersonLayout'
@@ -94,6 +98,7 @@ export default function App() {
           <Route path={PERSON_SIGN_UP.slice(1)} element={<SignUp />} />
           <Route path="join/:token" element={<SignUp />} />
           <Route path="invite/:token" element={<AcceptInvitation />} />
+          <Route path={PRIVACY.slice(1)} element={<Privacy />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
@@ -108,6 +113,7 @@ export default function App() {
             <Route path="vouch/:token" element={<VouchPage />} />
             <Route element={<RequireOpenAccount />}>
               <Route path={PERSON_ACCOUNT.slice(1)} element={<Account />} />
+              <Route path={PERSON_DOWNLOADS.slice(1)} element={<Downloads />} />
             </Route>
             <Route element={<RequireSearcher />}>
               <Route path={PERSON_SEARCH.slice(1)} element={<SearchPage />} />
