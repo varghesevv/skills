@@ -149,7 +149,9 @@ main:focus {
 /* ---------- Top bar ---------- */
 
 .topbar {
-  position: sticky;
+  /* Stays in view from tablet width up; on a phone a leader's menu wraps over several lines and
+     would cover too much of the screen, so it scrolls away there. */
+  position: static;
   top: 0;
   z-index: 20;
   display: flex;
@@ -854,6 +856,9 @@ input[aria-invalid='true'] {
 /* ---------- Tablet: 640px and up ---------- */
 
 @media (min-width: 640px) {
+  .topbar {
+    position: sticky;
+  }
   h1 {
     font-size: 2rem;
   }
