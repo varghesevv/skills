@@ -47,8 +47,25 @@ android {
         }
     }
 
-    // Release signing is injected by CI from environment secrets in the release workflow; nothing
-    // secret is committed, so a local release build is unsigned.
+    // Release signing is injected by CI from environment secrets in the release workflow (it points
+    // ANDROID_KEYSTORE_FILE at a key it decodes for the run); nothing secret is committed, so a
+    // local release build is unsigned.
+    val keystoreFile: String? = System.getenv("ANDROID_KEYSTORE_FILE")
+    if (!keystoreFile.isNullOrEmpty()) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystoreFile)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
 }
 
 kotlin {
