@@ -136,9 +136,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 }
 
 /** Fetch a file (such as a CSV report) with the bearer token. */
-export async function requestFile(path: string): Promise<{ blob: Blob; filename: string }> {
+export async function requestFile(
+  path: string,
+  fallbackName = 'report.csv',
+): Promise<{ blob: Blob; filename: string }> {
   const response = await sendAuthed(path, {})
   const disposition = response.headers.get('Content-Disposition') ?? ''
   const match = /filename="?([^";]+)"?/.exec(disposition)
-  return { blob: await response.blob(), filename: match?.[1] ?? 'report.csv' }
+  return { blob: await response.blob(), filename: match?.[1] ?? fallbackName }
 }
