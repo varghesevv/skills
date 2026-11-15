@@ -26,19 +26,11 @@ def _decode(credentials: HTTPAuthorizationCredentials | None, settings: Settings
     if credentials is None:
         raise ApiError(401, "not_authenticated", "Authentication required", headers=challenge)
     try:
-        principal = decode_access_token(
-            credentials.credentials, secret=settings.require_jwt_secret()
-        )
+        return decode_access_token(credentials.credentials, secret=settings.require_jwt_secret())
     except TokenError:
         raise ApiError(
             401, "invalid_token", "The access token is invalid or expired", headers=challenge
         ) from None
-    if principal.user_type != "person":
-        # A token of an account of the older kind (there are none any more): nobody to serve.
-        raise ApiError(
-            401, "invalid_token", "The access token is invalid or expired", headers=challenge
-        )
-    return principal
 
 
 def _load_person(db: Session, principal: Principal, *, allow_revoked: bool) -> Person:

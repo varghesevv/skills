@@ -19,12 +19,12 @@ class Actor:
     headers: dict[str, str]
 
 
-def older_actor(role: str = "workhost") -> Actor:
-    """A token of an account of the older kind. There are no such accounts any more, so it opens
-    nothing: every endpoint answers 401 `invalid_token`."""
+def ghost_actor() -> Actor:
+    """A valid token for a person who does not exist (for example an account of the older kind,
+    which is gone). It opens nothing: every endpoint answers 401 `invalid_token`."""
     account_id = uuid.uuid4()
     token, _ = create_access_token(
-        Principal(role, account_id),
+        Principal(account_id),
         secret=get_settings().require_jwt_secret(),
         lifetime_minutes=5,
     )

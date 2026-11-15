@@ -11,7 +11,7 @@ from app.core.config import Settings
 from app.core.errors import ApiError
 from app.models.church import Person
 from app.models.enums import STATUS_RANK
-from app.models.reveals import PersonPhoneReveal
+from app.models.reveals import PhoneReveal
 from app.schemas.profiles import RevealRequest
 from app.services import locks
 from app.services.profiles import utc_now
@@ -31,12 +31,12 @@ def check_reveal_limits(db: Session, settings: Settings, revealer_id: uuid.UUID)
         (timedelta(days=1), settings.reveal_max_per_day),
     ):
         oldest_counted = db.scalar(
-            select(PersonPhoneReveal.revealed_at)
+            select(PhoneReveal.revealed_at)
             .where(
-                PersonPhoneReveal.revealer_id == revealer_id,
-                PersonPhoneReveal.revealed_at > now - window,
+                PhoneReveal.revealer_id == revealer_id,
+                PhoneReveal.revealed_at > now - window,
             )
-            .order_by(PersonPhoneReveal.revealed_at.desc())
+            .order_by(PhoneReveal.revealed_at.desc())
             .offset(limit - 1)
             .limit(1)
         )
@@ -91,7 +91,7 @@ def reveal_mobile_number(
     # retry on serialization failure.
     check_reveal_limits(db, settings, revealer.id)
     db.add(
-        PersonPhoneReveal(
+        PhoneReveal(
             revealer_id=revealer.id,
             provider_id=provider.id,
             channel=body.channel,

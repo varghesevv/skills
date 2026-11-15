@@ -23,9 +23,9 @@ class TokenError(Exception):
 
 @dataclass(frozen=True)
 class Principal:
-    """Who is calling, taken from a verified access token."""
+    """Who is calling, taken from a verified access token: the person, nothing else (ADR-0017).
+    The status is read from the database on every request."""
 
-    user_type: str
     user_id: uuid.UUID
 
 
@@ -57,7 +57,6 @@ def create_access_token(
     lifetime = timedelta(minutes=lifetime_minutes)
     payload = {
         "sub": str(principal.user_id),
-        "role": principal.user_type,
         "iat": issued,
         "exp": issued + lifetime,
         "jti": uuid.uuid4().hex,
@@ -71,9 +70,9 @@ def decode_access_token(token: str, *, secret: str) -> Principal:
             token,
             secret,
             algorithms=[JWT_ALGORITHM],
-            options={"require": ["exp", "sub", "role"]},
+            options={"require": ["exp", "sub"]},
         )
-        return Principal(user_type=str(claims["role"]), user_id=uuid.UUID(str(claims["sub"])))
+        return Principal(user_id=uuid.UUID(str(claims["sub"])))
     except (jwt.PyJWTError, ValueError):
         raise TokenError("invalid access token") from None
 

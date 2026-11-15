@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import PersonUnavailability, Rating
-from tests.api_helpers import older_actor
+from tests.api_helpers import ghost_actor
 from tests.test_admission import headers_of
 from tests.test_person_auth import Member, add_member
 from tests.trust_helpers import World
@@ -284,7 +284,7 @@ def test_the_ratings_list_hides_who_rated(client: TestClient, world: World) -> N
 
 def test_older_account_tokens_open_none_of_it(client: TestClient, world: World) -> None:
     provider = add_member(world, "provider")
-    old = older_actor("workhost")
+    old = ghost_actor()
     for method, path in (
         ("GET", f"/freelancers/{provider.person.id}"),
         ("GET", f"/freelancers/{provider.person.id}/ratings"),

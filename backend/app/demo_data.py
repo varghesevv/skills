@@ -33,8 +33,8 @@ from app.models import (
     Label,
     Person,
     PersonLabel,
-    PersonPhoneReveal,
     PersonUnavailability,
+    PhoneReveal,
     Rating,
     StatusChange,
     Vouch,
@@ -511,7 +511,7 @@ def generate(
 
     # --- ratings and reveals: admitted people look at providers -----------------------------
     ratings: list[Rating] = []
-    reveals: list[PersonPhoneReveal] = []
+    reveals: list[PhoneReveal] = []
     for rater in admitted:
         for target in rng.sample(providers, min(len(providers), rng.randint(2, 8))):
             if target.id == rater.id:
@@ -532,7 +532,7 @@ def generate(
             )
             if rng.random() < 0.5:
                 reveals.append(
-                    PersonPhoneReveal(
+                    PhoneReveal(
                         revealer_id=rater.id,
                         provider_id=target.id,
                         revealed_at=max(start, when - timedelta(minutes=rng.randint(1, 60))),

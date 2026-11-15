@@ -86,7 +86,6 @@ def check_throttle(
     last_success = db.scalar(
         select(func.max(LoginHistory.login_time)).where(
             LoginHistory.login_email == email,
-            LoginHistory.user_type == "person",  # until the older rows go (S5.12a part 2)
             _ip_filter(ip),
             LoginHistory.succeeded.is_(True),
         )
@@ -98,7 +97,6 @@ def check_throttle(
         select(LoginHistory.login_time)
         .where(
             LoginHistory.login_email == email,
-            LoginHistory.user_type == "person",
             _ip_filter(ip),
             LoginHistory.succeeded.is_(False),
             LoginHistory.login_time > since,
@@ -190,7 +188,7 @@ def login(
         account.password_hash = hash_password(password)
     account.last_login_at = now
     record(account.id, succeeded=True)
-    tokens, _ = _token_response(db, settings, Principal("person", account.id), now)
+    tokens, _ = _token_response(db, settings, Principal(account.id), now)
     db.commit()
     return tokens
 
@@ -225,7 +223,7 @@ def refresh(db: Session, settings: Settings, *, refresh_token: str) -> TokenResp
     account = db.get(Person, row.user_id)
     if account is None or _can_log_in(account) is not None:
         raise invalid
-    tokens, new_row = _token_response(db, settings, Principal("person", row.user_id), now)
+    tokens, new_row = _token_response(db, settings, Principal(row.user_id), now)
     db.flush()  # the new token must exist before the old one can point at it
     row.revoked_at = now
     row.replaced_by_id = new_row.id
