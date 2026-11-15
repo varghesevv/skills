@@ -95,6 +95,15 @@ const en = {
   'privacy.choices.text':
     'You can change your name and mobile number under My account, and close your account at any time. For anything else, ask the {owner}.',
   'privacy.link': 'Privacy',
+  'downloads.link': 'Android app',
+  'downloads.title': 'Android app',
+  'downloads.lead':
+    'Test builds of the Android app. Download one, check the SHA-256 if you like, and install it on your phone (you may need to allow installing from this source).',
+  'downloads.none': 'No build has been published yet.',
+  'downloads.version': 'Version {version} (build {build})',
+  'downloads.size': '{size} MB',
+  'downloads.sha256': 'SHA-256',
+  'downloads.download': 'Download version {version}',
   'account.link': 'My account',
   'account.title': 'My account',
   'account.lead': 'Your details, and how to leave.',
