@@ -226,7 +226,7 @@ After the deploy the people and everything about them are gone (the labels and t
 2. Optional: `umask 077 && dc run --rm -T tools python -m app.cli generate-demo-data --csv - > demo-logins.csv`.
 3. Smoke test: `curl -fsS https://<demo-domain>/health/ready`; sign in as the OWNER on the web; open the churches page; sign in on the phone app (version 1.0.0 or later) and open the member home.
 
-Old app builds cannot sign in any more (their requests name an account type the API no longer has) and show a message; install the new build from the Downloads page. `APP_MIN_VERSION` and `APP_LATEST_VERSION` are read from the environment but the deploy workflow does not pass them (a `.github/` change, S7); until it does, an old build is not asked to update.
+Old app builds cannot sign in any more (their requests name an account type the API no longer has) and show a message; install the new build. Builds are published to the server's downloads folder (section 7, test builds of the mobile app) and listed by `GET /app/downloads` for a signed-in person; the web Downloads page is S7.1, so until then give the person the file directly. `APP_MIN_VERSION` and `APP_LATEST_VERSION` are read from the environment but the deploy workflow does not pass them (a `.github/` change, S7); until it does, an old build is not asked to update.
 
 Rollback: restore the backup taken by the deploy (section 6, disaster recovery) and deploy the previous image tag (section 4). The migration's downgrade brings the older tables back empty and is not a rollback of data.
 
