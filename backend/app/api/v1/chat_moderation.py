@@ -8,7 +8,7 @@ from app.api.deps import current_person
 from app.chat import moderation
 from app.core.db import get_session
 from app.models.church import Person
-from app.schemas.chat import AdminReportOut, ReportedMessage
+from app.schemas.chat import AdminReportOut, ReportedMessages
 from app.schemas.common import Page, Pagination, pagination
 
 router = APIRouter(prefix="/owner/chat-reports", tags=["chat"])
@@ -34,11 +34,15 @@ def list_reports(
 
 @router.get("/{report_id}/messages")
 def read_messages(
-    report_id: uuid.UUID, owner: Owner, db: Annotated[Session, Depends(get_session)]
-) -> list[ReportedMessage]:
-    """The reported conversation, oldest first. Each call is logged (who and when)."""
+    report_id: uuid.UUID,
+    owner: Owner,
+    db: Annotated[Session, Depends(get_session)],
+    before_seq: Annotated[int | None, Query(ge=1)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ReportedMessages:
+    """A page of the reported conversation, oldest first. Each call is logged (who and when)."""
     report = moderation.get_report(db, report_id)
-    messages = moderation.read_reported_conversation(db, report, owner)
+    messages = moderation.read_reported_conversation(db, report, owner, before_seq, limit)
     db.commit()
     return messages
 

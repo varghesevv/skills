@@ -88,3 +88,11 @@ class AdminReportOut(BaseModel):
 
 class ReportedMessage(MessageOut):
     sender_name: str | None
+
+
+class ReportedMessages(BaseModel):
+    """A page of a reported conversation, oldest first; `has_more` says older messages exist
+    (read them with `before_seq` set to the first `seq` of this page)."""
+
+    items: list[ReportedMessage]
+    has_more: bool

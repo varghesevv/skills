@@ -129,12 +129,34 @@ def test_reading_a_reported_conversation_is_logged_each_time(
     url = f"{API}/owner/chat-reports/{report_id}/messages"
     first = client.get(url, headers=owner)
     client.get(url, headers=owner)
-    assert [m["body"] for m in first.json()] == ["first", "second"]  # oldest first
-    assert first.json()[1]["sender_side"] == "provider"
-    assert first.json()[0]["sender_name"] == pair.starter.person.full_name
+    assert [m["body"] for m in first.json()["items"]] == ["first", "second"]  # oldest first
+    assert first.json()["items"][1]["sender_side"] == "provider"
+    assert first.json()["items"][0]["sender_name"] == pair.starter.person.full_name
     views = world.session.scalars(select(ChatReportView)).all()
     assert len(views) == 2 and {v.viewer_id for v in views} == {world.owner.id}
     assert not hasattr(views[0], "body")  # who and when, never what
+
+
+def test_a_long_conversation_is_read_page_by_page_and_each_page_is_logged(
+    pair: Pair, client: TestClient, world: World
+) -> None:
+    for number in range(5):
+        pair.send(pair.s, f"m{number}")
+    report_id = report(pair, pair.p).json()["id"]
+    owner = owner_headers(client, world)
+    url = f"{API}/owner/chat-reports/{report_id}/messages"
+    newest = client.get(url, params={"limit": 2}, headers=owner).json()
+    assert [m["body"] for m in newest["items"]] == ["m3", "m4"] and newest["has_more"]
+    older = client.get(
+        url, params={"limit": 2, "before_seq": newest["items"][0]["seq"]}, headers=owner
+    ).json()
+    assert [m["body"] for m in older["items"]] == ["m1", "m2"] and older["has_more"]
+    oldest = client.get(
+        url, params={"limit": 2, "before_seq": older["items"][0]["seq"]}, headers=owner
+    ).json()
+    assert [m["body"] for m in oldest["items"]] == ["m0"] and not oldest["has_more"]
+    assert world.session.scalar(select(func.count()).select_from(ChatReportView)) == 3
+    assert client.get(url, params={"limit": 101}, headers=owner).status_code == 422
 
 
 def test_an_unreported_conversation_cannot_be_read_by_anyone_else(

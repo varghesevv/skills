@@ -146,7 +146,7 @@ Storing a message announces an event (ids only) through PostgreSQL `NOTIFY` when
 |---|---|---|
 | POST | /chat/conversations/{id}/report | Either person of the conversation. Body `reason` (spam, harassment, inappropriate, scam, other) and optional `note` (at most 500 characters). `201`; `200` with the same report when this person already has one open on the conversation; `404` for anyone outside it; `422` for an unknown reason. |
 | GET | /owner/chat-reports | OWNER. Paged (`limit`, `offset`; `items`, `total`), newest first; filter `handled` (true or false). Each: `id`, `conversation_id`, `reason`, `note`, `reporter` and `other` (`id`, `full_name`; empty once closed), `created_at`, `handled_at`. Never message text. |
-| GET | /owner/chat-reports/{report_id}/messages | OWNER. The messages of the reported conversation, oldest first, at most 500. Each reading is written to `chat_report_views`. `404` for an unknown report; a conversation id is not accepted. |
+| GET | /owner/chat-reports/{report_id}/messages | OWNER. A page of the reported conversation: the newest `limit` messages (1 to 100, default 50) before `before_seq` when given, returned oldest first, with `has_more`; older ones are read with `before_seq` set to the first `seq` of the page. Each page read is written to `chat_report_views`. `404` for an unknown report; a conversation id is not accepted. |
 | POST | /owner/chat-reports/{report_id}/handle | OWNER. Marks the report handled. `204`; repeating it changes nothing. |
 
 #### WebSocket (S8.3, ADR-0014)

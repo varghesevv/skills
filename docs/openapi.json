@@ -3364,6 +3364,28 @@
         "title": "ReportedMessage",
         "type": "object"
       },
+      "ReportedMessages": {
+        "description": "A page of a reported conversation, oldest first; `has_more` says older messages exist\n(read them with `before_seq` set to the first `seq` of this page).",
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedMessage"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "has_more"
+        ],
+        "title": "ReportedMessages",
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "properties": {
           "new_password": {
@@ -7161,7 +7183,7 @@
     },
     "/api/v1/owner/chat-reports/{report_id}/messages": {
       "get": {
-        "description": "The reported conversation, oldest first. Each call is logged (who and when).",
+        "description": "A page of the reported conversation, oldest first. Each call is logged (who and when).",
         "operationId": "read_messages_api_v1_owner_chat_reports__report_id__messages_get",
         "parameters": [
           {
@@ -7173,6 +7195,35 @@
               "title": "Report Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "before_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Seq"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -7180,11 +7231,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ReportedMessage"
-                  },
-                  "title": "Response Read Messages Api V1 Owner Chat Reports  Report Id  Messages Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/ReportedMessages"
                 }
               }
             },

@@ -14,9 +14,7 @@ from app.chat.rules import now
 from app.core.errors import ApiError
 from app.models.chat import ChatReport, ChatReportView, Conversation, Message
 from app.models.church import Person
-from app.schemas.chat import AdminReportOut, NamedPerson, ReportedMessage
-
-MAX_READ_MESSAGES = 500
+from app.schemas.chat import AdminReportOut, NamedPerson, ReportedMessage, ReportedMessages
 
 
 def report_conversation(
@@ -45,11 +43,11 @@ def report_conversation(
         reason=reason,
         note=(note or "").strip() or None,
     )
-    db.add(report)
     try:
-        db.flush()
+        with db.begin_nested():  # only the insert is undone on a conflict
+            db.add(report)
+            db.flush()
     except IntegrityError:  # the same person reported twice at once
-        db.rollback()
         again = db.scalar(
             select(ChatReport).where(
                 ChatReport.conversation_id == conversation.id,
@@ -121,27 +119,26 @@ def list_reports(
 
 
 def read_reported_conversation(
-    db: Session, report: ChatReport, owner: Person
-) -> list[ReportedMessage]:
-    """The messages of a reported conversation, oldest first (the newest 500). The reading is
-    logged before anything is returned."""
+    db: Session, report: ChatReport, owner: Person, before_seq: int | None, limit: int
+) -> ReportedMessages:
+    """One page of a reported conversation: the newest `limit` messages (before `before_seq`
+    when given), returned oldest first. Every page read is logged before it is returned."""
     db.add(ChatReportView(report_id=report.id, viewer_id=owner.id))
     db.flush()
     conversation = db.get(Conversation, report.conversation_id)
     if conversation is None:  # cannot happen (the report cascades); kept as a safety net
         raise ApiError(404, "not_found", "Report not found")
-    rows = db.scalars(
-        select(Message)
-        .where(Message.conversation_id == conversation.id)
-        .order_by(Message.seq.desc())
-        .limit(MAX_READ_MESSAGES)
-    ).all()
+    query = select(Message).where(Message.conversation_id == conversation.id)
+    if before_seq is not None:
+        query = query.where(Message.seq < before_seq)
+    found = db.scalars(query.order_by(Message.seq.desc()).limit(limit + 1)).all()
+    rows = found[:limit]
     names = {
         p.id: p.full_name
         for p in db.scalars(select(Person).where(Person.id.in_({m.sender_id for m in rows}))).all()
         if p.closed_at is None
     }
-    return [
+    items = [
         ReportedMessage(
             id=m.id,
             seq=m.seq,
@@ -153,6 +150,7 @@ def read_reported_conversation(
         )
         for m in reversed(rows)
     ]
+    return ReportedMessages(items=items, has_more=len(found) > limit)
 
 
 def handle_report(db: Session, report: ChatReport, owner: Person) -> None:
