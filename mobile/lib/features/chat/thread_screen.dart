@@ -111,6 +111,16 @@ class _ThreadState extends ConsumerState<_Thread> {
     });
   }
 
+  /// The start of a long message: a reader would otherwise speak up to 2000 characters over
+  /// whatever the person is doing. The bubble itself holds the whole text.
+  static String _spoken(String body) {
+    const limit = 120;
+    final letters = body.runes.toList();
+    return letters.length <= limit
+        ? body
+        : '${String.fromCharCodes(letters.take(limit))}…';
+  }
+
   /// A screen reader says a message that arrives while the thread is open (a sighted person
   /// sees it appear; this is what TalkBack needs instead).
   void _announce(ChatMessage message) {
@@ -121,7 +131,7 @@ class _ThreadState extends ConsumerState<_Thread> {
         View.of(context),
         text('chat.announce', {
           'name': chatOtherName(text, _conversation),
-          'text': message.body,
+          'text': _spoken(message.body),
         }),
         Directionality.of(context),
       ),

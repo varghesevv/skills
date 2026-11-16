@@ -193,8 +193,18 @@ void main() {
           'message': _message(3, 'My own words', side: 'starter'),
         }),
       );
+      final long = 'word ' * 60;
+      server.last.say(
+        jsonEncode({'type': 'message', 'message': _message(4, long)}),
+      );
       await tester.pumpAndSettle();
-      expect(heard, ['New message from Anita Provider: Are you free?']);
+      expect(heard.first, 'New message from Anita Provider: Are you free?');
+      expect(heard.length, 2);
+      expect(
+        heard.last.length,
+        lessThan(160),
+      ); // the start only, with an ellipsis
+      expect(heard.last, endsWith('…'));
     },
   );
 
