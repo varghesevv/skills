@@ -6,12 +6,12 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.chat import rules
-from app.models.chat import ConversationState
-from app.services.account_closing import clear_account
+from app.models.chat import Conversation, ConversationState, Message
+from app.services.account_closing import clear_account, clear_accounts
 from tests.api_helpers import API
 from tests.test_admission import headers_of
 from tests.test_person_auth import add_member
@@ -270,6 +270,36 @@ def test_nothing_is_stored_for_a_person_who_has_closed_their_account(pair: Pair)
     assert (response.status_code, code(response)) == (409, "chat_closed")
     other = pair.client.get(f"{API}/chat/conversations", headers=pair.s).json()["items"][0]["other"]
     assert other["closed"] is True and other["full_name"] is None
+
+
+def test_the_other_person_keeps_the_history_until_they_close_their_account_too(
+    pair: Pair,
+) -> None:
+    pair.send(pair.s, "one")
+    pair.send(pair.p, "two")
+    session = pair.world.session
+    clear_account(session, pair.provider.person, datetime.now(UTC))
+    session.flush()
+    kept = pair.client.get(f"{API}/chat/conversations/{pair.id}/messages", headers=pair.s)
+    assert [m["body"] for m in kept.json()] == ["two", "one"]
+    assert session.scalar(select(func.count()).select_from(Message)) == 2
+    clear_account(session, pair.starter.person, datetime.now(UTC))
+    session.flush()
+    # Nobody is left to read it: the conversation, its messages and its state are gone.
+    for model in (Conversation, Message, ConversationState):
+        assert session.scalar(select(func.count()).select_from(model)) == 0, model
+
+
+def test_closing_both_at_once_removes_the_conversation_and_leaves_others(
+    client: TestClient, world: World
+) -> None:
+    first, second = Pair(client, world), Pair(client, world)
+    first.send(first.s, "a")
+    second.send(second.s, "b")
+    clear_accounts(world.session, [first.starter.person, first.provider.person], datetime.now(UTC))
+    world.session.flush()
+    ids = world.session.scalars(select(Conversation.id)).all()
+    assert [str(i) for i in ids] == [second.id]
 
 
 # ---- read marks and unread -------------------------------------------------------------------

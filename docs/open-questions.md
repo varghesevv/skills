@@ -26,7 +26,7 @@ Phase 2 implemented these defaults (change any with a new migration): Q2 `08-06`
 |---|---|---|
 | Q-A1 | App name and application ID (cannot change after the first store upload) | Use the placeholder `com.example.skills.dev` until answered; it blocks only the first signed build |
 | Q-A3 | May an admin read a conversation? | Only conversations that someone reported, and each access is logged |
-| Q-A4 | How long are chat messages kept? | Until either account is deleted, then anonymised; revisit with the privacy page |
+| Q-A4 | How long are chat messages kept? | Settled by D-53 (S9.2): while the installation runs; a closed account's side is shown without a name and the other person keeps the history; when both have closed theirs the conversation is deleted |
 | Q-A5 | May a freelancer start a chat after a work host revealed their number? | No (work host starts). Revisit with real usage |
 | Q-A6 | Attachments (photos, documents) in chat? | Text only in version 1 |
 | Q-A7 | Chat on the web? | Later; the API already supports it |

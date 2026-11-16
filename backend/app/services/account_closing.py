@@ -9,14 +9,14 @@ admitted is flagged. Leaders step down first; the OWNER hands over. Same flow as
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, func, update
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy.orm import Session, aliased
 
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.core.security import verify_dummy, verify_password
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
-from app.models.chat import DeviceToken, PushOutbox
+from app.models.chat import Conversation, DeviceToken, PushOutbox
 from app.models.church import Person
 from app.models.trust import GroupInvitation, VouchLink
 from app.services.auth import check_throttle, clean_ip, record_attempt
@@ -83,6 +83,23 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
             .where(LoginHistory.user_id.in_(chunk))
             .values(login_email=None, ip_address=None, user_agent=None)
         )
+    # A conversation whose two people have both closed their accounts has nobody left to read it:
+    # it goes, with its messages, reports and pending pushes (the cascade). While one of them is
+    # still here it stays, and the closed side is shown without a name (decision D-53).
+    db.flush()
+    starter, provider = aliased(Person), aliased(Person)
+    for chunk in _slices(ids):
+        orphaned = (
+            select(Conversation.id)
+            .join(starter, starter.id == Conversation.starter_id)
+            .join(provider, provider.id == Conversation.provider_id)
+            .where(
+                starter.closed_at.is_not(None),
+                provider.closed_at.is_not(None),
+                or_(Conversation.starter_id.in_(chunk), Conversation.provider_id.in_(chunk)),
+            )
+        )
+        db.execute(delete(Conversation).where(Conversation.id.in_(orphaned)))
     for chunk in _slices(
         emails
     ):  # attempts before the person was recognised carry only the address
