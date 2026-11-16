@@ -401,6 +401,7 @@ const stringsEn = <String, String>{
   'chat.closedCannotWrite': 'This person can no longer be written to.',
   'chat.sentBy.me': 'You, {time}: {text}',
   'chat.sentBy.other': 'They wrote, {time}: {text}',
+  'chat.announce': 'New message from {name}: {text}',
   'chat.menu': 'Conversation options',
   'chat.mute': 'Mute',
   'chat.unmute': 'Unmute',

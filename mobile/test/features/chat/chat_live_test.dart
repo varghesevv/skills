@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
@@ -153,6 +154,49 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Live hello'), findsOneWidget);
   });
+
+  testWidgets(
+    'a screen reader hears a new message from the other person, once',
+    (tester) async {
+      final heard = <String>[];
+      tester.binding.defaultBinaryMessenger
+          .setMockDecodedMessageHandler<Object?>(SystemChannels.accessibility, (
+            message,
+          ) async {
+            final map = message as Map;
+            if (map['type'] == 'announce') {
+              heard.add((map['data'] as Map)['message'] as String);
+            }
+            return null;
+          });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              null,
+            ),
+      );
+      final (:app, :server) = await _open(tester);
+      await _connect(tester, server);
+      await tapKey(tester, 'messages');
+      await tester.tap(find.byKey(const Key('conversation-c1')));
+      await tester.pumpAndSettle();
+      final theirs = jsonEncode({
+        'type': 'message',
+        'message': _message(2, 'Are you free?'),
+      });
+      server.last.say(theirs);
+      server.last.say(theirs);
+      server.last.say(
+        jsonEncode({
+          'type': 'message',
+          'message': _message(3, 'My own words', side: 'starter'),
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(heard, ['New message from Anita Provider: Are you free?']);
+    },
+  );
 
   testWidgets(
     'a message of another conversation does not appear in the open thread',
