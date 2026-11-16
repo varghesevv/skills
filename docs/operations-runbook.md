@@ -165,7 +165,7 @@ The API runs with `--ws-max-size 16384` (set in the image, the local compose fil
 
 ### What the logs hold
 
-The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The reverse proxy's access log is different: it writes the whole address of every request, so it holds the link tokens of the `/join/`, `/vouch/` and `/invite/` pages until the owner changes the proxy to hide them (an item on the roadmap's owner list). Treat the proxy log as holding secrets: keep it readable by the operators only, do not paste it into a ticket or a chat, and do not keep it longer than needed. A token seen there is a link that anyone who finds the log could use; cancel the link (the leader or the OWNER can end it) if the log has been shared.
+The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The web container's access log shows the path only, with a `/join/`, `/vouch/` or `/invite/` page (any letter case) logged as `/link/redacted`; the proxy writes no access log. The only secret a log holds is therefore the reset link, in the API log: keep that log readable by the operators only.
 
 ## 8. Security headers and limits
 
