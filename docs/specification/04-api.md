@@ -126,6 +126,21 @@ Auth behaviour:
 
 The platform operators' OWNER change is a command run on the server, not an endpoint: `python -m app.cli change-owner --new-owner <email>` with `--church-admin`, `--group-leader`, `--former-status` and `--revoke-old-owner` (see the operations runbook). It makes the same appointments as a handover, in one transaction, recorded in the history as operator changes, and cancels a handover proposal that is still open.
 
+### Chat (S8.2, ADR-0014)
+Conversations between two people: the *starter* (a SEARCHER or above) and the *provider* (open, not revoked, PROVIDER or above). Everything needs at least SEARCHER (`403 not_admitted` below, `403 account_revoked` for a revoked person). Someone who is not a participant gets `404 not_found`, the same as for a conversation that does not exist. Messages and names are never logged.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | /chat/conversations | Body `provider_id`. Returns the conversation (`201` new, `200` the one that exists). `404` for anyone who is not a provider a searcher may see; `422 cannot_message_self`; `403 chat_blocked` when the provider blocked this person; `429 chat_new_conversation_limit` over `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY` (10) new conversations in 24 hours. |
+| GET | /chat/conversations | Paged (`page`, `page_size`), latest activity first. Each: `id`, `my_side` (`starter` or `provider`), `other` (`id`, `full_name`, `closed`; the name is empty once that account is closed), `last_message_preview` (60 characters), `last_message_at`, `unread_count`, `muted`, `blocked` (the provider's own block; the starter is never told). |
+| GET | /chat/conversations/{id}/messages | Newest first; `limit` at most 50; `before_seq` is the cursor. Each: `id`, `seq`, `conversation_id`, `sender_side`, `body`, `created_at` (set by the server). |
+| POST | /chat/conversations/{id}/messages | Body `client_message_id` (a UUID the app makes), `body`. Idempotent: the same id on the same side returns the stored message (`200`, `201` for a new one). Text is trimmed, 1 to 2000 characters, no control characters except new line and tab: `422 chat_message_empty`, `chat_message_too_long`, `chat_message_invalid`. `403 chat_blocked` (a block stops both directions), `409 chat_closed` when the other person's account is closed or revoked, `429 chat_rate_limited` over `CHAT_MAX_MESSAGES_PER_MINUTE` (20). |
+| POST | /chat/conversations/{id}/read | Body `up_to_seq`. Moves the person's read mark forward only, and no further than the newest message. `204`. |
+| PUT | /chat/conversations/{id}/settings | Body `muted` and/or `blocked`. Either side may mute; only the provider may block (`403 chat_not_allowed`). Returns the conversation. |
+| GET | /chat/unread | `{"total": n}`: messages from the other side after the person's read marks, over all conversations. |
+
+Storing a message announces an event (ids only) through PostgreSQL `NOTIFY` when the transaction commits; the WebSocket that delivers it is S8.3.
+
 ### Providers (resource paths kept)
 | Method | Path | Who |
 |---|---|---|

@@ -129,7 +129,7 @@ Backend first, then web and mobile.
 
 ### S8. Chat and push (after the cut-over) — about 10 pull requests
 - [x] 8.1 Spike: synchronous database layer with an asynchronous socket; two-process notification test; result written down; ADR-0014.
-- [ ] 8.2 to 8.4 Chat backend: schema and REST; socket and cross-process delivery; moderation and reports.
+- [ ] 8.2 to 8.4 Chat backend: schema and REST (8.2 done, 211); socket and cross-process delivery; moderation and reports.
 - [ ] 8.5 to 8.6 Push: device tokens and outbox; sender.
 - [ ] 8.7 to 8.9 Chat in the app: list, thread, reconnect and queue, notification permission, deep links.
 - [ ] 8.10 Chat metrics report.

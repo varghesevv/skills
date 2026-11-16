@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     vouch_link_days: int = Field(default=30, ge=1)  # life of a vouch link
     admin_invitation_days: int = Field(default=14, ge=1)  # life of an invitation to be an ADMIN
     vouch_max_per_day: int = Field(default=20, ge=1)  # vouches per person per day
+    # Chat limits (ADR-0014): safety nets like the reveal limits, so they have defaults.
+    chat_max_new_conversations_per_day: int = Field(default=10, ge=1)  # per person who starts
+    chat_max_messages_per_minute: int = Field(default=20, ge=1)  # per person
+    chat_max_sockets_per_person: int = Field(default=5, ge=1)  # open sockets in one process
+    chat_push_delay_seconds: int = Field(default=3, ge=0)  # wait before a push is sent
     # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
     # default word profile, and no minimum version (every app version is accepted).
     terminology_profile: str = "default"
