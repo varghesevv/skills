@@ -23,6 +23,13 @@ final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>((
   return page.items;
 });
 
+/// One conversation by its id, for the thread screen (it may be outside the first page of the
+/// list, or opened from a push).
+final conversationProvider = FutureProvider.autoDispose
+    .family<Conversation, String>((ref, id) {
+      return ref.watch(chatRepositoryProvider).conversation(id);
+    });
+
 /// Messages not yet read, over all conversations, for the badge.
 final unreadMessagesProvider = FutureProvider.autoDispose<int>((ref) {
   final timer = Timer(chatPollInterval, ref.invalidateSelf);

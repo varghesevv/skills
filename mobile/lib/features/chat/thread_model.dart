@@ -51,6 +51,9 @@ class ThreadModel extends ChangeNotifier {
   bool hasMore = false;
   bool loadingOlder = false;
   Object? error;
+
+  /// Why the older messages could not be loaded (the newer ones stay on screen).
+  Object? olderError;
   bool _disposed = false;
   int _readUpTo = 0;
 
@@ -86,6 +89,7 @@ class ThreadModel extends ChangeNotifier {
   Future<void> loadOlder() async {
     if (loadingOlder || !hasMore || messages.isEmpty) return;
     loadingOlder = true;
+    olderError = null;
     _changed();
     try {
       final page = await _repository.messages(id, beforeSeq: messages.last.seq);
@@ -94,7 +98,7 @@ class ThreadModel extends ChangeNotifier {
       }
       hasMore = page.length >= 50;
     } catch (e) {
-      error = e;
+      olderError = e;
     }
     loadingOlder = false;
     _changed();

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:skills_app/core/providers.dart';
+import 'package:skills_app/features/chat/chat_providers.dart';
 import 'package:skills_app/app/router.dart';
 import 'package:skills_app/core/auth/person_me.dart';
 
@@ -38,7 +41,7 @@ Map<String, Object?> _message(
   'conversation_id': 'c1',
   'sender_side': side,
   'body': body,
-  'created_at': '2026-11-16T10:0$seq:00Z',
+  'created_at': '2026-11-16T10:${seq.toString().padLeft(2, '0')}:00Z',
 };
 
 Map<String, Object?> _page(List<Map<String, Object?>> items) => {
@@ -69,6 +72,11 @@ Future<TestApp> _open(
         'GET',
         '/chat/conversations',
         FakeReply(200, _page([conversation ?? _conversation()])),
+      )
+      ..reply(
+        'GET',
+        '/chat/conversations/c1',
+        FakeReply(200, conversation ?? _conversation()),
       )
       ..reply(
         'GET',
@@ -270,6 +278,15 @@ void main() {
     await _openThread(tester);
     await tester.tap(find.byKey(const Key('chat-menu')));
     await tester.pumpAndSettle();
+    // The server now says blocked, as the refreshed list will show.
+    app.adapter.setReply(
+      'GET',
+      '/chat/conversations',
+      FakeReply(
+        200,
+        _page([_conversation(mySide: 'provider', blocked: true, unread: 0)]),
+      ),
+    );
     await tester.tap(find.byKey(const Key('menu-block')));
     await tester.pumpAndSettle();
     final put = app.adapter.seen.singleWhere((r) => r.method == 'PUT');
@@ -306,6 +323,124 @@ void main() {
     expect(find.text('Reported. Thank you.'), findsOneWidget);
   });
 
+  testWidgets('a conversation outside the first page of the list opens', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      arrange: (adapter) => adapter.setReply(
+        'GET',
+        '/chat/conversations',
+        FakeReply(200, _page([_conversation(id: 'other', name: 'Someone')])),
+      ),
+    );
+    final router = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    ).read(routerProvider);
+    router.go('/member/chat/c1');
+    await tester.pumpAndSettle();
+    expect(find.text('Anita Provider'), findsWidgets);
+    expect(find.byKey(const Key('message-input')), findsOneWidget);
+  });
+
+  testWidgets('a conversation that is not the person\'s says so', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      arrange: (adapter) => adapter.setReply(
+        'GET',
+        '/chat/conversations/c1',
+        FakeReply(404, apiError('not_found')),
+      ),
+    );
+    await _openThread(tester);
+    expect(find.textContaining('no longer exists'), findsOneWidget);
+    expect(find.byKey(const Key('message-input')), findsNothing);
+  });
+
+  testWidgets(
+    'a failed refresh of the list keeps the open thread and its text',
+    (tester) async {
+      await _open(tester);
+      await _openThread(tester);
+      await tester.enterText(find.byKey(const Key('message-input')), 'Draft');
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      final adapter =
+          (container.read(dioProvider).httpClientAdapter) as FakeAdapter;
+      adapter.setReply(
+        'GET',
+        '/chat/conversations',
+        FakeReply(503, apiError('service_unavailable')),
+      );
+      container.invalidate(conversationsProvider);
+      await tester.pumpAndSettle();
+      expect(find.text('Draft'), findsOneWidget);
+      expect(find.byKey(const Key('message-input')), findsOneWidget);
+    },
+  );
+
+  testWidgets('a change seen in the list reaches the open thread', (
+    tester,
+  ) async {
+    await _open(tester);
+    await _openThread(tester);
+    expect(find.byKey(const Key('message-input')), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    final adapter =
+        (container.read(dioProvider).httpClientAdapter) as FakeAdapter;
+    adapter.setReply(
+      'GET',
+      '/chat/conversations',
+      FakeReply(
+        200,
+        _page([_conversation(name: null, closed: true, unread: 0)]),
+      ),
+    );
+    container.invalidate(conversationsProvider);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('message-input')), findsNothing);
+    expect(find.text('Closed account'), findsWidgets);
+  });
+
+  testWidgets('older messages that cannot be loaded say so', (tester) async {
+    await _open(
+      tester,
+      arrange: (adapter) => adapter
+        ..setReply(
+          'GET',
+          '/chat/conversations/c1/messages',
+          FakeReply(200, [
+            for (var i = 50; i >= 1; i--) _message(i, 'm$i', id: 'x$i'),
+          ]),
+        ),
+    );
+    await _openThread(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    final adapter =
+        (container.read(dioProvider).httpClientAdapter) as FakeAdapter;
+    adapter.setReply(
+      'GET',
+      '/chat/conversations/c1/messages',
+      FakeReply(503, apiError('service_unavailable')),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('older')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('older')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('temporarily unavailable'), findsOneWidget);
+    expect(find.text('m1'), findsOneWidget); // what was loaded stays
+  });
+
   testWidgets('an empty list says how to start', (tester) async {
     await _open(
       tester,
@@ -317,5 +452,6 @@ void main() {
     );
     await tapKey(tester, 'messages');
     expect(find.textContaining('no messages yet'), findsOneWidget);
+    expect(find.textContaining('Open a freelancer'), findsOneWidget);
   });
 }

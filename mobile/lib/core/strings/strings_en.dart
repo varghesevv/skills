@@ -385,7 +385,7 @@ const stringsEn = <String, String>{
       'The phone could not open the dialler. The number is shown below.',
   'given.title': 'Ratings I gave',
   'chat.title': 'Messages',
-  'chat.none': 'You have no messages yet. Open a provider and choose Message to write to them.',
+  'chat.none': 'You have no messages yet. Open {a_freelancer} and choose Message to write to them.',
   'chat.closedAccount': 'Closed account',
   'chat.unreadCount': '{count} unread',
   'chat.muted': 'muted',

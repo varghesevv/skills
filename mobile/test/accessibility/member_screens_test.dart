@@ -86,6 +86,7 @@ Map<String, Object?> _conversation() => {
 
 void _chat(FakeAdapter a) => a
   ..reply('GET', '/chat/unread', FakeReply(200, {'total': 2}))
+  ..reply('GET', '/chat/conversations/c1', FakeReply(200, _conversation()))
   ..reply(
     'GET',
     '/chat/conversations',

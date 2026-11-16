@@ -21,14 +21,15 @@ class ThreadScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = ref.watch(appTextProvider);
-    final list = ref.watch(conversationsProvider);
-    return Scaffold(
-      appBar: list.hasValue ? null : AppBar(title: Text(text('chat.title'))),
-      body: list.when(
-        skipLoadingOnRefresh: true,
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => SafeArea(
+    final one = ref.watch(conversationProvider(id));
+    return one.when(
+      loading: () => Scaffold(
+        appBar: AppBar(title: Text(text('chat.title'))),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => Scaffold(
+        appBar: AppBar(title: Text(text('chat.title'))),
+        body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -37,27 +38,15 @@ class ThreadScreen extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: FilledButton(
-                  onPressed: () => ref.invalidate(conversationsProvider),
+                  onPressed: () => ref.invalidate(conversationProvider(id)),
                   child: Text(text('common.retry')),
                 ),
               ),
             ],
           ),
         ),
-        data: (items) {
-          final found = items.where((c) => c.id == id).firstOrNull;
-          if (found == null) {
-            return Scaffold(
-              appBar: AppBar(title: Text(text('chat.title'))),
-              body: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(text('chat.notFound')),
-              ),
-            );
-          }
-          return _Thread(key: ValueKey(id), conversation: found);
-        },
       ),
+      data: (found) => _Thread(key: ValueKey(id), conversation: found),
     );
   }
 }
@@ -90,6 +79,18 @@ class _ThreadState extends ConsumerState<_Thread> {
       },
     )..addListener(() => mounted ? setState(() {}) : null);
     _model.load();
+  }
+
+  /// The list is asked again every minute and after a read mark: take what it says now, so a
+  /// mute or block made on another phone, or an account that was closed, shows here too.
+  void _follow(
+    AsyncValue<List<Conversation>>? _,
+    AsyncValue<List<Conversation>> next,
+  ) {
+    final fresh = next.value
+        ?.where((c) => c.id == _conversation.id)
+        .firstOrNull;
+    if (fresh != null && mounted) setState(() => _conversation = fresh);
   }
 
   @override
@@ -149,6 +150,7 @@ class _ThreadState extends ConsumerState<_Thread> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(conversationsProvider, _follow);
     final text = ref.watch(appTextProvider);
     final c = _conversation;
     final isProviderSide = c.mySide == ChatSide.provider;
@@ -257,6 +259,8 @@ class _ThreadState extends ConsumerState<_Thread> {
             child: Text(text('chat.older')),
           ),
         ),
+      if (_model.olderError != null)
+        MessageBanner(text.error(_model.olderError!)),
     ];
     if (rows.isEmpty) {
       return Padding(

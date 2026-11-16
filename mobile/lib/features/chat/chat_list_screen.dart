@@ -60,38 +60,29 @@ class _Row extends ConsumerWidget {
     final name = chatOtherName(text, item);
     final when = item.lastMessageAt;
     final unread = item.unread > 0;
-    final summary = [
-      name,
-      if (unread) text('chat.unreadCount', {'count': '${item.unread}'}),
-      if (item.muted) text('chat.muted'),
-      ?item.preview,
-    ].join(', ');
-    return Semantics(
-      container: true,
-      label: summary,
-      excludeSemantics: true,
-      button: true,
-      child: ListTile(
-        key: Key('conversation-${item.id}'),
-        title: Text(
+    return ListTile(
+      key: Key('conversation-${item.id}'),
+      title: Text(
+        name,
+        // A screen reader hears the name with what is new, before the preview.
+        semanticsLabel: [
           name,
-          style: unread ? const TextStyle(fontWeight: FontWeight.bold) : null,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (item.preview != null)
-              Text(item.preview!, maxLines: 2, overflow: TextOverflow.ellipsis),
-            if (when != null)
-              Text(
-                formatDay(when),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
-        trailing: unread ? Badge(label: Text('${item.unread}')) : null,
-        onTap: () => context.push(chatThread(item.id)),
+          if (unread) text('chat.unreadCount', {'count': '${item.unread}'}),
+          if (item.muted) text('chat.muted'),
+        ].join(', '),
+        style: unread ? const TextStyle(fontWeight: FontWeight.bold) : null,
       ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (item.preview != null)
+            Text(item.preview!, maxLines: 2, overflow: TextOverflow.ellipsis),
+          if (when != null)
+            Text(formatDay(when), style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+      trailing: unread ? Badge(label: Text('${item.unread}')) : null,
+      onTap: () => context.push(chatThread(item.id)),
     );
   }
 }

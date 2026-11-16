@@ -19,6 +19,12 @@ class ChatRepository {
         (json) => Paged.fromJson(json, Conversation.fromJson),
       );
 
+  /// One conversation by its id: the list shows only a page of them.
+  Future<Conversation> conversation(String id) async => parseResponse(
+    await _api.get('/chat/conversations/$id'),
+    Conversation.fromJson,
+  );
+
   /// Starts a conversation with a provider, or returns the one that exists.
   Future<Conversation> start(String providerId) async => parseResponse(
     await _api.post('/chat/conversations', body: {'provider_id': providerId}),

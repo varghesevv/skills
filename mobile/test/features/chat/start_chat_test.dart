@@ -104,6 +104,11 @@ Future<TestApp> _open(
             'page_size': 50,
           }),
         )
+        ..reply(
+          'GET',
+          '/chat/conversations/c9',
+          FakeReply(200, _conversation()),
+        )
         ..reply('GET', '/chat/conversations/c9/messages', FakeReply(200, []));
       arrange?.call(adapter);
     },
