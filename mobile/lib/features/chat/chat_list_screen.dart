@@ -6,6 +6,7 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../shared/widgets/async_view.dart';
 import 'chat_paths.dart';
+import 'push/push_registration.dart';
 import 'chat_providers.dart';
 import 'data/chat_models.dart';
 
@@ -17,6 +18,7 @@ class ChatListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = ref.watch(appTextProvider);
     final list = ref.watch(conversationsProvider);
+    ref.watch(pushOfferProvider); // asks once whether to allow notifications
     return Scaffold(
       appBar: AppBar(title: Text(text('chat.title'))),
       body: SafeArea(

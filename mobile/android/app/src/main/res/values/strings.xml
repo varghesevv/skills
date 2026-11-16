@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The name of the notification channel for new messages (Android settings show it). -->
+    <string name="messages_channel_name">Messages</string>
+</resources>
