@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/router.dart';
+import '../../../core/session/session_controller.dart';
 import '../chat_paths.dart';
 import '../chat_providers.dart';
 import 'firebase_push_gateway.dart';
@@ -28,13 +29,29 @@ class PushRegistration {
   String? _deviceId;
   String? _registeredToken;
   Future<void>? _syncing;
+  bool _again = false;
 
   Future<PushGateway> _gateway() => _ref.read(pushGatewayProvider.future);
 
   /// Registers this phone's address when notifications are allowed. Calls that overlap share
   /// one run; any failure is left for the next start (a push is never worth an error on screen).
-  Future<void> sync() =>
-      _syncing ??= _sync().whenComplete(() => _syncing = null);
+  Future<void> sync() {
+    final running = _syncing;
+    if (running != null) {
+      // Asked again while a run is under way (a new address arrived): run once more after it,
+      // so the newest address is the one the server ends with.
+      _again = true;
+      return running;
+    }
+    return _syncing = _syncLoop().whenComplete(() => _syncing = null);
+  }
+
+  Future<void> _syncLoop() async {
+    do {
+      _again = false;
+      await _sync();
+    } while (_again);
+  }
 
   Future<void> _sync() async {
     try {
@@ -79,16 +96,24 @@ class PushRegistration {
     _registeredToken = null;
     if (id == null) return;
     try {
-      await _ref.read(chatRepositoryProvider).forgetDevice(id);
+      // Never hold the sign-out for long: a phone that cannot be reached is forgotten later,
+      // when the next person to sign in on it registers the address.
+      await _ref
+          .read(chatRepositoryProvider)
+          .forgetDevice(id)
+          .timeout(const Duration(seconds: 5));
     } on Object {
       // See above.
     }
   }
 }
 
-final pushRegistrationProvider = Provider<PushRegistration>(
-  PushRegistration.new,
-);
+/// One registration per signed-in person: when the session ends, in any way, and another person
+/// signs in, the state of the first is gone and the phone is registered again for the second.
+final pushRegistrationProvider = Provider<PushRegistration>((ref) {
+  ref.watch(personProvider.select((person) => person?.id));
+  return PushRegistration(ref);
+});
 
 /// Asks for permission when a messages screen is opened (once per phone).
 final pushOfferProvider = FutureProvider.autoDispose<void>(

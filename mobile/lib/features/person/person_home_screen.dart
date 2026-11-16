@@ -62,9 +62,12 @@ class PersonHomeScreen extends ConsumerWidget {
             tooltip: text('nav.logOut'),
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              // Stop notifications for this phone first: afterwards there is no session to ask with.
-              await ref.read(pushRegistrationProvider).unregister();
-              await ref.read(sessionProvider.notifier).logout();
+              // Both are read before waiting: this page may be gone when the wait ends. Stop
+              // notifications for this phone first, as afterwards there is no session to ask with.
+              final push = ref.read(pushRegistrationProvider);
+              final session = ref.read(sessionProvider.notifier);
+              await push.unregister();
+              await session.logout();
             },
           ),
         ],

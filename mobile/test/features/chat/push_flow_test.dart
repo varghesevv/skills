@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/features/chat/push/push_gateway.dart';
@@ -175,6 +177,33 @@ void main() {
       gateway.refreshed.add('device-address-1');
       await tester.pumpAndSettle();
       expect(_registrations(app).length, 2);
+    },
+  );
+
+  testWidgets(
+    'an address renewed while one is being registered still ends up registered',
+    (tester) async {
+      final gateway = FakePushGateway(state: PushPermission.granted);
+      final gate = Completer<void>();
+      final app = await _open(
+        tester,
+        gateway,
+        arrange: (adapter) => adapter.setReply(
+          'POST',
+          '/chat/devices',
+          FakeReply(201, {'id': 'device-77'}, const {}, gate.future),
+        ),
+      );
+      await tester.pump(); // the first address is on its way and held
+      gateway.address = 'device-address-2';
+      gateway.refreshed.add('device-address-2');
+      await tester.pump();
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(_registrations(app), [
+        _registered('device-address-1'),
+        _registered('device-address-2'),
+      ]);
     },
   );
 
