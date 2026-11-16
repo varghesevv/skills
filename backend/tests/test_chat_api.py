@@ -1,6 +1,7 @@
 """Chat over REST (S8.2): who may write to whom, idempotent sending, limits, blocking, unread."""
 
 import uuid
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from typing import Any
 
@@ -10,8 +11,19 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.chat import rules
-from app.models.chat import Conversation, ConversationState, Message
+from app.chat.retention import delete_orphaned_conversations
+from app.core.config import get_settings
+from app.models.chat import (
+    ChatReport,
+    ChatReportView,
+    Conversation,
+    ConversationState,
+    Message,
+    PushOutbox,
+)
+from app.models.church import Person
 from app.services.account_closing import clear_account, clear_accounts
+from app.worker.jobs import purge_push
 from tests.api_helpers import API
 from tests.test_admission import headers_of
 from tests.test_person_auth import add_member
@@ -278,6 +290,25 @@ def test_the_other_person_keeps_the_history_until_they_close_their_account_too(
     pair.send(pair.s, "one")
     pair.send(pair.p, "two")
     session = pair.world.session
+    report = ChatReport(
+        conversation_id=uuid.UUID(pair.id),
+        reporter_id=pair.starter.person.id,
+        reported_by_side="starter",
+        reason="spam",
+    )
+    session.add(report)
+    session.flush()
+    session.add(ChatReportView(report_id=report.id, viewer_id=pair.world.owner.id))
+    session.add(
+        PushOutbox(
+            person_id=pair.starter.person.id,
+            conversation_id=uuid.UUID(pair.id),
+            side="starter",
+            last_seq=1,
+            send_after=datetime.now(UTC),
+        )
+    )
+    session.flush()
     clear_account(session, pair.provider.person, datetime.now(UTC))
     session.flush()
     kept = pair.client.get(f"{API}/chat/conversations/{pair.id}/messages", headers=pair.s)
@@ -285,9 +316,57 @@ def test_the_other_person_keeps_the_history_until_they_close_their_account_too(
     assert session.scalar(select(func.count()).select_from(Message)) == 2
     clear_account(session, pair.starter.person, datetime.now(UTC))
     session.flush()
-    # Nobody is left to read it: the conversation, its messages and its state are gone.
-    for model in (Conversation, Message, ConversationState):
+    # Nobody is left to read it: the conversation and everything that hangs on it are gone.
+    for model in (
+        Conversation,
+        Message,
+        ConversationState,
+        ChatReport,
+        ChatReportView,
+        PushOutbox,
+    ):
         assert session.scalar(select(func.count()).select_from(model)) == 0, model
+
+
+def close_without_sweep(person: Person) -> None:
+    """What closing an account does to the person's row, without the clean-up of conversations
+    (as when two closings run at the same moment and cannot see each other)."""
+    person.closed_at = datetime.now(UTC)
+    person.home_group_id = None
+    person.full_name = person.email = person.mobile_number = person.password_hash = None
+    person.flagged_for_recheck = False
+
+
+def test_the_sweep_removes_a_conversation_whose_two_closings_could_not_see_each_other(
+    pair: Pair,
+) -> None:
+    session = pair.world.session
+    pair.send(pair.s, "hello")
+    # Both closed in parallel transactions: each saw the other still open, so neither deleted it.
+    for person in (pair.starter.person, pair.provider.person):
+        close_without_sweep(person)
+    session.flush()
+    assert session.scalar(select(func.count()).select_from(Conversation)) == 1
+    assert delete_orphaned_conversations(session) == 1
+    assert session.scalar(select(func.count()).select_from(Message)) == 0
+    assert delete_orphaned_conversations(session) == 0
+
+
+def test_the_workers_hourly_clean_up_runs_the_sweep(pair: Pair) -> None:
+    session = pair.world.session
+    pair.send(pair.s, "hello")
+    for person in (pair.starter.person, pair.provider.person):
+        close_without_sweep(person)
+    session.flush()
+    purge_push(lambda: nullcontext(session), get_settings())
+    assert session.scalar(select(func.count()).select_from(Conversation)) == 0
+
+
+def test_the_sweep_leaves_a_conversation_with_someone_still_in_it(pair: Pair) -> None:
+    pair.send(pair.s, "hello")
+    close_without_sweep(pair.provider.person)
+    pair.world.session.flush()
+    assert delete_orphaned_conversations(pair.world.session) == 0
 
 
 def test_closing_both_at_once_removes_the_conversation_and_leaves_others(

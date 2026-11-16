@@ -9,6 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select
 
 from app.chat.push import PushSender, process_due, purge_finished
+from app.chat.retention import delete_orphaned_conversations
 from app.core.config import Settings
 from app.models.reports import ReportSchedule
 from app.reports.definitions import REGISTRY
@@ -31,14 +32,19 @@ def push_due(factory: SessionFactory, sender: PushSender) -> None:
 
 
 def purge_push(factory: SessionFactory, settings: Settings) -> None:
+    """The hourly clean-up of chat: finished push rows, and conversations nobody can read any
+    more (both accounts closed, which a closing cannot always see when two happen at once)."""
     try:
         with factory() as db:
             deleted = purge_finished(db, settings)
+            orphaned = delete_orphaned_conversations(db)
             db.commit()
         if deleted:
             log.info("Deleted %d finished push rows", deleted)
+        if orphaned:
+            log.info("Deleted %d conversations with no one left", orphaned)
     except Exception:  # noqa: BLE001
-        log.exception("Cleaning the push outbox failed")
+        log.exception("Cleaning up chat failed")
 
 
 def run_scheduled_report(

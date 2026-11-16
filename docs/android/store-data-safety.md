@@ -6,7 +6,7 @@ The app has no advertising and no analytics tools, no location, no contacts, no 
 
 ## Google Play, "Data safety" form
 
-**Does the app collect or share data?** Yes, it collects data. **Is all data encrypted in transit?** Yes (HTTPS and `wss` only; cleartext is off in the manifest). **Can people ask for their data to be deleted?** Yes: in the app (Account, Leave) and on the web (My account); closing the account removes the personal details at once. The privacy statement says what remains (statuses, vouches, ratings, without personal details).
+**Does the app collect or share data?** Yes, it collects data. **Is all data encrypted in transit?** Yes (HTTPS and `wss` only; cleartext is off in the manifest). **Can people ask for their data to be deleted?** Yes: in the app (Account, Leave) and on the web (My account); closing the account removes the personal details at once. What remains, and the privacy statement says so: the history of statuses, the vouches and the ratings, without personal details, and the messages the person wrote, kept for the other person without a name until that person closes their account too (then the conversation is deleted).
 
 | Data type (Play's wording) | Collected | Shared | Why | Optional | Notes |
 |---|---|---|---|---|---|
@@ -15,7 +15,7 @@ The app has no advertising and no analytics tools, no location, no contacts, no 
 | Phone number | Yes | No | App functionality | No | Shown only to a person who presses Reveal on a provider's page and to the leaders of the person's own group and church; every view is recorded. |
 | User IDs | Yes | No | App functionality, account management | No | An internal id; no advertising id is read. |
 | Messages: other in-app messages | Yes | No | App functionality | No | The text of chat messages, with who wrote them and when. Seen by the two people only; the OWNER can read a conversation that someone reported (each reading is recorded). Kept until both people close their accounts. |
-| Device or other IDs | Yes | Yes (see below) | App functionality (notifications) | Yes | The Firebase address of the phone, only if the person allows notifications. Removed at sign-out and when the account is closed. |
+| Device or other IDs | Yes | No: handled by a service provider (see below) | App functionality (notifications) | Yes | The Firebase address of the phone, only if the person allows notifications. Removed at sign-out and when the account is closed. |
 | App interactions / Diagnostics | No | No | | | No analytics, no crash reporting service. Sign-in attempts are recorded on the server for security (time, result, network address, browser), kept 12 months. |
 | Location, Contacts, Photos and videos, Audio, Files, Health, Financial info, Web browsing | No | | | | |
 
