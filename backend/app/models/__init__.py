@@ -1,7 +1,13 @@
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
 from app.models.availability import PersonUnavailability
 from app.models.base import Base
-from app.models.chat import Conversation, ConversationState, Message
+from app.models.chat import (
+    ChatReport,
+    ChatReportView,
+    Conversation,
+    ConversationState,
+    Message,
+)
 from app.models.church import Church, HomeGroup, Person
 from app.models.labels import Label, PersonLabel
 from app.models.ratings import Rating
@@ -22,6 +28,8 @@ from app.models.trust import (
 
 __all__ = [
     "AdminInvitation",
+    "ChatReport",
+    "ChatReportView",
     "Church",
     "Conversation",
     "ConversationState",

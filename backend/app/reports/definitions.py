@@ -26,6 +26,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Session, aliased
 
 from app.models.auth import LoginHistory
+from app.models.chat import ChatReport
 from app.models.church import Church, HomeGroup, Person
 from app.models.enums import STATUS_RANK
 from app.models.labels import Label, PersonLabel
@@ -609,6 +610,47 @@ def trust_events(db: Session, p: ReportParams) -> list[Section]:
 # ---- scheduled reports ---------------------------------------------------------------------
 
 
+def chat_reports(db: Session, p: ReportParams) -> list[Section]:
+    """Reports of chat conversations: per reason and per week, open and handled. No names, no
+    text, no conversation ids."""
+    in_window = and_(ChatReport.created_at >= p.start, ChatReport.created_at < p.end)
+    handled = ChatReport.handled_at.is_not(None)
+    total, open_now, closed = db.execute(
+        select(
+            func.count(ChatReport.id),
+            func.count(ChatReport.id).filter(ChatReport.handled_at.is_(None)),
+            func.count(ChatReport.id).filter(handled),
+        ).where(in_window)
+    ).one()
+    per_reason = db.execute(
+        select(
+            ChatReport.reason,
+            func.count(ChatReport.id),
+            func.count(ChatReport.id).filter(ChatReport.handled_at.is_(None)),
+            func.count(ChatReport.id).filter(handled),
+        )
+        .where(in_window)
+        .group_by(ChatReport.reason)
+        .order_by(ChatReport.reason)
+    ).all()
+    week = func.date_trunc("week", func.timezone(p.timezone, ChatReport.created_at))
+    per_week = db.execute(
+        select(
+            func.to_char(week, "YYYY-MM-DD"),
+            func.count(ChatReport.id),
+            func.count(ChatReport.id).filter(ChatReport.handled_at.is_(None)),
+        )
+        .where(in_window)
+        .group_by(week)
+        .order_by(week)
+    ).all()
+    return [
+        section("Summary", ["reports", "open", "handled"], [[total, open_now, closed]]),
+        section("By reason", ["reason", "reports", "open", "handled"], per_reason),
+        section("By week (Monday)", ["week", "reports", "open"], per_week),
+    ]
+
+
 def signups_daily(db: Session, p: ReportParams) -> list[Section]:
     """New applicants in the window by what they ask to be (or their status now) and church."""
     asked = func.coalesce(Person.requested_status, Person.status)
@@ -722,6 +764,13 @@ REPORTS: list[ReportDef] = [
         "and moves.",
         trust_events,
         admin_scoped=True,
+    ),
+    ReportDef(
+        "chat_reports",
+        "RP-10",
+        "Chat reports",
+        "Reported conversations in the period: per reason and per week, open and handled.",
+        chat_reports,
     ),
     ReportDef(
         "signups_daily",

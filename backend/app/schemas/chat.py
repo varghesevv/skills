@@ -54,3 +54,37 @@ class ConversationOut(BaseModel):
 
 class UnreadOut(BaseModel):
     total: int
+
+
+ReportReason = Literal["spam", "harassment", "inappropriate", "scam", "other"]
+
+
+class ReportCreate(BaseModel):
+    reason: ReportReason
+    note: Annotated[str, Field(max_length=500)] | None = None
+
+
+class ReportOut(BaseModel):
+    id: uuid.UUID
+    reason: ReportReason
+    created_at: datetime
+
+
+class NamedPerson(BaseModel):
+    id: uuid.UUID
+    full_name: str | None
+
+
+class AdminReportOut(BaseModel):
+    id: uuid.UUID
+    conversation_id: uuid.UUID
+    reason: ReportReason
+    note: str | None
+    created_at: datetime
+    handled_at: datetime | None
+    reporter: NamedPerson
+    other: NamedPerson
+
+
+class ReportedMessage(MessageOut):
+    sender_name: str | None
