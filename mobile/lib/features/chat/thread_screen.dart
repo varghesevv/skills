@@ -96,7 +96,9 @@ class _ThreadState extends ConsumerState<_Thread> {
     _live = ref.read(chatSocketProvider).events.listen((event) {
       switch (event) {
         case ChatMessageEvent(:final message):
-          _model.receive(message);
+          if (message.conversationId == _conversation.id) {
+            _model.receive(message);
+          }
         case ChatConnected(:final again):
           if (again) _model.load();
         case ChatMarkEvent() || ChatDisconnected() || ChatErrorEvent():

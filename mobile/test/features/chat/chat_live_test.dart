@@ -154,6 +154,28 @@ void main() {
     expect(find.text('Live hello'), findsOneWidget);
   });
 
+  testWidgets(
+    'a message of another conversation does not appear in the open thread',
+    (tester) async {
+      final (:app, :server) = await _open(tester);
+      await _connect(tester, server);
+      await tapKey(tester, 'messages');
+      await tester.tap(find.byKey(const Key('conversation-c1')));
+      await tester.pumpAndSettle();
+      server.last.say(
+        jsonEncode({
+          'type': 'message',
+          'message': {
+            ..._message(7, 'Meant for someone else'),
+            'conversation_id': 'c2',
+          },
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Meant for someone else'), findsNothing);
+    },
+  );
+
   testWidgets('after a reconnect the open thread reads its messages again', (
     tester,
   ) async {

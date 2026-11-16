@@ -128,7 +128,8 @@ class ChatSocket {
       }
       if (generation != _generation) return;
       if (token == null) return _lost(generation);
-      final link = await connector(address);
+      // A network that never answers must not hold the socket in "connecting" for ever.
+      final link = await connector(address).timeout(readyWait);
       if (generation != _generation) {
         await link.close();
         return;
@@ -232,10 +233,18 @@ class ChatSocket {
   /// The token ran out: renew the session once and reconnect at once. When that does not help
   /// (renewing failed, or the new token is refused too) fall back to waiting.
   Future<void> _renewAndReconnect(int generation) async {
+    final wasConnected = _status == ChatSocketStatus.connected;
     _tearDown();
+    _status = ChatSocketStatus.waiting;
+    if (wasConnected) _emit(const ChatDisconnected());
     if (_renewedOnce) return _lost(generation);
     _renewedOnce = true;
-    final renewed = await renewSession();
+    final bool renewed;
+    try {
+      renewed = await renewSession();
+    } on Object {
+      return _lost(generation);
+    }
     if (generation != _generation) return;
     if (!renewed) return _giveUp(generation);
     _open();

@@ -21,7 +21,7 @@ class _NoJitter implements Random {
 }
 
 class _Rig {
-  _Rig({int failures = 0, this.renews = true})
+  _Rig({int failures = 0, this.renews = true, this.renewThrows = false})
     : server = FakeServer(failures: failures) {
     socket = ChatSocket(
       address: Uri.parse('wss://api.test/api/v1/chat/ws'),
@@ -29,6 +29,7 @@ class _Rig {
       accessToken: () async => token,
       renewSession: () async {
         renewals++;
+        if (renewThrows) throw StateError('offline');
         if (renews) token = fresh('renewed');
         return renews;
       },
@@ -39,6 +40,7 @@ class _Rig {
 
   final FakeServer server;
   final bool renews;
+  final bool renewThrows;
   late final ChatSocket socket;
   String? token = fresh('access');
   int renewals = 0;
@@ -283,6 +285,39 @@ void main() {
       });
     },
   );
+
+  test('a renewal that fails with an error waits and tries again, and says it is offline', () {
+    fakeAsync((async) {
+      final rig = _Rig(renewThrows: true)..socket.start();
+      async.flushMicrotasks();
+      rig.server.last.say(_ready());
+      async.flushMicrotasks();
+      rig.server.links[0].serverClose(4401);
+      async.flushMicrotasks();
+      expect(rig.socket.status, ChatSocketStatus.waiting);
+      expect(rig.events.last, isA<ChatDisconnected>());
+      async.elapse(const Duration(seconds: 3));
+      expect(rig.socket.status, isNot(ChatSocketStatus.connected));
+    });
+  });
+
+  test('a network that never answers the handshake is given up on', () {
+    fakeAsync((async) {
+      final socket = ChatSocket(
+        address: Uri.parse('wss://api.test/api/v1/chat/ws'),
+        connector: neverConnects,
+        accessToken: () async => 'a-token',
+        renewSession: () async => true,
+        random: _NoJitter(),
+      )..start();
+      async.flushMicrotasks();
+      expect(socket.status, ChatSocketStatus.connecting);
+      async.elapse(const Duration(milliseconds: 10500));
+      async.flushMicrotasks();
+      expect(socket.status, ChatSocketStatus.waiting);
+      socket.stop();
+    });
+  });
 
   test('a second 4401 in a row waits instead of looping', () {
     fakeAsync((async) {

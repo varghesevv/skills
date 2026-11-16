@@ -21,6 +21,10 @@ Uri chatSocketUri(String apiBase) {
   return Uri.parse('${secure ? 'wss' : 'ws'}://$rest/chat/ws');
 }
 
+/// Whether the live connection is used at all; tests that are not about it switch it off, so
+/// that no connection attempt or retry timer is involved.
+final chatLiveEnabledProvider = Provider<bool>((ref) => true);
+
 /// How a connection is opened. A provider so that tests can replace the network.
 final chatConnectorProvider = Provider<ChatConnector>(
   (ref) => connectWebSocket,
@@ -45,6 +49,7 @@ final chatSocketProvider = Provider<ChatSocket>((ref) {
 /// background (a phone should not keep a connection open for nobody) and opened again when it
 /// returns; whatever came meanwhile is read over REST.
 final chatLiveProvider = Provider.autoDispose<void>((ref) {
+  if (!ref.watch(chatLiveEnabledProvider)) return;
   final socket = ref.watch(chatSocketProvider);
   final listener = AppLifecycleListener(
     onStateChange: (state) {
