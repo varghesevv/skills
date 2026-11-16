@@ -11,7 +11,7 @@ How to read this document: section 0 lists the rules the design must keep, secti
 These come from the specification and the code. A step that breaks one is wrong, however good it looks.
 
 1. **No field the API lacks.** A search result has the name, nationality, languages, rate, currency, negotiable flag, average rating and count, church and home group (id and name only), skills with levels, timings and nativity. It has **no picture, no leader name, no match score and no number** (FR-P-07, FR-M-06). If a design needs more, change the API and the specification first.
-2. **Words come from `t()` and the terminology profile.** No English in components. Kinds of people and the structure are tokens (`{freelancers}`, `{Organisation}`, `{Homegroup}`, see `src/terminology/`), so an installation can name them differently. Keys marked *new* below are added to `i18n/index.ts`.
+2. **Words come from `t()` and the terminology profile.** No English in components. Kinds of people and the structure are tokens (`{freelancers}`, `{Organisation}`, `{Homegroup}`, see `src/terminology/`), so an installation can name them differently. The words are the active profile that `GET /api/v1/app/config` serves (FR-C-08; the web app reads the same keys from `profiles.json`, and a test keeps the two equal). A label such as the home-group word is never typed into a component. Keys marked *new* below are added to `i18n/index.ts`.
 3. **A higher status includes the lower.** Navigation follows one set of status rules (the ones `PersonLayout` has now), never a role switch.
 4. **Reveal is sacred** (FR-M-05 to FR-M-07). The number is asked for only on a press, lives in component state, is never cached or prefilled, opens the dialler on a phone, and a `429` shows the wait. Every reveal is logged and limited, so no shortcut key and no automatic reveal. A provider's own card has no Reveal, as now.
 5. **State in the URL.** Filters, sort and page stay in `searchParams.ts`, so a refresh, a share and Back work.
@@ -37,7 +37,7 @@ These come from the specification and the code. A step that breaks one is wrong,
 
 ### 1.1 Colour tokens
 
-The design keeps the **token names already in `global.css`** (`--bg`, `--surface`, `--ink`, `--muted`, `--line`, `--accent`, `--accent-hover`, `--accent-ink`, `--danger`, `--danger-bg`, `--success`, `--success-bg`, `--info-bg`, `--focus`) and changes their values. It adds three: `--line-strong`, `--accent-bg` and `--accent-bg-ink`. One muted text colour is used, not two, because a second grey adds a decision on every screen and no value.
+The design keeps the **token names already in `global.css`** (`--bg`, `--surface`, `--ink`, `--muted`, `--line`, `--accent`, `--accent-hover`, `--accent-ink`, `--danger`, `--danger-bg`, `--success`, `--success-bg`, `--info-bg`, `--focus`) and changes their values. It adds five: `--line-strong`, `--accent-bg`, `--accent-bg-ink` and two shadows, `--shadow-card` and `--shadow-raised`. One muted text colour is used, not two, because a second grey adds a decision on every screen and no value.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -58,6 +58,8 @@ The design keeps the **token names already in `global.css`** (`--bg`, `--surface
 | `--danger-bg` | `#FEF3F2` | `#3A1512` | Error background (unchanged) |
 | `--info-bg` | `#EEF4FF` | `#172447` | Notices (unchanged) |
 | `--focus` | `#4338CA` | `#A5B4FC` | Focus ring (same as `--accent`) |
+| `--shadow-card` | `0 1px 2px rgb(0 0 0 / .06)` | `none` | A card at rest |
+| `--shadow-raised` | `0 6px 20px rgb(0 0 0 / .10)` | `none` | A hovered card and a floating menu |
 
 The teal accent in use today (`#0A6C6C`) is replaced by indigo. Because colour is named only in the token block, the change is that block, checked screen by screen (build step 1).
 
@@ -113,7 +115,7 @@ Sizes are in `rem`. The current body is `1rem/1.55` and stays: 16px stops iOS zo
 
 - Space scale in `rem`: 0.25, 0.5, 0.75, 1, 1.5, 2, 3. Card padding 1rem on mobile, 1.25rem from 640px.
 - Radius: 0.5rem controls, `var(--radius)` (0.75rem, as now) cards, 999px pills.
-- Elevation: in light mode a card has `0 1px 2px rgb(0 0 0 / .06)` and, on hover, `0 6px 20px rgb(0 0 0 / .10)`. Dark mode has no shadow; hover changes the border to `--line-strong`.
+- Elevation: only through `--shadow-card` and `--shadow-raised`, so a component names no shadow colour. Both are `none` in dark mode, where a hover changes the border to `--line-strong` instead.
 - Motion: 120ms for hover, 200ms for panels (the filter panel already uses 0.2s), ease-out. Under `prefers-reduced-motion: reduce`: no transforms and no transitions.
 - Targets: at least 2.75rem (44px) for every control, as `.btn` has now. Do not make a menu button or the notifications link smaller.
 - Focus: a 3px `--focus` outline with a 2px offset on every interactive element, as `global.css` has now. Never removed for pointer users.
@@ -233,6 +235,8 @@ Replace the two blocks at the top of `global.css`, keeping the names. The third 
   --success: #065f46;     --success-bg: #d1fae5;
   --danger: #b42318;      --danger-bg: #fef3f2;      --info-bg: #eef4ff;
   --focus: #4338ca;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-raised: 0 6px 20px rgb(0 0 0 / 0.1);
   --radius: 0.75rem;      --topbar-height: 3.5rem;
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
@@ -246,6 +250,7 @@ Replace the two blocks at the top of `global.css`, keeping the names. The third 
     --success: #6ee7b7;   --success-bg: #0f2a22;
     --danger: #fda29b;    --danger-bg: #3a1512;      --info-bg: #172447;
     --focus: #a5b4fc;
+    --shadow-card: none;  --shadow-raised: none;
   }
 }
 :root[data-theme='dark'] { /* the same values as the dark block above */ }
@@ -320,11 +325,11 @@ function ProviderCard({ item, search, searchedSkills, matchAny, own }: {
 
 .pcard {
   position: relative; display: grid; gap: 0.75rem; padding: 1rem;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  box-shadow: var(--shadow-card);
   transition: box-shadow 120ms ease-out, border-color 120ms ease-out;
 }
 @media (min-width: 640px) { .pcard { padding: 1.25rem; } }
-.pcard:hover, .pcard:focus-within { border-color: var(--line-strong); box-shadow: 0 6px 20px rgb(0 0 0 / 0.1); }
+.pcard:hover, .pcard:focus-within { border-color: var(--line-strong); box-shadow: var(--shadow-raised); }
 
 .pcard-name { display: flex; align-items: center; gap: 0.75rem; margin: 0; font-size: 1.125rem; }
 .pcard-initials {
@@ -379,7 +384,8 @@ export function navFor(person: PersonMe): NavGroup[] {
 `atLeast` is the status order `searcher < provider < verifier < admin < owner`, written once (`PersonLayout` spells it out as arrays today). Its test is a table: every status against the links it must have and must not have, like the permission matrix on the server. That table is what stops a later change from showing My services to a SEARCHER. *New keys:* `nav.services`, `nav.admin`, `nav.owner`.
 
 ```tsx
-function GroupMenu({ group }: { group: NavGroup }) {
+function GroupMenu({ group, panel = false }: { group: NavGroup; panel?: boolean }) {
+  // panel: inside the mobile Menu panel the group is a heading over an open list, with no button.
   const [open, setOpen] = useState(false)
   const id = useId()
   const box = useRef<HTMLDivElement>(null)
@@ -389,10 +395,14 @@ function GroupMenu({ group }: { group: NavGroup }) {
       onKeyDown={(e) => { if (e.key === 'Escape' && open) { setOpen(false); box.current?.querySelector('button')?.focus() } }}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false) }}
     >
-      <button type="button" className="btn btn-quiet" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        {group.label}
-      </button>
-      <ul id={id} className="navgroup-list plain-list" hidden={!open}>
+      {panel ? (
+        <h2 className="navgroup-title">{group.label}</h2>
+      ) : (
+        <button type="button" className="btn btn-quiet" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+          {group.label}
+        </button>
+      )}
+      <ul id={id} className="navgroup-list plain-list" hidden={!panel && !open}>
         {group.links.map((link) => (
           <li key={link.to}><NavLink to={link.to} onClick={() => setOpen(false)}>{link.label}</NavLink></li>
         ))}
@@ -416,11 +426,11 @@ function GroupMenu({ group }: { group: NavGroup }) {
   .navgroup-list { position: absolute; inset-block-start: 100%; inset-inline-start: 0; z-index: 30;
                    min-width: 14rem; padding: 0.5rem; background: var(--surface);
                    border: 1px solid var(--line); border-radius: var(--radius);
-                   box-shadow: 0 6px 20px rgb(0 0 0 / 0.1); }
+                   box-shadow: var(--shadow-raised); }
 }
 ```
 
-On mobile the Menu panel renders the groups with their lists open and the group button as a heading, so no extra tap is needed there. `NavLink` sets `aria-current="page"` itself.
+On mobile the Menu panel renders each group with `panel` set, so the lists are open under headings and no extra tap is needed. From 640px the bar renders them without it. The component and this sentence must stay in agreement. `NavLink` sets `aria-current="page"` itself.
 
 ## 4. Build order
 
