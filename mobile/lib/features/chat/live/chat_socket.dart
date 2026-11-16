@@ -169,6 +169,7 @@ class ChatSocket {
         _status = ChatSocketStatus.connected;
         _failures = 0;
         _renewedOnce = false;
+        _pinger?.cancel(); // a repeated ready must not leave a second timer running
         _pinger = Timer.periodic(heartbeat, (_) => _send({'type': 'ping'}));
         _resetWatchdog(generation);
         final again = _connectedBefore;

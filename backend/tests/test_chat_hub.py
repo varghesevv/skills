@@ -256,6 +256,40 @@ def test_a_dead_socket_does_not_stop_the_others() -> None:
     assert got == [{"x": 1}]
 
 
+def test_a_socket_that_stops_reading_is_dropped_and_does_not_hold_up_the_others() -> None:
+    hub = Hub(send_timeout=0.05)
+    person, other = uuid.uuid4(), uuid.uuid4()
+    got: list[dict[str, Any]] = []
+    closed: list[int] = []
+
+    async def stuck(frame: dict[str, Any]) -> None:
+        await asyncio.sleep(30)
+
+    async def alive(frame: dict[str, Any]) -> None:
+        got.append(frame)
+
+    async def stuck_close(code: int) -> None:
+        closed.append(code)
+        await asyncio.sleep(30)  # a close that cannot be written either
+
+    hub.connect(person, stuck, stuck_close)
+    hub.connect(person, alive)
+    hub.connect(other, alive)
+
+    async def run() -> int:
+        sent = await hub.deliver(person, {"x": 1})
+        await asyncio.sleep(0.01)  # the close runs on the side
+        return sent
+
+    started = time.monotonic()
+    assert asyncio.run(run()) == 1
+    assert time.monotonic() - started < 2
+    assert got == [{"x": 1}] and closed == [1013]
+    # The stuck socket is forgotten: the next frame reaches only the live one.
+    assert asyncio.run(hub.deliver(person, {"x": 2})) == 1
+    assert hub.connected_people() == {person, other}
+
+
 def test_an_event_that_is_too_large_is_refused() -> None:
     url = database_url()
     engine = create_engine(url)

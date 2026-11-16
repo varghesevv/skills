@@ -13,6 +13,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+SEND_TIMEOUT_SECONDS = 5.0  # a socket that takes longer than this to accept a frame is dropped
+
 Frame = dict[str, Any]
 Send = Callable[[Frame], Awaitable[None]]
 Close = Callable[[int], Awaitable[None]]  # closes the socket with a WebSocket close code
@@ -23,8 +25,12 @@ class TooManySockets(Exception):
 
 
 class Hub:
-    def __init__(self, max_sockets_per_person: int = 5) -> None:
+    def __init__(
+        self, max_sockets_per_person: int = 5, send_timeout: float = SEND_TIMEOUT_SECONDS
+    ) -> None:
         self._max = max_sockets_per_person
+        self._send_timeout = send_timeout
+        self._closing: set[asyncio.Future[None]] = set()
         self._sockets: dict[uuid.UUID, dict[int, Send]] = {}
         self._closers: dict[tuple[uuid.UUID, int], Close] = {}
         self._next = 0
@@ -60,11 +66,28 @@ class Hub:
         sent = 0
         for handle, send in list(self._sockets.get(person_id, {}).items()):
             try:
-                await send(frame)
+                # A phone that has stopped reading must not hold up everyone else's delivery.
+                await asyncio.wait_for(send(frame), timeout=self._send_timeout)
                 sent += 1
+            except TimeoutError:
+                logger.info("chat socket too slow, dropped", extra={"handle": handle})
+                closer = self._closers.get((person_id, handle))
+                self.disconnect(person_id, handle)
+                if closer is not None:
+                    # Closing writes to the same backed-up connection: do it on the side, so the
+                    # delivery to the next socket does not wait for it.
+                    task = asyncio.ensure_future(self._close_quietly(closer, handle))
+                    self._closing.add(task)
+                    task.add_done_callback(self._closing.discard)
             except Exception:  # a dead socket must not stop the others; its handler cleans up
                 logger.info("chat socket send failed", extra={"handle": handle})
         return sent
+
+    async def _close_quietly(self, closer: Close, handle: int) -> None:
+        try:
+            await asyncio.wait_for(closer(1013), timeout=self._send_timeout)
+        except Exception:  # noqa: BLE001 - it is going away either way
+            logger.info("chat socket close failed", extra={"handle": handle})
 
     async def close_person(self, person_id: uuid.UUID, code: int) -> int:
         """Close the person's sockets in this process (revoked, closed); returns how many."""

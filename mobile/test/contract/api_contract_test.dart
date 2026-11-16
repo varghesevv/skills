@@ -180,17 +180,18 @@ void main() {
       'POST /verifier/group-invitations': '201',
       'DELETE /verifier/group-invitations/{invitation_id}': '204',
       'POST /home-groups/{group_id}/close': '200',
-      // Chat over REST (S8.7); the new ones answer 201 as well, which the API does not list.
+      // Chat over REST (S8.7). A new conversation, message, report or address answers 201, a
+      // known one 200: the API lists both.
       'GET /chat/conversations': '200',
-      'POST /chat/conversations': '200',
+      'POST /chat/conversations': '201',
       'GET /chat/conversations/{conversation_id}': '200',
       'GET /chat/conversations/{conversation_id}/messages': '200',
-      'POST /chat/conversations/{conversation_id}/messages': '200',
+      'POST /chat/conversations/{conversation_id}/messages': '201',
       'POST /chat/conversations/{conversation_id}/read': '204',
       'PUT /chat/conversations/{conversation_id}/settings': '200',
-      'POST /chat/conversations/{conversation_id}/report': '200',
+      'POST /chat/conversations/{conversation_id}/report': '201',
       'GET /chat/unread': '200',
-      'POST /chat/devices': '200',
+      'POST /chat/devices': '201',
       'DELETE /chat/devices/{device_id}': '204',
     };
     calls.forEach((call, status) {
