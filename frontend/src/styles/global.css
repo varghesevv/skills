@@ -273,6 +273,7 @@ main:focus {
 .site-menu[data-open='true'] {
   display: flex;
 }
+.site-menu,
 .site-menu > *,
 .gsearch > * {
   min-width: 0;
@@ -282,7 +283,8 @@ main:focus {
   gap: 0.5rem;
 }
 .gsearch input {
-  flex: 1;
+  flex: 1 1 0;
+  width: 0; /* an input has a width of its own that would widen the panel on a small phone */
   min-width: 0;
   min-height: 2.75rem;
   padding: 0 1rem;
