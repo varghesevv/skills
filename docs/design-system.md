@@ -1,433 +1,450 @@
 # Design system and UI specification
 
-Status: proposal, 2026-11-15. Not yet built. It changes no data, roles or permissions, so [verification.md](verification.md) is unchanged.
+Status: proposal, revised 2026-11-17 against the code on `main`. Not yet built. It changes no data, roles or permissions, so [verification.md](verification.md) is unchanged.
 
-Direction: **Dark Graphite & Warm Stone**, with an **Electric Indigo** call to action and **Emerald** for trust. Desktop first, then tablet and mobile. Built for fast scanning and few clicks. The target is WCAG 2.2 AA.
+Direction: **Dark Graphite & Warm Stone**, with an **Electric Indigo** call to action and a green for trust. Desktop first in layout, mobile first in CSS. Built for fast scanning and few clicks. The target is WCAG 2.2 AA.
 
-## 0. How the brief maps to Skills
+How to read this document: section 0 lists the rules the design must keep, sections 1 and 2 say *what* the look and behaviour are, section 3 shows *how* that fits the code that exists (`frontend/src/styles/global.css`, `shell/PersonLayout.tsx`, `pages/person/search/`), section 4 is the build order and section 5 lists what the owner must decide. Where this document and [06-frontend.md](specification/06-frontend.md) differ, the specification stays in force until a build step changes both in the same pull request.
 
-Skills is a closed church network with no jobs, budgets, payments or clients. The design keeps the interaction patterns and fits them to the model in [verification.md](verification.md):
+## 0. Rules the design must keep
+
+These come from the specification and the code. A step that breaks one is wrong, however good it looks.
+
+1. **No field the API lacks.** A search result has the name, nationality, languages, rate, currency, negotiable flag, average rating and count, church and home group (id and name only), skills with levels, timings and nativity. It has **no picture, no leader name, no match score and no number** (FR-P-07, FR-M-06). If a design needs more, change the API and the specification first.
+2. **Words come from `t()` and the terminology profile.** No English in components. Kinds of people and the structure are tokens (`{freelancers}`, `{Organisation}`, `{Homegroup}`, see `src/terminology/`), so an installation can name them differently. Keys marked *new* below are added to `i18n/index.ts`.
+3. **A higher status includes the lower.** Navigation follows one set of status rules (the ones `PersonLayout` has now), never a role switch.
+4. **Reveal is sacred** (FR-M-05 to FR-M-07). The number is asked for only on a press, lives in component state, is never cached or prefilled, opens the dialler on a phone, and a `429` shows the wait. Every reveal is logged and limited, so no shortcut key and no automatic reveal. A provider's own card has no Reveal, as now.
+5. **State in the URL.** Filters, sort and page stay in `searchParams.ts`, so a refresh, a share and Back work.
+6. **Mobile first.** Base CSS is the smallest screen. Wider screens add `min-width` rules at 640px and 1024px, the two values already in `global.css`. Never `max-width`.
+7. **Plain CSS and `rem`.** The frontend has no Tailwind and none is added. Sizes are in `rem`, so the browser's text-size setting works. Existing class names stay (`.btn`, `.card`, `.badge`, `.chip`, `.field`), so existing screens restyle by changing tokens, not markup. Outside the token block, `global.css` names no colour except the dialog scrim.
+
+### How the brief maps to Skills
 
 | Brief | In Skills | Why |
 |---|---|---|
-| Job feed, job card | **Provider feed, provider card** | The things searched are providers (FR-S-06) |
-| Budget badge | **Rate badge** (rate, currency, negotiable) | FR-P-02 |
-| Payment verified / verified client | **Vouched** tag: church, home group and leader | Trust comes from the home group, not payment. Every listed provider is already admitted, so the tag shows *who stands behind them*, not a yes or no |
-| Find Work / Hire Talent toggle | **Search** (everyone admitted) and **My services** (PROVIDER and above) | A higher status includes the lower, so this is a view switch, not a role switch. A SEARCHER never sees My services |
-| Match percentage | **Skill match**: searched skills the provider has, out of those searched | Derived from the existing skill filter. Shown only when skills are filtered |
-| Rate range | Maximum rate, currency, negotiable only (FR-S-02) | |
-| Timezone overlap | **Available on** a date range (FR-S-03) | The app has no timezones |
+| Job feed, job card | **Provider results, provider card** | The things searched are providers (FR-S-06) |
+| Budget badge | **Rate** (`formatRate`) and the **Negotiable** badge | FR-P-02 |
+| Payment verified | **Church and home group line** with a shield icon | Every listed provider is already admitted, so a "Vouched" badge on every card says nothing. The card shows *who stands behind them*. The leader's name joins it once the API sends it (section 5) |
+| Find Work / Hire Talent | **Find {freelancers}** (everyone admitted) and a **My services** group (PROVIDER and above) | A grouped menu, not a mode switch. A SEARCHER never sees My services |
+| Match percentage | **Skill match**: of the skills searched, how many the provider has | Worked out in the browser from the filter and the result's `skills`. Shown only when skills are filtered with *any* |
+| Rate range | Highest rate, currency, negotiable only (FR-S-02) | |
+| Timezone overlap | **Available from / until** (FR-S-03) | The app has no timezones |
 | Engagement type | **Timing** (FR-S-01) | |
-| Skill tags | Skill any/all, level, language, nativity (FR-S-01) | |
-| Apply from the slide-over | **Reveal mobile** and **Rate** (FR-M-05, FR-M-06) | The contact action is the conversion |
-
-Do not add a field the API does not have. If the skill match needs data the search response lacks, change the API and the specification first.
+| Apply from the slide-over | **Reveal** and **Rate** on the provider's page | The contact action is the conversion |
+| Avatar photo | **Initials** in a circle, hidden from screen readers | No picture exists, and photo upload would bring moderation and privacy cost for no need |
 
 ## 1. Visual system
 
 ### 1.1 Colour tokens
 
-Every pair below was computed against the WCAG 2.2 contrast formula. Thresholds: text 4.5:1, large text 3:1, UI boundaries and focus rings 3:1.
+The design keeps the **token names already in `global.css`** (`--bg`, `--surface`, `--ink`, `--muted`, `--line`, `--accent`, `--accent-hover`, `--accent-ink`, `--danger`, `--danger-bg`, `--success`, `--success-bg`, `--info-bg`, `--focus`) and changes their values. It adds three: `--line-strong`, `--accent-bg` and `--accent-bg-ink`. One muted text colour is used, not two, because a second grey adds a decision on every screen and no value.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` canvas | `#F5F3EF` | `#151517` | Page background |
-| `--surface` card | `#FFFFFF` | `#1F1F22` | Cards, drawer, header |
-| `--ink` primary text | `#1C1B19` | `#F2F0EC` | Body, headings |
-| `--ink-2` secondary text | `#57534E` | `#B0AAA3` | Labels, metadata |
-| `--ink-3` muted text | `#6B665F` | `#9A948C` | Hints, timestamps |
-| `--line` muted border | `#D6D3CD` | `#3A3936` | Card and divider lines (decorative only) |
-| `--line-strong` | `#8C877F` | `#7C776F` | Input, checkbox and toggle edges |
-| `--cta` indigo | `#4338CA` | `#A5B4FC` | Primary button fill, links, focus ring |
-| `--cta-hover` | `#3730A3` | `#C7D2FE` | Hover and pressed |
-| `--cta-ink` | `#FFFFFF` | `#0F0E2A` | Text on the CTA |
-| `--cta-bg` | `#E0E7FF` | `#26254F` | Selected chips and the active toggle |
-| `--cta-bg-ink` | `#3730A3` | `#C7D2FE` | Text on `--cta-bg` |
-| `--ok` emerald | `#047857` | `#34D399` | Vouched icon and text on a surface |
-| `--ok-bg` | `#D1FAE5` | `#0F2A22` | Vouched tag background |
-| `--ok-ink` | `#065F46` | `#6EE7B7` | Text on `--ok-bg` |
+| `--bg` | `#F5F3EF` | `#151517` | Page background (warm stone / graphite) |
+| `--surface` | `#FFFFFF` | `#1F1F22` | Cards, top bar, panels |
+| `--ink` | `#1C1B19` | `#F2F0EC` | Body, headings |
+| `--muted` | `#57534E` | `#B0AAA3` | Labels, metadata, hints |
+| `--line` | `#D6D3CD` | `#3A3936` | Card and divider lines (decorative only) |
+| `--line-strong` | `#8C877F` | `#7C776F` | Edges of inputs, checkboxes, the segmented control |
+| `--accent` | `#4338CA` | `#A5B4FC` | Primary button fill, links, selected state |
+| `--accent-hover` | `#3730A3` | `#C7D2FE` | Hover and pressed |
+| `--accent-ink` | `#FFFFFF` | `#0F0E2A` | Text on `--accent` |
+| `--accent-bg` | `#E0E7FF` | `#26254F` | Skill pills, initials circle, the current menu item |
+| `--accent-bg-ink` | `#3730A3` | `#C7D2FE` | Text on `--accent-bg` |
+| `--success` | `#065F46` | `#6EE7B7` | Trust line and the Negotiable badge (icon and text) |
+| `--success-bg` | `#D1FAE5` | `#0F2A22` | Background of those |
 | `--danger` | `#B42318` | `#FDA29B` | Errors, revoke |
+| `--danger-bg` | `#FEF3F2` | `#3A1512` | Error background (unchanged) |
+| `--info-bg` | `#EEF4FF` | `#172447` | Notices (unchanged) |
+| `--focus` | `#4338CA` | `#A5B4FC` | Focus ring (same as `--accent`) |
 
-Computed contrast ratios:
+The teal accent in use today (`#0A6C6C`) is replaced by indigo. Because colour is named only in the token block, the change is that block, checked screen by screen (build step 1).
+
+Contrast, computed with the WCAG 2.2 formula and re-checked on 2026-11-17. Thresholds: text 4.5:1, large text 3:1, UI boundaries and the focus ring 3:1.
 
 | Pair | Light | Dark |
 |---|---|---|
-| `--ink` on canvas | 15.53 | 16.02 |
-| `--ink` on surface | 17.21 | 14.44 |
-| `--ink-2` on canvas / surface | 6.88 / 7.63 | 7.92 / 7.14 |
-| `--ink-3` on canvas / surface | 5.13 / 5.69 | 5.47 on surface |
-| `--line-strong` on canvas / surface | 3.22 / 3.57 | 4.10 / 3.70 |
-| `--cta-ink` on `--cta` | 7.90 | 9.43 |
-| `--cta-ink` on `--cta-hover` | 9.93 | 12.61 |
-| `--cta` on surface (links, focus ring) | 7.90 | 8.25 |
-| `--cta-bg-ink` on `--cta-bg` | 8.06 | 9.64 |
-| `--ok` on surface | 5.48 | 8.55 |
-| `--ok-ink` on `--ok-bg` | 6.78 | 10.02 |
-| `--danger` on surface | 6.57 | 8.47 |
+| `--ink` on `--bg` / `--surface` | 15.53 / 17.21 | 16.02 / 14.44 |
+| `--muted` on `--bg` / `--surface` | 6.88 / 7.63 | 7.92 / 7.14 |
+| `--muted` on `--accent-bg` | 6.19 | 6.25 |
+| `--ink` on `--accent-bg` | 13.97 | 12.64 |
+| `--accent-ink` on `--accent` / `--accent-hover` | 7.90 / 9.93 | 9.43 / 12.61 |
+| `--accent` on `--bg` / `--surface` (links, focus ring) | 7.13 / 7.90 | 9.15 / 8.25 |
+| `--accent-bg-ink` on `--accent-bg` | 8.06 | 9.64 |
+| `--accent` on `--accent-bg` (focus ring on a selected item) | 6.41 | 7.22 |
+| `--success` on `--success-bg` | 6.78 | 10.02 |
+| `--success` on `--bg` / `--surface` | 6.93 / 7.68 | 11.96 / 10.79 |
+| `--danger` on `--surface` / `--danger-bg` | 6.57 / 6.05 | 8.47 / 8.35 |
+| `--line-strong` on `--bg` / `--surface` | 3.22 / 3.57 | 4.10 / 3.70 |
+
+`--line` on `--surface` is 1.49 (light) and 1.42 (dark). That is deliberate for a decorative card edge, because the text inside is the content. A control or anything that carries meaning must not rely on `--line` alone (WCAG 1.4.11): controls use `--line-strong`. `--line-strong` on `--accent-bg` is only 2.90, so a control with a `--line-strong` edge sits on `--bg` or `--surface`, never on `--accent-bg`.
 
 Rules:
 
-- **Colour is never the only signal.** The Vouched tag carries a shield icon and the words "Vouched". A selected filter carries a tick. An error carries an icon and text.
-- **Warm stone for the canvas, a clean surface for cards.** The contrast between them is deliberately small, so a card edge uses `--line` as a hairline plus a soft shadow in light mode. Dark mode uses the surface step alone. A card's edge is decorative, because the text inside it is the content.
-- **Form controls use `--line-strong`** (WCAG 1.4.11).
-- Dark mode follows `prefers-color-scheme`, with a manual override saved per person in the browser. It never flashes on load: set `data-theme` from an inline script in `index.html`.
+- **Colour is never the only signal.** The trust line has a shield icon and words. A selected filter has a tick. An error has an icon and text. The current menu item is bold and has `aria-current`.
+- **Warm stone canvas, clean card.** Light mode uses a hairline and a soft shadow. Dark mode uses the surface step and no shadow.
+- **Dark mode follows `prefers-color-scheme`**, with a manual choice (System, Light, Dark) kept in the browser's `localStorage`. That is a per-browser convenience, not an account setting. A script in `index.html` sets `data-theme` before the first paint, so there is no flash. It reads storage inside `try/catch`, because storage can be blocked. If a Content-Security-Policy is ever added, the script becomes an external file or carries a hash.
+- `color-scheme: light dark` stays on `:root`, so native controls, scrollbars and the date picker follow the theme.
 
 ### 1.2 Typography
 
 | Role | Face | Notes |
 |---|---|---|
-| UI and body | **Inter** (variable), fallback `system-ui` | Tall x-height and clear digits for dense data. Use `font-feature-settings: 'tnum', 'cv11'` so rates align |
-| Headings | Inter at 650 weight, tight tracking | One family keeps the payload small |
-| Mono (ids, codes) | `ui-monospace` | |
+| UI and body | **Inter** (variable), then `system-ui` | Clear digits for rates and counts. `font-variant-numeric: tabular-nums` on rates and counts |
+| Headings | Inter at 650 weight | One family keeps the payload small |
+| Codes (report short codes) | `ui-monospace` | |
 
-Self-host the font files. The privacy page makes a promise about third parties, and a font CDN would break it.
+Self-host the font as `woff2` from the app's own origin, Latin subset, `font-display: swap`, with a preload for the regular weight. The privacy page promises no third parties, so no font CDN. The app ships no font today. If the added weight (about 100 KB) is too much, keep `system-ui` and change nothing else (section 5).
+
+Sizes are in `rem`. The current body is `1rem/1.55` and stays: 16px stops iOS zooming into inputs and is kinder to readers than a 14px dense body.
 
 | Step | Size / line height | Weight | Use |
 |---|---|---|---|
-| Display | 30 / 36 | 650 | Landing only |
-| H1 | 24 / 32 | 650 | Page title |
-| H2 | 20 / 28 | 600 | Section, drawer title |
-| H3 | 16 / 24 | 600 | Card title |
-| Body | 14 / 20 | 400 | Default in dense lists |
-| Body large | 16 / 24 | 400 | Forms and mobile body |
-| Caption | 12 / 16 | 500 | Meta and pills, never below 12px |
-
-Mobile body is 16px. Anything smaller makes iOS zoom into a focused input.
+| Display | 1.875rem / 2.25rem | 650 | Landing only |
+| H1 | 1.5rem / 2rem | 650 | Page title |
+| H2 | 1.25rem / 1.75rem | 600 | Section, panel title |
+| H3 | 1.125rem / 1.5rem | 600 | Card title (the size `.result h2` has now) |
+| Body | 1rem / 1.55 | 400 | Everything, forms included |
+| Small | 0.875rem / 1.25rem | 400 | Metadata in a card |
+| Caption | 0.75rem / 1rem | 500 | Pills and badges, never smaller |
 
 ### 1.3 Space, shape, motion
 
-- 4px base scale: 4, 8, 12, 16, 24, 32, 48. Card padding 16 on mobile, 20 from tablet up.
-- Radius: 8 controls, 12 cards, 999 pills.
-- Elevation: card rest `0 1px 2px rgb(0 0 0 / .06)`, hover `0 6px 20px rgb(0 0 0 / .10)`. Dark mode drops shadows and lifts the surface by 4% instead.
-- Motion: 120ms for hover and 220ms for the drawer, with an ease-out curve. Under `prefers-reduced-motion: reduce`, drop all transforms and use plain fades or no animation.
-- Targets: at least 44 × 44px on touch screens (WCAG 2.5.8 asks for 24 × 24, and 44 is the platform norm). Visible focus ring: 2px `--cta` with a 2px offset, on every interactive element.
+- Space scale in `rem`: 0.25, 0.5, 0.75, 1, 1.5, 2, 3. Card padding 1rem on mobile, 1.25rem from 640px.
+- Radius: 0.5rem controls, `var(--radius)` (0.75rem, as now) cards, 999px pills.
+- Elevation: in light mode a card has `0 1px 2px rgb(0 0 0 / .06)` and, on hover, `0 6px 20px rgb(0 0 0 / .10)`. Dark mode has no shadow; hover changes the border to `--line-strong`.
+- Motion: 120ms for hover, 200ms for panels (the filter panel already uses 0.2s), ease-out. Under `prefers-reduced-motion: reduce`: no transforms and no transitions.
+- Targets: at least 2.75rem (44px) for every control, as `.btn` has now. Do not make a menu button or the notifications link smaller.
+- Focus: a 3px `--focus` outline with a 2px offset on every interactive element, as `global.css` has now. Never removed for pointer users.
 
-## 2. Layout and interaction architecture
+## 2. Layout and interaction
 
 ### 2.1 Breakpoints
 
 | Name | Width | Layout |
 |---|---|---|
-| Desktop (first) | ≥ 1024px | Filter rail 280px, feed fills the rest. The detail drawer is a 480px slide-over |
-| Tablet | 640–1023px | Filters collapse behind one **Filters** button into a left drawer. The feed has 2 columns. The detail drawer is 60% wide |
-| Mobile | < 640px | One column. A bottom tab bar replaces the header links. Filters open as a full-height sheet, and the detail opens as a full-screen sheet |
+| Mobile | below 640px | One column. Navigation behind one **Menu** button. Filters in the existing right-hand panel with a **Show results** button. One card per row |
+| Tablet | 640–1023px | The top bar holds the primary links. Cards in two columns. Filters still in the panel |
+| Desktop | 1024px and up | The filter column is permanent beside the results. Two or three card columns. Content capped at about 75rem |
 
-### 2.2 Top navigation (sticky)
+These are the breakpoints in [06-frontend.md](specification/06-frontend.md). Only the card grid is new.
+
+### 2.2 Navigation
+
+`PersonLayout.tsx` makes six status checks inline and can show well over a dozen links in one wrapping bar. A leader on a phone gets several lines of links. The redesign keeps the same rules and organises the output.
+
+**One function holds the rules.** `navFor(person, unread)` returns groups. The layout renders them and tests call it directly. It replaces the inline booleans.
+
+| Group | Who | Links (existing routes) |
+|---|---|---|
+| Find | SEARCHER and above | Find {freelancers}, Ratings I gave |
+| My services | PROVIDER and above | Profile, Skills and labels, Availability, My ratings |
+| Church | VERIFIER and above | Applicants, Members, To re-check, Revoked, My group, Invite to my group (only if they lead one), Moves |
+| Administration | ADMIN and OWNER | Groups, Reports, Handover |
+| Owner | OWNER | Views, Labels, Churches |
+| Account | everyone with an account | Notifications (with the unread count), My account, Android app, Privacy, Theme, Log out |
+
+A revoked person gets only the revoked page, Privacy and Log out. An applicant gets Notifications, My account and Log out.
 
 ```
-Desktop
-[Skills]  [ Search | My services ]   [ 🔍 Search skills, people …  ⌘K ]   [🔔 3]  [Avatar ▾]
+Tablet and desktop
+[Skills]  Find providers · Ratings I gave · [My services ▾] · [Church ▾] · [Admin ▾]    [name…] [Notifications 3] [Account ▾]
 
 Mobile
-[Skills]                                  [🔍] [🔔 3] [Avatar]
-────────────────────────────────────────────────────────────
- … page …
-────────────────────────────────────────────────────────────
-[ Search ]   [ My services* ]   [ Alerts ]   [ Me ]     (* PROVIDER and above)
+[Skills]                                                                  [Notifications 3] [☰ Menu]
+   Menu panel: every group as a heading with its links, then Account, theme and Log out
 ```
 
-- **Sticky**, 56px, `--surface` with a bottom hairline. It sits above content with `z-index` 40, and the skip link remains the first tab stop.
-- **Mode toggle** is a two-option segmented control (`role="tablist"` is wrong here because it navigates, so use `<nav>` with two links and `aria-current="page"`). It changes the route, so the Back button works and the view can be bookmarked. The active option uses `--cta-bg` and bold text, so it reads in greyscale. **A SEARCHER sees no toggle at all, only Search.** Leaders keep their own screens (Applicants, Members, Groups) in the avatar menu, not the toggle.
-- **Global search** is a single field with the skill any/all search behind it. `/` or `⌘K` focuses it. Typing opens a suggestion list (skills first, then people) as a `role="combobox"` with `aria-activedescendant`. Enter goes to the feed with the query as a URL parameter. On mobile the field is an icon that expands to a full-width bar.
-- **Notification hub** is a bell with an unread count and a text label for screen readers ("3 unread"). The panel lists the latest items. Each item links to its page, and "Mark all read" sits at the top. The count uses the existing poll (`NOTIFICATIONS_POLL_MS`).
-- **Avatar menu**: Profile, Availability, My vouches, Account, Downloads, theme, Sign out, plus the leader, admin and owner screens that the person's status allows.
-- A REVOKED or PENDING person sees none of this, only the page they are allowed to see.
+- **Sticky** from 640px up, as now. On a phone the bar scrolls away today because a leader's links used to fill the screen. With groups behind one button that reason goes, so the bar may become sticky on phones too. Build step 2 decides from the Playwright screenshots.
+- **Group menus are disclosure buttons**, not `role="menu"`: a `button` with `aria-expanded` and `aria-controls` that shows a list of links. Esc closes it and returns focus to the button, and focus leaving the group closes it. This works with a keyboard and a screen reader without custom arrow-key code.
+- **No Search / My services toggle.** It suggests two modes, but a provider uses both at once, a leader uses a third set, and no existing route is mode-specific. A grouped menu reaches the same pages in the same number of clicks.
+- **Global search** is a name field in the bar that goes to `/member/search?name=…`, where the existing name search and chip already work. A suggestion list is a later step (section 4, step 6), because it needs the labels loaded on every page.
+- **Notifications** stay a page (`/member/notifications`) with the unread count in the link text, as now. The 60-second poll is unchanged. A pop-up panel is not built: it needs focus handling and a second copy of the list for little gain.
+- The email address in the bar (`.topbar-email`) moves into the Account menu.
+- **The skip link stays the first tab stop.**
 
-### 2.3 Search and filter drawer
+**No bottom tab bar.** Up to nearly twenty destinations by status do not fit four tabs, and the most used one (search) is one tap from Menu. The Android app has its own native navigation, so there is no parity reason. See section 5 if the owner disagrees.
 
-Filters apply **as you change them**, with no Apply button and no reload. The state lives in the URL (as `searchParams.ts` does now), so a refresh, a share and Back all work. Requests are debounced by 250ms and cancel the previous one, and the previous results stay visible, dimmed, until the new ones arrive. A polite live region announces "48 providers".
+### 2.3 Search and filters
 
-| Filter | Control | Requirement |
-|---|---|---|
-| Skills | Tag input with suggestions, plus **Any / All** switch, then level | FR-S-01 |
-| Maximum rate | Slider with a number field, then currency, then **Negotiable only** checkbox | FR-S-02 |
-| Available on | Date range picker | FR-S-03 |
-| Church / home group | Two linked selects | FR-S-04 |
-| Minimum rating | Stepper 1–10 | FR-S-04 |
-| Language, timing, nativity | Checkbox groups | FR-S-01 |
-| Sort | Select: Best match, Rating, Rate, Newest | FR-S-05 |
+What exists: a filter panel (a right-hand drawer to 1023px, a column from 1024px), a name search, removable chips (`activeFilters.ts`), a sort select (**newest**, **best rated**, **lowest rate**), pages of 12 and a result count. The filters are a form with a **Show results** button.
 
-- A strip of **removable chips** above the feed shows every active filter, each with a remove button and "Clear all". It reuses `activeFilters.ts`.
-- The count on the mobile **Filters** button shows the number active.
-- An empty result says which filter to relax, with a one-click action (for example "Remove 'Negotiable only'").
-- Every control has a visible label. The rate slider has a number field twin, because a slider alone is hard to use with a keyboard or a screen reader.
+Changes:
 
-### 2.4 Provider feed (bento grid)
+- **Apply as you change, on desktop.** From 1024px the filters apply when a control changes: at once for selects, checkboxes and switches, after 400ms for typed text and numbers. A new request replaces the old one. The old results stay visible, dimmed, until the new ones arrive (the query already keeps the previous data), and the result count is a polite live region. On mobile and tablet the panel keeps **Show results**, because applying while the panel covers the results shows the person nothing.
+- **The filters stay the ones in the code:** skills with any / all and level, language, timing, nativity, highest rate with currency, negotiable only, available from and until, church, home group, minimum average rating (a select of 5 to 9) and the name. The rate stays a number field. A slider alone is hard with a keyboard or a screen reader, and a slider plus a number is two controls for one value.
+- **Sort has no "Best match".** The API sorts by rating, rate and newest only (FR-S-05). Skill match is shown on the card but is not a sort until the API has one.
+- **Chips** exist already: keep their remove buttons (`search.chip.remove`) and "Clear all filters". The mobile Filters button shows the count (`search.filtersActive` has it).
+- **An empty result** names a filter to relax, with a one-click removal beside the existing `search.none` text.
+- **Group the filters** in the panel under the existing `<details class="filter-group">`: **Skills**, **Rate and time**, **Where**. The first is open by default.
 
-- CSS grid, `repeat(auto-fill, minmax(300px, 1fr))`, 16px gap. Desktop shows 2–3 columns beside the filter rail.
-- **Bento rule:** all cards have equal width. A card spans two columns only when it is the *top match* (rank 1 under Best match) on desktop, and carries a short bio line. Nothing else changes size, so scanning stays predictable.
-- Pagination is a "Load more" button with a count ("Showing 24 of 312"). Infinite scroll is avoided, because it traps keyboard users and loses their place.
-- The loading state is skeleton cards of the same size, with no layout shift.
+### 2.4 Results
 
-**Card hierarchy** (top to bottom, the order of reading):
+- A CSS grid: one column on mobile, `repeat(auto-fill, minmax(18rem, 1fr))` from 640px, 1rem gap. All cards are the same size. There is no "featured" card, because the default sort is newest and there is no rank to feature.
+- **Pagination stays** (the existing `Pager`, 12 per page, the page in the URL). Load more and infinite scroll are not used: a page number is shareable, keeps its place on Back and does not trap keyboard users.
+- Loading uses skeleton cards of the same height, so nothing shifts. `QueryBoundary` keeps the error and empty states.
 
-1. **Name**, picture, and the **Skill match** ring (for example "3/4 skills") when skills are filtered
-2. **Rate** badge (the main scan target, aligned top right), plus "Negotiable"
-3. Primary skill, with the level
-4. **Vouched** tag: "Grace Church · Home group Oak · led by A. Mensah"
-5. **Skill pills**, at most 4, then "+3 more"
-6. Footer: rating (★ 8.6 · 12), availability line, and the **Reveal mobile** button
+**Card hierarchy**, top to bottom, built only from `SearchResult`:
 
-The whole card opens the drawer. The Reveal button stops propagation and works on its own.
+1. **Name**, the link to the provider's page (`/member/providers/:id`, with the search in router state, as now), after an initials circle.
+2. **Rate** with the **Negotiable** badge (`formatRate`, as now).
+3. **Rating**: `★ 8.6 (12)` or the existing "no ratings" text.
+4. **Trust line** with a shield icon: `{church} · {home group}`. This restyles the line the card has today. The leader's name joins it when the API sends it.
+5. **Skill pills** with the level, at most four, then "+3 more". When skills are searched with *any*, one line: "3 of 4 searched skills". The text is the signal; a small meter beside it, if drawn, is `aria-hidden`.
+6. **Footer**: nationality and languages in small text (as now) and the existing **Reveal** control, absent on a person's own card.
 
-### 2.5 Detail slide-over
+**The whole card is clickable, done honestly.** The name is a real link. A CSS rule makes the link's `::after` cover the card (the stretched-link pattern), and Reveal sits above it. A real link works with open in a new tab, middle click and screen readers, which a hidden cover button does not. A card is an `<li>` in the results list, as now.
 
-- Opens from the card without leaving the feed. The URL gains `?provider=<id>`, so Back closes it and a link opens it.
-- Desktop: a 480px panel from the right over a scrim at 40% opacity. Tablet: 60% wide. Mobile: full-screen sheet from the bottom.
-- It is a `role="dialog"` with `aria-modal`, a labelled title and a focus trap. Esc and the scrim close it, and focus returns to the card.
-- Content: header (name, rate, Vouched tag), sticky action bar (**Reveal mobile**, **Rate**), skills and levels, languages, availability, church and home group with the leader's name, ratings list.
-- **Previous / Next** buttons (and `J` / `K`) move through the feed while the drawer stays open, so a person can triage many providers quickly.
-- The action bar stays pinned at the bottom of the panel, so the primary action is never below the fold.
-- Reveal follows FR-M-05 to FR-M-07: the number is greyed out until the server returns it, and a `429` shows the wait time.
+### 2.5 The provider's page
 
-### 2.6 Zero-friction rules
+`/member/providers/:id` stays a full page, as built in S5.5a. It already holds the rating form, the ratings list, unavailability and Reveal, and it can be linked to, with a working Back.
 
-1. The first screen after sign-in for a SEARCHER or above is the feed, with the last filters restored.
-2. No full-page reloads for filtering, opening a provider or changing sort.
-3. Every filter, sort and drawer state is in the URL.
-4. Keyboard: `/` search, `J`/`K` next and previous card, `Enter` open, `Esc` close, `R` reveal (in the drawer). List the shortcuts in a help dialog (`?`), and never trigger them while typing in a field.
+A **slide-over** (a panel over the results, with next and previous) is a later, optional step (section 4, step 7). It would give a second way into the same content and a modal to keep accessible, for a gain only to someone looking at many providers in a row. If it is built:
+
+- The page route stays the address. The panel shows the same component, with `?provider=<id>` on the results page, so Back closes it.
+- It is a `role="dialog"` with `aria-modal`, a label, a focus trap, Esc to close and focus returned to the card. On mobile it is a full-height sheet.
+- Next and previous are buttons, not single-key shortcuts.
+- Reveal and Rate behave exactly as on the page.
+
+### 2.6 Rules for every screen
+
+1. **The first screen after sign-in stays the member home** (`/member`), because what it shows depends on status (applicant, searcher, provider, leader). It gains a "Find {freelancers}" tile first for a SEARCHER and above.
+2. No full-page reload for filtering or sorting.
+3. Every filter, sort and page is in the URL. The design does not keep the last search in the browser, because a name typed into a search is personal data (the access-log rule, ADR-0011).
+4. **Keyboard.** Every action works with Tab, Enter and Esc. The one shortcut is `/` to focus the name field, active only when no field has focus, and it comes last (step 6). No single-letter shortcut for an action (WCAG 2.1.4), and none for Reveal.
 5. Destructive or irreversible actions (revoke, leave) keep the existing `Confirm` dialog.
+6. Every list and page keeps its loading, empty and error states (06-frontend.md, UI requirements).
 
 ## 3. Components
 
-The frontend uses plain CSS with variables (see `frontend/src/styles/global.css`) and has no Tailwind, so the components below use **React + CSS variables**. Tailwind can be added later by mapping the same tokens in its theme. That is a separate decision.
+### 3.1 Token block
 
-### 3.1 Tokens
+Replace the two blocks at the top of `global.css`, keeping the names. The third block is the manual theme.
 
 ```css
 :root {
-  --bg: #f5f3ef;        --surface: #ffffff;
-  --ink: #1c1b19;       --ink-2: #57534e;      --ink-3: #6b665f;
-  --line: #d6d3cd;      --line-strong: #8c877f;
-  --cta: #4338ca;       --cta-hover: #3730a3;  --cta-ink: #ffffff;
-  --cta-bg: #e0e7ff;    --cta-bg-ink: #3730a3;
-  --ok: #047857;        --ok-bg: #d1fae5;      --ok-ink: #065f46;
-  --danger: #b42318;
-  --radius: 0.75rem;
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light dark;
+  --bg: #f5f3ef;          --surface: #ffffff;
+  --ink: #1c1b19;         --muted: #57534e;
+  --line: #d6d3cd;        --line-strong: #8c877f;
+  --accent: #4338ca;      --accent-hover: #3730a3;   --accent-ink: #ffffff;
+  --accent-bg: #e0e7ff;   --accent-bg-ink: #3730a3;
+  --success: #065f46;     --success-bg: #d1fae5;
+  --danger: #b42318;      --danger-bg: #fef3f2;      --info-bg: #eef4ff;
+  --focus: #4338ca;
+  --radius: 0.75rem;      --topbar-height: 3.5rem;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #151517;      --surface: #1f1f22;
-    --ink: #f2f0ec;     --ink-2: #b0aaa3;      --ink-3: #9a948c;
-    --line: #3a3936;    --line-strong: #7c776f;
-    --cta: #a5b4fc;     --cta-hover: #c7d2fe;  --cta-ink: #0f0e2a;
-    --cta-bg: #26254f;  --cta-bg-ink: #c7d2fe;
-    --ok: #34d399;      --ok-bg: #0f2a22;      --ok-ink: #6ee7b7;
-    --danger: #fda29b;
+    --bg: #151517;        --surface: #1f1f22;
+    --ink: #f2f0ec;       --muted: #b0aaa3;
+    --line: #3a3936;      --line-strong: #7c776f;
+    --accent: #a5b4fc;    --accent-hover: #c7d2fe;   --accent-ink: #0f0e2a;
+    --accent-bg: #26254f; --accent-bg-ink: #c7d2fe;
+    --success: #6ee7b7;   --success-bg: #0f2a22;
+    --danger: #fda29b;    --danger-bg: #3a1512;      --info-bg: #172447;
+    --focus: #a5b4fc;
   }
 }
 :root[data-theme='dark'] { /* the same values as the dark block above */ }
 ```
 
+The dark values are written twice, because CSS has no way to share a block between a media query and an attribute selector. A test (section 4, step 1) fails if the two blocks differ.
+
 ### 3.2 Provider card
 
-```tsx
-import type { ProviderSummary } from '../../api/types'
+Built from the real `SearchResult`, `t()`, `formatRate` and `RevealMobile`. This replaces `ResultCard` in `SearchPage.tsx`.
 
-type Props = {
-  provider: ProviderSummary
-  matched?: { have: number; of: number } // only when skills are filtered
-  featured?: boolean                      // the top match on desktop
-  onOpen: (id: string) => void
-  onReveal: (id: string) => void
+```tsx
+const MAX_PILLS = 4
+
+/** How many of the searched skills the provider has, without regard to case; null when none are searched. */
+export function skillMatch(item: SearchResult, searched: string[]) {
+  if (searched.length === 0) return null
+  const have = new Set(item.skills.map((skill) => skill.name.toLowerCase()))
+  return { have: searched.filter((name) => have.has(name.toLowerCase())).length, of: searched.length }
 }
 
-export function ProviderCard({ provider: p, matched, featured, onOpen, onReveal }: Props) {
-  const maxPills = 4
-  const extra = p.skills.length - maxPills
+function ProviderCard({ item, search, searchedSkills, matchAny, own }: {
+  item: SearchResult
+  search: string
+  searchedSkills: string[]
+  matchAny: boolean // the "all" filter makes every result a full match, so it is not shown
+  own: boolean
+}) {
+  const name = item.full_name ?? t('search.noName')
+  const match = matchAny ? skillMatch(item, searchedSkills) : null
+  const extra = item.skills.length - MAX_PILLS
   return (
-    <article className={`pcard${featured ? ' pcard--featured' : ''}`}>
-      <button
-        type="button"
-        className="pcard-open"
-        onClick={() => onOpen(p.id)}
-        aria-label={`Open ${p.name}`}
-      />
-      <header className="pcard-head">
-        <img className="pcard-pic" src={p.picture} alt="" width={44} height={44} />
-        <div className="pcard-who">
-          <h3 className="pcard-name">{p.name}</h3>
-          <p className="pcard-sub">{p.skills[0]?.name} · {p.skills[0]?.level}</p>
-        </div>
-        <p className="pcard-rate" aria-label={`Rate ${p.rate} ${p.currency} per hour`}>
-          <strong>{p.rate}</strong> {p.currency}/h
-          {p.rate_negotiable && <span className="pcard-neg">Negotiable</span>}
-        </p>
-      </header>
-
-      <p className="tag tag-ok">
-        <ShieldIcon aria-hidden />
-        <span>Vouched</span>
-        <span className="tag-sub">{p.church} · {p.home_group} · led by {p.leader_name}</span>
+    <li className="card pcard">
+      <h2 className="pcard-name">
+        <span className="pcard-initials" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
+        <Link className="pcard-link" to={`${PERSON_PROVIDERS}/${item.id}`} state={{ search }}>{name}</Link>
+      </h2>
+      <p className="pcard-rate">
+        <strong>{formatRate(item.rate_per_hour, item.rate_currency)}</strong>{' '}
+        {item.is_rate_negotiable && <Badge tone="good">{t('search.negotiableTag')}</Badge>}
       </p>
-
-      {matched && (
-        <p className="pcard-match">
-          <span className="meter" role="img" aria-label={`${matched.have} of ${matched.of} skills match`}>
-            <span style={{ width: `${(matched.have / matched.of) * 100}%` }} />
-          </span>
-          {matched.have}/{matched.of} skills
-        </p>
-      )}
-
-      <ul className="pills" aria-label="Skills">
-        {p.skills.slice(0, maxPills).map((s) => (
-          <li key={s.id} className="pill">{s.name}</li>
+      <p className="pcard-trust">
+        <ShieldIcon />
+        {t('search.trustLine', { church: item.church.name, group: item.home_group.name })} {/* new key */}
+      </p>
+      {match && <p className="pcard-match">{t('search.skillMatch.of', match)}</p>} {/* new key: "{have} of {of} searched skills" */}
+      <ul className="pills plain-list" aria-label={t('search.skillsLabel')}> {/* new key */}
+        {item.skills.slice(0, MAX_PILLS).map((skill) => (
+          <li key={skill.name} className="pill">{skill.level ? `${skill.name} · ${skill.level}` : skill.name}</li>
         ))}
-        {extra > 0 && <li className="pill pill-more">+{extra} more</li>}
+        {extra > 0 && <li className="pill pill-more">{t('search.moreSkills', { count: extra })}</li>} {/* new key */}
       </ul>
-
-      <footer className="pcard-foot">
-        <span>★ {p.average_rating?.toFixed(1) ?? '–'} <span className="muted">({p.rating_count})</span></span>
-        <button type="button" className="btn btn-primary" onClick={() => onReveal(p.id)}>
-          Reveal mobile
-        </button>
-      </footer>
-    </article>
+      <p className="muted">{[item.nationality, ...item.languages].filter(Boolean).join(' · ')}</p>
+      {!own && (
+        <div className="pcard-foot">
+          <RevealMobile freelancerId={item.id} freelancerName={name} source="search" searchedSkills={searchedSkills} />
+        </div>
+      )}
+    </li>
   )
 }
 ```
 
-The field names above are illustrative. Bind them to the real `FreelancerPublic` type in `frontend/src/api/types.ts` when building.
+`ShieldIcon` is a 16px inline SVG with `aria-hidden`; the words carry the meaning. The rating line of today's card stays between the rate and the trust line.
 
 ```css
+/* Mobile first: one column; wider screens add columns to the grid, not to the card. */
+.result-grid { grid-template-columns: 1fr; }
+@media (min-width: 640px) {
+  .result-grid { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
+}
+
 .pcard {
-  position: relative; display: grid; gap: 12px; padding: 20px;
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--line); border-radius: var(--radius);
+  position: relative; display: grid; gap: 0.75rem; padding: 1rem;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
-  transition: transform 120ms ease-out, box-shadow 120ms ease-out, border-color 120ms;
+  transition: box-shadow 120ms ease-out, border-color 120ms ease-out;
 }
-.pcard:hover, .pcard:focus-within {
-  transform: translateY(-2px); border-color: var(--line-strong);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.1);
+@media (min-width: 640px) { .pcard { padding: 1.25rem; } }
+.pcard:hover, .pcard:focus-within { border-color: var(--line-strong); box-shadow: 0 6px 20px rgb(0 0 0 / 0.1); }
+
+.pcard-name { display: flex; align-items: center; gap: 0.75rem; margin: 0; font-size: 1.125rem; }
+.pcard-initials {
+  display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem;
+  border-radius: 999px; background: var(--accent-bg); color: var(--accent-bg-ink); font-weight: 650;
 }
-.pcard--featured { grid-column: span 2; }
-@media (max-width: 1023px) { .pcard--featured { grid-column: auto; } }
-/* The whole card is one click target, with the real button covering it. */
-.pcard-open { position: absolute; inset: 0; border: 0; background: none; border-radius: inherit; cursor: pointer; }
-.pcard-open:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
-.pcard-foot .btn, .pcard a { position: relative; z-index: 1; } /* above the cover button */
+/* The link covers the whole card; Reveal stays above it. The ring is drawn on the card. */
+.pcard-link { color: var(--ink); text-decoration: none; }
+.pcard-link::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius); }
+.pcard-link:focus-visible { outline: none; }
+.pcard-link:focus-visible::after { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pcard-foot { position: relative; z-index: 1; }
 
-.pcard-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
-.pcard-pic  { border-radius: 999px; object-fit: cover; }
-.pcard-name { font-size: 16px; line-height: 24px; font-weight: 600; margin: 0; }
-.pcard-sub  { color: var(--ink-2); font-size: 14px; margin: 0; }
-.pcard-rate { text-align: right; margin: 0; font-variant-numeric: tabular-nums; color: var(--ink-2); }
-.pcard-rate strong { color: var(--ink); font-size: 18px; }
-.pcard-neg  { display: block; font-size: 12px; color: var(--ink-3); }
+.pcard-rate { margin: 0; font-variant-numeric: tabular-nums; color: var(--muted); }
+.pcard-rate strong { color: var(--ink); font-size: 1.125rem; }
+.pcard-trust {
+  display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0.25rem 0.75rem;
+  border-radius: 999px; font-size: 0.875rem; color: var(--success); background: var(--success-bg);
+}
+.pcard-match { margin: 0; font-size: 0.875rem; color: var(--muted); }
 
-.tag { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0;
-       padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
-.tag-ok { background: var(--ok-bg); color: var(--ok-ink); }
-.tag-ok svg { color: var(--ok); width: 14px; height: 14px; }
-.tag-sub { font-weight: 400; }
+.pills { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0; }
+.pill { padding: 0.125rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;
+        background: var(--accent-bg); color: var(--accent-bg-ink); }
+.pill-more { background: transparent; color: var(--muted); border: 1px solid var(--line-strong); }
 
-.meter { display: inline-block; width: 64px; height: 6px; margin-right: 8px; border-radius: 99px;
-         background: var(--line); vertical-align: middle; overflow: hidden; }
-.meter > span { display: block; height: 100%; background: var(--cta); }
-.pcard-match { margin: 0; color: var(--ink-2); font-size: 13px; }
-
-.pills { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
-.pill { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500;
-        background: var(--cta-bg); color: var(--cta-bg-ink); }
-.pill-more { background: transparent; color: var(--ink-2); border: 1px solid var(--line-strong); }
-
-.pcard-foot { display: flex; justify-content: space-between; align-items: center; }
-.btn-primary { min-height: 44px; padding: 0 16px; border: 0; border-radius: 8px; font: inherit; font-weight: 600;
-               background: var(--cta); color: var(--cta-ink); cursor: pointer; }
-.btn-primary:hover { background: var(--cta-hover); }
-.btn-primary:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
-
-@media (prefers-reduced-motion: reduce) { .pcard { transition: none; } .pcard:hover { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pcard { transition: none; } }
 ```
 
-Two accessibility notes: the meter is not the only signal (the "3/4 skills" text sits beside it), and the card uses a cover button instead of a link inside a link, so a screen reader reads one clear control, "Open Name".
+### 3.3 Navigation
 
-### 3.3 Top navigation with the mode toggle
+```ts
+// shell/nav.ts: the one place that decides what a status sees.
+export type NavLinkItem = { to: string; label: string }
+export type NavGroup = { id: string; label: string; links: NavLinkItem[] }
+
+export function navFor(person: PersonMe): NavGroup[] {
+  const searcher = atLeast(person, 'searcher')
+  const provider = atLeast(person, 'provider')
+  const leader = atLeast(person, 'verifier')
+  const admin = atLeast(person, 'admin')
+  const groups: NavGroup[] = []
+  if (searcher) groups.push({ id: 'find', label: t('member.nav.label'), links: [/* search, ratings given */] })
+  if (provider) groups.push({ id: 'services', label: t('nav.services'), links: [/* profile, skills, availability, ratings */] })
+  if (leader) groups.push({ id: 'church', label: t('leader.nav.label'), links: [/* applicants … moves, flagged, revoked */] })
+  if (admin) groups.push({ id: 'admin', label: t('nav.admin'), links: [/* groups, reports, handover */] })
+  if (person.status === 'owner') groups.push({ id: 'owner', label: t('nav.owner'), links: [/* views, labels, churches */] })
+  return groups
+}
+```
+
+`atLeast` is the status order `searcher < provider < verifier < admin < owner`, written once (`PersonLayout` spells it out as arrays today). Its test is a table: every status against the links it must have and must not have, like the permission matrix on the server. That table is what stops a later change from showing My services to a SEARCHER. *New keys:* `nav.services`, `nav.admin`, `nav.owner`.
 
 ```tsx
-import { NavLink } from 'react-router-dom'
-
-type Props = { canProvide: boolean; unread: number }
-
-export function TopNav({ canProvide, unread }: Props) {
+function GroupMenu({ group }: { group: NavGroup }) {
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  const box = useRef<HTMLDivElement>(null)
   return (
-    <header className="topnav">
-      <a className="skip-link" href="#main">Skip to content</a>
-      <NavLink to="/" className="brand">Skills</NavLink>
-
-      {canProvide && (
-        <nav className="mode" aria-label="View">
-          <NavLink to="/search" className="mode-opt">Search</NavLink>
-          <NavLink to="/my-services" className="mode-opt">My services</NavLink>
-        </nav>
-      )}
-
-      <form className="gsearch" role="search" action="/search">
-        <label htmlFor="gs" className="sr-only">Search skills and people</label>
-        <input id="gs" name="q" type="search" placeholder="Search skills, people…" autoComplete="off" />
-        <kbd aria-hidden>/</kbd>
-      </form>
-
-      <NavLink to="/notifications" className="bell" aria-label={`Notifications, ${unread} unread`}>
-        <BellIcon aria-hidden />
-        {unread > 0 && <span className="bell-n" aria-hidden>{unread}</span>}
-      </NavLink>
-      <AvatarMenu />
-    </header>
+    <div
+      className="navgroup" ref={box}
+      onKeyDown={(e) => { if (e.key === 'Escape' && open) { setOpen(false); box.current?.querySelector('button')?.focus() } }}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false) }}
+    >
+      <button type="button" className="btn btn-quiet" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+        {group.label}
+      </button>
+      <ul id={id} className="navgroup-list plain-list" hidden={!open}>
+        {group.links.map((link) => (
+          <li key={link.to}><NavLink to={link.to} onClick={() => setOpen(false)}>{link.label}</NavLink></li>
+        ))}
+      </ul>
+    </div>
   )
 }
 ```
 
 ```css
-.topnav { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 16px;
-          height: 56px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--line); }
-.brand { font-weight: 650; font-size: 18px; color: var(--ink); text-decoration: none; }
+/* Base (mobile): inside the Menu panel the groups are stacked, always open, no floating list. */
+.navgroup-list { margin: 0; padding: 0; }
+.navgroup-list a { display: flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0.75rem;
+                   border-radius: 0.5rem; color: var(--ink); text-decoration: none; }
+.navgroup-list a:hover { background: var(--bg); }
+.navgroup-list a[aria-current='page'] { background: var(--accent-bg); color: var(--accent-bg-ink); font-weight: 650; }
 
-.mode { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--bg);
-        border: 1px solid var(--line-strong); }
-.mode-opt { padding: 6px 16px; border-radius: 999px; font-size: 14px; font-weight: 500;
-            color: var(--ink-2); text-decoration: none; min-height: 32px; }
-.mode-opt:hover { color: var(--ink); }
-.mode-opt[aria-current='page'] { background: var(--cta-bg); color: var(--cta-bg-ink); font-weight: 650; }
-.mode-opt:focus-visible { outline: 2px solid var(--cta); outline-offset: 2px; }
-
-.gsearch { position: relative; flex: 1; max-width: 520px; margin: 0 auto; }
-.gsearch input { width: 100%; height: 40px; padding: 0 40px 0 14px; font: inherit; color: var(--ink);
-                 background: var(--bg); border: 1px solid var(--line-strong); border-radius: 999px; }
-.gsearch input:focus { outline: 2px solid var(--cta); outline-offset: 1px; }
-.gsearch kbd { position: absolute; right: 14px; top: 10px; font-size: 12px; color: var(--ink-3);
-               border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 5px; }
-
-.bell { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--ink); }
-.bell-n { position: absolute; top: 4px; right: 2px; min-width: 18px; padding: 0 5px; border-radius: 99px;
-          font-size: 11px; font-weight: 700; text-align: center; background: var(--cta); color: var(--cta-ink); }
-
-@media (max-width: 1023px) { .topnav { padding: 0 16px; gap: 8px; } .gsearch kbd { display: none; } }
-@media (max-width: 639px) {
-  .mode { display: none; }            /* the bottom tab bar carries it on mobile */
-  .gsearch { margin: 0; }
+/* From 640px: each group is a button with a floating list. */
+@media (min-width: 640px) {
+  .navgroup { position: relative; }
+  .navgroup-list { position: absolute; inset-block-start: 100%; inset-inline-start: 0; z-index: 30;
+                   min-width: 14rem; padding: 0.5rem; background: var(--surface);
+                   border: 1px solid var(--line); border-radius: var(--radius);
+                   box-shadow: 0 6px 20px rgb(0 0 0 / 0.1); }
 }
 ```
 
-The `canProvide` flag is `provider`, `verifier`, `admin` or `owner`, exactly as `PersonLayout.tsx` already works out. Keep that one rule in one place.
+On mobile the Menu panel renders the groups with their lists open and the group button as a heading, so no extra tap is needed there. `NavLink` sets `aria-current="page"` itself.
 
 ## 4. Build order
 
-1. Tokens and dark mode in `global.css` (no markup change). Check every existing screen for contrast.
-2. Top navigation and the mobile tab bar.
-3. Provider card and the feed grid.
-4. Live filters and the chip strip.
-5. Detail slide-over (route driven).
-6. Keyboard shortcuts and the help dialog.
+Each step is its own pull request into `main`, after review. Each one updates [06-frontend.md](specification/06-frontend.md) where behaviour changes, and passes the existing checks (frontend tests, lint, typecheck and the Playwright layout run at five viewports).
 
-Each step is its own change, with tests for focus handling, the URL state and the status-based visibility of "My services". Add an automated contrast check over the token table above, and an axe run in the Playwright end-to-end tests.
+1. **Tokens and theme.** Replace the token block, add the theme script and the System / Light / Dark choice on the account page, and the font if the owner agrees. No markup change except the script. Check every screen in both themes. Add a unit test that reads the token blocks of `global.css` and fails if a pair in the contrast table is below its threshold, or if the dark `data-theme` block differs from the media block. Add an axe run to the Playwright scenarios in both themes.
+2. **Navigation.** `navFor` with its status table, group menus, the Menu panel on mobile, the Account menu, the name field. Update `responsive.spec.ts` for the new bar, including a leader on a 320px phone with no sideways scroll.
+3. **Provider card and results grid.** `ProviderCard` and `skillMatch` (tests: none searched, any, all, case, a skill missing, own card without Reveal), the grid and the skeletons. The Reveal tests do not change.
+4. **Live filters on desktop.** Debounced apply from 1024px, dimmed old results, the live region, empty states. Test that the URL is the one source of state and that a slow older response never overwrites a newer one.
+5. **Member home.** Tiles ordered by status, "Find {freelancers}" first.
+6. **Name suggestions and `/`.** Only if the owner wants them (section 5).
+7. **Provider panel.** Optional. Section 2.5 holds the requirements.
 
-## 5. Open points for the product owner
+The Android app is not part of these steps. It has its own theme in `mobile/lib/`. If the owner wants the same indigo there, that is a separate change with its own contrast checks. [parity.md](android/parity.md) is about screens and behaviour and does not change.
 
-- **Skill match:** is "x of y searched skills" enough, or is a weighted score wanted? A weighted score needs the API changed first.
-- **Mobile bottom tabs vs. the existing top bar:** the plan above moves primary links to the bottom on mobile. Confirm that before step 2.
-- **Inter:** the file adds about 100 KB self-hosted. Keep `system-ui` instead if that is too heavy.
-- **Tailwind:** only if wanted, as a separate decision, mapping the tokens above to its theme.
+## 5. Open points for the owner
+
+Each has a default that this document already assumes.
+
+1. **The leader's name on the card.** The search response has the home group's id and name only. "Led by A. Mensah" needs `leader_name` added to the search result, a small change to the API and specification that exposes no new data (the home group already has a leader, and the sign-up screens show it). Default: not shown until then.
+2. **Skill match.** "3 of 4 searched skills", worked out in the browser, only with *any*. A weighted score or a "best match" sort needs the API first. Default: the simple count, no sort.
+3. **Bottom tab bar on mobile.** Default: **no**. One Menu button with grouped links (section 2.2).
+4. **Inter, self-hosted.** About 100 KB. Default: yes, with `system-ui` as the fallback. Say no, and step 1 uses `system-ui` only.
+5. **Provider slide-over.** Default: not in the first release. The provider's page stays a page (section 2.5).
+6. **Name suggestions and the `/` key.** Default: later (step 6).
+7. **Indigo replaces teal.** The accent today is teal (`#0A6C6C`). Default: indigo, as proposed. Say so now if teal means something to the church or its logo.
+8. **Tailwind.** Not adopted. The tokens are plain CSS variables and map to a Tailwind theme if it is ever wanted. That would be its own decision.
