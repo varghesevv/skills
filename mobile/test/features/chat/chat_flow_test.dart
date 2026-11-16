@@ -355,7 +355,8 @@ void main() {
       ),
     );
     await _openThread(tester);
-    expect(find.textContaining('no longer exists'), findsOneWidget);
+    expect(find.text('This conversation is not available.'), findsOneWidget);
+    expect(find.text('Try again'), findsNothing);
     expect(find.byKey(const Key('message-input')), findsNothing);
   });
 

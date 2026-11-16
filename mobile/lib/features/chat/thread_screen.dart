@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/strings/app_text.dart';
@@ -33,15 +34,21 @@ class ThreadScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              MessageBanner(text.error(error)),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton(
-                  onPressed: () => ref.invalidate(conversationProvider(id)),
-                  child: Text(text('common.retry')),
+              // A conversation that is not the person's (or does not exist) never appears by
+              // trying again; any other failure may.
+              if (error is ApiException && error.code == 'not_found')
+                Text(text('chat.notFound'))
+              else ...[
+                MessageBanner(text.error(error)),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton(
+                    onPressed: () => ref.invalidate(conversationProvider(id)),
+                    child: Text(text('common.retry')),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
