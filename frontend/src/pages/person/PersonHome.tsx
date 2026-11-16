@@ -4,10 +4,18 @@ import { Link } from 'react-router-dom'
 
 import { applyForProvider } from '../../api/person'
 import { useAuth, usePerson } from '../../auth/AuthContext'
+import type { PersonMe } from '../../api/types'
 import { t } from '../../i18n'
-import { PERSON_GROUP_REQUESTS, PERSON_MOVES, PERSON_VOUCHES } from '../../portals/config'
+import {
+  PERSON_GROUP_REQUESTS,
+  PERSON_MOVES,
+  PERSON_PROFILE,
+  PERSON_SEARCH,
+  PERSON_VOUCHES,
+} from '../../portals/config'
 import { errorMessage } from '../../shared/errors'
 import { takeFlash } from '../../shared/flash'
+import { atLeast } from '../../shell/nav'
 import { Alert } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import ApplicantHome from './ApplicantHome'
@@ -33,6 +41,18 @@ function RevokedHome() {
   )
 }
 
+/** The places a person goes most, first the ones of their status (docs/design-system.md, 2.6). */
+function tiles(person: PersonMe): { to: string; label: string }[] {
+  const all: { to: string; label: string; show: boolean }[] = [
+    { to: PERSON_SEARCH, label: t('nav.search'), show: atLeast(person, 'searcher') },
+    { to: PERSON_PROFILE, label: t('nav.profile'), show: atLeast(person, 'provider') },
+    { to: PERSON_VOUCHES, label: t('vouch.given.link'), show: true },
+    { to: PERSON_GROUP_REQUESTS, label: t('groupRequests.link'), show: true },
+    { to: PERSON_MOVES, label: t('moves.link'), show: true },
+  ]
+  return all.filter((tile) => tile.show)
+}
+
 /** Admitted people: the screens for each status arrive in later steps of the roadmap. */
 function MemberHome() {
   const person = usePerson()
@@ -53,15 +73,15 @@ function MemberHome() {
           {person.church.name}
           {person.home_group ? `, ${person.home_group.name}` : ''}
         </p>
-        <p>
-          <Link to={PERSON_VOUCHES}>{t('vouch.given.link')}</Link>
-        </p>
-        <p>
-          <Link to={PERSON_GROUP_REQUESTS}>{t('groupRequests.link')}</Link>
-        </p>
-        <p>
-          <Link to={PERSON_MOVES}>{t('moves.link')}</Link>
-        </p>
+        <ul className="tiles plain-list">
+          {tiles(person).map((tile) => (
+            <li key={tile.to}>
+              <Link className="card shortcut" to={tile.to}>
+                {tile.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
         <p className="hint">{t('member.soon')}</p>
       </div>
       {person.status === 'searcher' && <Upgrade />}

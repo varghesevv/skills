@@ -175,16 +175,22 @@ export function LoadingScreen() {
 /** Loading, error (with retry) and then the content, for a page that depends on one query. */
 export function QueryBoundary<T>({
   query,
+  pending,
   children,
 }: {
   query: UseQueryResult<T>
+  /** Shown under the loading text while the first answer is awaited (a skeleton of the page). */
+  pending?: ReactNode
   children: (data: T) => ReactNode
 }) {
   if (query.isPending) {
     return (
-      <p role="status" className="muted">
-        {t('loading')}
-      </p>
+      <>
+        <p role="status" className="muted">
+          {t('loading')}
+        </p>
+        {pending}
+      </>
     )
   }
   if (query.isError) {

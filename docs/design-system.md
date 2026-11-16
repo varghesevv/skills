@@ -1,6 +1,6 @@
 # Design system and UI specification
 
-Status: proposal, revised 2026-11-17 against the code on `main`. Not yet built. It changes no data, roles or permissions, so [verification.md](verification.md) is unchanged.
+Status: built in one pull request, steps 1 to 5 of section 4 (2026-11-17). Steps 6 and 7 are not built, as the open points of section 5 decide. It changes no data, roles or permissions, so [verification.md](verification.md) is unchanged.
 
 Direction: **Dark Graphite & Warm Stone**, with an **Electric Indigo** call to action and a green for trust. Desktop first in layout, mobile first in CSS. Built for fast scanning and few clicks. The target is WCAG 2.2 AA.
 
@@ -434,7 +434,7 @@ On mobile the Menu panel renders each group with `panel` set, so the lists are o
 
 ## 4. Build order
 
-Each step is its own pull request into `main`, after review. Each one updates [06-frontend.md](specification/06-frontend.md) where behaviour changes, and passes the existing checks (frontend tests, lint, typecheck and the Playwright layout run at five viewports).
+Each step is its own change, after review. (The first release of the design was built as a single pull request, at the owner's request.) Each one updates [06-frontend.md](specification/06-frontend.md) where behaviour changes, and passes the existing checks (frontend tests, lint, typecheck and the Playwright layout run at five viewports).
 
 1. **Tokens and theme.** Replace the token block, add the theme script and the System / Light / Dark choice on the account page, and the font if the owner agrees. No markup change except the script. Check every screen in both themes. Add a unit test that reads the token blocks of `global.css` and fails if a pair in the contrast table is below its threshold, or if the dark `data-theme` block differs from the media block. Add an axe run to the Playwright scenarios in both themes.
 2. **Navigation.** `navFor` with its status table, group menus, the Menu panel on mobile, the Account menu, the name field. Update `responsive.spec.ts` for the new bar, including a leader on a 320px phone with no sideways scroll.

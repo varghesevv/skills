@@ -1,20 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
 import { listLabels } from '../../../api/freelancer'
 import { fetchChurches, fetchHomeGroups } from '../../../api/person'
 import { SEARCH_PAGE_SIZE, searchProviders } from '../../../api/providers'
-import type { SearchResult } from '../../../api/types'
 import { usePerson } from '../../../auth/AuthContext'
 import { t } from '../../../i18n'
-import { PERSON_PROVIDERS } from '../../../portals/config'
-import { Badge, Pager, QueryBoundary, SelectField, TextField } from '../../../shared/ui'
+import { useDesktop } from '../../../shell/useWide'
+import { Pager, QueryBoundary, SelectField, TextField } from '../../../shared/ui'
 import { usePageTitle } from '../../../shared/usePageTitle'
 import { activeChips, clearedFilters } from './activeFilters'
 import FilterForm, { SORT_OPTIONS } from './FilterForm'
-import { formatRate } from './format'
-import RevealMobile from './RevealMobile'
+import ProviderCard from './ProviderCard'
 import {
   activeFilterCount,
   apiQuery,
@@ -25,59 +23,14 @@ import {
   type SortKey,
 } from './searchParams'
 
-function ResultCard({
-  item,
-  search,
-  searchedSkills,
-  own,
-}: {
-  item: SearchResult
-  search: string
-  searchedSkills: string[]
-  own: boolean
-}) {
+/** Cards of the size of the real ones, so nothing moves when the results arrive. */
+function ResultsSkeleton() {
   return (
-    <li className="card result">
-      <h2>
-        <Link to={`${PERSON_PROVIDERS}/${item.id}`} state={{ search }}>
-          {item.full_name ?? t('search.noName')}
-        </Link>
-      </h2>
-      <p className="result-rate">
-        <strong>{formatRate(item.rate_per_hour, item.rate_currency)}</strong>{' '}
-        {item.is_rate_negotiable && <Badge tone="good">{t('search.negotiableTag')}</Badge>}
-      </p>
-      <p>
-        {item.average_rating === null
-          ? t('search.noRatings')
-          : t('search.average', {
-              average: item.average_rating.toFixed(1),
-              count: item.rating_count,
-            })}
-      </p>
-      <ul className="chips plain-list">
-        {item.skills.map((skill) => (
-          <li key={skill.name} className="chip">
-            {skill.name}
-            {skill.level && <span className="muted"> · {skill.level}</span>}
-          </li>
-        ))}
-      </ul>
-      <p className="muted">{[item.nationality, ...item.languages].filter(Boolean).join(' · ')}</p>
-      <p className="muted">
-        {item.church.name} · {item.home_group.name}
-      </p>
-      {!own && (
-        <p className="result-contact">
-          <RevealMobile
-            freelancerId={item.id}
-            freelancerName={item.full_name ?? t('search.noName')}
-            source="search"
-            searchedSkills={searchedSkills}
-          />
-        </p>
-      )}
-    </li>
+    <ul className="result-grid plain-list" aria-hidden="true">
+      {[0, 1, 2, 3, 4, 5].map((n) => (
+        <li key={n} className="card pcard pcard-skeleton" />
+      ))}
+    </ul>
   )
 }
 
@@ -86,6 +39,7 @@ export default function SearchPage() {
   const me = usePerson()
   const [params, setParams] = useSearchParams()
   const [panelOpen, setPanelOpen] = useState(false)
+  const live = useDesktop() // from 1024px the filters apply as they change
   const filterButton = useRef<HTMLButtonElement>(null)
 
   const applied = valuesFromParams(params)
@@ -181,11 +135,12 @@ export default function SearchPage() {
           <QueryBoundary query={labels}>
             {(available) => (
               <FilterForm
-                key={`${filterKey}-${churches.data?.items.length ?? 0}`}
+                key={`${live ? 'live' : filterKey}-${churches.data?.items.length ?? 0}`}
                 labels={available}
                 churches={churches.data?.items ?? []}
                 initial={applied}
                 onApply={apply}
+                live={live}
               />
             )}
           </QueryBoundary>
@@ -253,7 +208,7 @@ export default function SearchPage() {
               </li>
             </ul>
           )}
-          <QueryBoundary query={results}>
+          <QueryBoundary query={results} pending={<ResultsSkeleton />}>
             {(data) =>
               data.total === 0 ? (
                 <div role="status">
@@ -271,13 +226,17 @@ export default function SearchPage() {
               ) : (
                 <>
                   <p role="status">{t('search.results', { count: data.total })}</p>
-                  <ul className="result-grid plain-list">
+                  <ul
+                    className={`result-grid plain-list${results.isFetching ? ' is-stale' : ''}`}
+                    aria-busy={results.isFetching}
+                  >
                     {data.items.map((item) => (
-                      <ResultCard
+                      <ProviderCard
                         key={item.id}
                         item={item}
                         search={paramsKey}
                         searchedSkills={applied.skills}
+                        matchAny={applied.skillMatch === 'any'}
                         own={item.id === me.id}
                       />
                     ))}
