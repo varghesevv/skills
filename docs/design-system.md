@@ -86,7 +86,7 @@ Rules:
 
 - **Colour is never the only signal.** The trust line has a shield icon and words. A selected filter has a tick. An error has an icon and text. The current menu item is bold and has `aria-current`.
 - **Warm stone canvas, clean card.** Light mode uses a hairline and a soft shadow. Dark mode uses the surface step and no shadow.
-- **Dark mode follows `prefers-color-scheme`**, with a manual choice (System, Light, Dark) kept in the browser's `localStorage`. That is a per-browser convenience, not an account setting. A script in `index.html` sets `data-theme` before the first paint, so there is no flash. It reads storage inside `try/catch`, because storage can be blocked. If a Content-Security-Policy is ever added, the script becomes an external file or carries a hash.
+- **Dark mode follows `prefers-color-scheme`**, with a manual choice (System, Light, Dark) kept in the browser's `localStorage`. That is a per-browser convenience, not an account setting. A small script, `public/theme-init.js`, loaded synchronously from `index.html`, sets `data-theme` before the first paint, so there is no flash. It is a file of its own and not inline code, because the Content-Security-Policy allows scripts from this origin only. It reads storage inside `try/catch`, because storage can be blocked.
 - `color-scheme: light dark` stays on `:root`, so native controls, scrollbars and the date picker follow the theme.
 
 ### 1.2 Typography

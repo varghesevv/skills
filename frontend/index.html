@@ -11,14 +11,7 @@
       type="font/woff2"
       crossorigin
     />
-    <script>
-      // Set the saved theme before the first paint, so the page never flashes the other one.
-      // Storage can be blocked, so a failure leaves the system setting in force.
-      try {
-        var theme = localStorage.getItem('skills.theme')
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
-      } catch (e) {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
