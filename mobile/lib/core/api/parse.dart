@@ -13,3 +13,20 @@ T parseResponse<T>(Object? data, T Function(Map<String, Object?> json) build) {
     throw const ApiException.badResponse();
   }
 }
+
+/// The same for an answer that is a bare JSON list of objects.
+List<T> parseListResponse<T>(
+  Object? data,
+  T Function(Map<String, Object?> item) build,
+) {
+  if (data is! List) throw const ApiException.badResponse();
+  try {
+    return [
+      for (final item in data) build(Map<String, Object?>.from(item as Map)),
+    ];
+  } on TypeError {
+    throw const ApiException.badResponse();
+  } on FormatException {
+    throw const ApiException.badResponse();
+  }
+}

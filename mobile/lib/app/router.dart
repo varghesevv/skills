@@ -6,6 +6,9 @@ import '../core/auth/person_me.dart';
 import '../core/session/session_controller.dart';
 import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/welcome_screen.dart';
+import '../features/chat/chat_list_screen.dart';
+import '../features/chat/chat_paths.dart';
+import '../features/chat/thread_screen.dart';
 import '../features/freelancer/availability/availability_screen.dart';
 import '../features/freelancer/labels/labels_screen.dart';
 import '../features/freelancer/profile/profile_screen.dart';
@@ -65,6 +68,8 @@ bool personMayVisit(PersonMe person, String path) {
   final isSearchPage =
       path == personSearch ||
       path == personRatingsGiven ||
+      path == chatList ||
+      path.startsWith('$chatThreadBase/') ||
       path.startsWith('$personProviders/');
   // The groups of the church are for an ADMIN or the OWNER only.
   final isAdminPage = path == adminGroups;
@@ -144,6 +149,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: 'chat',
+            builder: (context, state) => const ChatListScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) =>
+                    ThreadScreen(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
           GoRoute(
             path: 'ratings-given',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/api/paged.dart';
 import '../../core/format.dart';
@@ -8,6 +9,8 @@ import '../../core/session/session_controller.dart';
 import '../../core/strings/app_text.dart';
 import '../../shared/widgets/async_view.dart';
 import '../../shared/widgets/message_banner.dart';
+import '../chat/chat_paths.dart';
+import '../chat/chat_providers.dart';
 import '../freelancer/data/received_rating.dart';
 import '../freelancer/freelancer_providers.dart';
 import '../leader/leader_providers.dart';
@@ -50,7 +53,12 @@ class ProviderScreen extends ConsumerWidget {
             children: [
               _Facts(provider: p, text: text),
               const SizedBox(height: 16),
-              if (!own) ...[_Contact(provider: p), const SizedBox(height: 16)],
+              if (!own) ...[
+                _Message(provider: p),
+                const SizedBox(height: 8),
+                _Contact(provider: p),
+                const SizedBox(height: 16),
+              ],
               _Labels(provider: p, text: text),
               const SizedBox(height: 16),
               _Unavailable(provider: p, text: text),
@@ -138,6 +146,57 @@ class _Facts extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Starts (or opens) the conversation with this provider.
+class _Message extends ConsumerStatefulWidget {
+  const _Message({required this.provider});
+
+  final ProviderPublic provider;
+
+  @override
+  ConsumerState<_Message> createState() => _MessageState();
+}
+
+class _MessageState extends ConsumerState<_Message> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _open() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final conversation = await ref
+          .read(chatRepositoryProvider)
+          .start(widget.provider.id);
+      ref.invalidate(conversationsProvider);
+      if (mounted) context.push(chatThread(conversation.id));
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = ref.read(appTextProvider).error(error));
+      }
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = ref.watch(appTextProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_error != null) MessageBanner(_error!),
+        FilledButton.icon(
+          key: const Key('message-provider'),
+          onPressed: _busy ? null : _open,
+          icon: const Icon(Icons.chat_bubble_outline),
+          label: Text(_busy ? text('chat.starting') : text('chat.message')),
+        ),
+      ],
     );
   }
 }

@@ -6,6 +6,8 @@ import '../../core/auth/person_me.dart';
 import '../../core/providers.dart';
 import '../../core/strings/app_text.dart';
 import '../../core/session/session_controller.dart';
+import '../chat/chat_paths.dart';
+import '../chat/chat_providers.dart';
 import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
@@ -80,6 +82,32 @@ class _Bell extends ConsumerWidget {
         child: const Icon(Icons.notifications_outlined),
       ),
       onPressed: () => context.push(personNotifications),
+    );
+  }
+}
+
+/// The way into the messages, with how many are unread.
+class _MessagesTile extends ConsumerWidget {
+  const _MessagesTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = ref.watch(appTextProvider);
+    final unread = ref.watch(unreadMessagesProvider).value ?? 0;
+    return ListTile(
+      key: const Key('messages'),
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        unread > 0
+            ? '${text('chat.title')} (${text('chat.unreadBadge', {'count': '$unread'})})'
+            : text('chat.title'),
+      ),
+      trailing: Badge(
+        isLabelVisible: unread > 0,
+        label: Text('$unread'),
+        child: const Icon(Icons.chevron_right),
+      ),
+      onTap: () => context.push(chatList),
     );
   }
 }
@@ -191,6 +219,7 @@ class _Member extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(personSearch),
           ),
+        if (person.status.isSearcher) const _MessagesTile(),
         if (person.status.isSearcher)
           ListTile(
             key: const Key('ratings-given'),
