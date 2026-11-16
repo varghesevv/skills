@@ -128,7 +128,7 @@ Backend first, then web and mobile.
 - [x] 7.4 (204) Privacy page text (accounts, closure, messages, push tokens): the page `/privacy`; the owner reads it and gives its address to the app build (`PRIVACY_URL`). It says there is no chat and no push yet; it must be updated before S8 starts.
 
 ### S8. Chat and push (after the cut-over) — about 10 pull requests
-- [ ] 8.1 Spike: synchronous database layer with an asynchronous socket; two-process notification test; result written down; ADR-0014.
+- [x] 8.1 Spike: synchronous database layer with an asynchronous socket; two-process notification test; result written down; ADR-0014.
 - [ ] 8.2 to 8.4 Chat backend: schema and REST; socket and cross-process delivery; moderation and reports.
 - [ ] 8.5 to 8.6 Push: device tokens and outbox; sender.
 - [ ] 8.7 to 8.9 Chat in the app: list, thread, reconnect and queue, notification permission, deep links.

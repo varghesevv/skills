@@ -27,8 +27,8 @@ An ADR records one significant technical decision: the context, the choice, and 
 | [0011](0011-secrets-from-environment-only.md) | Secrets come from the environment only, and are checked before merge | Accepted |
 | [0012](0012-production-on-ecs-fargate-and-rds.md) | Production on ECS Fargate and Amazon RDS for PostgreSQL | Proposed |
 | [0013](0013-gemini-agent-as-pull-request-reviewer.md) | Gemini agent as an advisory pull request reviewer | Proposed |
+| [0014](0014-real-time-chat-over-websocket.md) | Real-time chat over WebSocket, announced through PostgreSQL | Accepted |
 | [0015](0015-flutter-for-the-mobile-apps.md) | Flutter for the mobile apps | Proposed |
 | [0016](0016-church-trust-hierarchy-verification-model.md) | Church trust hierarchy as the verification model | Accepted |
 | [0017](0017-authorisation-by-status.md) | Authorisation by status | Proposed |
 
-ADR-0014 (real-time chat over WebSocket) is reserved: it is written with the chat work, after the spike described in [android/chat-design.md](../android/chat-design.md) section 6.
