@@ -83,6 +83,21 @@ The push only says that there is a new message and which conversation; it never 
 - **Nothing in logs** (5): secrets are passed as step environment variables (GitHub masks them), never on a command line or in a printed line; the decoded key is written with mode 600 in the runner's temporary folder and deleted in the build step and again in the last step, which always runs. The signature check prints the certificate's name and SHA-256 only, which are public.
 - **Nothing to run from outside**: the workflow starts only by hand (`workflow_dispatch`), the release notes and the tag are read through the environment, never pasted into a script, and the tag is checked before use.
 
+## Staged rollout of the first release with chat (S9.3)
+
+Order matters: the server first, the app after, push last.
+
+1. **Server and web (the pull request from `feat/chat` into `main`).** Merging it deploys the demo, including the migrations `0019` to `0021` (chat tables, reports, push addresses). The older app keeps working: nothing it uses has changed. Check the runbook's "Chat limits" and "The chat socket" sections, and that `--ws-max-size 16384` is on the API container (it is in `docker-compose.yml` and `infra/docker/compose.demo.yml`).
+2. **The app to testers.** Run `mobile-release` on `main` (see "Run it"); testers download it from the Android app page. Ask two or three testers to write to each other for a few days. Push is still off.
+3. **Push, when the Firebase project exists.** Follow "Push notifications" above, then set `PUSH_ENABLED=true` for the API and the worker and run the check in step 5 of that section. Switch it back off by setting it to `false` and restarting: chat itself carries on.
+4. **Google Play (when the store account exists).** Internal testing, then closed testing (a new personal account must run a closed test with a minimum number of testers for a minimum number of days before production access), then **production at 5%, 20%, 50%, 100%**, at least two days at each step. The store forms are answered from `docs/android/store-data-safety.md`.
+
+**Before each step up** look at, in this order: the crash and error numbers in the store console; the API log for a rise in `429` (the chat limits), `403 chat_blocked` and `5xx` on `/api/v1/chat`; the report `chat_reports` (RP-10: reports per week, open ones) and `chat_metrics` (RP-11: first answers, median time); the worker log for "Chat push run failed". Go on only when nothing is rising. Reports of harassment or scams stop the rollout until the OWNER has read them (the readings are logged) and decided.
+
+**To stop.** In the Play console halt the rollout (people who have the new version keep it). There is no switch to turn chat off for everyone: if a serious problem is on the server side, block `/api/v1/chat` at the reverse proxy (people see an error where messages are), fix it and open it again. A dangerous app version is retired with `APP_MIN_VERSION` (then older apps ask for an update). Always fix forward with a higher version code; a store cannot go back to a lower one.
+
+**Before the first public release, the owner has to have done** (everything here is the owner's, see the roadmap section 7): the signing key and `ANDROID_*` secrets; the application ID (Q-A1: it cannot change after the first store upload); the Firebase project and its files; reading the privacy page; and the store account with the filled forms.
+
 ## Things to know
 
 - **The application ID is a placeholder** (`com.example.skills.dev`, open question Q-A1). It cannot change once a build is installed or uploaded to a store: a new ID is a different app. Decide the name and ID before testers depend on the app, and before any store upload.
