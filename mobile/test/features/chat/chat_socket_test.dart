@@ -153,6 +153,20 @@ void main() {
     },
   );
 
+  test('a repeated ready does not leave two ping timers running', () {
+    fakeAsync((async) {
+      final rig = _Rig()..socket.start();
+      async.flushMicrotasks();
+      rig.server.last.say(_ready());
+      async.flushMicrotasks();
+      rig.server.last.say(_ready());
+      async.flushMicrotasks();
+      final before = rig.server.last.sent.length;
+      async.elapse(const Duration(seconds: 26));
+      expect(rig.server.last.sent.length - before, 1); // one ping, not two
+    });
+  });
+
   test('delivered is sent only while connected', () {
     fakeAsync((async) {
       final rig = _Rig();

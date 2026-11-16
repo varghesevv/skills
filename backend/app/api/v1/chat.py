@@ -37,7 +37,11 @@ def _conversation_out(db: Session, person: Person, conversation_id: uuid.UUID) -
     return items[0]
 
 
-@router.post("/conversations")
+@router.post(
+    "/conversations",
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": ConversationOut, "description": "The conversation that exists"}},
+)
 def start(
     body: StartConversation,
     response: Response,
@@ -89,7 +93,11 @@ def messages(
     return [rules.message_out(m) for m in rules.messages_page(db, conversation, before_seq, limit)]
 
 
-@router.post("/conversations/{conversation_id}/messages")
+@router.post(
+    "/conversations/{conversation_id}/messages",
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": MessageOut, "description": "The message stored by an earlier try"}},
+)
 def send(
     conversation_id: uuid.UUID,
     body: SendMessage,
@@ -134,7 +142,11 @@ def settings_update(
     return _conversation_out(db, person, conversation.id)
 
 
-@router.post("/conversations/{conversation_id}/report")
+@router.post(
+    "/conversations/{conversation_id}/report",
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": ReportOut, "description": "The report this person already has open"}},
+)
 def report(
     conversation_id: uuid.UUID,
     body: ReportCreate,
@@ -158,7 +170,11 @@ def unread(person: Member, db: Annotated[Session, Depends(get_session)]) -> Unre
     return UnreadOut(total=rules.unread_total(db, person.id))
 
 
-@router.post("/devices")
+@router.post(
+    "/devices",
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": DeviceOut, "description": "The address was already known"}},
+)
 def register_device(
     body: DeviceRegister,
     response: Response,

@@ -13,6 +13,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+SEND_TIMEOUT_SECONDS = 5.0  # a socket that takes longer than this to accept a frame is dropped
+
 Frame = dict[str, Any]
 Send = Callable[[Frame], Awaitable[None]]
 Close = Callable[[int], Awaitable[None]]  # closes the socket with a WebSocket close code
@@ -23,8 +25,11 @@ class TooManySockets(Exception):
 
 
 class Hub:
-    def __init__(self, max_sockets_per_person: int = 5) -> None:
+    def __init__(
+        self, max_sockets_per_person: int = 5, send_timeout: float = SEND_TIMEOUT_SECONDS
+    ) -> None:
         self._max = max_sockets_per_person
+        self._send_timeout = send_timeout
         self._sockets: dict[uuid.UUID, dict[int, Send]] = {}
         self._closers: dict[tuple[uuid.UUID, int], Close] = {}
         self._next = 0
@@ -60,8 +65,18 @@ class Hub:
         sent = 0
         for handle, send in list(self._sockets.get(person_id, {}).items()):
             try:
-                await send(frame)
+                # A phone that has stopped reading must not hold up everyone else's delivery.
+                await asyncio.wait_for(send(frame), timeout=self._send_timeout)
                 sent += 1
+            except TimeoutError:
+                logger.info("chat socket too slow, dropped", extra={"handle": handle})
+                closer = self._closers.get((person_id, handle))
+                self.disconnect(person_id, handle)
+                if closer is not None:
+                    try:
+                        await asyncio.wait_for(closer(1013), timeout=self._send_timeout)
+                    except Exception:  # noqa: BLE001 - it is going away either way
+                        logger.info("chat socket close failed", extra={"handle": handle})
             except Exception:  # a dead socket must not stop the others; its handler cleans up
                 logger.info("chat socket send failed", extra={"handle": handle})
         return sent

@@ -4966,6 +4966,16 @@
                 }
               }
             },
+            "description": "The conversation that exists"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
             "description": "Successful Response"
           },
           "422": {
@@ -5154,6 +5164,16 @@
                 }
               }
             },
+            "description": "The message stored by an earlier try"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
             "description": "Successful Response"
           },
           "422": {
@@ -5264,6 +5284,16 @@
                 }
               }
             },
+            "description": "The report this person already has open"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
             "description": "Successful Response"
           },
           "422": {
@@ -5362,6 +5392,16 @@
         },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceOut"
+                }
+              }
+            },
+            "description": "The address was already known"
+          },
+          "201": {
             "content": {
               "application/json": {
                 "schema": {

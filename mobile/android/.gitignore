@@ -14,4 +14,4 @@ key.properties
 **/*.jks
 
 # The owner's Firebase files (push); supplied to the build, never committed.
-app/google-services.json
+**/google-services.json

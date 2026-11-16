@@ -23,6 +23,6 @@ The app gets chat between a person who looks for a provider and the provider ([c
 - One more long-lived database connection per API process (the listener), and one worker job (the push sender).
 - A worst-case delay of `CHAT_PUSH_DELAY_SECONDS` (3 s) before a push for an offline person; nothing depends on in-memory state, so it is correct with one process or ten and survives restarts.
 - `NOTIFY` payloads are limited to about 8 000 bytes: ids only, by design.
-- A load balancer in front of several processes needs an idle timeout above the 25-second heartbeat.
+- A load balancer in front of several processes needs an idle timeout above 60 seconds (the app pings every 25 seconds and the server closes a socket that is silent for 70 seconds; see the runbook, "The chat socket").
 - Chat sends no push until a Firebase project exists (`PUSH_ENABLED`); the rest works without it.
 - On the development host the first database connection of a process can take about 11 seconds; the chat tests warm it first.
