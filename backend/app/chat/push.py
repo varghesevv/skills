@@ -167,6 +167,9 @@ def _process_one(
         row = db.get(PushOutbox, row_id)
         if row is None or row.state != "pending":
             return "gone"
+        # The claim lasts for the whole batch, which can be long when Firebase is slow: renew it
+        # for this row, from the real clock, just before it is used.
+        row.send_after = max(now, datetime.now(UTC)) + timedelta(seconds=LEASE_SECONDS)
         reason = _decide(db, row)
         if reason is not None:
             _cancel(row, reason, now)
