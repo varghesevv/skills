@@ -140,6 +140,14 @@ def test_anything_but_a_valid_auth_frame_is_refused(client: TestClient, first: A
         assert closed_with(socket) == 4401
 
 
+def test_an_oversized_first_frame_is_refused_before_it_is_parsed(
+    client: TestClient, runtime: Any
+) -> None:
+    with client.websocket_connect(URL) as socket:
+        socket.send_text("{" + "x" * ws.MAX_FRAME_BYTES)
+        assert closed_with(socket) == 1009
+
+
 def test_a_socket_that_says_nothing_is_closed(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, runtime: Any
 ) -> None:

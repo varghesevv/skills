@@ -58,6 +58,9 @@ async def serve(
     except (TimeoutError, WebSocketDisconnect):
         await _close(websocket, CLOSE_NOT_AUTHENTICATED)
         return
+    if len(first.encode()) > MAX_FRAME_BYTES:  # before parsing: this frame needs no account
+        await _close(websocket, CLOSE_TOO_BIG)
+        return
     try:
         frame = json.loads(first)
         token = frame["token"] if frame.get("type") == "auth" else None
