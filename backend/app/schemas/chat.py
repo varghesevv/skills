@@ -96,3 +96,14 @@ class ReportedMessages(BaseModel):
 
     items: list[ReportedMessage]
     has_more: bool
+
+
+class DeviceRegister(BaseModel):
+    """A phone's push address (Firebase registration token)."""
+
+    token: Annotated[str, Field(min_length=1, max_length=512)]
+    platform: Literal["android"] = "android"
+
+
+class DeviceOut(BaseModel):
+    id: uuid.UUID

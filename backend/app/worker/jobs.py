@@ -8,6 +8,7 @@ from apscheduler.schedulers.base import BaseScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select
 
+from app.chat.push import PushSender, process_due, purge_finished
 from app.core.config import Settings
 from app.models.reports import ReportSchedule
 from app.reports.definitions import REGISTRY
@@ -17,6 +18,27 @@ from app.reports.windows import scheduled_window, zone_of
 log = logging.getLogger("skills.worker")
 
 SYNC_JOB_ID = "__sync_schedules__"
+PUSH_JOB_ID = "__chat_push__"
+PURGE_JOB_ID = "__chat_push_purge__"
+
+
+def push_due(factory: SessionFactory, sender: PushSender) -> None:
+    """Send the chat pushes that are due (a failure is logged; the next run tries again)."""
+    try:
+        process_due(factory, sender)
+    except Exception:  # noqa: BLE001 - one bad run must not stop the worker
+        log.exception("Chat push run failed")
+
+
+def purge_push(factory: SessionFactory, settings: Settings) -> None:
+    try:
+        with factory() as db:
+            deleted = purge_finished(db, settings)
+            db.commit()
+        if deleted:
+            log.info("Deleted %d finished push rows", deleted)
+    except Exception:  # noqa: BLE001
+        log.exception("Cleaning the push outbox failed")
 
 
 def run_scheduled_report(

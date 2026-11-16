@@ -86,6 +86,12 @@ class Settings(BaseSettings):
     chat_max_messages_per_minute: int = Field(default=20, ge=1)  # per person
     chat_max_sockets_per_person: int = Field(default=5, ge=1)  # open sockets in one process
     chat_push_delay_seconds: int = Field(default=3, ge=0)  # wait before a push is sent
+    chat_max_devices_per_person: int = Field(default=10, ge=1)  # push addresses kept per person
+    chat_push_keep_days: int = Field(default=7, ge=1)  # finished outbox rows are deleted after
+    # Push (S8.5). Off until the owner has a Firebase project; the key file is a secret and comes
+    # from the environment only (ADR-0011).
+    push_enabled: bool = False
+    fcm_service_account_json: SecretStr | None = None
     # Public app configuration (GET /api/v1/app/config). Not secrets, and safe defaults: the
     # default word profile, and no minimum version (every app version is accepted).
     terminology_profile: str = "default"
@@ -126,7 +132,7 @@ class Settings(BaseSettings):
     def secret_values(self) -> list[str]:
         """Every secret value (and the password inside the database URL), for log redaction."""
         values: list[str] = []
-        for secret in (self.jwt_secret, self.demo_user_password):
+        for secret in (self.jwt_secret, self.demo_user_password, self.fcm_service_account_json):
             if secret is not None and secret.get_secret_value():
                 values.append(secret.get_secret_value())
         if self.database_url is not None and self.database_url.get_secret_value():

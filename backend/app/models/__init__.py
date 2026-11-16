@@ -6,7 +6,9 @@ from app.models.chat import (
     ChatReportView,
     Conversation,
     ConversationState,
+    DeviceToken,
     Message,
+    PushOutbox,
 )
 from app.models.church import Church, HomeGroup, Person
 from app.models.labels import Label, PersonLabel
@@ -35,6 +37,7 @@ __all__ = [
     "ConversationState",
     "Message",
     "ContactView",
+    "DeviceToken",
     "GroupInvitation",
     "GroupRequest",
     "HandoverRequest",
@@ -42,6 +45,7 @@ __all__ = [
     "MoveRequest",
     "Notification",
     "Person",
+    "PushOutbox",
     "StatusChange",
     "Vouch",
     "VouchLink",

@@ -86,6 +86,8 @@ MATRIX: dict[tuple[str, str], str] = {
     ("PUT", "/chat/conversations/{conversation_id}/settings"): "searcher",
     ("GET", "/chat/unread"): "searcher",
     ("POST", "/chat/conversations/{conversation_id}/report"): "searcher",
+    ("POST", "/chat/devices"): "searcher",
+    ("DELETE", "/chat/devices/{device_id}"): "searcher",
     # ---- a PROVIDER or above -------------------------------------------------------------------
     ("GET", "/freelancers/me"): "provider",
     ("PUT", "/freelancers/me"): "provider",
@@ -213,6 +215,7 @@ def request(client: TestClient, method: str, path: str, headers: dict[str, str])
         "freelancer_id",
         "conversation_id",
         "report_id",
+        "device_id",
     ):
         url = url.replace("{" + name + "}", ghost)
     url = url.replace("{version}", "9.9.9").replace("{name}", "no_such_report")

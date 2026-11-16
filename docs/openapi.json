@@ -855,6 +855,42 @@
         "title": "ConversationOut",
         "type": "object"
       },
+      "DeviceOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeviceOut",
+        "type": "object"
+      },
+      "DeviceRegister": {
+        "description": "A phone's push address (Firebase registration token).",
+        "properties": {
+          "platform": {
+            "const": "android",
+            "default": "android",
+            "title": "Platform",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "DeviceRegister",
+        "type": "object"
+      },
       "DirectMove": {
         "properties": {
           "home_group_id": {
@@ -5256,6 +5292,95 @@
           }
         ],
         "summary": "Settings Update",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/devices": {
+      "post": {
+        "description": "Remember this phone's push address (`201` new, `200` known: the app may repeat it at each\nstart and whenever Firebase gives it a new one).",
+        "operationId": "register_device_api_v1_chat_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Register Device",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/devices/{device_id}": {
+      "delete": {
+        "description": "Stop pushing to this phone (sign-out). `404` for an address that is not the person's.",
+        "operationId": "forget_device_api_v1_chat_devices__device_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forget Device",
         "tags": [
           "chat"
         ]

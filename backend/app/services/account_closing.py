@@ -9,13 +9,14 @@ admitted is flagged. Leaders step down first; the OWNER hands over. Same flow as
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, update
+from sqlalchemy import delete, func, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.core.security import verify_dummy, verify_password
 from app.models.auth import LoginHistory, PasswordResetToken, RefreshToken
+from app.models.chat import DeviceToken, PushOutbox
 from app.models.church import Person
 from app.models.trust import GroupInvitation, VouchLink
 from app.services.auth import check_throttle, clean_ip, record_attempt
@@ -74,6 +75,9 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
             .where(GroupInvitation.created_by_id.in_(chunk), GroupInvitation.revoked_at.is_(None))
             .values(revoked_at=now)
         )
+        # No push goes to a closed account.
+        db.execute(delete(DeviceToken).where(DeviceToken.person_id.in_(chunk)))
+        db.execute(delete(PushOutbox).where(PushOutbox.person_id.in_(chunk)))
         db.execute(
             update(LoginHistory)
             .where(LoginHistory.user_id.in_(chunk))

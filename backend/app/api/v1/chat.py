@@ -5,13 +5,16 @@ from fastapi import APIRouter, Depends, Query, Response, WebSocket, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_person
-from app.chat import moderation, rules, ws
+from app.chat import moderation, push, rules, ws
 from app.chat.runtime import ChatRuntime, SessionFactory
 from app.core.config import Settings, get_settings
 from app.core.db import get_session, get_session_factory
+from app.core.errors import ApiError
 from app.models.church import Person
 from app.schemas.chat import (
     ConversationOut,
+    DeviceOut,
+    DeviceRegister,
     MessageOut,
     ReadMark,
     ReportCreate,
@@ -141,6 +144,33 @@ def report(
 @router.get("/unread")
 def unread(person: Member, db: Annotated[Session, Depends(get_session)]) -> UnreadOut:
     return UnreadOut(total=rules.unread_total(db, person.id))
+
+
+@router.post("/devices")
+def register_device(
+    body: DeviceRegister,
+    response: Response,
+    person: Member,
+    db: Annotated[Session, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DeviceOut:
+    """Remember this phone's push address (`201` new, `200` known: the app may repeat it at each
+    start and whenever Firebase gives it a new one)."""
+    device, created = push.register_device(db, settings, person, body.token, body.platform)
+    db.commit()
+    response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return DeviceOut(id=device.id)
+
+
+@router.delete("/devices/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
+def forget_device(
+    device_id: uuid.UUID, person: Member, db: Annotated[Session, Depends(get_session)]
+) -> Response:
+    """Stop pushing to this phone (sign-out). `404` for an address that is not the person's."""
+    if not push.forget_device(db, person, device_id):
+        raise ApiError(404, "not_found", "Device not found")
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.websocket("/ws")
