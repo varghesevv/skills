@@ -160,6 +160,77 @@
         "title": "AdminInvitationLookup",
         "type": "object"
       },
+      "AdminReportOut": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "handled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handled At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "other": {
+            "$ref": "#/components/schemas/NamedPerson"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "inappropriate",
+              "scam",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/NamedPerson"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "reason",
+          "note",
+          "created_at",
+          "handled_at",
+          "reporter",
+          "other"
+        ],
+        "title": "AdminReportOut",
+        "type": "object"
+      },
       "AdmitRequest": {
         "properties": {
           "to": {
@@ -2382,6 +2453,32 @@
         "title": "NameRef",
         "type": "object"
       },
+      "NamedPerson": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "NamedPerson",
+        "type": "object"
+      },
       "NotificationItem": {
         "properties": {
           "created_at": {
@@ -2478,6 +2575,37 @@
           "closed"
         ],
         "title": "OtherPerson",
+        "type": "object"
+      },
+      "Page_AdminReportOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminReportOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[AdminReportOut]",
         "type": "object"
       },
       "Page_ConversationOut_": {
@@ -2995,6 +3123,38 @@
         "title": "RefreshRequest",
         "type": "object"
       },
+      "ReportCreate": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "inappropriate",
+              "scam",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReportCreate",
+        "type": "object"
+      },
       "ReportInfo": {
         "properties": {
           "code": {
@@ -3029,6 +3189,38 @@
           "filters"
         ],
         "title": "ReportInfo",
+        "type": "object"
+      },
+      "ReportOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "inappropriate",
+              "scam",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "created_at"
+        ],
+        "title": "ReportOut",
         "type": "object"
       },
       "ReportRunOut": {
@@ -3113,6 +3305,85 @@
           "has_files"
         ],
         "title": "ReportRunOut",
+        "type": "object"
+      },
+      "ReportedMessage": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sender_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender Name"
+          },
+          "sender_side": {
+            "enum": [
+              "starter",
+              "provider"
+            ],
+            "title": "Sender Side",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "conversation_id",
+          "sender_side",
+          "body",
+          "created_at",
+          "sender_name"
+        ],
+        "title": "ReportedMessage",
+        "type": "object"
+      },
+      "ReportedMessages": {
+        "description": "A page of a reported conversation, oldest first; `has_more` says older messages exist\n(read them with `before_seq` set to the first `seq` of this page).",
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedMessage"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "has_more"
+        ],
+        "title": "ReportedMessages",
         "type": "object"
       },
       "ResetPasswordRequest": {
@@ -4868,6 +5139,65 @@
           }
         ],
         "summary": "Read",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{conversation_id}/report": {
+      "post": {
+        "description": "Report the conversation to the OWNER. One open report per person and conversation:\nreporting again returns it (`200`).",
+        "operationId": "report_api_v1_chat_conversations__conversation_id__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report",
         "tags": [
           "chat"
         ]
@@ -6729,6 +7059,203 @@
         "summary": "Cancel",
         "tags": [
           "move-requests"
+        ]
+      }
+    },
+    "/api/v1/owner/chat-reports": {
+      "get": {
+        "description": "Reports newest first; `handled=false` for the open ones. No message text here.",
+        "operationId": "list_reports_api_v1_owner_chat_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "handled",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handled"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AdminReportOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/owner/chat-reports/{report_id}/handle": {
+      "post": {
+        "operationId": "handle_api_v1_owner_chat_reports__report_id__handle_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Handle",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/owner/chat-reports/{report_id}/messages": {
+      "get": {
+        "description": "A page of the reported conversation, oldest first. Each call is logged (who and when).",
+        "operationId": "read_messages_api_v1_owner_chat_reports__report_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Seq"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportedMessages"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Messages",
+        "tags": [
+          "chat"
         ]
       }
     },

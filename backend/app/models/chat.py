@@ -23,7 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
-from app.models.enums import CHAT_SIDES, sql_in
+from app.models.enums import CHAT_REPORT_REASONS, CHAT_SIDES, sql_in
 
 MAX_MESSAGE_CHARS = 2000
 
@@ -95,3 +95,49 @@ class ConversationState(Base):
     blocked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
     __table_args__ = (CheckConstraint(sql_in("side", CHAT_SIDES), name="side_valid"),)
+
+
+class ChatReport(UUIDPrimaryKeyMixin, Base):
+    """A person reporting a conversation. The OWNER may then read it (each reading is logged)."""
+
+    __tablename__ = "chat_reports"
+
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE")
+    )
+    reporter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    reported_by_side: Mapped[str] = mapped_column(String(10))
+    reason: Mapped[str] = mapped_column(String(20))
+    note: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    handled_at: Mapped[datetime | None] = mapped_column()
+    handled_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("people.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        CheckConstraint(sql_in("reported_by_side", CHAT_SIDES), name="side_valid"),
+        CheckConstraint(sql_in("reason", CHAT_REPORT_REASONS), name="reason_valid"),
+        CheckConstraint("(handled_at IS NULL) = (handled_by_id IS NULL)", name="handled_together"),
+        # One open report per person and conversation: reporting again changes nothing.
+        Index(
+            "uq_chat_reports_open",
+            "conversation_id",
+            "reporter_id",
+            unique=True,
+            postgresql_where=text("handled_at IS NULL"),
+        ),
+        Index("ix_chat_reports_created", "created_at"),
+    )
+
+
+class ChatReportView(UUIDPrimaryKeyMixin, Base):
+    """Each time the OWNER read a reported conversation: who and when, never what was read."""
+
+    __tablename__ = "chat_report_views"
+
+    report_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_reports.id", ondelete="CASCADE"))
+    viewer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    viewed_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    __table_args__ = (Index(None, "report_id"),)

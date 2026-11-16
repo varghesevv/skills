@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, Response, WebSocket, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_person
-from app.chat import rules, ws
+from app.chat import moderation, rules, ws
 from app.chat.runtime import ChatRuntime, SessionFactory
 from app.core.config import Settings, get_settings
 from app.core.db import get_session, get_session_factory
@@ -14,6 +14,8 @@ from app.schemas.chat import (
     ConversationOut,
     MessageOut,
     ReadMark,
+    ReportCreate,
+    ReportOut,
     SendMessage,
     SettingsUpdate,
     StartConversation,
@@ -115,6 +117,25 @@ def settings_update(
     rules.update_settings(db, conversation, side, muted=body.muted, blocked=body.blocked)
     db.commit()
     return _conversation_out(db, person, conversation.id)
+
+
+@router.post("/conversations/{conversation_id}/report")
+def report(
+    conversation_id: uuid.UUID,
+    body: ReportCreate,
+    response: Response,
+    person: Member,
+    db: Annotated[Session, Depends(get_session)],
+) -> ReportOut:
+    """Report the conversation to the OWNER. One open report per person and conversation:
+    reporting again returns it (`200`)."""
+    conversation, side = rules.open_conversation(db, conversation_id, person)
+    filed, created = moderation.report_conversation(
+        db, conversation, side, person, body.reason, body.note
+    )
+    db.commit()
+    response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return ReportOut(id=filed.id, reason=filed.reason, created_at=filed.created_at)
 
 
 @router.get("/unread")

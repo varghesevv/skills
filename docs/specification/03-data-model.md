@@ -176,6 +176,9 @@ id uuid PK, user_id FK people (ON DELETE CASCADE), token_hash text, expires_at t
 - `messages`: id, `seq` bigint GENERATED ALWAYS AS IDENTITY (the cursor; gaps are normal), `conversation_id` FK ON DELETE CASCADE, `sender_side` (`starter` or `provider`), `sender_id` FK people (for the per-minute limit; index on `sender_id`, `created_at`), `body` text CHECK length 1 to 2000, `client_message_id` uuid, `created_at` (server). UNIQUE (`conversation_id`, `sender_side`, `client_message_id`): a retry stores nothing new. Index (`conversation_id`, `seq`).
 - `conversation_state`: PK (`conversation_id`, `side`); `last_read_seq` and `delivered_seq` (bigint, default 0), `muted`, `blocked` (only the provider side blocks). Two rows per conversation, made with it.
 
+### chat_reports and chat_report_views (chat moderation, S8.4, migration 0020)
+`chat_reports`: id, conversation_id FK, reporter_id FK people, reported_by_side (starter or provider), reason CHECK in (spam, harassment, inappropriate, scam, other), note (at most 500 characters, trimmed, optional), created_at, handled_at and handled_by_id (both set together). A partial unique index `uq_chat_reports_open` allows one open report per reporter and conversation; a handled one can be followed by a new one. `chat_report_views`: id, report_id FK, viewer_id FK people, viewed_at: one row each time the OWNER read the messages of a reported conversation (who and when, never what). Only a conversation that has a report can be read by anyone but its two people (decision D-52).
+
 ### report_schedules and report_runs
 - `report_schedules`: id, report_name, cron_expression, timezone, is_enabled, recipients (text).
 - `report_runs`: id, report_name, window_from, window_to, started_at, finished_at, status (running/succeeded/failed), file_path, row_count, error_message. UNIQUE (report_name, window_from, window_to) for idempotency.
