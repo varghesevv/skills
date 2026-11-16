@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,8 @@ import '../../core/strings/app_text.dart';
 import '../../shared/widgets/message_banner.dart';
 import 'chat_list_screen.dart' show chatOtherName;
 import 'chat_providers.dart';
+import 'live/chat_events.dart';
+import 'live/chat_live.dart';
 import 'data/chat_models.dart';
 import 'thread_model.dart';
 
@@ -71,6 +75,7 @@ class _ThreadState extends ConsumerState<_Thread> {
   late final ThreadModel _model;
   final _input = TextEditingController();
   late Conversation _conversation = widget.conversation;
+  StreamSubscription<ChatEvent>? _live;
   String? _menuError;
 
   @override
@@ -86,6 +91,18 @@ class _ThreadState extends ConsumerState<_Thread> {
       },
     )..addListener(() => mounted ? setState(() {}) : null);
     _model.load();
+    // News from the socket: a message of this conversation is added at once, and after a
+    // reconnect the messages are read again, so nothing missed while away is lost.
+    _live = ref.read(chatSocketProvider).events.listen((event) {
+      switch (event) {
+        case ChatMessageEvent(:final message):
+          _model.receive(message);
+        case ChatConnected(:final again):
+          if (again) _model.load();
+        case ChatMarkEvent() || ChatDisconnected() || ChatErrorEvent():
+          break;
+      }
+    });
   }
 
   /// The list is asked again every minute and after a read mark: take what it says now, so a
@@ -102,6 +119,7 @@ class _ThreadState extends ConsumerState<_Thread> {
 
   @override
   void dispose() {
+    unawaited(_live?.cancel());
     _model.dispose();
     _input.dispose();
     super.dispose();

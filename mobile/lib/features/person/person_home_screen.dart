@@ -8,6 +8,7 @@ import '../../core/strings/app_text.dart';
 import '../../core/session/session_controller.dart';
 import '../chat/chat_paths.dart';
 import '../chat/chat_providers.dart';
+import '../chat/live/chat_live.dart';
 import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
@@ -37,6 +38,8 @@ class PersonHomeScreen extends ConsumerWidget {
         }
       });
     }
+    // Chat is live while a member who may chat has the app open.
+    if (person.status.isSearcher) ref.watch(chatLiveProvider);
     final (title, body) = switch (person.status) {
       PersonStatus.pending => (
         text('applicant.title'),

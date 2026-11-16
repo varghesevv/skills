@@ -7,8 +7,11 @@ import 'package:skills_app/app/app.dart';
 import 'memory_token_store.dart';
 
 import 'package:skills_app/core/providers.dart';
+import 'package:skills_app/features/chat/live/chat_link.dart';
+import 'package:skills_app/features/chat/live/chat_live.dart';
 
 import 'fake_api.dart';
+import 'fake_chat_link.dart';
 
 /// The words the server returns for each profile (test data; the app has no copy of them).
 const defaultWords = {
@@ -113,6 +116,7 @@ Future<TestApp> pumpApp(
   Size size = const Size(400, 800),
   double textScale = 1.0,
   List<Override> overrides = const [],
+  ChatConnector chatConnector = neverConnects,
 }) async {
   tester.view.physicalSize = size * tester.view.devicePixelRatio;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -134,6 +138,8 @@ Future<TestApp> pumpApp(
         dioProvider.overrideWithValue(dio),
         tokenStoreProvider.overrideWithValue(store),
         appVersionProvider.overrideWithValue(appVersion),
+        // The chat socket is not under test unless a test replaces this: it never connects.
+        chatConnectorProvider.overrideWithValue(chatConnector),
         ...overrides,
       ],
     ),
