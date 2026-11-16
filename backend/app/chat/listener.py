@@ -50,6 +50,7 @@ class Listener:
         self._task: asyncio.Task[None] | None = None
         self.listening = asyncio.Event()  # set while LISTEN is active
         self.reconnects = 0
+        self.backend_pid: int | None = None  # of the current connection (for tests and diagnosis)
 
     async def start(self) -> None:
         if self._task is None:
@@ -74,6 +75,7 @@ class Listener:
                     await connection.execute(
                         sql.SQL("LISTEN {}").format(sql.Identifier(self._channel))
                     )
+                    self.backend_pid = connection.info.backend_pid
                     self.listening.set()
                     pause = 0.2
                     async for notification in connection.notifies():

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 Frame = dict[str, Any]
 Send = Callable[[Frame], Awaitable[None]]
+Close = Callable[[int], Awaitable[None]]  # closes the socket with a WebSocket close code
 
 
 class TooManySockets(Exception):
@@ -25,15 +26,18 @@ class Hub:
     def __init__(self, max_sockets_per_person: int = 5) -> None:
         self._max = max_sockets_per_person
         self._sockets: dict[uuid.UUID, dict[int, Send]] = {}
+        self._closers: dict[tuple[uuid.UUID, int], Close] = {}
         self._next = 0
 
-    def connect(self, person_id: uuid.UUID, send: Send) -> int:
-        """Register a socket; returns a handle for `disconnect`."""
+    def connect(self, person_id: uuid.UUID, send: Send, close: Close | None = None) -> int:
+        """Register a socket; returns a handle for `disconnect`. `close` ends it from outside."""
         held = self._sockets.setdefault(person_id, {})
         if len(held) >= self._max:
             raise TooManySockets
         self._next += 1
         held[self._next] = send
+        if close is not None:
+            self._closers[(person_id, self._next)] = close
         return self._next
 
     def disconnect(self, person_id: uuid.UUID, handle: int) -> None:
@@ -41,6 +45,7 @@ class Hub:
         if held is None:
             return
         held.pop(handle, None)
+        self._closers.pop((person_id, handle), None)
         if not held:
             del self._sockets[person_id]
 
@@ -61,7 +66,22 @@ class Hub:
                 logger.info("chat socket send failed", extra={"handle": handle})
         return sent
 
+    async def close_person(self, person_id: uuid.UUID, code: int) -> int:
+        """Close the person's sockets in this process (revoked, closed); returns how many."""
+        closed = 0
+        for handle in list(self._sockets.get(person_id, {})):
+            closer = self._closers.get((person_id, handle))
+            if closer is not None:
+                try:
+                    await closer(code)
+                    closed += 1
+                except Exception:
+                    logger.info("chat socket close failed", extra={"handle": handle})
+            self.disconnect(person_id, handle)
+        return closed
+
     async def close_all(self) -> None:
         """Forget every socket (the process is stopping)."""
         self._sockets.clear()
+        self._closers.clear()
         await asyncio.sleep(0)

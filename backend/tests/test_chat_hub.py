@@ -155,18 +155,16 @@ def test_the_listener_comes_back_after_its_connection_is_killed() -> None:
         try:
             frames = a.attach(person)
 
-            def kill_listeners() -> None:
+            pid = a.listener.backend_pid
+            assert pid is not None
+
+            def kill_listener() -> None:
                 engine = create_engine(url)
                 with engine.begin() as connection:
-                    connection.execute(
-                        text(
-                            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                            "WHERE query LIKE 'LISTEN%' AND pid <> pg_backend_pid()"
-                        )
-                    )
+                    connection.execute(text("SELECT pg_terminate_backend(:pid)"), {"pid": pid})
                 engine.dispose()
 
-            await run_in_threadpool(kill_listeners)
+            await run_in_threadpool(kill_listener)
             await eventually(lambda: a.listener.reconnects >= 1)
             await asyncio.wait_for(a.listener.listening.wait(), timeout=5)
             await run_in_threadpool(announce, url, {"people": [str(person)], "seq": 2})
@@ -217,6 +215,28 @@ def test_a_person_cannot_hold_more_sockets_than_allowed() -> None:
     hub.disconnect(person, first)
     hub.connect(person, send)  # a slot is free again
     assert hub.is_connected(person)
+
+
+def test_closing_a_person_ends_every_socket_of_theirs_and_only_theirs() -> None:
+    hub = Hub()
+    gone, stays = uuid.uuid4(), uuid.uuid4()
+    codes: list[tuple[str, int]] = []
+
+    def closer(name: str) -> Any:
+        async def close(code: int) -> None:
+            codes.append((name, code))
+
+        return close
+
+    async def send(frame: dict[str, Any]) -> None:  # pragma: no cover
+        raise AssertionError
+
+    hub.connect(gone, send, closer("phone"))
+    hub.connect(gone, send, closer("tablet"))
+    hub.connect(stays, send, closer("other"))
+    assert asyncio.run(hub.close_person(gone, 4403)) == 2
+    assert sorted(codes) == [("phone", 4403), ("tablet", 4403)]
+    assert not hub.is_connected(gone) and hub.is_connected(stays)
 
 
 def test_a_dead_socket_does_not_stop_the_others() -> None:
