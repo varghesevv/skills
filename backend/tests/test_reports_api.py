@@ -71,7 +71,9 @@ def test_the_owner_lists_every_report(client: TestClient, world: World) -> None:
     owner = owner_member(world)
     everything = client.get(REPORTS, headers=headers_of(client, owner)).json()
     assert len(everything) == 14
-    assert {"RP-01", "RP-09", "RP-10", "RP-11", "SC-01"} <= {report["code"] for report in everything}
+    assert {"RP-01", "RP-09", "RP-10", "RP-11", "SC-01"} <= {
+        report["code"] for report in everything
+    }
 
 
 def test_an_admin_lists_only_the_reports_limited_to_their_church(
@@ -101,7 +103,14 @@ def test_an_admin_runs_only_reports_limited_to_their_church(
 ) -> None:
     _, admin = second_church(world)
     headers = headers_of(client, admin)
-    for name in ("active_users", "top_rated", "rate_distribution", "phone_reveals"):
+    for name in (
+        "active_users",
+        "top_rated",
+        "rate_distribution",
+        "phone_reveals",
+        "chat_reports",
+        "chat_metrics",  # what people write about is the OWNER's alone
+    ):
         response = client.get(f"{REPORTS}/{name}", headers=headers)
         assert response.status_code == 403, name
     assert client.get(f"{REPORTS}/trust_events", headers=headers).status_code == 200

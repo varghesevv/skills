@@ -674,7 +674,8 @@ def chat_metrics(db: Session, p: ReportParams) -> list[Section]:
     # in which the provider wrote afterwards, and how long the first answer took.
     first_ask = (
         select(Message.conversation_id.label("cid"), func.min(Message.created_at).label("asked"))
-        .where(Message.sender_side == "starter")
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(Message.sender_side == "starter", started)  # the window first: not all history
         .group_by(Message.conversation_id)
         .subquery()
     )
