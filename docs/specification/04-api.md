@@ -139,7 +139,15 @@ Conversations between two people: the *starter* (a SEARCHER or above) and the *p
 | PUT | /chat/conversations/{id}/settings | Body `muted` and/or `blocked`. Either side may mute; only the provider may block (`403 chat_not_allowed`). Returns the conversation. |
 | GET | /chat/unread | `{"total": n}`: messages from the other side after the person's read marks, over all conversations. |
 
-Storing a message announces an event (ids only) through PostgreSQL `NOTIFY` when the transaction commits; the WebSocket that delivers it is S8.3.
+Storing a message announces an event (ids only) through PostgreSQL `NOTIFY` when the transaction commits. Every API process listens and delivers the event to the sockets it holds.
+
+#### WebSocket (S8.3, ADR-0014)
+`wss://<host>/api/v1/chat/ws`, JSON text frames, protocol version 1. It carries live events only; everything it does is also possible through REST, so an app without a socket works by reading the list when it comes to the foreground.
+
+- **Authentication.** The first frame is `{"type":"auth","token":"<access token>"}` within 5 seconds (the token is never read from the address). Close codes: `4401` not authenticated, a bad or expired token, or the token ran out while connected (the app refreshes and reconnects); `4403` the person may not chat (PENDING, REVOKED or a closed account), also when they become so while connected; `4429` too many frames (more than 60 in 10 seconds) or too many sockets for one person in this process (5); `1003` a binary frame (before authentication it is `4401`); `1009` a frame over 8 KiB (the first frame too, checked before it is parsed; the server also runs with `--ws-max-size 16384`, so a larger frame never reaches the application); `1001` no frame for 70 seconds. The person is read from the database on **every** frame, so a revoked person is ended at the next frame (the app sends a `ping` every 25 seconds), and an event is delivered to a person only after a check that they are still allowed.
+- **Client to server.** `ping`; `send` (`conversation_id`, `client_message_id`, `body`); `read` and `delivered` (`conversation_id`, `up_to_seq`).
+- **Server to client.** `ready` (`server_time`, `heartbeat_seconds`); `pong`; `ack` (`client_message_id`, the stored `message`); `message` (`message`: `id`, `seq`, `conversation_id`, `sender_side`, `body`, `created_at`) to the other person and to every device of the sender, so an app dedups by `message.id`; `read` and `delivered` (`conversation_id`, `side`, `up_to_seq`) to the other side; `error` (`code`, and `client_message_id` for a refused send) with the same codes as REST (`chat_message_too_long`, `chat_blocked`, `chat_rate_limited`, `not_found`, ...) or `bad_frame`.
+- **Catching up.** An app that reconnects reads `GET /chat/conversations` and the messages it lacks through REST; events missed while disconnected are not replayed.
 
 ### Providers (resource paths kept)
 | Method | Path | Who |

@@ -1,13 +1,14 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response, WebSocket, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_person
-from app.chat import rules
+from app.chat import rules, ws
+from app.chat.runtime import ChatRuntime, SessionFactory
 from app.core.config import Settings, get_settings
-from app.core.db import get_session
+from app.core.db import get_session, get_session_factory
 from app.models.church import Person
 from app.schemas.chat import (
     ConversationOut,
@@ -119,3 +120,17 @@ def settings_update(
 @router.get("/unread")
 def unread(person: Member, db: Annotated[Session, Depends(get_session)]) -> UnreadOut:
     return UnreadOut(total=rules.unread_total(db, person.id))
+
+
+@router.websocket("/ws")
+async def socket(
+    websocket: WebSocket,
+    factory: Annotated[SessionFactory, Depends(get_session_factory)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> None:
+    """Live events (ADR-0014): the first frame must be `{"type":"auth","token":...}`."""
+    runtime: ChatRuntime | None = getattr(websocket.app.state, "chat", None)
+    if runtime is None:  # the API started without chat (no database yet)
+        await websocket.close(code=1013)
+        return
+    await ws.serve(websocket, runtime, factory, settings)

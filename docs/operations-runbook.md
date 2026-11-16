@@ -159,6 +159,10 @@ The settings of the app show a Privacy row only when the build is made with `--d
 
 The chat limits are settings with safe defaults (like the reveal limits); set them in the API's environment only to change them: `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY` (10: conversations one person may start in 24 hours), `CHAT_MAX_MESSAGES_PER_MINUTE` (20 per person), `CHAT_MAX_SOCKETS_PER_PERSON` (5 open sockets in one API process), `CHAT_PUSH_DELAY_SECONDS` (3: how long a notification waits for the app to say it got the message). The tests use smaller values (3 and 5). Messages are never logged.
 
+### The chat socket
+
+The API runs with `--ws-max-size 16384` (set in the image, the local compose file and the demo compose file): a WebSocket frame over 16 KiB is refused by the server itself. Caddy proxies WebSocket upgrades without further settings. A load balancer in front of several API processes needs an idle timeout above 60 seconds (the app sends a ping every 25 seconds; a socket with no frame for 70 seconds is closed). Chat sockets end when the person's access token runs out (at most 15 minutes) and the app reconnects.
+
 ### What the logs hold
 
 The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The reverse proxy's access log is different: it writes the whole address of every request, so it holds the link tokens of the `/join/`, `/vouch/` and `/invite/` pages until the owner changes the proxy to hide them (an item on the roadmap's owner list). Treat the proxy log as holding secrets: keep it readable by the operators only, do not paste it into a ticket or a chat, and do not keep it longer than needed. A token seen there is a link that anyone who finds the log could use; cancel the link (the leader or the OWNER can end it) if the log has been shared.
