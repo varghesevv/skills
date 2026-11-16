@@ -157,7 +157,7 @@ The settings of the app show a Privacy row only when the build is made with `--d
 
 ### What the logs hold
 
-The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The web container's access log shows the path only, with the token of a `/join/`, `/vouch/` or `/invite/` page replaced by `redacted`; the proxy writes no access log. The only secret a log holds is therefore the reset link, in the API log: keep that log readable by the operators only.
+The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The web container's access log shows the path only, with a `/join/`, `/vouch/` or `/invite/` page (any letter case) logged as `/link/redacted`; the proxy writes no access log. The only secret a log holds is therefore the reset link, in the API log: keep that log readable by the operators only.
 
 ## 8. Security headers and limits
 
