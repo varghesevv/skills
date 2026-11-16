@@ -58,7 +58,7 @@ Builds on: [mobile-app-plan.md](../mobile-app-plan.md) (the earlier Flutter plan
 | Q-A1 | App name and application ID (cannot change after the first upload) | Blocking for phase 1's first signed build only. Use `com.example.skills.dev` locally until decided. |
 | Q-A2 | What machine does Remote-SSH connect to (CPU architecture, KVM, a phone attached)? | Check in phase 0; plan section 2 lists the options. |
 | Q-A3 | May an admin read a conversation? | Settled by D-52: only the OWNER, only a conversation that someone reported, and each reading is logged. |
-| Q-A4 | How long are messages kept? | Until either account is deleted, then anonymised; revisit with the privacy page. |
+| Q-A4 | How long are messages kept? | Settled by D-53: a closed account's side is shown without a name, the other person keeps the history, and the conversation is deleted when both have closed their accounts. |
 | Q-A5 | Should freelancers be able to start a chat after a work host has revealed their number? | No (A7). Revisit with real usage. |
 | Q-A6 | Attachments (photos, documents) in chat? | Text only in version 1. |
 | Q-A7 | Chat on the web? | Later; the API already supports it. |
