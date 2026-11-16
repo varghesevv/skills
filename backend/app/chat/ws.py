@@ -40,6 +40,7 @@ CLOSE_NOT_ALLOWED = 4403
 CLOSE_TOO_MANY = 4429
 CLOSE_TOO_BIG = 1009
 CLOSE_GOING_AWAY = 1001
+CLOSE_UNSUPPORTED = 1003  # a binary frame: only JSON text is spoken here
 
 
 def _uuid(value: object) -> uuid.UUID | None:
@@ -49,13 +50,25 @@ def _uuid(value: object) -> uuid.UUID | None:
         return None
 
 
+async def _read(websocket: WebSocket) -> str | None:
+    """The next text frame; None for a binary frame. Raises WebSocketDisconnect when it closes."""
+    message = await websocket.receive()
+    if message["type"] == "websocket.disconnect":
+        raise WebSocketDisconnect(message.get("code", 1000))
+    text = message.get("text")
+    return text if isinstance(text, str) else None
+
+
 async def serve(
     websocket: WebSocket, runtime: ChatRuntime, factory: SessionFactory, settings: Settings
 ) -> None:
     await websocket.accept()
     try:
-        first = await asyncio.wait_for(websocket.receive_text(), AUTH_WAIT_SECONDS)
+        first = await asyncio.wait_for(_read(websocket), AUTH_WAIT_SECONDS)
     except (TimeoutError, WebSocketDisconnect):
+        await _close(websocket, CLOSE_NOT_AUTHENTICATED)
+        return
+    if first is None:  # binary
         await _close(websocket, CLOSE_NOT_AUTHENTICATED)
         return
     if len(first.encode()) > MAX_FRAME_BYTES:  # before parsing: this frame needs no account
@@ -111,12 +124,15 @@ async def _loop(
             await _close(websocket, CLOSE_NOT_AUTHENTICATED)  # the app refreshes and reconnects
             return
         try:
-            text = await asyncio.wait_for(websocket.receive_text(), min(IDLE_SECONDS, remaining))
+            text = await asyncio.wait_for(_read(websocket), min(IDLE_SECONDS, remaining))
         except TimeoutError:
             if (expires - datetime.now(UTC)).total_seconds() <= 0:
                 await _close(websocket, CLOSE_NOT_AUTHENTICATED)
             else:
                 await _close(websocket, CLOSE_GOING_AWAY)
+            return
+        if text is None:
+            await _close(websocket, CLOSE_UNSUPPORTED)
             return
         if len(text.encode()) > MAX_FRAME_BYTES:
             await _close(websocket, CLOSE_TOO_BIG)

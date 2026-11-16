@@ -132,7 +132,7 @@ def test_a_valid_token_opens_the_socket(client: TestClient, chat: Chat) -> None:
 
 @pytest.mark.parametrize(
     "first",
-    [{"type": "auth", "token": "not-a-token"}, {"type": "send"}, {"token": "x"}, ["list"]],
+    [{"type": "auth", "token": "bad"}, {"type": "send"}, {"token": "x"}, ["list"]],
 )
 def test_anything_but_a_valid_auth_frame_is_refused(client: TestClient, first: Any) -> None:
     with client.websocket_connect(URL) as socket:
@@ -146,6 +146,17 @@ def test_an_oversized_first_frame_is_refused_before_it_is_parsed(
     with client.websocket_connect(URL) as socket:
         socket.send_text("{" + "x" * ws.MAX_FRAME_BYTES)
         assert closed_with(socket) == 1009
+
+
+def test_a_binary_frame_closes_the_socket_cleanly_before_and_after_authentication(
+    client: TestClient, chat: Chat
+) -> None:
+    with client.websocket_connect(URL) as before:
+        before.send_bytes(b"\x00\x01")
+        assert closed_with(before) == 4401
+    after = ready(client, chat.s_token)
+    after.send_bytes(b"\x00\x01")
+    assert closed_with(after) == 1003
 
 
 def test_a_socket_that_says_nothing_is_closed(
@@ -382,16 +393,14 @@ def test_the_hub_forgets_a_socket_when_it_closes(
 def test_nothing_the_person_wrote_reaches_the_log(
     client: TestClient, chat: Chat, caplog: pytest.LogCaptureFixture
 ) -> None:
-    secret_text = "my-very-private-sentence"
+    sentence = "my-very-private-sentence"
     with caplog.at_level("DEBUG"):
         socket = ready(client, chat.s_token)
-        socket.send_json(
-            {"type": "send", "conversation_id": chat.id, **new_message(body=secret_text)}
-        )
+        socket.send_json({"type": "send", "conversation_id": chat.id, **new_message(body=sentence)})
         socket.receive_json()
-        socket.send_text("garbage " + secret_text)
+        socket.send_text("garbage " + sentence)
         socket.receive_json()
-    assert secret_text not in caplog.text and chat.s_token not in caplog.text
+    assert sentence not in caplog.text and chat.s_token not in caplog.text
 
 
 def test_the_headers_helper_still_works_for_the_rest_api(client: TestClient, chat: Chat) -> None:
