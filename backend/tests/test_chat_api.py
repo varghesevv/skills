@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.chat import rules
+from app.models.chat import ConversationState
 from app.services.account_closing import clear_account
 from tests.api_helpers import API
 from tests.test_admission import headers_of
@@ -275,6 +276,18 @@ def test_unread_counts_follow_the_read_marks(pair: Pair) -> None:
     assert unread(pair.p) == 1
     pair.client.post(url, json={"up_to_seq": 10**12}, headers=pair.p)  # nor beyond the newest
     assert unread(pair.p) == 0
+
+
+def test_a_late_read_mark_never_moves_the_mark_back(pair: Pair) -> None:
+    """Sending moves the sender's own mark to the new message; an older read mark that arrives
+    afterwards (another device, a slow request) must not lower it."""
+    pair.send(pair.s, "one")
+    last = pair.send(pair.s, "two").json()["seq"]
+    url = f"{API}/chat/conversations/{pair.id}/read"
+    assert pair.client.post(url, json={"up_to_seq": 1}, headers=pair.s).status_code == 204
+    assert pair.client.get(f"{API}/chat/unread", headers=pair.s).json()["total"] == 0
+    state = pair.world.session.get(ConversationState, (uuid.UUID(pair.id), "starter"))
+    assert state is not None and state.last_read_seq == last and state.delivered_seq == last
 
 
 def test_the_preview_is_short(pair: Pair) -> None:

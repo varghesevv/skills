@@ -7,8 +7,9 @@ pool. Messages and names never reach a log.
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import CursorResult, Select, and_, case, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -229,9 +230,7 @@ def send_message(
     db.refresh(message)  # the server's time and the sequence number
     conversation.last_message_at = message.created_at
     # The sender has seen their own message.
-    sender_state = _state(db, conversation.id, side)
-    sender_state.last_read_seq = max(sender_state.last_read_seq, message.seq)
-    sender_state.delivered_seq = max(sender_state.delivered_seq, message.seq)
+    _advance(db, conversation.id, side, message.seq)
     notify(
         db,
         {
@@ -248,17 +247,45 @@ def send_message(
 # ---- reading ----------------------------------------------------------------------------------
 
 
+def _advance(db: Session, conversation_id: uuid.UUID, side: str, seq: int) -> bool:
+    """Move the side's read and delivered marks up to `seq`, never down, in one statement so that
+    two devices acting at once cannot move a mark backwards. True when the read mark moved."""
+    state = _state(db, conversation_id, side)  # exists
+    moved = cast(
+        "CursorResult[Any]",
+        db.execute(
+            update(ConversationState)
+            .where(
+                ConversationState.conversation_id == conversation_id,
+                ConversationState.side == side,
+                ConversationState.last_read_seq < seq,
+            )
+            .values(
+                last_read_seq=seq, delivered_seq=func.greatest(ConversationState.delivered_seq, seq)
+            )
+        ),
+    ).rowcount
+    db.execute(
+        update(ConversationState)
+        .where(
+            ConversationState.conversation_id == conversation_id,
+            ConversationState.side == side,
+            ConversationState.delivered_seq < seq,
+        )
+        .values(delivered_seq=seq)
+    )
+    db.refresh(state)  # the statements above changed the row behind the object
+    return moved > 0
+
+
 def mark_read(db: Session, conversation: Conversation, side: str, up_to_seq: int) -> int:
     """Move the side's read mark forward only; returns the mark."""
-    state = _state(db, conversation.id, side)
     newest = (
         db.scalar(select(func.max(Message.seq)).where(Message.conversation_id == conversation.id))
         or 0
     )
     target = min(up_to_seq, newest)
-    if target > state.last_read_seq:
-        state.last_read_seq = target
-        state.delivered_seq = max(state.delivered_seq, target)
+    if _advance(db, conversation.id, side, target):
         notify(
             db,
             {
@@ -273,7 +300,7 @@ def mark_read(db: Session, conversation: Conversation, side: str, up_to_seq: int
                 ],
             },
         )
-    return state.last_read_seq
+    return _state(db, conversation.id, side).last_read_seq
 
 
 def messages_page(
@@ -301,13 +328,12 @@ def update_settings(
 # ---- lists ------------------------------------------------------------------------------------
 
 
-def _unread_by_conversation(
-    db: Session, person_id: uuid.UUID, ids: list[uuid.UUID] | None = None
-) -> dict[uuid.UUID, int]:
-    """Messages from the other side after the person's read mark, per conversation."""
+def _unread_query(person_id: uuid.UUID, *columns: Any) -> Select[Any]:
+    """Messages from the other side after the person's read mark (the base of both counts)."""
     mine = case((Conversation.starter_id == person_id, "starter"), else_="provider")
-    query = (
-        select(Conversation.id, func.count(Message.id))
+    return (
+        select(*columns)
+        .select_from(Conversation)
         .join(Message, Message.conversation_id == Conversation.id)
         .join(
             ConversationState,
@@ -321,15 +347,24 @@ def _unread_by_conversation(
             Message.sender_side != mine,
             Message.seq > ConversationState.last_read_seq,
         )
+    )
+
+
+def _unread_by_conversation(
+    db: Session, person_id: uuid.UUID, ids: list[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """Unread messages per conversation, for the conversations on a page."""
+    query = (
+        _unread_query(person_id, Conversation.id, func.count(Message.id))
+        .where(Conversation.id.in_(ids))
         .group_by(Conversation.id)
     )
-    if ids is not None:
-        query = query.where(Conversation.id.in_(ids))
     return {row[0]: row[1] for row in db.execute(query).all()}
 
 
 def unread_total(db: Session, person_id: uuid.UUID) -> int:
-    return sum(_unread_by_conversation(db, person_id).values())
+    """All unread messages of the person, summed in the database."""
+    return db.scalar(_unread_query(person_id, func.count(Message.id))) or 0
 
 
 def list_conversations(
