@@ -9,6 +9,7 @@ import '../../core/session/session_controller.dart';
 import '../chat/chat_paths.dart';
 import '../chat/chat_providers.dart';
 import '../chat/live/chat_live.dart';
+import '../chat/push/push_registration.dart';
 import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
@@ -39,7 +40,10 @@ class PersonHomeScreen extends ConsumerWidget {
       });
     }
     // Chat is live while a member who may chat has the app open.
-    if (person.status.isSearcher) ref.watch(chatLiveProvider);
+    if (person.status.isSearcher) {
+      ref.watch(chatLiveProvider);
+      ref.watch(pushLiveProvider);
+    }
     final (title, body) = switch (person.status) {
       PersonStatus.pending => (
         text('applicant.title'),
@@ -57,7 +61,14 @@ class PersonHomeScreen extends ConsumerWidget {
             key: const Key('log-out'),
             tooltip: text('nav.logOut'),
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(sessionProvider.notifier).logout(),
+            onPressed: () async {
+              // Both are read before waiting: this page may be gone when the wait ends. Stop
+              // notifications for this phone first, as afterwards there is no session to ask with.
+              final push = ref.read(pushRegistrationProvider);
+              final session = ref.read(sessionProvider.notifier);
+              await push.unregister();
+              await session.logout();
+            },
           ),
         ],
       ),

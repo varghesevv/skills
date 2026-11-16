@@ -64,6 +64,18 @@ gh secret set ANDROID_KEY_PASSWORD --env demo
 3. When it is green, open the Android app page of the web app, or ask the API: the new version is listed with its SHA-256. A tester can check it with `sha256sum`.
 4. To make older builds ask people to update, set `APP_MIN_VERSION` and `APP_LATEST_VERSION` in the Environment and run `deploy-demo` again.
 
+## Push notifications (needs your Firebase project)
+
+Chat works without push: the app shows new messages while it is open. To notify a phone whose app is closed, push needs a Firebase project, which only you can create (free). Until then the app builds and runs with no push: without `google-services.json` in the build, Firebase does not start in the app, so the person is never asked to allow notifications, and without `PUSH_ENABLED` on the server nothing is sent.
+
+1. In the Firebase console create a project. Add an Android app for each build you install: the demo flavor's ID is the application ID with `.demo` after it (now `com.example.skills.dev.demo`, see Q-A1 below), the store flavor's is the application ID itself.
+2. Download `google-services.json` once, after both apps are added: that one file lists both application IDs, and the build uses it for either flavor. It is not a secret in the way a key is, but it belongs to your project: keep it out of git (`mobile/android/.gitignore` ignores `mobile/android/app/google-services.json`). A build uses the file when it is in that place; without it there is no push.
+3. For release builds, store the file in the `demo` Environment as a secret (for example `ANDROID_GOOGLE_SERVICES_JSON`, base64) and have the release workflow write it to `mobile/android/app/google-services.json` before the build. **This workflow step is not made yet:** it touches `.github/`, so it is made together with you (S9.2).
+4. For the server: Firebase console > Project settings > Service accounts > Generate new private key. Put the JSON in the API worker's environment as `FCM_SERVICE_ACCOUNT_JSON` and set `PUSH_ENABLED=true` for the API and the worker (operations runbook, "Chat push"). The key is a secret: environment only, never a file in the repository (ADR-0011).
+5. Check on a phone: sign in as two people, open Messages on the first phone (allow notifications), close the app, write from the second. A notification "You have a new message" arrives within a few seconds, with no text in it; tapping it opens the conversation.
+
+The push only says that there is a new message and which conversation; it never carries text or names. At sign-out the phone is removed from the server; if a session ends without signing out, the next person to sign in on that phone replaces the address.
+
 ## How this follows ADR-0011 (secrets from the environment only)
 
 - **No secret in the repository** (1): the workflow only names secrets (`secrets.ANDROID_*`); the key, its passwords and the SSH key exist only in the Environment. `*.jks`, `*.keystore` and `key.properties` are git-ignored, and `scripts/check-secrets.sh` (the required `secrets-scan` check) refuses them if they are added anyway.

@@ -12,6 +12,7 @@ import 'chat_list_screen.dart' show chatOtherName;
 import 'chat_providers.dart';
 import 'live/chat_events.dart';
 import 'live/chat_live.dart';
+import 'push/push_registration.dart';
 import 'data/chat_models.dart';
 import 'thread_model.dart';
 
@@ -178,6 +179,7 @@ class _ThreadState extends ConsumerState<_Thread> {
   @override
   Widget build(BuildContext context) {
     ref.listen(conversationsProvider, _follow);
+    ref.watch(pushOfferProvider); // asks once whether to allow notifications
     final text = ref.watch(appTextProvider);
     final c = _conversation;
     final isProviderSide = c.mySide == ChatSide.provider;
