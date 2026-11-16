@@ -73,8 +73,13 @@ const SCENARIOS: Scenario[] = [
     ready: async (page) => {
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
       const toggle = page.getByRole('button', { name: 'Filters', exact: true })
-      if (await toggle.isVisible()) await toggle.click()
-      await expect(page.getByRole('button', { name: 'Show results' }).first()).toBeVisible()
+      if (await toggle.isVisible()) {
+        await toggle.click()
+        await expect(page.getByRole('button', { name: 'Show results' }).first()).toBeVisible()
+      } else {
+        // From 1024 px the filters apply as they change, so there is no Show results button.
+        await expect(page.getByRole('button', { name: 'Clear filters' }).first()).toBeVisible()
+      }
     },
   },
   {
@@ -148,7 +153,7 @@ test('the phone menu of an owner, open', async ({ page }, testInfo) => {
   await page.goto('/member')
   await page.getByRole('button', { name: 'Menu' }).click()
   await expect(page.getByRole('link', { name: 'Applicants' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Churches' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Number views' })).toBeVisible()
   expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
   expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
   await keepScreenshot(page, testInfo, 'phone menu open')

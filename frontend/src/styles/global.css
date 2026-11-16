@@ -928,7 +928,6 @@ input[aria-invalid='true'] {
   border-radius: 999px;
   color: var(--muted);
   letter-spacing: 0.08em;
-  opacity: 0.7;
   user-select: none;
 }
 .reveal-error {
@@ -1016,8 +1015,10 @@ input[aria-invalid='true'] {
     max-width: 22rem;
     margin-inline-start: auto;
   }
+  /* The lists drop from the bar itself, not from their button: the bar wraps, so a button can sit
+     anywhere in it and a list under the button could run off the screen. */
   .navgroup {
-    position: relative;
+    position: static;
   }
   .navgroup[data-open='false'] > .navgroup-list {
     display: none;
@@ -1025,9 +1026,9 @@ input[aria-invalid='true'] {
   .navgroup-list {
     position: absolute;
     inset-block-start: 100%;
-    inset-inline-start: 0;
+    inset-inline-start: 0.5rem;
     z-index: 30;
-    min-width: 14rem;
+    width: min(16rem, calc(100% - 1rem));
     padding: 0.5rem;
     background: var(--surface);
     border: 1px solid var(--line);
@@ -1036,7 +1037,7 @@ input[aria-invalid='true'] {
   }
   .topbar-account .navgroup-list {
     inset-inline-start: auto;
-    inset-inline-end: 0;
+    inset-inline-end: 0.5rem;
   }
   .choice-grid {
     grid-template-columns: repeat(2, 1fr);
