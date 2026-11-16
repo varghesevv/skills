@@ -141,6 +141,14 @@ Conversations between two people: the *starter* (a SEARCHER or above) and the *p
 
 Storing a message announces an event (ids only) through PostgreSQL `NOTIFY` when the transaction commits. Every API process listens and delivers the event to the sockets it holds.
 
+#### Push addresses and the push itself (S8.5, ADR-0014)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /chat/devices | Body `token` (the Firebase registration token, 1 to 512 characters) and `platform` (`android`). `201` new, `200` known (the app repeats it at each start and when Firebase changes it); an address registered by someone else moves to the caller. Returns `{id}`. `422` for a missing or too long token or another platform. |
+| DELETE | /chat/devices/{id} | Sign-out: stop pushing to this phone. `204`; `404` for a device that is not the caller's. |
+
+The push is sent by the worker, not by the API, and only when `PUSH_ENABLED` is true: storing a message adds or raises one `push_outbox` row for the recipient (none if they muted the conversation or have no device), due after `CHAT_PUSH_DELAY_SECONDS`. When due, the worker cancels it if the recipient's `delivered_seq` or `last_read_seq` has reached the message (a socket delivered it), or the person is closed, revoked, or blocked, and otherwise sends one push to each device through Firebase (HTTP v1): title "Skills", text "You have a new message" ("You have new messages" when several), data `type=chat` and `conversation_id` only (the app opens that conversation). A token Firebase reports as unregistered is deleted; other failures are tried again after 30 seconds, up to 5 times.
+
 #### Reporting and the OWNER (S8.4)
 | Method | Path | Notes |
 |---|---|---|

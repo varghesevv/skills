@@ -9,7 +9,15 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.logging_config import configure_logging
-from app.worker.jobs import SYNC_JOB_ID, catch_up, sync_jobs
+from app.worker.jobs import (
+    PURGE_JOB_ID,
+    PUSH_JOB_ID,
+    SYNC_JOB_ID,
+    catch_up,
+    purge_push,
+    push_due,
+    sync_jobs,
+)
 
 log = logging.getLogger("skills.worker")
 
@@ -29,6 +37,27 @@ def main() -> None:
         IntervalTrigger(seconds=60),
         args=[scheduler, factory, settings],
         id=SYNC_JOB_ID,
+        max_instances=1,
+        coalesce=True,
+    )
+    if settings.push_enabled:
+        from app.chat.push import build_sender
+
+        sender = build_sender(settings)  # stops here when the key is missing
+        scheduler.add_job(
+            push_due,
+            IntervalTrigger(seconds=2),
+            args=[factory, sender],
+            id=PUSH_JOB_ID,
+            max_instances=1,
+            coalesce=True,
+        )
+        log.info("Chat push is on")
+    scheduler.add_job(
+        purge_push,
+        IntervalTrigger(hours=1),
+        args=[factory, settings],
+        id=PURGE_JOB_ID,
         max_instances=1,
         coalesce=True,
     )

@@ -13,6 +13,7 @@ from sqlalchemy import CursorResult, Select, and_, case, func, or_, select, upda
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.chat import push
 from app.chat.listener import notify
 from app.core.config import Settings
 from app.core.errors import ApiError
@@ -240,6 +241,14 @@ def send_message(
             # The recipient, and the sender's other devices.
             "people": [str(recipient.id), str(sender.id)],
         },
+    )
+    push.enqueue(
+        db,
+        settings,
+        recipient,
+        conversation,
+        "provider" if side == "starter" else "starter",
+        message.seq,
     )
     return message, True
 
