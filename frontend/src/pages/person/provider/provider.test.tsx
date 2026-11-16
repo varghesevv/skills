@@ -19,7 +19,7 @@ describe('the provider menu', () => {
   it.each(['provider', 'verifier', 'admin', 'owner'])('is shown to a %s', async (status) => {
     as(status)
     renderApp('/member')
-    const nav = await screen.findByRole('navigation', { name: 'My profile' })
+    const nav = await screen.findByRole('navigation', { name: 'My services' })
     expect(
       within(nav)
         .getAllByRole('link')
@@ -31,7 +31,7 @@ describe('the provider menu', () => {
     as(status)
     renderApp('/member')
     await screen.findByRole('link', { name: /Notifications/ })
-    expect(screen.queryByRole('navigation', { name: 'My profile' })).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'My services' })).toBeNull()
   })
 })
 

@@ -59,7 +59,7 @@ paths, status values, report files and emails never change with the words (D-47)
 ## UI requirements
 
 - Responsive web design (RWD) on every page, see the next section.
-- Accessible: keyboard navigation, labels on inputs, sufficient contrast (WCAG 2.1 AA target).
+- Accessible: keyboard navigation, labels on inputs, sufficient contrast (WCAG 2.2 AA target, see [the design system](../design-system.md)).
 - Form validation with zod mirroring API rules; show API error messages clearly.
 - The screens shown depend on the status from `GET /me`, which is read again on every start and after every `403`. The access token is kept in memory; silent refresh using the refresh token; log out on refresh failure.
 - Loading, empty and error states for every list and page.
@@ -84,13 +84,14 @@ Every page, for every status, works on phones, tablets and desktops. This is a r
 - Layout adapts to the viewport and to orientation changes, not to the device type.
 
 ### Components
-- **Navigation:** a top bar with a menu button on mobile, a collapsible side menu on tablet, a persistent side menu on desktop.
-- **Tables** (search results, report sections, run history): on mobile each row becomes a stacked card or the table scrolls horizontally inside its own container; the page itself never scrolls sideways. Key columns stay visible. Report pages keep all columns reachable on every size.
+- **Navigation:** one top bar. From 640 px it holds the everyday links (Find providers, Ratings I gave), a menu button for each group the status allows (My services, the leader group, Administration, Owner), a name search, Notifications and an Account menu. On a phone everything sits behind one Menu button, in a panel with each group under its heading. The groups come from one function (`navFor` in `shell/nav.ts`) and follow the status rules of this document; a group's menu is a disclosure button (Esc closes it and returns focus). Built from the design system, section 2.2.
+- **Theme:** light, dark or the device's setting, chosen on the account page and kept in the browser only; the saved choice is applied before the first paint. The colours are the tokens of `styles/global.css`, and the font is Inter from this origin ([design system](../design-system.md), section 1).
+- **Tables** (report sections, run history): on mobile each row becomes a stacked card or the table scrolls horizontally inside its own container; the page itself never scrolls sideways. Key columns stay visible. Report pages keep all columns reachable on every size.
 - **Forms:** single column on mobile, two columns where it helps on wider screens; labels always visible; correct `type`, `inputmode` and `autocomplete` values so phones show the right keyboard.
 - **Mobile number:** shown as a greyed placeholder with a **Reveal** button on searcher search results and the provider detail page. Reveal calls the server; on a touch device (`hover: none` and `pointer: coarse`) it then opens the dialler, otherwise it shows the number as a `tel:` link. The number lives only in the component state. A refused request (limit reached) shows the wait time and the button stays available.
-- **Filters** on provider search: a slide-in panel on mobile and tablet, a side panel on desktop.
+- **Filters** on provider search: a slide-in panel on mobile and tablet with a Show results button, a side panel on desktop (1024 px and up) where they apply as they are changed (at once for a choice, after a short pause for typed values), with the previous results shown dimmed until the new ones arrive. The results are cards of one size in a grid; each card names the church and home group, and shows how many of the searched skills the provider has when skills are searched with *any*.
 - **Calendar** (unavailability): month view on tablet and desktop, list view on mobile.
-- **Dialogs and menus:** full-screen sheets on mobile, centred dialogs on larger screens; focus is trapped and returned on close. A question that must be answered before something that cannot be undone (decline, revoke, close a group or a church, accept the OWNER role) is one shared component: the warning receives focus when it appears, so it is read out, and focus returns to the button that opened it when the question is dropped.
+- **Dialogs and modal menus:** full-screen sheets on mobile, centred dialogs on larger screens; focus is trapped and returned on close. A question that must be answered before something that cannot be undone (decline, revoke, close a group or a church, accept the OWNER role) is one shared component: the warning receives focus when it appears, so it is read out, and focus returns to the button that opened it when the question is dropped. The group menus of the top bar are not modal: they are disclosures without a focus trap (see Navigation).
 - **Images and charts:** scale to the container; charts redraw on resize.
 
 ### Usability on touch devices
@@ -109,4 +110,5 @@ Every page, for every status, works on phones, tablets and desktops. This is a r
 2. Every function of the member pages can be completed at 360 px width using touch only.
 3. Layout changes at the breakpoints above, with no overlapping or clipped content.
 4. Each page is checked at all five reference viewports, with automated browser tests (Playwright screenshots and an overflow check) for the shell, login, search, a form page and a report page. They live in `frontend/e2e` and run in CI as the `responsive` job.
-5. Pages meet the WCAG 2.1 AA reflow and target-size expectations.
+5. Pages meet the WCAG 2.2 AA reflow and target-size expectations.
+6. The colour tokens reach their contrast in the light and the dark theme (a unit test reads `global.css`), and the browser tests run an automatic accessibility check (axe) of the search, the member home and the account page in both themes.

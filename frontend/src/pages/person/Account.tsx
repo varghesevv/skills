@@ -6,6 +6,7 @@ import { updateMe } from '../../api/person'
 import { useAuth, usePerson } from '../../auth/AuthContext'
 import { t } from '../../i18n'
 import { errorMessage, serverFieldErrors } from '../../shared/errors'
+import ThemeChoice from '../../shared/ThemeChoice'
 import { Alert, TextField } from '../../shared/ui'
 import { usePageTitle } from '../../shared/usePageTitle'
 import { accountDetailsSchema, validate, type FieldErrors } from '../../shared/validation'
@@ -99,6 +100,9 @@ export default function Account() {
           {save.isPending ? t('account.saving') : t('account.save')}
         </button>
       </form>
+      <section className="card">
+        <ThemeChoice />
+      </section>
       <LeaveAccount />
     </div>
   )

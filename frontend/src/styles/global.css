@@ -7,44 +7,97 @@
  * the same everywhere in this file.
  */
 
-:root {
-  color-scheme: light dark;
-  --bg: #f4f6f8;
-  --surface: #ffffff;
-  --ink: #172033;
-  --muted: #4b5568;
-  --line: #d5dbe4;
-  --accent: #0a6c6c;
-  --accent-hover: #085757;
-  --accent-ink: #ffffff;
-  --danger: #b42318;
-  --danger-bg: #fef3f2;
-  --success: #05603a;
-  --success-bg: #ecfdf3;
-  --info-bg: #eef4ff;
-  --focus: #1d4ed8;
-  --radius: 0.75rem;
-  --topbar-height: 3.5rem;
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+/* Inter, variable weight, Latin subset, from this origin (no font service: the privacy page
+   promises no third parties). Licence: public/fonts/inter-OFL.txt. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+:root {
+  color-scheme: light dark;
+  --bg: #f5f3ef;
+  --surface: #ffffff;
+  --ink: #1c1b19;
+  --muted: #57534e;
+  --line: #d6d3cd;
+  --line-strong: #8c877f;
+  --accent: #4338ca;
+  --accent-hover: #3730a3;
+  --accent-ink: #ffffff;
+  --accent-bg: #e0e7ff;
+  --accent-bg-ink: #3730a3;
+  --success: #065f46;
+  --success-bg: #d1fae5;
+  --danger: #b42318;
+  --danger-bg: #fef3f2;
+  --info-bg: #eef4ff;
+  --focus: #4338ca;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-raised: 0 6px 20px rgb(0 0 0 / 0.1);
+  --radius: 0.75rem;
+  --topbar-height: 3.5rem;
+  --font:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* The dark values are written twice (CSS cannot share a block between a media query and an
+   attribute selector); styles/tokens.test.ts fails if the two blocks differ. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0e1420;
-    --surface: #151d2c;
-    --ink: #e8edf5;
-    --muted: #b0bacb;
-    --line: #2b3649;
-    --accent: #3cc4b6;
-    --accent-hover: #63d6ca;
-    --accent-ink: #06201d;
-    --danger: #ff9a90;
+  :root:not([data-theme='light']) {
+    --bg: #151517;
+    --surface: #1f1f22;
+    --ink: #f2f0ec;
+    --muted: #b0aaa3;
+    --line: #3a3936;
+    --line-strong: #7c776f;
+    --accent: #a5b4fc;
+    --accent-hover: #c7d2fe;
+    --accent-ink: #0f0e2a;
+    --accent-bg: #26254f;
+    --accent-bg-ink: #c7d2fe;
+    --success: #6ee7b7;
+    --success-bg: #0f2a22;
+    --danger: #fda29b;
     --danger-bg: #3a1512;
-    --success: #6ee7a8;
-    --success-bg: #0f2a1c;
     --info-bg: #172447;
-    --focus: #8ab4ff;
+    --focus: #a5b4fc;
+    --shadow-card: none;
+    --shadow-raised: none;
   }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #151517;
+  --surface: #1f1f22;
+  --ink: #f2f0ec;
+  --muted: #b0aaa3;
+  --line: #3a3936;
+  --line-strong: #7c776f;
+  --accent: #a5b4fc;
+  --accent-hover: #c7d2fe;
+  --accent-ink: #0f0e2a;
+  --accent-bg: #26254f;
+  --accent-bg-ink: #c7d2fe;
+  --success: #6ee7b7;
+  --success-bg: #0f2a22;
+  --danger: #fda29b;
+  --danger-bg: #3a1512;
+  --info-bg: #172447;
+  --focus: #a5b4fc;
+  --shadow-card: none;
+  --shadow-raised: none;
 }
 
 *,
@@ -79,12 +132,24 @@ h2,
 h3 {
   line-height: 1.2;
   margin: 0 0 0.75rem;
+  font-weight: 650;
 }
 h1 {
-  font-size: 1.625rem;
+  font-size: 1.5rem;
+  line-height: 2rem;
 }
 h2 {
   font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+h3 {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+}
+.tnum,
+.result-rate,
+.pcard-rate {
+  font-variant-numeric: tabular-nums;
 }
 p {
   margin: 0 0 1rem;
@@ -189,13 +254,86 @@ main:focus {
   align-items: center;
   gap: 0.5rem;
 }
-.topbar-email {
+.topbar-notifications {
+  margin-inline-start: auto;
+}
+.menu-button {
+  flex: none;
+}
+
+/* The links of the bar: on a phone they sit in one panel under the Menu button, from 640px they
+   are in the bar itself (docs/design-system.md, section 2.2). */
+.site-menu {
   display: none;
+  flex-basis: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-block: 0.5rem 1rem;
+}
+.site-menu[data-open='true'] {
+  display: flex;
+}
+.site-menu,
+.site-menu > *,
+.gsearch > * {
+  min-width: 0;
+}
+.gsearch {
+  display: flex;
+  gap: 0.5rem;
+}
+.gsearch input {
+  flex: 1 1 0;
+  width: 0; /* an input has a width of its own that would widen the panel on a small phone */
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+.navgroup-title {
+  margin: 0.5rem 0.75rem 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 650;
   color: var(--muted);
-  max-width: 16rem;
+  text-transform: none;
+}
+.navgroup-list {
+  margin: 0;
+  padding: 0;
+}
+.navgroup-list a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.navgroup-list a:hover {
+  background: var(--bg);
+}
+.navgroup-list a[aria-current='page'],
+.topbar-nav a[aria-current='page'] {
+  background: var(--accent-bg);
+  color: var(--accent-bg-ink);
+  font-weight: 650;
+}
+.navgroup-email {
+  margin: 0.5rem 0.75rem 0;
   overflow: hidden;
+  color: var(--muted);
+  font-size: 0.875rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.navgroup-signout {
+  width: 100%;
+  margin-top: 0.25rem;
 }
 
 /* ---------- Buttons ---------- */
@@ -229,7 +367,7 @@ main:focus {
 .icon-btn {
   background: transparent;
   color: var(--ink);
-  border-color: var(--line);
+  border-color: var(--line-strong);
 }
 .btn-quiet:hover,
 .icon-btn:hover {
@@ -344,6 +482,7 @@ main:focus {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1.25rem;
+  box-shadow: var(--shadow-card);
 }
 .auth-card {
   max-width: 28rem;
@@ -355,7 +494,7 @@ main:focus {
   padding: 0.25rem;
   margin-block: 0.75rem 1rem;
   background: var(--bg);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 0.75rem;
 }
 .segmented a {
@@ -436,7 +575,7 @@ textarea {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 0.5rem;
   background: var(--surface);
   color: var(--ink);
@@ -640,7 +779,7 @@ input[type='date'] {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 0.5rem;
   background: var(--surface);
   color: var(--ink);
@@ -726,7 +865,7 @@ input[aria-invalid='true'] {
   gap: 0.4rem;
   min-height: 2.25rem;
   padding: 0.25rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--bg);
   color: inherit;
@@ -795,7 +934,6 @@ input[aria-invalid='true'] {
   border-radius: 999px;
   color: var(--muted);
   letter-spacing: 0.08em;
-  opacity: 0.7;
   user-select: none;
 }
 .reveal-error {
@@ -862,8 +1000,50 @@ input[aria-invalid='true'] {
   h1 {
     font-size: 2rem;
   }
-  .topbar-email {
-    display: inline;
+  .site-menu {
+    display: flex;
+    flex: 1;
+    flex-basis: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0;
+  }
+  .topbar-notifications {
+    margin-inline-start: 0;
+    order: 5;
+  }
+  .topbar-account {
+    order: 6;
+  }
+  .gsearch {
+    flex: 1 1 12rem;
+    max-width: 22rem;
+    margin-inline-start: auto;
+  }
+  /* The lists drop from the bar itself, not from their button: the bar wraps, so a button can sit
+     anywhere in it and a list under the button could run off the screen. */
+  .navgroup {
+    position: static;
+  }
+  .navgroup[data-open='false'] > .navgroup-list {
+    display: none;
+  }
+  .navgroup-list {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0.5rem;
+    z-index: 30;
+    width: min(16rem, calc(100% - 1rem));
+    padding: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-raised);
+  }
+  .topbar-account .navgroup-list {
+    inset-inline-start: auto;
+    inset-inline-end: 0.5rem;
   }
   .choice-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -881,7 +1061,7 @@ input[aria-invalid='true'] {
     grid-template-columns: repeat(2, 1fr);
   }
   .result-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
   }
   .calendar {
     display: block;
@@ -1021,7 +1201,7 @@ input[aria-invalid='true'] {
   gap: 0.75rem;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   cursor: pointer;
 }
@@ -1040,4 +1220,166 @@ input[aria-invalid='true'] {
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: space-between;
+}
+
+.theme-choice {
+  display: grid;
+  gap: 0.5rem;
+}
+@media (min-width: 640px) {
+  .theme-choice {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Provider card (docs/design-system.md, section 3.2) ---------- */
+
+.pcard {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1rem;
+  transition:
+    box-shadow 120ms ease-out,
+    border-color 120ms ease-out;
+}
+@media (min-width: 640px) {
+  .pcard {
+    padding: 1.25rem;
+  }
+}
+.pcard:hover,
+.pcard:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-raised);
+}
+.pcard > * {
+  margin: 0;
+}
+.pcard-name {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.125rem;
+}
+.pcard-initials {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent-bg-ink);
+  font-weight: 650;
+}
+/* The link covers the whole card; Reveal stays above it. The focus ring is drawn on the card. */
+.pcard-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+.pcard-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+}
+.pcard-link:focus-visible {
+  outline: none;
+}
+.pcard-link:focus-visible::after {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.pcard-foot {
+  position: relative;
+  z-index: 1;
+}
+.pcard-rate {
+  color: var(--muted);
+}
+.pcard-rate strong {
+  color: var(--ink);
+  font-size: 1.125rem;
+}
+.pcard-trust {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 0.875rem;
+}
+.pcard-trust svg {
+  flex: none;
+}
+.pcard-match,
+.pcard-small {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.pill {
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent-bg-ink);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.pill-more {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--muted);
+}
+.pcard-skeleton {
+  min-height: 15rem;
+  background: linear-gradient(90deg, var(--surface), var(--bg), var(--surface));
+  background-size: 200% 100%;
+  animation: pcard-shimmer 1.4s linear infinite;
+}
+@keyframes pcard-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.result-grid.is-stale {
+  opacity: 0.6;
+  transition: opacity 120ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcard,
+  .result-grid.is-stale {
+    transition: none;
+  }
+  .pcard-skeleton {
+    animation: none;
+  }
+}
+
+/* ---------- Home tiles ---------- */
+
+.tiles {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  margin-bottom: 1rem;
+}
+.tiles .shortcut {
+  display: flex;
+  align-items: center;
+  min-height: 3.5rem;
+  padding: 0.75rem 1rem;
+}
+@media (min-width: 640px) {
+  .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  }
 }

@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
 
 import { mockApi, type Role } from './mockApi'
@@ -72,8 +73,13 @@ const SCENARIOS: Scenario[] = [
     ready: async (page) => {
       await expect(page.getByText('40 freelancer(s) found')).toBeVisible()
       const toggle = page.getByRole('button', { name: 'Filters', exact: true })
-      if (await toggle.isVisible()) await toggle.click()
-      await expect(page.getByRole('button', { name: 'Show results' }).first()).toBeVisible()
+      if (await toggle.isVisible()) {
+        await toggle.click()
+        await expect(page.getByRole('button', { name: 'Show results' }).first()).toBeVisible()
+      } else {
+        // From 1024 px the filters apply as they change, so there is no Show results button.
+        await expect(page.getByRole('button', { name: 'Clear filters' }).first()).toBeVisible()
+      }
     },
   },
   {
@@ -94,6 +100,22 @@ async function horizontalOverflow(page: Page): Promise<number> {
       document.body.scrollWidth - document.documentElement.clientWidth,
     ),
   )
+}
+
+/** The elements that reach past the right edge, to say what scrolls sideways. */
+async function reachingPastTheEdge(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const edge = document.documentElement.clientWidth
+    const found: string[] = []
+    for (const element of document.querySelectorAll<HTMLElement>('body *')) {
+      const rect = element.getBoundingClientRect()
+      if (rect.width > 0 && rect.right > edge + 0.5) {
+        const label = (element.className?.toString() || element.tagName).slice(0, 40)
+        found.push(`${element.tagName.toLowerCase()}.${label} right=${Math.round(rect.right)}`)
+      }
+    }
+    return found.slice(0, 8)
+  })
 }
 
 /** Visible controls smaller than 44 by 44 CSS pixels (WCAG 2.1 AA target size, spec 06). */
@@ -135,11 +157,76 @@ for (const scenario of SCENARIOS) {
 
     expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
     expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
-    // The member pages show their menus in the top bar all the time (there is no menu button), so
-    // the overflow and target-size checks above already cover them.
     await keepScreenshot(page, testInfo, scenario.name)
   })
 }
+
+// docs/design-system.md, 2.2: on a phone the links sit behind one Menu button, and every group
+// opens without a sideways scroll, with targets of 44 px.
+test('the phone menu of an owner, open', async ({ page }, testInfo) => {
+  test.skip(!['phone-small-360x640', 'phone-390x844'].includes(testInfo.project.name), 'phones')
+  await mockApi(page, 'owner')
+  await page.goto('/member')
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await expect(page.getByRole('link', { name: 'Applicants' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Number views' })).toBeVisible()
+  expect(
+    await horizontalOverflow(page),
+    `the page scrolls sideways: ${(await reachingPastTheEdge(page)).join('; ')}`,
+  ).toBeLessThanOrEqual(0)
+  expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
+  await keepScreenshot(page, testInfo, 'phone menu open')
+})
+
+// On a tablet or desktop a group opens as a floating list.
+test('a group menu of the top bar opens', async ({ page }, testInfo) => {
+  test.skip(['phone-small-360x640', 'phone-390x844'].includes(testInfo.project.name), 'wider')
+  await mockApi(page, 'owner')
+  await page.goto('/member')
+  await page.getByRole('button', { name: 'Leader' }).click()
+  await expect(page.getByRole('link', { name: 'Applicants' })).toBeVisible()
+  expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
+  await keepScreenshot(page, testInfo, 'group menu open')
+})
+
+// Section 4, step 1: no automatically detectable accessibility problem (contrast included) in
+// either theme, on the pages that carry the most of the design.
+for (const theme of ['light', 'dark'] as const) {
+  for (const target of [
+    { name: 'search', role: 'searcher' as Role, path: '/member/search' },
+    { name: 'member home', role: 'provider' as Role, path: '/member' },
+    { name: 'account', role: 'searcher' as Role, path: '/member/account' },
+  ]) {
+    test(`axe finds nothing on ${target.name} in the ${theme} theme`, async ({
+      page,
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop-1440x900', 'run once')
+      await page.emulateMedia({ colorScheme: theme })
+      await mockApi(page, target.role)
+      await page.goto(target.path)
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      const result = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+      expect(
+        result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' | ')}`),
+      ).toEqual([])
+    })
+  }
+}
+
+// A saved choice wins over the system setting, with no flash of the other theme.
+test('a saved dark choice is applied before the first paint', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-1440x900', 'run once')
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.addInitScript(() => localStorage.setItem('skills.theme', 'dark'))
+  await mockApi(page, null)
+  await page.goto('/')
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark')
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
+    'rgb(21, 21, 23)',
+  )
+})
 
 // Acceptance criterion 1: no horizontal scrolling at any width from 320 px.
 test('narrowest supported width (320 px)', async ({ page }, testInfo) => {
