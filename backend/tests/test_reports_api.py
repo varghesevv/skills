@@ -70,8 +70,8 @@ def second_church(world: World) -> tuple[Church, Member]:
 def test_the_owner_lists_every_report(client: TestClient, world: World) -> None:
     owner = owner_member(world)
     everything = client.get(REPORTS, headers=headers_of(client, owner)).json()
-    assert len(everything) == 13
-    assert {"RP-01", "RP-09", "RP-10", "SC-01"} <= {report["code"] for report in everything}
+    assert len(everything) == 14
+    assert {"RP-01", "RP-09", "RP-10", "RP-11", "SC-01"} <= {report["code"] for report in everything}
 
 
 def test_an_admin_lists_only_the_reports_limited_to_their_church(
