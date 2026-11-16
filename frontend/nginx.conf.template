@@ -1,7 +1,7 @@
 # The access log never shows the token of a link page (/join/, /vouch/, /invite/) or a query string:
 # a link is a credential, and a name typed into a search is personal data (ADR-0011, S5.13).
 map $request_uri $logged_uri {
-  ~^/(join|vouch|invite)/ /$1/redacted;
+  ~*^/(join|vouch|invite)/ /link/redacted;  # any letter case: the web router ignores case
   ~^([^?]*)\? $1;
   default $request_uri;
 }
