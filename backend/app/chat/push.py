@@ -13,11 +13,12 @@ import uuid
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from datetime import UTC, datetime, timedelta
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 import httpx
 import jwt
-from sqlalchemy import delete, func, select, text
+from cryptography.hazmat.primitives import serialization
+from sqlalchemy import delete, func, literal_column, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -115,64 +116,106 @@ def _decide(db: Session, row: PushOutbox) -> str | None:
     return None
 
 
-def process_due(
-    factory: SessionFactory, sender: PushSender, now: datetime | None = None
-) -> dict[str, int]:
-    """Handle every due row once (in batches); the counts of what happened, by outcome. Safe to run
-    from more than one worker: rows are taken with `FOR UPDATE SKIP LOCKED`."""
-    counts: dict[str, int] = {}
-    while True:
-        with factory() as db:
-            moment = now or datetime.now(UTC)
-            rows = db.scalars(
-                select(PushOutbox)
+LEASE_SECONDS = 120  # a claimed row is left alone this long (a worker that dies lets it go)
+
+
+def _claim(factory: SessionFactory, moment: datetime) -> list[uuid.UUID]:
+    """Take up to BATCH due rows by moving their time forward, in a short transaction, so that no
+    row stays locked while the network is used."""
+    with factory() as db:
+        ids = list(
+            db.scalars(
+                select(PushOutbox.id)
                 .where(PushOutbox.state == "pending", PushOutbox.send_after <= moment)
                 .order_by(PushOutbox.send_after)
                 .limit(BATCH)
                 .with_for_update(skip_locked=True)
-            ).all()
-            if not rows:
-                return counts
-            for row in rows:
-                outcome = _handle(db, sender, row, moment)
-                counts[outcome] = counts.get(outcome, 0) + 1
-            db.commit()
-        if len(rows) < BATCH:
+            )
+        )
+        if ids:
+            db.execute(
+                update(PushOutbox)
+                .where(PushOutbox.id.in_(ids))
+                .values(send_after=moment + timedelta(seconds=LEASE_SECONDS))
+            )
+        db.commit()
+    return ids
+
+
+def process_due(
+    factory: SessionFactory, sender: PushSender, now: datetime | None = None
+) -> dict[str, int]:
+    """Handle every due row once; the counts of what happened, by outcome. Safe to run from more
+    than one worker. A row is claimed in one short transaction, looked at in a second, sent with
+    no transaction open, and its outcome written in a third, so a slow Firebase never blocks the
+    sending of a message."""
+    counts: dict[str, int] = {}
+    moment = now or datetime.now(UTC)
+    while True:
+        ids = _claim(factory, moment)
+        for row_id in ids:
+            outcome = _process_one(factory, sender, row_id, moment)
+            counts[outcome] = counts.get(outcome, 0) + 1
+        if len(ids) < BATCH:
             return counts
 
 
-def _handle(db: Session, sender: PushSender, row: PushOutbox, now: datetime) -> str:
-    reason = _decide(db, row)
-    if reason is not None:
-        _cancel(row, reason, now)
-        return reason
-    devices = db.scalars(select(DeviceToken).where(DeviceToken.person_id == row.person_id)).all()
-    if not devices:
-        _cancel(row, "no_device", now)
-        return "no_device"
-    body = BODY_MANY if row.message_count > 1 else BODY_ONE
+def _process_one(
+    factory: SessionFactory, sender: PushSender, row_id: uuid.UUID, now: datetime
+) -> str:
+    with factory() as db:  # look
+        row = db.get(PushOutbox, row_id)
+        if row is None or row.state != "pending":
+            return "gone"
+        reason = _decide(db, row)
+        if reason is not None:
+            _cancel(row, reason, now)
+            db.commit()
+            return reason
+        seen_seq, count = row.last_seq, row.message_count
+        devices = [
+            (d.id, d.token)
+            for d in db.scalars(select(DeviceToken).where(DeviceToken.person_id == row.person_id))
+        ]
+        if not devices:
+            _cancel(row, "no_device", now)
+            db.commit()
+            return "no_device"
+        db.commit()
+    body = BODY_MANY if count > 1 else BODY_ONE
     data = {"type": "chat", "conversation_id": str(row.conversation_id)}
-    delivered = retry = False
-    for device in devices:
-        result = sender.send(device.token, TITLE, body, data)
-        if result == "ok":
-            delivered = True
-        elif result == "invalid":
-            db.delete(device)  # the phone no longer has the app
+    results = [
+        (device_id, sender.send(address, TITLE, body, data)) for device_id, address in devices
+    ]
+    with factory() as db:  # record
+        row = db.scalar(select(PushOutbox).where(PushOutbox.id == row_id).with_for_update())
+        if row is None:
+            return "gone"
+        gone = [device_id for device_id, result in results if result == "invalid"]
+        if gone:
+            db.execute(delete(DeviceToken).where(DeviceToken.id.in_(gone)))
+        outcomes = {result for _, result in results}
+        if "ok" in outcomes:
+            if row.last_seq > seen_seq:
+                # A newer message arrived while sending: it still needs its own push.
+                row.send_after, row.message_count, row.attempts = now, 1, 0
+                outcome = "sent"
+            else:
+                row.state, row.finished_at = "sent", now
+                outcome = "sent"
+        elif "retry" not in outcomes:  # every address was refused as unregistered
+            _cancel(row, "no_device", now)
+            outcome = "no_device"
         else:
-            retry = True
-    if delivered:
-        row.state, row.finished_at = "sent", now
-        return "sent"
-    if not retry:  # every address was refused as unregistered
-        _cancel(row, "no_device", now)
-        return "no_device"
-    row.attempts += 1
-    if row.attempts >= MAX_ATTEMPTS:
-        _cancel(row, "failed", now)
-        return "failed"
-    row.send_after = now + timedelta(seconds=RETRY_SECONDS)
-    return "retry"
+            row.attempts += 1
+            if row.attempts >= MAX_ATTEMPTS:
+                _cancel(row, "failed", now)
+                outcome = "failed"
+            else:
+                row.send_after = now + timedelta(seconds=RETRY_SECONDS)
+                outcome = "retry"
+        db.commit()
+        return outcome
 
 
 def purge_finished(db: Session, settings: Settings, now: datetime | None = None) -> int:
@@ -193,31 +236,33 @@ def register_device(
     """Remember a phone's address for the person; `(device, created)`. An address that belonged to
     someone else (a phone passed on, a second account) moves to this person. The oldest devices
     beyond `CHAT_MAX_DEVICES_PER_PERSON` are forgotten."""
-    existing = db.scalar(select(DeviceToken).where(DeviceToken.token == token).with_for_update())
-    now = datetime.now(UTC)
-    if existing is not None:
-        existing.person_id = person.id
-        existing.last_seen_at = now
-        db.flush()
-        return existing, False
-    device = DeviceToken(person_id=person.id, token=token, platform=platform)
-    db.add(device)
-    db.flush()
+    # One statement, so two calls with the same new address cannot both insert it.
+    stmt = insert(DeviceToken).values(person_id=person.id, token=token, platform=platform)
+    inserted: Any = db.execute(
+        stmt.on_conflict_do_update(
+            index_elements=["token"],
+            set_={"person_id": person.id, "last_seen_at": func.now(), "platform": platform},
+        ).returning(DeviceToken.id, literal_column("(xmax = 0)").label("created"))
+    ).one()
+    device_id, created = inserted.id, bool(inserted.created)
     keep = db.scalars(
         select(DeviceToken.id)
-        .where(DeviceToken.person_id == person.id, DeviceToken.id != device.id)
+        .where(DeviceToken.person_id == person.id, DeviceToken.id != device_id)
         .order_by(DeviceToken.last_seen_at.desc(), DeviceToken.created_at.desc())
         .limit(settings.chat_max_devices_per_person - 1)
     ).all()
     db.execute(
         delete(DeviceToken).where(
             DeviceToken.person_id == person.id,
-            DeviceToken.id != device.id,
+            DeviceToken.id != device_id,
             ~DeviceToken.id.in_(keep),
         )
     )
+    device = db.get(DeviceToken, device_id)
+    if device is None:  # cannot happen: the row was just written
+        raise RuntimeError("device row missing")
     db.refresh(device)
-    return device, True
+    return device, created
 
 
 def forget_device(db: Session, person: Person, device_id: uuid.UUID) -> bool:
@@ -243,6 +288,8 @@ class FcmSender:
         self._token_uri: str = key.get("token_uri", "https://oauth2.googleapis.com/token")
         self._project: str = key["project_id"]
         register_secret(self._private_key)
+        # Fail at start, not at the first push, when the key cannot be used.
+        serialization.load_pem_private_key(self._private_key.encode(), password=None)
         self._http = client or httpx.Client(timeout=10.0)
         self._access: str | None = None
         self._expires = 0.0
@@ -300,14 +347,16 @@ class FcmSender:
             return "retry"
         if response.status_code == 200:
             return "ok"
-        if response.status_code == 404 or _unregistered(response):
+        if _unregistered(response):
             return "invalid"
         log.warning("Push refused with status %s", response.status_code)
         return "retry"
 
 
 def _unregistered(response: httpx.Response) -> bool:
-    if response.status_code != 400:
+    """Only the code UNREGISTERED means the phone's address is gone; a bare 404 may be a wrong
+    project, and must not delete anyone's address."""
+    if response.status_code not in (400, 404):
         return False
     try:
         details = response.json()["error"].get("details", [])
@@ -321,4 +370,7 @@ def build_sender(settings: Settings) -> PushSender:
     key = settings.fcm_service_account_json
     if key is None or not key.get_secret_value():
         raise RuntimeError("PUSH_ENABLED is set but FCM_SERVICE_ACCOUNT_JSON is missing")
-    return FcmSender(key.get_secret_value())
+    try:
+        return FcmSender(key.get_secret_value())
+    except (ValueError, KeyError, TypeError) as exc:
+        raise RuntimeError("FCM_SERVICE_ACCOUNT_JSON is not a usable service account key") from exc

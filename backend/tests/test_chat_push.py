@@ -13,6 +13,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
@@ -262,6 +263,48 @@ def test_a_failed_send_is_tried_again_and_given_up_after_five_times(pair: Pair) 
     assert (rows(session)[0].state, rows(session)[0].reason) == ("cancelled", "failed")
 
 
+def test_a_message_that_arrives_while_sending_still_gets_its_own_push(pair: Pair) -> None:
+    register(pair, pair.p)
+    pair.send(pair.s, "first")
+    session = pair.world.session
+
+    class Busy(FakeSender):
+        def send(self, address: str, title: str, body: str, data: dict[str, str]) -> push.Result:
+            if not self.sent:
+                pair.send(pair.s, "second")  # arrives while Firebase is being called
+            return super().send(address, title, body, data)
+
+    sender = Busy()
+    assert push.process_due(factory(session), sender, now=LATER)
+    assert [row.state for row in rows(session)] == ["pending"]
+    assert push.process_due(factory(session), sender, now=LATER + timedelta(minutes=5)) == {
+        "sent": 1
+    }
+    assert len(sender.sent) == 2 and rows(session)[0].state == "sent"
+
+
+def test_a_row_being_sent_is_not_picked_up_again_at_once(pair: Pair) -> None:
+    register(pair, pair.p)
+    pair.send(pair.s, "hello")
+    session = pair.world.session
+    claimed = push._claim(factory(session), LATER)
+    assert len(claimed) == 1 and push._claim(factory(session), LATER) == []
+
+
+def test_a_moved_address_is_pruned_like_a_new_one(pair: Pair) -> None:
+    limit = get_settings().chat_max_devices_per_person
+    for number in range(limit):
+        register(pair, pair.p, f"own-{number}")
+    register(pair, pair.s, "other-phone")
+    register(pair, pair.p, "other-phone")  # moves to the provider, who is at the limit
+    count = pair.world.session.scalar(
+        select(func.count())
+        .select_from(DeviceToken)
+        .where(DeviceToken.person_id == pair.provider.person.id)
+    )
+    assert count == limit
+
+
 def test_old_finished_rows_are_deleted_and_pending_ones_kept(pair: Pair) -> None:
     register(pair, pair.p)
     pair.send(pair.s, "hello")
@@ -328,7 +371,11 @@ def test_the_firebase_sender_signs_the_request_and_sends_the_message() -> None:
 @pytest.mark.parametrize(
     ("response", "expected"),
     [
-        (httpx.Response(404, json={}), "invalid"),
+        (httpx.Response(404, json={}), "retry"),  # a wrong project must not delete addresses
+        (
+            httpx.Response(404, json={"error": {"details": [{"errorCode": "UNREGISTERED"}]}}),
+            "invalid",
+        ),
         (
             httpx.Response(400, json={"error": {"details": [{"errorCode": "UNREGISTERED"}]}}),
             "invalid",
@@ -347,6 +394,13 @@ def test_an_expired_access_key_is_renewed_once() -> None:
     sender = sender_with([httpx.Response(401, json={}), httpx.Response(200, json={})], seen)
     assert sender.send("phone", "T", "B", {}) == "ok"
     assert len([r for r in seen if r.url.host == "auth.example"]) == 2
+
+
+def test_a_key_that_cannot_sign_stops_the_worker_at_start() -> None:
+    text = json.dumps({"project_id": "p", "client_email": "e@x.example", "private_key": "nonsense"})
+    settings = Settings.model_construct(push_enabled=True, fcm_service_account_json=SecretStr(text))
+    with pytest.raises(RuntimeError, match="usable"):
+        push.build_sender(settings)
 
 
 def test_a_missing_key_stops_the_worker_at_start() -> None:
