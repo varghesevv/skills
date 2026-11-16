@@ -155,6 +155,10 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 
 The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement is the web page `https://<demo-domain>/privacy` (S7.4); the owner reads it, changes the wording if needed (`privacy.*` in `frontend/src/i18n/index.ts`) and gives that address as `PRIVACY_URL`.
 
+### Chat limits
+
+The chat limits are settings with safe defaults (like the reveal limits); set them in the API's environment only to change them: `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY` (10: conversations one person may start in 24 hours), `CHAT_MAX_MESSAGES_PER_MINUTE` (20 per person), `CHAT_MAX_SOCKETS_PER_PERSON` (5 open sockets in one API process), `CHAT_PUSH_DELAY_SECONDS` (3: how long a notification waits for the app to say it got the message). The tests use smaller values (3 and 5). Messages are never logged.
+
 ### What the logs hold
 
 The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The reverse proxy's access log is different: it writes the whole address of every request, so it holds the link tokens of the `/join/`, `/vouch/` and `/invite/` pages until the owner changes the proxy to hide them (an item on the roadmap's owner list). Treat the proxy log as holding secrets: keep it readable by the operators only, do not paste it into a ticket or a chat, and do not keep it longer than needed. A token seen there is a link that anyone who finds the log could use; cancel the link (the leader or the OWNER can end it) if the log has been shared.

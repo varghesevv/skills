@@ -171,6 +171,11 @@ id uuid PK, user_id FK people (ON DELETE CASCADE), token_hash text, expires_at t
 ### refresh_tokens
 id uuid PK, user_id FK people (ON DELETE CASCADE), token_hash text, expires_at timestamptz, revoked_at timestamptz null, created_at timestamptz, replaced_by_id uuid null (rotation).
 
+### conversations, messages and conversation_state (chat, S8.2, migration 0019)
+- `conversations`: id, `starter_id` FK people, `provider_id` FK people, `created_at`, `last_message_at` null. A unique index on (least(`starter_id`, `provider_id`), greatest(...)): one conversation per pair of people, whichever of them wrote first. CHECK `starter_id <> provider_id`. Indexes on (`starter_id`, `last_message_at` DESC) and (`provider_id`, `last_message_at` DESC).
+- `messages`: id, `seq` bigint GENERATED ALWAYS AS IDENTITY (the cursor; gaps are normal), `conversation_id` FK ON DELETE CASCADE, `sender_side` (`starter` or `provider`), `sender_id` FK people (for the per-minute limit; index on `sender_id`, `created_at`), `body` text CHECK length 1 to 2000, `client_message_id` uuid, `created_at` (server). UNIQUE (`conversation_id`, `sender_side`, `client_message_id`): a retry stores nothing new. Index (`conversation_id`, `seq`).
+- `conversation_state`: PK (`conversation_id`, `side`); `last_read_seq` and `delivered_seq` (bigint, default 0), `muted`, `blocked` (only the provider side blocks). Two rows per conversation, made with it.
+
 ### report_schedules and report_runs
 - `report_schedules`: id, report_name, cron_expression, timezone, is_enabled, recipients (text).
 - `report_runs`: id, report_name, window_from, window_to, started_at, finished_at, status (running/succeeded/failed), file_path, row_count, error_message. UNIQUE (report_name, window_from, window_to) for idempotency.

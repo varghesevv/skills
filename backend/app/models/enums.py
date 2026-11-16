@@ -3,6 +3,7 @@
 from typing import Literal
 
 LABEL_TYPES = ("skill", "language", "timing", "nativity", "skill_level")
+CHAT_SIDES = ("starter", "provider")
 REVEAL_CHANNELS = ("dial", "show")
 REVEAL_SOURCES = ("search", "detail")
 STATUSES = ("revoked", "pending", "searcher", "provider", "verifier", "admin", "owner")

@@ -40,6 +40,9 @@ for _name, _value in {
 # the shell or docker compose may already provide the (larger) defaults.
 os.environ["REVEAL_MAX_PER_HOUR"] = "3"
 os.environ["REVEAL_MAX_PER_DAY"] = "5"
+# Small chat limits, for the same reason.
+os.environ["CHAT_MAX_NEW_CONVERSATIONS_PER_DAY"] = "3"
+os.environ["CHAT_MAX_MESSAGES_PER_MINUTE"] = "5"
 # A random signing key for this test run only; nothing secret is stored in the source.
 os.environ.setdefault("JWT_SECRET", secrets.token_hex(32))
 
