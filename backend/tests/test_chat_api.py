@@ -75,6 +75,17 @@ def test_a_searcher_starts_a_conversation_with_a_provider_once(
     assert first.json()["other"]["full_name"] == provider.person.full_name
 
 
+def test_one_conversation_can_be_read_by_its_id_whatever_the_page_of_the_list(
+    pair: Pair,
+) -> None:
+    pair.send(pair.s, "hi")
+    mine = pair.client.get(f"{API}/chat/conversations/{pair.id}", headers=pair.s).json()
+    theirs = pair.client.get(f"{API}/chat/conversations/{pair.id}", headers=pair.p).json()
+    assert (mine["id"], mine["my_side"], mine["unread_count"]) == (pair.id, "starter", 0)
+    assert (theirs["my_side"], theirs["unread_count"]) == ("provider", 1)
+    assert theirs["other"]["full_name"] == pair.starter.person.full_name
+
+
 def test_a_provider_appears_in_the_list_of_the_provider_too(pair: Pair) -> None:
     listing = pair.client.get(f"{API}/chat/conversations", headers=pair.p).json()
     assert listing["total"] == 1
@@ -246,6 +257,10 @@ def test_someone_outside_the_conversation_finds_nothing(
     assert client.put(f"{url}/settings", json={"muted": True}, headers=stranger).status_code == 404
     unknown = client.get(f"{API}/chat/conversations/{uuid.uuid4()}/messages", headers=stranger)
     assert unknown.status_code == 404
+    assert client.get(url, headers=stranger).status_code == 404
+    assert (
+        client.get(f"{API}/chat/conversations/{uuid.uuid4()}", headers=stranger).status_code == 404
+    )
 
 
 def test_nothing_is_stored_for_a_person_who_has_closed_their_account(pair: Pair) -> None:

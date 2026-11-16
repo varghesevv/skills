@@ -64,6 +64,18 @@ def conversations(
     )
 
 
+@router.get("/conversations/{conversation_id}")
+def conversation(
+    conversation_id: uuid.UUID, person: Member, db: Annotated[Session, Depends(get_session)]
+) -> ConversationOut:
+    """One conversation of the person (the list shows only one page of them). `404` for anyone
+    else's, as for an id that does not exist."""
+    items, _ = rules.list_conversations(db, person, 0, 1, only=conversation_id)
+    if not items:
+        raise ApiError(404, "not_found", "Conversation not found")
+    return items[0]
+
+
 @router.get("/conversations/{conversation_id}/messages")
 def messages(
     conversation_id: uuid.UUID,

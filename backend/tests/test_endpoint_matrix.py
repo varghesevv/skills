@@ -80,6 +80,7 @@ MATRIX: dict[tuple[str, str], str] = {
     ("GET", "/workhosts/me/ratings"): "searcher",
     ("POST", "/chat/conversations"): "searcher",
     ("GET", "/chat/conversations"): "searcher",
+    ("GET", "/chat/conversations/{conversation_id}"): "searcher",
     ("GET", "/chat/conversations/{conversation_id}/messages"): "searcher",
     ("POST", "/chat/conversations/{conversation_id}/messages"): "searcher",
     ("POST", "/chat/conversations/{conversation_id}/read"): "searcher",
