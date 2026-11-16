@@ -24,6 +24,19 @@ describe('the privacy statement', () => {
     expect(screen.getByText(/each view is recorded/)).toBeVisible()
   })
 
+  it('says what is kept about messages, who can read them and what a notification holds', async () => {
+    renderApp('/privacy')
+    expect(await screen.findByText(/the messages you write and receive/)).toBeVisible()
+    expect(screen.getByText(/seen by the two people in the conversation only/)).toBeVisible()
+    expect(
+      screen.getByText(/each reading is recorded \(who and when, never the text\)/),
+    ).toBeVisible()
+    expect(screen.getByText(/never contains the message or a name/)).toBeVisible()
+    expect(screen.getByText(/Firebase Cloud Messaging/)).toBeVisible()
+    expect(screen.getByText(/until they close their account too/)).toBeVisible()
+    expect(document.body.textContent).not.toMatch(/has no chat/)
+  })
+
   it('uses the words of the installation, not fixed ones', async () => {
     renderApp('/privacy')
     expect(

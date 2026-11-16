@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import delete, func, update
 from sqlalchemy.orm import Session
 
+from app.chat.retention import delete_orphaned_conversations
 from app.core.config import Settings
 from app.core.errors import ApiError
 from app.core.security import verify_dummy, verify_password
@@ -83,6 +84,13 @@ def clear_accounts(db: Session, people: list[Person], now: datetime) -> None:
             .where(LoginHistory.user_id.in_(chunk))
             .values(login_email=None, ip_address=None, user_agent=None)
         )
+    # A conversation whose two people have both closed their accounts has nobody left to read it:
+    # it goes, with its messages and reports. While one of them is still here it stays, and the
+    # closed side is shown without a name (decision D-53). The worker's sweep catches two
+    # accounts closed at the same moment.
+    db.flush()
+    for chunk in _slices(ids):
+        delete_orphaned_conversations(db, chunk)
     for chunk in _slices(
         emails
     ):  # attempts before the person was recognised carry only the address
