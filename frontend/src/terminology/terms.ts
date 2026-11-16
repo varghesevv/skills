@@ -1,5 +1,6 @@
 // The words used for the three kinds of people, chosen per installation (see profiles.json).
-// Screen text uses tokens such as {organisation}; web addresses use the *_path values.
+// Screen text uses tokens such as {organisation}. The *_path values stay in the profiles (the
+// backend serves them in GET /app/config), but no web address is built from them any more (D-47).
 
 import profiles from './profiles.json'
 
@@ -32,7 +33,7 @@ export function setProfile(name: string | undefined): void {
   active = PROFILES[DEFAULT_PROFILE]
 }
 
-/** One value of the active profile, for example term('organisation_path'). */
+/** One value of the active profile, for example term('organisation'). */
 export function term(key: string): string {
   const value = active[key] ?? PROFILES[DEFAULT_PROFILE][key]
   if (value === undefined) throw new Error(`Unknown term: ${key}`)
@@ -82,18 +83,6 @@ export function applyTerms(text: string): string {
     }
     return capital ? written : lowerFirst(written)
   })
-}
-
-export type PathUserType = 'freelancer' | 'workhost' | 'organisation'
-
-/** The address segment for a kind of account, for example "church" for organisations. */
-export function slugOf(userType: PathUserType | 'admin'): string {
-  return userType === 'admin' ? 'admin' : term(`${userType}_path`)
-}
-
-/** The account kind behind an address segment, or undefined if it is not one of them. */
-export function userTypeOfSlug(slug: string | undefined): PathUserType | undefined {
-  return (['freelancer', 'workhost', 'organisation'] as const).find((kind) => slugOf(kind) === slug)
 }
 
 /**

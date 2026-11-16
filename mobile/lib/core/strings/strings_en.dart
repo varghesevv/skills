@@ -73,7 +73,7 @@ const stringsEn = <String, String>{
   'update.title': 'Please update the app',
   'update.text': 'This version of the app is too old to work with the server. Install the newest version to continue.',
   'landing.title': 'Find skilled {freelancers}, or offer your skills',
-  'landing.lead': '{Freelancers} show their skills, {workhosts} find the right person, and {organisations} vouch for the people they trust.',
+  'landing.lead': '{Freelancers} show their skills and {workhosts} find the right person. The leader of your {homegroup} admits you, and members vouch for the people they know.',
   'field.fullName': 'Full name',
   'field.email': 'Email',
   'field.mobile': 'Mobile number',

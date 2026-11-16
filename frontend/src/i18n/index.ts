@@ -619,7 +619,7 @@ const en = {
 
   'landing.title': 'Find skilled {freelancers}, or offer your skills',
   'landing.lead':
-    '{Freelancers} show their skills, {workhosts} find the right person, and {organisations} vouch for the people they trust.',
+    '{Freelancers} show their skills and {workhosts} find the right person. The leader of your {homegroup} admits you, and members vouch for the people they know.',
   'landing.freelancer.title': 'I am {a_freelancer}',
   'landing.freelancer.text': 'Show your skills and availability to {workhosts}.',
   'landing.workhost.title': 'I need to hire',

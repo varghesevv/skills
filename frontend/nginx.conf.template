@@ -1,5 +1,15 @@
+# The access log never shows the token of a link page (/join/, /vouch/, /invite/) or a query string:
+# a link is a credential, and a name typed into a search is personal data (ADR-0011, S5.13).
+map $request_uri $logged_uri {
+  ~^/(join|vouch|invite)/ /$1/redacted;
+  ~^([^?]*)\? $1;
+  default $request_uri;
+}
+log_format redacted '$remote_addr - [$time_local] "$request_method $logged_uri" $status $body_bytes_sent';
+
 server {
   listen 8080;
+  access_log /dev/stdout redacted;
   root /usr/share/nginx/html;
   index index.html;
 
