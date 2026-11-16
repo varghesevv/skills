@@ -303,6 +303,37 @@ def mark_read(db: Session, conversation: Conversation, side: str, up_to_seq: int
     return _state(db, conversation.id, side).last_read_seq
 
 
+def mark_delivered(db: Session, conversation: Conversation, side: str, up_to_seq: int) -> None:
+    """The side's app received messages up to `up_to_seq` (never down, never beyond the newest)."""
+    newest = (
+        db.scalar(select(func.max(Message.seq)).where(Message.conversation_id == conversation.id))
+        or 0
+    )
+    target = min(up_to_seq, newest)
+    state = _state(db, conversation.id, side)
+    if target <= state.delivered_seq:
+        return
+    db.execute(
+        update(ConversationState)
+        .where(
+            ConversationState.conversation_id == conversation.id,
+            ConversationState.side == side,
+        )
+        .values(delivered_seq=func.greatest(ConversationState.delivered_seq, target))
+    )
+    db.refresh(state)
+    notify(
+        db,
+        {
+            "kind": "delivered",
+            "conversation_id": str(conversation.id),
+            "up_to_seq": target,
+            "side": side,
+            "people": [str(other_id(conversation, side))],
+        },
+    )
+
+
 def messages_page(
     db: Session, conversation: Conversation, before_seq: int | None, limit: int
 ) -> list[Message]:

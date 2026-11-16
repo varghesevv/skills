@@ -52,10 +52,13 @@ class Listener:
         self.reconnects = 0
         self.backend_pid: int | None = None  # of the current connection (for tests and diagnosis)
 
-    async def start(self) -> None:
+    async def start(self, *, wait: bool = True) -> None:
+        """Start listening. With `wait=False` (the API at start-up) the connection is made in the
+        background and retried, so a slow or restarting database never stops the API."""
         if self._task is None:
             self._task = asyncio.create_task(self._run(), name="chat-listener")
-        await asyncio.wait_for(self.listening.wait(), timeout=10)
+        if wait:
+            await asyncio.wait_for(self.listening.wait(), timeout=10)
 
     async def stop(self) -> None:
         task, self._task = self._task, None

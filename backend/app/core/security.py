@@ -65,6 +65,11 @@ def create_access_token(
 
 
 def decode_access_token(token: str, *, secret: str) -> Principal:
+    return decode_access_token_with_expiry(token, secret=secret)[0]
+
+
+def decode_access_token_with_expiry(token: str, *, secret: str) -> tuple[Principal, datetime]:
+    """The person and the moment the token expires (a socket held open ends then)."""
     try:
         claims = jwt.decode(
             token,
@@ -72,7 +77,10 @@ def decode_access_token(token: str, *, secret: str) -> Principal:
             algorithms=[JWT_ALGORITHM],
             options={"require": ["exp", "sub"]},
         )
-        return Principal(user_id=uuid.UUID(str(claims["sub"])))
+        return (
+            Principal(user_id=uuid.UUID(str(claims["sub"]))),
+            datetime.fromtimestamp(int(claims["exp"]), UTC),
+        )
     except (jwt.PyJWTError, ValueError):
         raise TokenError("invalid access token") from None
 
