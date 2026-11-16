@@ -180,6 +180,18 @@ void main() {
       'POST /verifier/group-invitations': '201',
       'DELETE /verifier/group-invitations/{invitation_id}': '204',
       'POST /home-groups/{group_id}/close': '200',
+      // Chat over REST (S8.7); the new ones answer 201 as well, which the API does not list.
+      'GET /chat/conversations': '200',
+      'POST /chat/conversations': '200',
+      'GET /chat/conversations/{conversation_id}': '200',
+      'GET /chat/conversations/{conversation_id}/messages': '200',
+      'POST /chat/conversations/{conversation_id}/messages': '200',
+      'POST /chat/conversations/{conversation_id}/read': '204',
+      'PUT /chat/conversations/{conversation_id}/settings': '200',
+      'POST /chat/conversations/{conversation_id}/report': '200',
+      'GET /chat/unread': '200',
+      'POST /chat/devices': '200',
+      'DELETE /chat/devices/{device_id}': '204',
     };
     calls.forEach((call, status) {
       test(call, () {
@@ -1077,6 +1089,91 @@ void main() {
         properties('PublicRating'),
         unorderedEquals(['rating', 'comment', 'rated_on']),
       );
+    });
+  });
+
+  group('chat', () {
+    test('a conversation and a message have the fields the app reads', () {
+      expect(
+        responseSchema('GET', '/chat/conversations/{conversation_id}', '200'),
+        'ConversationOut',
+      );
+      expect(required('ConversationOut'), {
+        'id',
+        'my_side',
+        'other',
+        'last_message_preview',
+        'last_message_at',
+        'unread_count',
+        'muted',
+        'blocked',
+      });
+      expect(required('OtherPerson'), {'id', 'full_name', 'closed'});
+      expect(
+        typesOf('OtherPerson', 'full_name'),
+        containsAll(['string', 'null']),
+      );
+      expect(typesOf('ConversationOut', 'unread_count'), {'integer'});
+      expect(required('MessageOut'), {
+        'id',
+        'seq',
+        'conversation_id',
+        'sender_side',
+        'body',
+        'created_at',
+      });
+      expect(typesOf('MessageOut', 'seq'), {'integer'});
+    });
+
+    test('what the app sends has the fields the API takes', () {
+      expect(requestSchema('POST', '/chat/conversations'), 'StartConversation');
+      expect(properties('StartConversation'), {'provider_id'});
+      expect(
+        requestSchema('POST', '/chat/conversations/{conversation_id}/messages'),
+        'SendMessage',
+      );
+      expect(properties('SendMessage'), {'client_message_id', 'body'});
+      expect(properties('ReadMark'), {'up_to_seq'});
+      expect(properties('SettingsUpdate'), {'muted', 'blocked'});
+      expect(properties('ReportCreate'), {'reason', 'note'});
+      expect(properties('DeviceRegister'), {'token', 'platform'});
+      expect(properties('DeviceOut'), {'id'});
+      expect(properties('UnreadOut'), {'total'});
+    });
+
+    test('the message list is cut by before_seq and limit, at most 50', () {
+      final parameters =
+          (operation(
+                    'GET',
+                    '/chat/conversations/{conversation_id}/messages',
+                  )['parameters']
+                  as List)
+              .cast<Map>();
+      final byName = {for (final p in parameters) p['name'] as String: p};
+      expect(byName.keys, containsAll(['before_seq', 'limit']));
+      expect((byName['limit']!['schema'] as Map)['maximum'], 50);
+    });
+
+    test('the socket the app opens is documented with the frames and codes it uses', () {
+      // A WebSocket is not part of the OpenAPI file, so the contract is the API specification
+      // (docs/specification/04-api.md). A rename on either side breaks this test.
+      final doc = File('../docs/specification/04-api.md').readAsStringSync();
+      expect(doc, contains('/api/v1/chat/ws'));
+      expect(doc, contains('"type":"auth"'), reason: 'the first frame');
+      for (final frame in [
+        'ping',
+        'delivered',
+        'ready',
+        'message',
+        'read',
+        'error',
+        'pong',
+      ]) {
+        expect(doc, contains('`$frame`'), reason: 'frame $frame');
+      }
+      for (final code in ['4401', '4403', '4429']) {
+        expect(doc, contains(code), reason: 'close code $code');
+      }
     });
   });
 }

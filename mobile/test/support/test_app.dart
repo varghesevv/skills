@@ -7,6 +7,8 @@ import 'package:skills_app/app/app.dart';
 import 'memory_token_store.dart';
 
 import 'package:skills_app/core/providers.dart';
+import 'package:skills_app/features/chat/live/chat_link.dart';
+import 'package:skills_app/features/chat/live/chat_live.dart';
 
 import 'fake_api.dart';
 
@@ -113,6 +115,7 @@ Future<TestApp> pumpApp(
   Size size = const Size(400, 800),
   double textScale = 1.0,
   List<Override> overrides = const [],
+  ChatConnector? chatConnector,
 }) async {
   tester.view.physicalSize = size * tester.view.devicePixelRatio;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -134,6 +137,10 @@ Future<TestApp> pumpApp(
         dioProvider.overrideWithValue(dio),
         tokenStoreProvider.overrideWithValue(store),
         appVersionProvider.overrideWithValue(appVersion),
+        // The chat socket is off unless a test gives it a connector.
+        chatLiveEnabledProvider.overrideWithValue(chatConnector != null),
+        if (chatConnector != null)
+          chatConnectorProvider.overrideWithValue(chatConnector),
         ...overrides,
       ],
     ),
