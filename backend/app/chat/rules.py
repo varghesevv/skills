@@ -71,6 +71,18 @@ def _is_open(person: Person | None) -> bool:
     return person is not None and person.closed_at is None and person.status != "revoked"
 
 
+def _between(db: Session, a: uuid.UUID, b: uuid.UUID) -> Conversation | None:
+    """The conversation of these two people, whichever of them started it."""
+    return db.scalar(
+        select(Conversation).where(
+            or_(
+                and_(Conversation.starter_id == a, Conversation.provider_id == b),
+                and_(Conversation.starter_id == b, Conversation.provider_id == a),
+            )
+        )
+    )
+
+
 # ---- starting ---------------------------------------------------------------------------------
 
 
@@ -82,11 +94,7 @@ def start_conversation(
         raise ApiError(422, "cannot_message_self", "You cannot write to yourself")
     lock_people(db, [starter.id, provider_id])
     visible_provider(db, provider_id)  # 404 for anyone a searcher may not see
-    existing = db.scalar(
-        select(Conversation).where(
-            Conversation.starter_id == starter.id, Conversation.provider_id == provider_id
-        )
-    )
+    existing = _between(db, starter.id, provider_id)
     if existing is not None:
         if _state(db, existing.id, "provider").blocked:
             raise ApiError(403, "chat_blocked", "You cannot write to this person")
@@ -111,11 +119,7 @@ def start_conversation(
         db.flush()
     except IntegrityError:  # a second request for the same pair won the race
         db.rollback()
-        found = db.scalar(
-            select(Conversation).where(
-                Conversation.starter_id == starter.id, Conversation.provider_id == provider_id
-            )
-        )
+        found = _between(db, starter.id, provider_id)
         if found is None:
             raise
         return found, False
@@ -161,13 +165,8 @@ def _sent_in_last_minute(db: Session, person_id: uuid.UUID) -> int:
         db.scalar(
             select(func.count())
             .select_from(Message)
-            .join(Conversation, Conversation.id == Message.conversation_id)
             .where(
-                Message.created_at > now() - timedelta(minutes=1),
-                or_(
-                    and_(Conversation.starter_id == person_id, Message.sender_side == "starter"),
-                    and_(Conversation.provider_id == person_id, Message.sender_side == "provider"),
-                ),
+                Message.sender_id == person_id, Message.created_at > now() - timedelta(minutes=1)
             )
         )
         or 0
@@ -185,6 +184,9 @@ def send_message(
 ) -> tuple[Message, bool]:
     """Store a message; `(message, created)`. A repeated `client_message_id` returns the stored
     message and `created=False`, so a retry after a lost answer is safe."""
+    # One sender's sends are counted and stored one at a time, so the per-minute limit holds
+    # under parallel requests (people first, as everywhere).
+    lock_people(db, [sender.id])
     existing = db.scalar(
         select(Message).where(
             Message.conversation_id == conversation.id,
@@ -205,6 +207,7 @@ def send_message(
     message = Message(
         conversation_id=conversation.id,
         sender_side=side,
+        sender_id=sender.id,
         body=text,
         client_message_id=client_message_id,
     )

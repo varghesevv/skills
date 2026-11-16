@@ -136,6 +136,22 @@ def test_the_number_of_new_conversations_per_day_is_limited(
     assert code(results[3]) == "chat_new_conversation_limit"
 
 
+def test_one_conversation_per_pair_of_people_whoever_writes_first(
+    client: TestClient, world: World
+) -> None:
+    first, second = add_member(world, "provider"), add_member(world, "provider")
+    a, b = headers_of(client, first), headers_of(client, second)
+    one = client.post(
+        f"{API}/chat/conversations", json={"provider_id": str(second.person.id)}, headers=a
+    )
+    back = client.post(
+        f"{API}/chat/conversations", json={"provider_id": str(first.person.id)}, headers=b
+    )
+    assert (one.status_code, back.status_code) == (201, 200)
+    assert one.json()["id"] == back.json()["id"]
+    assert back.json()["my_side"] == "provider"  # the second one answers in the first one's thread
+
+
 # ---- sending ---------------------------------------------------------------------------------
 
 
@@ -188,6 +204,27 @@ def test_a_message_must_be_text_of_the_right_length(pair: Pair, body: str, expec
 def test_a_message_is_trimmed_and_may_have_new_lines(pair: Pair) -> None:
     response = pair.send(pair.s, "  two\nlines  ")
     assert response.json()["body"] == "two\nlines"
+
+
+def test_a_sender_is_locked_before_the_limit_is_counted(
+    pair: Pair, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Parallel sends of one person are stored one at a time, so the limit cannot be passed."""
+    order: list[str] = []
+    real_lock, real_count = rules.lock_people, rules._sent_in_last_minute
+
+    def lock(db: Session, ids: Any) -> Any:
+        order.append("lock")
+        return real_lock(db, ids)
+
+    def count(db: Session, person_id: uuid.UUID) -> int:
+        order.append("count")
+        return real_count(db, person_id)
+
+    monkeypatch.setattr(rules, "lock_people", lock)
+    monkeypatch.setattr(rules, "_sent_in_last_minute", count)
+    assert pair.send(pair.s, "hi").status_code == 201
+    assert order == ["lock", "count"]
 
 
 def test_messages_per_minute_are_limited(pair: Pair) -> None:

@@ -37,8 +37,14 @@ class Conversation(UUIDPrimaryKeyMixin, Base):
     last_message_at: Mapped[datetime | None] = mapped_column()
 
     __table_args__ = (
-        UniqueConstraint("starter_id", "provider_id", name="pair"),
         CheckConstraint("starter_id <> provider_id", name="not_self"),
+        # One conversation per pair of people, whichever of them wrote first.
+        Index(
+            "uq_conversations_pair",
+            text("least(starter_id, provider_id)"),
+            text("greatest(starter_id, provider_id)"),
+            unique=True,
+        ),
         Index("ix_conversations_starter_activity", "starter_id", text("last_message_at DESC")),
         Index("ix_conversations_provider_activity", "provider_id", text("last_message_at DESC")),
     )
@@ -53,6 +59,7 @@ class Message(UUIDPrimaryKeyMixin, Base):
         ForeignKey("conversations.id", ondelete="CASCADE")
     )
     sender_side: Mapped[str] = mapped_column(String(10))
+    sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
     body: Mapped[str] = mapped_column(Text)
     # Chosen by the app, so a retry after a lost answer stores the message once.
     client_message_id: Mapped[uuid.UUID]
@@ -61,8 +68,14 @@ class Message(UUIDPrimaryKeyMixin, Base):
     __table_args__ = (
         CheckConstraint(sql_in("sender_side", CHAT_SIDES), name="side_valid"),
         CheckConstraint(f"length(body) BETWEEN 1 AND {MAX_MESSAGE_CHARS}", name="body_length"),
-        UniqueConstraint("conversation_id", "sender_side", "client_message_id", name="client_id"),
+        UniqueConstraint(
+            "conversation_id",
+            "sender_side",
+            "client_message_id",
+            name="uq_messages_conversation_id_sender_side_client_message_id",
+        ),
         Index("ix_messages_conversation_seq", "conversation_id", "seq"),
+        Index("ix_messages_sender_time", "sender_id", "created_at"),
     )
 
 
