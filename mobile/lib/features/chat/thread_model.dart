@@ -112,12 +112,15 @@ class ThreadModel extends ChangeNotifier {
     messages.insert(at == -1 ? messages.length : at, message);
   }
 
-  /// A message that arrived by another way than a REST answer (the socket, S8.8).
-  void receive(ChatMessage message) {
-    if (message.conversationId != id) return;
+  /// A message that arrived by another way than a REST answer (the socket, S8.8). True when it
+  /// is new here (it may have arrived already).
+  bool receive(ChatMessage message) {
+    if (message.conversationId != id) return false;
+    final isNew = !messages.any((m) => m.id == message.id);
     _insert(message);
     _changed();
     _markRead();
+    return isNew;
   }
 
   /// Sends [text] (trimmed); false when there is nothing to send. A failure stays in the list

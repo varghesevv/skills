@@ -41,7 +41,7 @@ Map<String, Object?> _message(
   'conversation_id': 'c1',
   'sender_side': side,
   'body': body,
-  'created_at': '2026-11-16T10:${seq.toString().padLeft(2, '0')}:00Z',
+  'created_at': '2026-11-16T10:00:00Z',
 };
 
 Map<String, Object?> _page(List<Map<String, Object?>> items) => {
@@ -431,15 +431,39 @@ void main() {
       '/chat/conversations/c1/messages',
       FakeReply(503, apiError('service_unavailable')),
     );
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('older')),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    // The list is reversed: its end, where the older messages are asked for, is at the top.
+    await tester.drag(find.byType(ListView), const Offset(0, 6000));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('older')));
     await tester.pumpAndSettle();
     expect(find.textContaining('temporarily unavailable'), findsOneWidget);
     expect(find.text('m1'), findsOneWidget); // what was loaded stays
+  });
+
+  testWidgets('a long conversation builds only the rows on the screen', (
+    tester,
+  ) async {
+    await _open(
+      tester,
+      arrange: (adapter) => adapter.setReply(
+        'GET',
+        '/chat/conversations/c1/messages',
+        FakeReply(200, [
+          // (Under about 50 KB: a bigger answer is read in an isolate, which a widget test cannot wait for.)
+          for (var i = 250; i >= 1; i--)
+            _message(
+              i,
+              'message number $i',
+              id: 'long$i',
+              side: i.isEven ? 'starter' : 'provider',
+            ),
+        ]),
+      ),
+    );
+    await _openThread(tester);
+    final built = find.textContaining('message number').evaluate().length;
+    expect(built, greaterThan(3));
+    expect(built, lessThan(60));
   });
 
   testWidgets('an empty list says how to start', (tester) async {

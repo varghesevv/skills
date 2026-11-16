@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_exception.dart';
@@ -97,8 +98,10 @@ class _ThreadState extends ConsumerState<_Thread> {
     _live = ref.read(chatSocketProvider).events.listen((event) {
       switch (event) {
         case ChatMessageEvent(:final message):
-          if (message.conversationId == _conversation.id) {
-            _model.receive(message);
+          if (message.conversationId == _conversation.id &&
+              _model.receive(message) &&
+              message.senderSide != _conversation.mySide) {
+            _announce(message);
           }
         case ChatConnected(:final again):
           if (again) _model.load();
@@ -106,6 +109,33 @@ class _ThreadState extends ConsumerState<_Thread> {
           break;
       }
     });
+  }
+
+  /// The start of a long message: a reader would otherwise speak up to 2000 characters over
+  /// whatever the person is doing. The bubble itself holds the whole text.
+  static String _spoken(String body) {
+    const limit = 120;
+    final letters = body.runes.toList();
+    return letters.length <= limit
+        ? body
+        : '${String.fromCharCodes(letters.take(limit))}…';
+  }
+
+  /// A screen reader says a message that arrives while the thread is open (a sighted person
+  /// sees it appear; this is what TalkBack needs instead).
+  void _announce(ChatMessage message) {
+    if (!mounted) return;
+    final text = ref.read(appTextProvider);
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        text('chat.announce', {
+          'name': chatOtherName(text, _conversation),
+          'text': _spoken(message.body),
+        }),
+        Directionality.of(context),
+      ),
+    );
   }
 
   /// The list is asked again every minute and after a read mark: take what it says now, so a
@@ -274,33 +304,53 @@ class _ThreadState extends ConsumerState<_Thread> {
       );
     }
     final mine = _conversation.mySide;
-    // The list is reversed: the first item is the newest, at the bottom.
-    final rows = <Widget>[
-      for (final item in _model.pending.reversed)
-        _PendingBubble(item: item, model: _model, text: text),
-      for (final message in _model.messages)
-        _Bubble(message: message, mine: message.senderSide == mine, text: text),
-      if (_model.hasMore)
-        Center(
-          child: TextButton(
-            key: const Key('older'),
-            onPressed: _model.loadingOlder ? null : _model.loadOlder,
-            child: Text(text('chat.older')),
-          ),
-        ),
-      if (_model.olderError != null)
-        MessageBanner(text.error(_model.olderError!)),
-    ];
-    if (rows.isEmpty) {
+    final pending = _model.pending.reversed.toList();
+    final messages = _model.messages;
+    final older = _model.hasMore ? 1 : 0;
+    final olderError = _model.olderError != null ? 1 : 0;
+    final count = pending.length + messages.length + older + olderError;
+    if (count == 0) {
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Text(text('chat.emptyThread')),
       );
     }
-    return ListView(
+    // Reversed, so the first item is the newest, at the bottom. Rows are built as they scroll
+    // into view: a long conversation costs what is on the screen, not its length.
+    return ListView.builder(
       reverse: true,
       padding: const EdgeInsets.all(12),
-      children: rows,
+      itemCount: count,
+      itemBuilder: (context, index) {
+        if (index < pending.length) {
+          return _PendingBubble(
+            item: pending[index],
+            model: _model,
+            text: text,
+          );
+        }
+        index -= pending.length;
+        if (index < messages.length) {
+          final message = messages[index];
+          return _Bubble(
+            key: ValueKey(message.id),
+            message: message,
+            mine: message.senderSide == mine,
+            text: text,
+          );
+        }
+        index -= messages.length;
+        if (index < older) {
+          return Center(
+            child: TextButton(
+              key: const Key('older'),
+              onPressed: _model.loadingOlder ? null : _model.loadOlder,
+              child: Text(text('chat.older')),
+            ),
+          );
+        }
+        return MessageBanner(text.error(_model.olderError!));
+      },
     );
   }
 }
@@ -349,6 +399,7 @@ class _Composer extends StatelessWidget {
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
+    super.key,
     required this.message,
     required this.mine,
     required this.text,

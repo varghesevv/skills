@@ -173,6 +173,13 @@ Close codes: `4401` not authenticated or token expired, `4403` role not allowed,
 - Export and "delete this conversation for me" are later.
 - The privacy page and the store data-safety form must be updated before the first chat release (messages, device tokens).
 
+## 8a. On the phone: accessibility, performance and battery (S9.1)
+
+- **Accessibility.** Every row and button has a label and a 48 dp target, text contrast is checked in light and dark mode, and both chat screens fit at twice the text size on a small phone (the accessibility sweep in `mobile/test/accessibility/member_screens_test.dart` covers the list and the thread). A message from the other person that arrives while the thread is open is announced by the screen reader ("New message from <name>: <text>", once, never for the person's own messages); a sighted person sees it appear. A message that did not go has a labelled "Send again" and "Discard".
+- **Performance.** A thread is a lazily built list: a conversation of any length costs the rows on the screen (a test with 250 messages builds fewer than 60 rows). The first 50 messages are asked for; older ones only when the person asks (`before_seq`). The list of conversations is the first 50. The socket sends nothing but a ping every 25 seconds and a `delivered` mark for each message that arrives.
+- **Battery.** The socket is open only while the app is on show: it is closed when the app goes to the background (and when the person signs out) and opened again when it returns, so a closed app holds no connection, no timer and no wake lock, and runs no foreground service. In the background the only way in is the push (Firebase), which wakes the phone only for a message. Screens ask again every 60 seconds only while they are open. After a lost connection the app waits 1, 2, 4 ... 30 seconds (never a tight loop); a silent connection is dropped after 70 seconds; an expired token is renewed once; `4403` stops it for good; `4429` waits 30 seconds.
+- **To check on a phone before a release** (cannot be done in the tests): TalkBack reads the list and the thread in a sensible order; the keyboard does not hide the box to write in; with the app in the background for ten minutes the server shows no open socket for the person (the API log shows the close).
+
 ## 9. Later (not version 1)
 
 Typing indicator and online status, attachments (photos), message deletion, "report and block" in one step, quick replies, chat on the web, delivery receipts per device, search in messages, end-to-end encryption (would remove admin access to reports; a product decision).
