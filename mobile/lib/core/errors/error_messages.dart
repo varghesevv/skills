@@ -78,6 +78,24 @@ String? _byCode(ApiException e) {
       return 'A highest rate needs a currency.';
     case 'availability_range':
       return 'Give both dates, with the start before the end.';
+    case 'chat_blocked':
+      return 'You cannot write to this person.';
+    case 'chat_closed':
+      return 'This person can no longer be written to.';
+    case 'chat_rate_limited':
+      return 'You are sending messages too fast. Wait a moment and try again.';
+    case 'chat_new_conversation_limit':
+      return 'You have started many conversations today. Try again tomorrow.';
+    case 'chat_message_empty':
+      return 'Write something to send.';
+    case 'chat_message_too_long':
+      return 'This message is too long.';
+    case 'chat_message_invalid':
+      return 'This message cannot be sent.';
+    case 'chat_not_allowed':
+      return 'You are not allowed to do this in this conversation.';
+    case 'cannot_message_self':
+      return 'You cannot write to yourself.';
     case 'report_error':
     case 'report_window':
       return 'The report could not run for these dates. Check the date range.';
