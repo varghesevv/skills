@@ -160,6 +160,77 @@
         "title": "AdminInvitationLookup",
         "type": "object"
       },
+      "AdminReportOut": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "handled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handled At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "other": {
+            "$ref": "#/components/schemas/NamedPerson"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "inappropriate",
+              "scam",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/NamedPerson"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "reason",
+          "note",
+          "created_at",
+          "handled_at",
+          "reporter",
+          "other"
+        ],
+        "title": "AdminReportOut",
+        "type": "object"
+      },
       "AdmitRequest": {
         "properties": {
           "to": {
@@ -715,6 +786,109 @@
           "viewed_at"
         ],
         "title": "ContactViewOut",
+        "type": "object"
+      },
+      "ConversationOut": {
+        "properties": {
+          "blocked": {
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "last_message_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message Preview"
+          },
+          "muted": {
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "my_side": {
+            "enum": [
+              "starter",
+              "provider"
+            ],
+            "title": "My Side",
+            "type": "string"
+          },
+          "other": {
+            "$ref": "#/components/schemas/OtherPerson"
+          },
+          "unread_count": {
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "my_side",
+          "other",
+          "last_message_preview",
+          "last_message_at",
+          "unread_count",
+          "muted",
+          "blocked"
+        ],
+        "title": "ConversationOut",
+        "type": "object"
+      },
+      "DeviceOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeviceOut",
+        "type": "object"
+      },
+      "DeviceRegister": {
+        "description": "A phone's push address (Firebase registration token).",
+        "properties": {
+          "platform": {
+            "const": "android",
+            "default": "android",
+            "title": "Platform",
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "DeviceRegister",
         "type": "object"
       },
       "DirectMove": {
@@ -2137,6 +2311,51 @@
         "title": "MemberRow",
         "type": "object"
       },
+      "MessageOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sender_side": {
+            "enum": [
+              "starter",
+              "provider"
+            ],
+            "title": "Sender Side",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "conversation_id",
+          "sender_side",
+          "body",
+          "created_at"
+        ],
+        "title": "MessageOut",
+        "type": "object"
+      },
       "MoveAgreements": {
         "properties": {
           "from_leader": {
@@ -2270,6 +2489,32 @@
         "title": "NameRef",
         "type": "object"
       },
+      "NamedPerson": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "NamedPerson",
+        "type": "object"
+      },
       "NotificationItem": {
         "properties": {
           "created_at": {
@@ -2335,6 +2580,99 @@
           "unread_count"
         ],
         "title": "NotificationList",
+        "type": "object"
+      },
+      "OtherPerson": {
+        "properties": {
+          "closed": {
+            "title": "Closed",
+            "type": "boolean"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "closed"
+        ],
+        "title": "OtherPerson",
+        "type": "object"
+      },
+      "Page_AdminReportOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminReportOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[AdminReportOut]",
+        "type": "object"
+      },
+      "Page_ConversationOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[ConversationOut]",
         "type": "object"
       },
       "Page_GivenRating_": {
@@ -2792,6 +3130,20 @@
         "title": "RatingUpdate",
         "type": "object"
       },
+      "ReadMark": {
+        "properties": {
+          "up_to_seq": {
+            "minimum": 0.0,
+            "title": "Up To Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "up_to_seq"
+        ],
+        "title": "ReadMark",
+        "type": "object"
+      },
       "RefreshRequest": {
         "properties": {
           "refresh_token": {
@@ -2805,6 +3157,38 @@
           "refresh_token"
         ],
         "title": "RefreshRequest",
+        "type": "object"
+      },
+      "ReportCreate": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "inappropriate",
+              "scam",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReportCreate",
         "type": "object"
       },
       "ReportInfo": {
@@ -2841,6 +3225,38 @@
           "filters"
         ],
         "title": "ReportInfo",
+        "type": "object"
+      },
+      "ReportOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "inappropriate",
+              "scam",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "created_at"
+        ],
+        "title": "ReportOut",
         "type": "object"
       },
       "ReportRunOut": {
@@ -2925,6 +3341,85 @@
           "has_files"
         ],
         "title": "ReportRunOut",
+        "type": "object"
+      },
+      "ReportedMessage": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sender_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender Name"
+          },
+          "sender_side": {
+            "enum": [
+              "starter",
+              "provider"
+            ],
+            "title": "Sender Side",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "seq",
+          "conversation_id",
+          "sender_side",
+          "body",
+          "created_at",
+          "sender_name"
+        ],
+        "title": "ReportedMessage",
+        "type": "object"
+      },
+      "ReportedMessages": {
+        "description": "A page of a reported conversation, oldest first; `has_more` says older messages exist\n(read them with `before_seq` set to the first `seq` of this page).",
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedMessage"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "has_more"
+        ],
+        "title": "ReportedMessages",
         "type": "object"
       },
       "ResetPasswordRequest": {
@@ -3317,6 +3812,54 @@
         "title": "SearchSkill",
         "type": "object"
       },
+      "SendMessage": {
+        "properties": {
+          "body": {
+            "maxLength": 20000,
+            "title": "Body",
+            "type": "string"
+          },
+          "client_message_id": {
+            "format": "uuid",
+            "title": "Client Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_message_id",
+          "body"
+        ],
+        "title": "SendMessage",
+        "type": "object"
+      },
+      "SettingsUpdate": {
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked"
+          },
+          "muted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Muted"
+          }
+        },
+        "title": "SettingsUpdate",
+        "type": "object"
+      },
       "SignupRequest": {
         "properties": {
           "email": {
@@ -3404,6 +3947,20 @@
           "id"
         ],
         "title": "SignupResponse",
+        "type": "object"
+      },
+      "StartConversation": {
+        "properties": {
+          "provider_id": {
+            "format": "uuid",
+            "title": "Provider Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id"
+        ],
+        "title": "StartConversation",
         "type": "object"
       },
       "StatusRequest": {
@@ -3592,6 +4149,19 @@
           "unavailable_to"
         ],
         "title": "UnavailabilityOut",
+        "type": "object"
+      },
+      "UnreadOut": {
+        "properties": {
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total"
+        ],
+        "title": "UnreadOut",
         "type": "object"
       },
       "ValidationError": {
@@ -4311,6 +4881,623 @@
         "summary": "Signup",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations": {
+      "get": {
+        "operationId": "conversations_api_v1_chat_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ConversationOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversations",
+        "tags": [
+          "chat"
+        ]
+      },
+      "post": {
+        "description": "Start a conversation with a provider, or return the one that exists (`200`).",
+        "operationId": "start_api_v1_chat_conversations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartConversation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "The conversation that exists"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{conversation_id}": {
+      "get": {
+        "description": "One conversation of the person (the list shows only one page of them). `404` for anyone\nelse's, as for an id that does not exist.",
+        "operationId": "conversation_api_v1_chat_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversation",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{conversation_id}/messages": {
+      "get": {
+        "description": "Newest first; `before_seq` is the cursor.",
+        "operationId": "messages_api_v1_chat_conversations__conversation_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Seq"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageOut"
+                  },
+                  "title": "Response Messages Api V1 Chat Conversations  Conversation Id  Messages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Messages",
+        "tags": [
+          "chat"
+        ]
+      },
+      "post": {
+        "description": "Send a message. Idempotent: the same `client_message_id` returns the stored one (`200`).",
+        "operationId": "send_api_v1_chat_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "The message stored by an earlier try"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{conversation_id}/read": {
+      "post": {
+        "operationId": "read_api_v1_chat_conversations__conversation_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadMark"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{conversation_id}/report": {
+      "post": {
+        "description": "Report the conversation to the OWNER. One open report per person and conversation:\nreporting again returns it (`200`).",
+        "operationId": "report_api_v1_chat_conversations__conversation_id__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
+            "description": "The report this person already has open"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{conversation_id}/settings": {
+      "put": {
+        "operationId": "settings_update_api_v1_chat_conversations__conversation_id__settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Settings Update",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/devices": {
+      "post": {
+        "description": "Remember this phone's push address (`201` new, `200` known: the app may repeat it at each\nstart and whenever Firebase gives it a new one).",
+        "operationId": "register_device_api_v1_chat_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceOut"
+                }
+              }
+            },
+            "description": "The address was already known"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Register Device",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/devices/{device_id}": {
+      "delete": {
+        "description": "Stop pushing to this phone (sign-out). `404` for an address that is not the person's.",
+        "operationId": "forget_device_api_v1_chat_devices__device_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forget Device",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/unread": {
+      "get": {
+        "operationId": "unread_api_v1_chat_unread_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unread",
+        "tags": [
+          "chat"
         ]
       }
     },
@@ -6086,6 +7273,203 @@
         "summary": "Cancel",
         "tags": [
           "move-requests"
+        ]
+      }
+    },
+    "/api/v1/owner/chat-reports": {
+      "get": {
+        "description": "Reports newest first; `handled=false` for the open ones. No message text here.",
+        "operationId": "list_reports_api_v1_owner_chat_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "handled",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handled"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AdminReportOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/owner/chat-reports/{report_id}/handle": {
+      "post": {
+        "operationId": "handle_api_v1_owner_chat_reports__report_id__handle_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Handle",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/owner/chat-reports/{report_id}/messages": {
+      "get": {
+        "description": "A page of the reported conversation, oldest first. Each call is logged (who and when).",
+        "operationId": "read_messages_api_v1_owner_chat_reports__report_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Seq"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportedMessages"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Messages",
+        "tags": [
+          "chat"
         ]
       }
     },

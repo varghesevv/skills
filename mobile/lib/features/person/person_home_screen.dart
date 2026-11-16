@@ -6,6 +6,10 @@ import '../../core/auth/person_me.dart';
 import '../../core/providers.dart';
 import '../../core/strings/app_text.dart';
 import '../../core/session/session_controller.dart';
+import '../chat/chat_paths.dart';
+import '../chat/chat_providers.dart';
+import '../chat/live/chat_live.dart';
+import '../chat/push/push_registration.dart';
 import '../leader/leader_paths.dart';
 import 'applicant_home.dart';
 import 'person_providers.dart';
@@ -35,6 +39,11 @@ class PersonHomeScreen extends ConsumerWidget {
         }
       });
     }
+    // Chat is live while a member who may chat has the app open.
+    if (person.status.isSearcher) {
+      ref.watch(chatLiveProvider);
+      ref.watch(pushLiveProvider);
+    }
     final (title, body) = switch (person.status) {
       PersonStatus.pending => (
         text('applicant.title'),
@@ -52,7 +61,14 @@ class PersonHomeScreen extends ConsumerWidget {
             key: const Key('log-out'),
             tooltip: text('nav.logOut'),
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(sessionProvider.notifier).logout(),
+            onPressed: () async {
+              // Both are read before waiting: this page may be gone when the wait ends. Stop
+              // notifications for this phone first, as afterwards there is no session to ask with.
+              final push = ref.read(pushRegistrationProvider);
+              final session = ref.read(sessionProvider.notifier);
+              await push.unregister();
+              await session.logout();
+            },
           ),
         ],
       ),
@@ -80,6 +96,32 @@ class _Bell extends ConsumerWidget {
         child: const Icon(Icons.notifications_outlined),
       ),
       onPressed: () => context.push(personNotifications),
+    );
+  }
+}
+
+/// The way into the messages, with how many are unread.
+class _MessagesTile extends ConsumerWidget {
+  const _MessagesTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = ref.watch(appTextProvider);
+    final unread = ref.watch(unreadMessagesProvider).value ?? 0;
+    return ListTile(
+      key: const Key('messages'),
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        unread > 0
+            ? '${text('chat.title')} (${text('chat.unreadBadge', {'count': '$unread'})})'
+            : text('chat.title'),
+      ),
+      trailing: Badge(
+        isLabelVisible: unread > 0,
+        label: Text('$unread'),
+        child: const Icon(Icons.chevron_right),
+      ),
+      onTap: () => context.push(chatList),
     );
   }
 }
@@ -191,6 +233,7 @@ class _Member extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(personSearch),
           ),
+        if (person.status.isSearcher) const _MessagesTile(),
         if (person.status.isSearcher)
           ListTile(
             key: const Key('ratings-given'),

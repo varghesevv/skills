@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skills_app/app/router.dart';
+import 'package:skills_app/features/chat/chat_paths.dart';
 import 'package:skills_app/features/leader/leader_paths.dart';
 import 'package:skills_app/features/person/person_router_paths.dart';
 
@@ -72,6 +73,49 @@ Map<String, Object?> _detail() => {
   'can_admit_as_provider': true,
 };
 
+Map<String, Object?> _conversation() => {
+  'id': 'c1',
+  'my_side': 'starter',
+  'other': {'id': 'p9', 'full_name': 'Anita Provider', 'closed': false},
+  'last_message_preview': 'See you on Tuesday',
+  'last_message_at': '2026-11-16T10:00:00Z',
+  'unread_count': 2,
+  'muted': false,
+  'blocked': false,
+};
+
+void _chat(FakeAdapter a) => a
+  ..reply('GET', '/chat/unread', FakeReply(200, {'total': 2}))
+  ..reply('GET', '/chat/conversations/c1', FakeReply(200, _conversation()))
+  ..reply(
+    'GET',
+    '/chat/conversations',
+    FakeReply(200, _page([_conversation()])),
+  )
+  ..reply('POST', '/chat/conversations/c1/read', FakeReply(204))
+  ..reply(
+    'GET',
+    '/chat/conversations/c1/messages',
+    FakeReply(200, [
+      {
+        'id': 'm2',
+        'seq': 2,
+        'conversation_id': 'c1',
+        'sender_side': 'provider',
+        'body': 'See you on Tuesday',
+        'created_at': '2026-11-16T10:00:00Z',
+      },
+      {
+        'id': 'm1',
+        'seq': 1,
+        'conversation_id': 'c1',
+        'sender_side': 'starter',
+        'body': 'Hello',
+        'created_at': '2026-11-16T09:00:00Z',
+      },
+    ]),
+  );
+
 final _screens = [
   _s('searcher', personHome),
   _s('provider', personHome),
@@ -82,6 +126,8 @@ final _screens = [
   _s('searcher', personAccount),
   _s('searcher', personSearch),
   _s('searcher', personRatingsGiven),
+  _s('searcher', chatList, arrange: _chat),
+  _s('searcher', chatThread('c1'), arrange: _chat),
   _s('searcher', personVouches),
   _s('searcher', personNotifications),
   _s('searcher', personGroupRequests),

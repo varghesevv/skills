@@ -7,6 +7,14 @@ import 'package:skills_app/app/app.dart';
 import 'memory_token_store.dart';
 
 import 'package:skills_app/core/providers.dart';
+import 'package:skills_app/features/chat/live/chat_link.dart';
+import 'package:skills_app/features/chat/push/push_gateway.dart';
+import 'package:skills_app/features/chat/push/push_preferences.dart';
+import 'package:skills_app/features/chat/push/push_registration.dart';
+
+import 'fake_push.dart';
+
+import 'package:skills_app/features/chat/live/chat_live.dart';
 
 import 'fake_api.dart';
 
@@ -113,6 +121,9 @@ Future<TestApp> pumpApp(
   Size size = const Size(400, 800),
   double textScale = 1.0,
   List<Override> overrides = const [],
+  ChatConnector? chatConnector,
+  PushGateway? pushGateway,
+  PushPreferences? pushPreferences,
 }) async {
   tester.view.physicalSize = size * tester.view.devicePixelRatio;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -134,6 +145,17 @@ Future<TestApp> pumpApp(
         dioProvider.overrideWithValue(dio),
         tokenStoreProvider.overrideWithValue(store),
         appVersionProvider.overrideWithValue(appVersion),
+        // The chat socket is off unless a test gives it a connector.
+        chatLiveEnabledProvider.overrideWithValue(chatConnector != null),
+        if (chatConnector != null)
+          chatConnectorProvider.overrideWithValue(chatConnector),
+        // No push service unless a test gives one; the answers are kept in memory.
+        pushGatewayProvider.overrideWith(
+          (ref) async => pushGateway ?? const UnavailablePushGateway(),
+        ),
+        pushPreferencesProvider.overrideWithValue(
+          pushPreferences ?? MemoryPushPreferences(),
+        ),
         ...overrides,
       ],
     ),

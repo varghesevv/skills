@@ -3,6 +3,10 @@
 from typing import Literal
 
 LABEL_TYPES = ("skill", "language", "timing", "nativity", "skill_level")
+CHAT_SIDES = ("starter", "provider")
+PUSH_PLATFORMS = ("android",)
+PUSH_STATES = ("pending", "sent", "cancelled")
+CHAT_REPORT_REASONS = ("spam", "harassment", "inappropriate", "scam", "other")
 REVEAL_CHANNELS = ("dial", "show")
 REVEAL_SOURCES = ("search", "detail")
 STATUSES = ("revoked", "pending", "searcher", "provider", "verifier", "admin", "owner")

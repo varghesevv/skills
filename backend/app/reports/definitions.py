@@ -19,6 +19,7 @@ from sqlalchemy import (
     cast,
     exists,
     func,
+    or_,
     select,
     text,
     true,
@@ -26,6 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Session, aliased
 
 from app.models.auth import LoginHistory
+from app.models.chat import ChatReport, Conversation, Message
 from app.models.church import Church, HomeGroup, Person
 from app.models.enums import STATUS_RANK
 from app.models.labels import Label, PersonLabel
@@ -609,6 +611,170 @@ def trust_events(db: Session, p: ReportParams) -> list[Section]:
 # ---- scheduled reports ---------------------------------------------------------------------
 
 
+def chat_reports(db: Session, p: ReportParams) -> list[Section]:
+    """Reports of chat conversations: per reason and per week, open and handled. No names, no
+    text, no conversation ids."""
+    in_window = and_(ChatReport.created_at >= p.start, ChatReport.created_at < p.end)
+    handled = ChatReport.handled_at.is_not(None)
+    total, open_now, closed = db.execute(
+        select(
+            func.count(ChatReport.id),
+            func.count(ChatReport.id).filter(ChatReport.handled_at.is_(None)),
+            func.count(ChatReport.id).filter(handled),
+        ).where(in_window)
+    ).one()
+    per_reason = db.execute(
+        select(
+            ChatReport.reason,
+            func.count(ChatReport.id),
+            func.count(ChatReport.id).filter(ChatReport.handled_at.is_(None)),
+            func.count(ChatReport.id).filter(handled),
+        )
+        .where(in_window)
+        .group_by(ChatReport.reason)
+        .order_by(ChatReport.reason)
+    ).all()
+    week = func.date_trunc("week", func.timezone(p.timezone, ChatReport.created_at))
+    per_week = db.execute(
+        select(
+            func.to_char(week, "YYYY-MM-DD"),
+            func.count(ChatReport.id),
+            func.count(ChatReport.id).filter(ChatReport.handled_at.is_(None)),
+        )
+        .where(in_window)
+        .group_by(week)
+        .order_by(week)
+    ).all()
+    return [
+        section("Summary", ["reports", "open", "handled"], [[total, open_now, closed]]),
+        section("By reason", ["reason", "reports", "open", "handled"], per_reason),
+        section("By week (Monday)", ["week", "reports", "open"], per_week),
+    ]
+
+
+REPLY_WINDOW_DAYS = 7  # a conversation counts for a reveal when it starts within this many days
+
+
+def chat_metrics(db: Session, p: ReportParams) -> list[Section]:
+    """How chat is used (RP-11): conversations, messages, how often and how fast a first message
+    is answered, and how many revealed numbers lead to a conversation. Counts only: no names, no
+    text, no conversation ids."""
+    started = and_(Conversation.created_at >= p.start, Conversation.created_at < p.end)
+    sent = and_(Message.created_at >= p.start, Message.created_at < p.end)
+    conversations = db.scalar(select(func.count(Conversation.id)).where(started)) or 0
+    messages, writers, active = db.execute(
+        select(
+            func.count(Message.id),
+            func.count(func.distinct(Message.sender_id)),
+            func.count(func.distinct(Message.conversation_id)),
+        ).where(sent)
+    ).one()
+
+    # First answers: of the conversations started in the window in which the starter wrote, those
+    # in which the provider wrote afterwards, and how long the first answer took.
+    first_ask = (
+        select(Message.conversation_id.label("cid"), func.min(Message.created_at).label("asked"))
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(Message.sender_side == "starter", started)  # the window first: not all history
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+    answered = (
+        select(
+            first_ask.c.cid,
+            first_ask.c.asked,
+            func.min(Message.created_at).label("answered"),
+        )
+        .select_from(first_ask)
+        .join(Conversation, Conversation.id == first_ask.c.cid)
+        .outerjoin(
+            Message,
+            and_(
+                Message.conversation_id == first_ask.c.cid,
+                Message.sender_side == "provider",
+                Message.created_at > first_ask.c.asked,
+            ),
+        )
+        .where(started)
+        .group_by(first_ask.c.cid, first_ask.c.asked)
+        .subquery()
+    )
+    asked_n, answered_n, median_seconds = db.execute(
+        select(
+            func.count(),
+            func.count(answered.c.answered),
+            func.percentile_cont(0.5).within_group(
+                func.extract("epoch", answered.c.answered - answered.c.asked)
+            ),
+        ).select_from(answered)
+    ).one()
+    rate = round(100 * answered_n / asked_n, 1) if asked_n else None
+    median_minutes = round(float(median_seconds) / 60, 1) if median_seconds is not None else None
+
+    # Reveals that lead to a conversation: of the pairs (searcher, provider) with a reveal in the
+    # window, those with a conversation that starts within a week after their first reveal.
+    pairs = (
+        select(
+            PhoneReveal.revealer_id.label("a"),
+            PhoneReveal.provider_id.label("b"),
+            func.min(PhoneReveal.revealed_at).label("first"),
+        )
+        .where(PhoneReveal.revealed_at >= p.start, PhoneReveal.revealed_at < p.end)
+        .group_by(PhoneReveal.revealer_id, PhoneReveal.provider_id)
+        .subquery()
+    )
+    follows = (
+        select(Conversation.id)
+        .where(
+            or_(
+                and_(Conversation.starter_id == pairs.c.a, Conversation.provider_id == pairs.c.b),
+                and_(Conversation.starter_id == pairs.c.b, Conversation.provider_id == pairs.c.a),
+            ),
+            Conversation.created_at >= pairs.c.first,
+            Conversation.created_at < pairs.c.first + timedelta(days=REPLY_WINDOW_DAYS),
+        )
+        .exists()
+    )
+    revealed_n, converted_n = db.execute(
+        select(func.count(), func.count().filter(follows)).select_from(pairs)
+    ).one()
+    conversion = round(100 * converted_n / revealed_n, 1) if revealed_n else None
+
+    day_started = func.to_char(func.timezone(p.timezone, Conversation.created_at), "YYYY-MM-DD")
+    day_sent = func.to_char(func.timezone(p.timezone, Message.created_at), "YYYY-MM-DD")
+    per_day: dict[str, list[int]] = {}
+    for day, count in db.execute(
+        select(day_started, func.count()).where(started).group_by(day_started)
+    ):
+        per_day.setdefault(day, [0, 0])[0] = count
+    for day, count in db.execute(select(day_sent, func.count()).where(sent).group_by(day_sent)):
+        per_day.setdefault(day, [0, 0])[1] = count
+    return [
+        section(
+            "Summary",
+            ["measure", "value"],
+            [
+                ("conversations_started", conversations),
+                ("conversations_with_messages", active),
+                ("messages_sent", messages),
+                ("people_who_wrote", writers),
+                ("conversations_where_the_starter_wrote", asked_n),
+                ("answered_by_the_provider", answered_n),
+                ("first_answer_rate_percent", rate),
+                ("median_minutes_to_first_answer", median_minutes),
+                ("numbers_revealed_to_providers", revealed_n),
+                (f"of_these_a_conversation_within_{REPLY_WINDOW_DAYS}_days", converted_n),
+                ("reveal_to_conversation_percent", conversion),
+            ],
+        ),
+        section(
+            "By day",
+            ["day", "conversations_started", "messages_sent"],
+            [(day, *counts) for day, counts in sorted(per_day.items())],
+        ),
+    ]
+
+
 def signups_daily(db: Session, p: ReportParams) -> list[Section]:
     """New applicants in the window by what they ask to be (or their status now) and church."""
     asked = func.coalesce(Person.requested_status, Person.status)
@@ -722,6 +888,20 @@ REPORTS: list[ReportDef] = [
         "and moves.",
         trust_events,
         admin_scoped=True,
+    ),
+    ReportDef(
+        "chat_reports",
+        "RP-10",
+        "Chat reports",
+        "Reported conversations in the period: per reason and per week, open and handled.",
+        chat_reports,
+    ),
+    ReportDef(
+        "chat_metrics",
+        "RP-11",
+        "Chat metrics",
+        "Conversations, messages, first answers, and numbers revealed that lead to a conversation.",
+        chat_metrics,
     ),
     ReportDef(
         "signups_daily",

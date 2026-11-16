@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine
@@ -13,6 +13,12 @@ def get_engine() -> Engine:
     return create_engine(
         get_settings().require_database_url(), pool_pre_ping=True, hide_parameters=True
     )
+
+
+def get_session_factory() -> Callable[[], Session]:
+    """A factory of short sessions, for code that must not hold one for a long time (a socket).
+    Use it as `with factory() as session:`; tests replace it."""
+    return sessionmaker(bind=get_engine(), expire_on_commit=False)
 
 
 def get_session() -> Iterator[Session]:

@@ -4,6 +4,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Push needs the owner's Firebase project. Its google-services.json is kept out of git and put here
+// by the build (CI writes it from a secret); without it the app builds and simply has no push.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.skills.skills_app"
     compileSdk = flutter.compileSdkVersion

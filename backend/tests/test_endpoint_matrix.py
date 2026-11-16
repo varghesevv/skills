@@ -78,6 +78,17 @@ MATRIX: dict[tuple[str, str], str] = {
     ("GET", "/search/freelancers"): "searcher",
     ("GET", "/labels"): "searcher",
     ("GET", "/workhosts/me/ratings"): "searcher",
+    ("POST", "/chat/conversations"): "searcher",
+    ("GET", "/chat/conversations"): "searcher",
+    ("GET", "/chat/conversations/{conversation_id}"): "searcher",
+    ("GET", "/chat/conversations/{conversation_id}/messages"): "searcher",
+    ("POST", "/chat/conversations/{conversation_id}/messages"): "searcher",
+    ("POST", "/chat/conversations/{conversation_id}/read"): "searcher",
+    ("PUT", "/chat/conversations/{conversation_id}/settings"): "searcher",
+    ("GET", "/chat/unread"): "searcher",
+    ("POST", "/chat/conversations/{conversation_id}/report"): "searcher",
+    ("POST", "/chat/devices"): "searcher",
+    ("DELETE", "/chat/devices/{device_id}"): "searcher",
     # ---- a PROVIDER or above -------------------------------------------------------------------
     ("GET", "/freelancers/me"): "provider",
     ("PUT", "/freelancers/me"): "provider",
@@ -118,6 +129,9 @@ MATRIX: dict[tuple[str, str], str] = {
     ("DELETE", "/owner/churches/invitations/{invitation_id}"): "owner",
     ("POST", "/owner/churches/{church_id}/close"): "owner",
     ("GET", "/owner/contact-views"): "owner",
+    ("GET", "/owner/chat-reports"): "owner",
+    ("GET", "/owner/chat-reports/{report_id}/messages"): "owner",
+    ("POST", "/owner/chat-reports/{report_id}/handle"): "owner",
     ("POST", "/owner/handover"): "owner",
     ("POST", "/labels"): "owner",
     ("PATCH", "/labels/{label_id}"): "owner",
@@ -200,6 +214,9 @@ def request(client: TestClient, method: str, path: str, headers: dict[str, str])
         "rating_id",
         "notification_id",
         "freelancer_id",
+        "conversation_id",
+        "report_id",
+        "device_id",
     ):
         url = url.replace("{" + name + "}", ghost)
     url = url.replace("{version}", "9.9.9").replace("{name}", "no_such_report")

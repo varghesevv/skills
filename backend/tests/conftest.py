@@ -8,6 +8,7 @@ import os
 import secrets
 import tempfile
 from collections.abc import Iterator
+from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -40,6 +41,9 @@ for _name, _value in {
 # the shell or docker compose may already provide the (larger) defaults.
 os.environ["REVEAL_MAX_PER_HOUR"] = "3"
 os.environ["REVEAL_MAX_PER_DAY"] = "5"
+# Small chat limits, for the same reason.
+os.environ["CHAT_MAX_NEW_CONVERSATIONS_PER_DAY"] = "3"
+os.environ["CHAT_MAX_MESSAGES_PER_MINUTE"] = "5"
 # A random signing key for this test run only; nothing secret is stored in the source.
 os.environ.setdefault("JWT_SECRET", secrets.token_hex(32))
 
@@ -121,7 +125,7 @@ def client(session: Session) -> Iterator["TestClient"]:
     from fastapi.testclient import TestClient
 
     from app.core.config import get_settings
-    from app.core.db import get_session
+    from app.core.db import get_session, get_session_factory
     from app.main import app
 
     get_settings.cache_clear()
@@ -130,6 +134,8 @@ def client(session: Session) -> Iterator["TestClient"]:
         yield session
 
     app.dependency_overrides[get_session] = override
+    # Code that opens short sessions of its own (the chat socket) uses the test session too.
+    app.dependency_overrides[get_session_factory] = lambda: lambda: nullcontext(session)
     # A fixed client address, so login throttling (per email and IP) is predictable.
     with TestClient(app, client=("203.0.113.7", 50000)) as test_client:
         yield test_client

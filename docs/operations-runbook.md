@@ -155,6 +155,22 @@ Both are listed in `.env.example` and `infra/docker/demo.env.example`. The deplo
 
 The settings of the app show a Privacy row only when the build is made with `--dart-define=PRIVACY_URL=https://<address of the statement>`. It is optional and not a secret. The value must start with `https://`; a release build that sets anything else is refused by the "this build is not configured" screen, naming `PRIVACY_URL`. The release workflow (`.github/`, an owner change) has to pass it; until then release builds show no Privacy row. The statement is the web page `https://<demo-domain>/privacy` (S7.4); the owner reads it, changes the wording if needed (`privacy.*` in `frontend/src/i18n/index.ts`) and gives that address as `PRIVACY_URL`.
 
+### Chat limits
+
+The chat limits are settings with safe defaults (like the reveal limits); set them in the API's environment only to change them: `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY` (10: conversations one person may start in 24 hours), `CHAT_MAX_MESSAGES_PER_MINUTE` (20 per person), `CHAT_MAX_SOCKETS_PER_PERSON` (5 open sockets in one API process), `CHAT_PUSH_DELAY_SECONDS` (3: how long a notification waits for the app to say it got the message). The tests use smaller values (3 and 5). Messages are never logged.
+
+### Turning chat off in an emergency
+
+There is no switch for chat in the application. If something serious is wrong on the server side (abuse that cannot be stopped by the limits, a bug that exposes messages), block the path `/api/v1/chat` at the reverse proxy so that it answers `503` (people then see an error where their messages are; sign-in and everything else carry on). Fix the problem, then open the path again. Push stops by itself when `PUSH_ENABLED` is `false` for the API and the worker (restart both). To stop one abusive person, the OWNER revokes them or the other person blocks them. The staged rollout notes in `docs/android/release.md` say what to look at and when to stop a store rollout.
+
+### Chat push
+
+Push is off until the owner has a Firebase project (`PUSH_ENABLED=false`). To switch it on: create the Firebase project and a service account that may send messages, put the key file's JSON in the worker's environment as `FCM_SERVICE_ACCOUNT_JSON` (a secret: environment only, never in a file in the repository, ADR-0011) and set `PUSH_ENABLED=true` for **both** the API (so messages make outbox rows) and the worker (which sends). The worker stops at start with a clear message if the key is missing. Settings with defaults: `CHAT_PUSH_DELAY_SECONDS` (3), `CHAT_MAX_DEVICES_PER_PERSON` (10), `CHAT_PUSH_KEEP_DAYS` (7). Run exactly one worker. Check: the worker log says "Chat push is on"; a refused or failed push is logged by status only, never with a token or text. Rows that stay `pending` with `attempts` above 0 mean Firebase is refusing: check the key and the project.
+
+### The chat socket
+
+The API runs with `--ws-max-size 16384` (set in the image, the local compose file and the demo compose file): a WebSocket frame over 16 KiB is refused by the server itself. Caddy proxies WebSocket upgrades without further settings. A load balancer in front of several API processes needs an idle timeout above 60 seconds (the app sends a ping every 25 seconds; a socket with no frame for 70 seconds is closed). Chat sockets end when the person's access token runs out (at most 15 minutes) and the app reconnects.
+
 ### What the logs hold
 
 The API's own log shows paths without query strings, and names no person except in the password reset line (which carries the address and the reset link until email delivery exists). The web container's access log shows the path only, with a `/join/`, `/vouch/` or `/invite/` page (any letter case) logged as `/link/redacted`; the proxy writes no access log. The only secret a log holds is therefore the reset link, in the API log: keep that log readable by the operators only.

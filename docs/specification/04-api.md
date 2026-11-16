@@ -126,6 +126,46 @@ Auth behaviour:
 
 The platform operators' OWNER change is a command run on the server, not an endpoint: `python -m app.cli change-owner --new-owner <email>` with `--church-admin`, `--group-leader`, `--former-status` and `--revoke-old-owner` (see the operations runbook). It makes the same appointments as a handover, in one transaction, recorded in the history as operator changes, and cancels a handover proposal that is still open.
 
+### Chat (S8.2, ADR-0014)
+Conversations between two people: the *starter* (a SEARCHER or above) and the *provider* (open, not revoked, PROVIDER or above). Everything needs at least SEARCHER (`403 not_admitted` below, `403 account_revoked` for a revoked person). Someone who is not a participant gets `404 not_found`, the same as for a conversation that does not exist. Messages and names are never logged.
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | /chat/conversations | Body `provider_id`. Returns the conversation (`201` new, `200` the one that exists: one conversation per pair of people, whichever of them wrote first, so a provider who is written to by someone they already wrote to gets the same thread). `404` for anyone who is not a provider a searcher may see; `422 cannot_message_self`; `403 chat_blocked` when the provider blocked this person; `429 chat_new_conversation_limit` over `CHAT_MAX_NEW_CONVERSATIONS_PER_DAY` (10) new conversations in 24 hours. |
+| GET | /chat/conversations | Paged (`page`, `page_size`), latest activity first. Each: `id`, `my_side` (`starter` or `provider`), `other` (`id`, `full_name`, `closed`; the name is empty once that account is closed), `last_message_preview` (60 characters), `last_message_at`, `unread_count`, `muted`, `blocked` (the provider's own block; the field is always `false` for the starter, who learns of a block only by `403 chat_blocked` when writing, decision D-51). |
+| GET | /chat/conversations/{id} | One conversation of the caller, in the shape of a list item (the list shows one page only, so an app opening a conversation by its id asks here). `404` for anyone outside it and for an unknown id. |
+| GET | /chat/conversations/{id}/messages | Newest first; `limit` at most 50; `before_seq` is the cursor. Each: `id`, `seq`, `conversation_id`, `sender_side`, `body`, `created_at` (set by the server). |
+| POST | /chat/conversations/{id}/messages | Body `client_message_id` (a UUID the app makes), `body`. Idempotent: the same id on the same side returns the stored message (`200`, `201` for a new one). Text is trimmed, 1 to 2000 characters, no control characters except new line and tab: `422 chat_message_empty`, `chat_message_too_long`, `chat_message_invalid`. `403 chat_blocked` (a block stops both directions), `409 chat_closed` when the other person's account is closed or revoked, `429 chat_rate_limited` over `CHAT_MAX_MESSAGES_PER_MINUTE` (20). |
+| POST | /chat/conversations/{id}/read | Body `up_to_seq`. Moves the person's read mark forward only, and no further than the newest message. `204`. |
+| PUT | /chat/conversations/{id}/settings | Body `muted` and/or `blocked`. Either side may mute; only the provider may block (`403 chat_not_allowed`). Returns the conversation. |
+| GET | /chat/unread | `{"total": n}`: messages from the other side after the person's read marks, over all conversations. |
+
+Storing a message announces an event (ids only) through PostgreSQL `NOTIFY` when the transaction commits. Every API process listens and delivers the event to the sockets it holds.
+
+#### Push addresses and the push itself (S8.5, ADR-0014)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /chat/devices | Body `token` (the Firebase registration token, 1 to 512 characters) and `platform` (`android`). `201` new, `200` known (the app repeats it at each start and when Firebase changes it); an address registered by someone else moves to the caller. Returns `{id}`. `422` for a missing or too long token or another platform. |
+| DELETE | /chat/devices/{id} | Sign-out: stop pushing to this phone. `204`; `404` for a device that is not the caller's. |
+
+The push is sent by the worker, not by the API (a row is claimed in a short transaction and sent with none open, so a slow Firebase never blocks sending a message), and only when `PUSH_ENABLED` is true: storing a message adds or raises one `push_outbox` row for the recipient (none if they muted the conversation or have no device), due after `CHAT_PUSH_DELAY_SECONDS`. When due, the worker cancels it if the recipient's `delivered_seq` or `last_read_seq` has reached the message (a socket delivered it), or the person is closed, revoked, or blocked, and otherwise sends one push to each device through Firebase (HTTP v1): title "Skills", text "You have a new message" ("You have new messages" when several), data `type=chat` and `conversation_id` only (the app opens that conversation). A token is deleted only when Firebase says `UNREGISTERED` (a bare 404 or any other refusal keeps it and is tried again); other failures are tried again after 30 seconds, up to 5 times.
+
+#### Reporting and the OWNER (S8.4)
+| Method | Path | Notes |
+|---|---|---|
+| POST | /chat/conversations/{id}/report | Either person of the conversation. Body `reason` (spam, harassment, inappropriate, scam, other) and optional `note` (at most 500 characters). `201`; `200` with the same report when this person already has one open on the conversation; `404` for anyone outside it; `422` for an unknown reason. |
+| GET | /owner/chat-reports | OWNER. Paged (`limit`, `offset`; `items`, `total`), newest first; filter `handled` (true or false). Each: `id`, `conversation_id`, `reason`, `note`, `reporter` and `other` (`id`, `full_name`; empty once closed), `created_at`, `handled_at`. Never message text. |
+| GET | /owner/chat-reports/{report_id}/messages | OWNER. A page of the reported conversation: the newest `limit` messages (1 to 100, default 50) before `before_seq` when given, returned oldest first, with `has_more`; older ones are read with `before_seq` set to the first `seq` of the page. Each page read is written to `chat_report_views`. `404` for an unknown report; a conversation id is not accepted. |
+| POST | /owner/chat-reports/{report_id}/handle | OWNER. Marks the report handled. `204`; repeating it changes nothing. |
+
+#### WebSocket (S8.3, ADR-0014)
+`wss://<host>/api/v1/chat/ws`, JSON text frames, protocol version 1. It carries live events only; everything it does is also possible through REST, so an app without a socket works by reading the list when it comes to the foreground.
+
+- **Authentication.** The first frame is `{"type":"auth","token":"<access token>"}` within 5 seconds (the token is never read from the address). Close codes: `4401` not authenticated, a bad or expired token, or the token ran out while connected (the app refreshes and reconnects); `4403` the person may not chat (PENDING, REVOKED or a closed account), also when they become so while connected; `4429` too many frames (more than 60 in 10 seconds) or too many sockets for one person in this process (5); `1003` a binary frame (before authentication it is `4401`); `1009` a frame over 8 KiB (the first frame too, checked before it is parsed; the server also runs with `--ws-max-size 16384`, so a larger frame never reaches the application); `1001` no frame for 70 seconds. The person is read from the database on **every** frame, so a revoked person is ended at the next frame (the app sends a `ping` every 25 seconds), and an event is delivered to a person only after a check that they are still allowed.
+- **Client to server.** `ping`; `send` (`conversation_id`, `client_message_id`, `body`); `read` and `delivered` (`conversation_id`, `up_to_seq`).
+- **Server to client.** `ready` (`server_time`, `heartbeat_seconds`); `pong`; `ack` (`client_message_id`, the stored `message`); `message` (`message`: `id`, `seq`, `conversation_id`, `sender_side`, `body`, `created_at`) to the other person and to every device of the sender, so an app dedups by `message.id`; `read` and `delivered` (`conversation_id`, `side`, `up_to_seq`) to the other side; `error` (`code`, and `client_message_id` for a refused send) with the same codes as REST (`chat_message_too_long`, `chat_blocked`, `chat_rate_limited`, `not_found`, ...) or `bad_frame`.
+- **Catching up.** An app that reconnects reads `GET /chat/conversations` and the messages it lacks through REST; events missed while disconnected are not replayed.
+
 ### Providers (resource paths kept)
 | Method | Path | Who |
 |---|---|---|
