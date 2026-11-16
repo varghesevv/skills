@@ -273,6 +273,10 @@ main:focus {
 .site-menu[data-open='true'] {
   display: flex;
 }
+.site-menu > *,
+.gsearch > * {
+  min-width: 0;
+}
 .gsearch {
   display: flex;
   gap: 0.5rem;

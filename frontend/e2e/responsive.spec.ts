@@ -102,6 +102,22 @@ async function horizontalOverflow(page: Page): Promise<number> {
   )
 }
 
+/** The elements that reach past the right edge, to say what scrolls sideways. */
+async function reachingPastTheEdge(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const edge = document.documentElement.clientWidth
+    const found: string[] = []
+    for (const element of document.querySelectorAll<HTMLElement>('body *')) {
+      const rect = element.getBoundingClientRect()
+      if (rect.width > 0 && rect.right > edge + 0.5) {
+        const label = (element.className?.toString() || element.tagName).slice(0, 40)
+        found.push(`${element.tagName.toLowerCase()}.${label} right=${Math.round(rect.right)}`)
+      }
+    }
+    return found.slice(0, 8)
+  })
+}
+
 /** Visible controls smaller than 44 by 44 CSS pixels (WCAG 2.1 AA target size, spec 06). */
 async function smallTargets(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -154,7 +170,10 @@ test('the phone menu of an owner, open', async ({ page }, testInfo) => {
   await page.getByRole('button', { name: 'Menu' }).click()
   await expect(page.getByRole('link', { name: 'Applicants' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Number views' })).toBeVisible()
-  expect(await horizontalOverflow(page), 'the page scrolls sideways').toBeLessThanOrEqual(0)
+  expect(
+    await horizontalOverflow(page),
+    `the page scrolls sideways: ${(await reachingPastTheEdge(page)).join('; ')}`,
+  ).toBeLessThanOrEqual(0)
   expect(await smallTargets(page), 'controls smaller than 44x44 px').toEqual([])
   await keepScreenshot(page, testInfo, 'phone menu open')
 })
