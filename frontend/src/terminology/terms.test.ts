@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import profiles from './profiles.json'
-import { applyTerms, setProfile, slugOf, term, userTypeOfSlug } from './terms'
+import { applyTerms, setProfile, term } from './terms'
 
 afterEach(() => setProfile('default'))
 
@@ -73,26 +73,19 @@ describe('applyTerms', () => {
   })
 })
 
-describe('addresses', () => {
-  it('follow the profile', () => {
-    expect(slugOf('organisation')).toBe('organisation')
+describe('profiles', () => {
+  it('follow the chosen profile', () => {
+    expect(term('organisation')).toBe('Organisation')
     setProfile('church')
-    expect(slugOf('organisation')).toBe('church')
-    expect(slugOf('workhost')).toBe('searcher')
-    expect(slugOf('admin')).toBe('admin')
-    expect(term('organisations_path')).toBe('churches')
-    expect(userTypeOfSlug('church')).toBe('organisation')
-    expect(userTypeOfSlug('searcher')).toBe('workhost')
-    expect(slugOf('freelancer')).toBe('provider')
-    expect(term('freelancers_path')).toBe('providers')
-    expect(userTypeOfSlug('provider')).toBe('freelancer')
-    expect(userTypeOfSlug('organisation')).toBeUndefined()
+    expect(term('organisation')).toBe('Church')
+    expect(term('workhost')).toBe('Searcher')
+    expect(term('freelancer')).toBe('Provider')
   })
 
   it('fall back to the default for an unknown profile', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     setProfile('nonsense')
-    expect(slugOf('organisation')).toBe('organisation')
+    expect(term('organisation')).toBe('Organisation')
     expect(warn).toHaveBeenCalled()
     warn.mockRestore()
   })
