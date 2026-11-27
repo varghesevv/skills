@@ -39,8 +39,6 @@ from app.schemas.auth import (
 from app.services import contact_views, notifications
 from app.services.operators import SetupError, change_owner, create_first_owner
 
-DEMO_DOMAIN = "example.com"
-
 # The same rules as the API applies to a sign-up.
 _EMAIL: TypeAdapter[str] = TypeAdapter(Email)
 _PERSON_NAME: TypeAdapter[str] = TypeAdapter(PersonName)

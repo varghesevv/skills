@@ -53,14 +53,6 @@ def _open_church(db: Session, church_id: uuid.UUID) -> Church:
     return church
 
 
-def _successor_required() -> ApiError:
-    return ApiError(
-        409,
-        "successor_required",
-        "Someone who leads a home group needs a successor for it first",
-    )
-
-
 def _start(db: Session, person: Person, name: str, decided_by: Person | None) -> HomeGroup:
     """Create the group and move the person in as its leader. The caller commits."""
     group = HomeGroup(church_id=person.church_id, name=name, leader_id=person.id)
