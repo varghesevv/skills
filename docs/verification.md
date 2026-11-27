@@ -13,6 +13,23 @@ Accepted, 2026-11-12 ([ADR-0016](adr/0016-church-trust-hierarchy-verification-mo
 - Expected scale: about 10,000 users, of whom at least 4,000 are providers.
 - Churches do not keep a formal membership roll, so verification cannot rely on one. Trust comes from people who know each other instead.
 
+## What "verified" means
+
+A person is **verified** when a verifier admits them: their status is SEARCHER or higher, and not REVOKED. A PENDING applicant is not yet verified. Skills is for Christians, so being in a home group is not enough: someone who attends a group without meeting these conditions is not verified.
+
+The conditions are set in the initial config (`verification_conditions` in `initial.json`), one list for every church, and nowhere else. At a minimum, a verified person:
+
+1. **attends a home group** with reasonable consistency;
+2. **is known to the home group's leader**;
+3. **has a credible profession of Christian faith**;
+4. **adheres to their church's constitution**.
+
+The verifier who admits someone confirms every condition from their own knowledge. Vouches are evidence that others know the applicant, but they do not replace this judgement. To admit, the verifier ticks each condition; the Admit button works only when all are ticked, and the server refuses an admission that does not confirm every current condition. The history records the wording that was confirmed. The conditions change only by editing `initial.json` and restarting the server; earlier admissions keep the wording confirmed at the time. A verified person who no longer meets these conditions can have their status changed or be [revoked](#revocation) by a verifier with authority over them.
+
+The people created when Skills is set up (the OWNER, the ADMIN of each church and each home group's leader, from the initial config or `create-owner`) are verified by that setup: the platform operators confirm the conditions for them.
+
+**Members.** A **member** of a home group or church is a verified person in it (SEARCHER or higher). A PENDING applicant belongs to the group they applied to, but is not a member until they are admitted. Only a member can be appointed: a successor leader or ADMIN is always verified. Applicants still count when deciding whether a group or church is empty: a group with waiting applicants is not empty, so it is never closed while they wait.
+
 ## Structure
 
 ```
@@ -22,7 +39,7 @@ Skills ── always exactly 1 OWNER (authority over every church)
         └── Members: SEARCHERs, PROVIDERs, and the leaders above
 ```
 
-- **Every open, non-revoked person (PENDING or above) belongs to exactly one home group, and so to exactly one church.** This includes the VERIFIER, the ADMIN and the OWNER. A revoked person belongs to no home group, only to their church's revoked list.
+- **Every open, non-revoked person (PENDING or above) belongs to exactly one home group, and so to exactly one church**, as a member or, while PENDING, as an applicant. This includes the VERIFIER, the ADMIN and the OWNER. A revoked person belongs to no home group, only to their church's revoked list.
 - There is always exactly one OWNER. They belong to a home group in one church, usually the first, and **are always that church's ADMIN**: the OWNER is an ADMIN with platform-wide powers.
 - **Every church always has exactly one ADMIN**, and is made up of home groups. The ADMIN is the person of ADMIN status in that church, or, in the OWNER's own church, the OWNER. The OWNER's church has no separate person of ADMIN status.
 - **Every home group always has exactly one leader, who belongs to that group.** It can have any number of other members.
@@ -71,7 +88,7 @@ From lowest to highest:
 1. A verifier cannot override a revocation or a leader appointment made by a higher verifier. For example, a VERIFIER cannot reinstate someone an ADMIN revoked. Ordinary admissions (SEARCHER or PROVIDER) can be changed by any verifier with authority over that person, whoever made them.
 2. Nobody can change their own status, except for the OWNER handing over (see [Owner succession](#owner-succession)) and a VERIFIER closing their group (see [Closing home groups and churches](#closing-home-groups-and-churches)).
 3. Only the OWNER can create a church. A home group is started by a member with the ADMIN's approval (see [Starting a home group](#home-group-leaders)).
-4. Only the church's ADMIN (or the OWNER) can appoint a home group's leader, and only as part of [succession](#succession) or approving a new group. Only the OWNER can appoint an ADMIN, in the same way. Anyone appointed as a leader must already exist in Skills, in any status from PENDING upwards.
+4. Only the church's ADMIN (or the OWNER) can appoint a home group's leader, and only as part of [succession](#succession) or approving a new group. Only the OWNER can appoint an ADMIN, in the same way. Anyone appointed as a leader must already be a member (SEARCHER or above): an applicant is not yet verified.
 5. An admitted member can move to another home group in the same church by agreement (see [Moving between groups](#home-group-leaders)), or be moved by the ADMIN (or the OWNER). Moving a group's leader out of it is a [succession](#succession): a successor is appointed in the same step. To change church, an admitted member leaves and signs up again in the new church, where different people know them.
 
 ### What verifiers can see
@@ -101,21 +118,26 @@ A VERIFIER sees the members of their home group, an ADMIN sees everyone in their
 
    An ADMIN or the OWNER can start a group for themselves in the same way, without needing approval. This means groups grow from the bottom up, and the ADMIN only has to approve them.
 3. **Growing a group.** A leader can share an invitation link to their group. People who sign up through it join that group as PENDING, and are admitted in the usual way.
-4. **Moving between groups.** An admitted member can move to another home group in the same church when three people agree: the member, the leader of the group they are joining, and the leader of the group they are leaving. No ADMIN is needed. The ADMIN (or the OWNER) can also move members directly. A leader who wants to move steps down as group leader first, through [succession](#succession). An ADMIN or the OWNER [hands their group on](#succession) and keeps their status.
+4. **Moving between groups.** An admitted member can move to another home group in the same church when three people agree: the member, the leader of the group they are joining, and the leader of the group they are leaving. No ADMIN is needed. The ADMIN (or the OWNER) can also move members directly. A leader cannot move while they lead: a VERIFIER first sends a [step-down request](#succession) and the ADMIN appoints their successor; an ADMIN or the OWNER [hands their group on](#succession) and keeps their status. An ADMIN or the OWNER [hands their group on](#succession) and keeps their status.
 
 ## Succession
 
 **Nobody ever stops leading a group or a church without a successor being appointed in the same step.** This is what keeps exactly one OWNER, one ADMIN per church and one leader per group at all times.
 
-1. **Successor for a group.** Whenever a group's leader stops leading it (stepping down, being moved, replaced or revoked, or a handover), the ADMIN (or the OWNER) appoints a new leader in the same step. The new leader must already be a member of that group, in any status from PENDING upwards (revoked people are no longer members). A PENDING member appointed this way becomes VERIFIER directly, without the usual vouches. If the group has no other member and the old leader is leaving it (revoked, moved or leaving Skills), the group is closed in the same step. A leader who is their group's only member and wants to stay in Skills steps down by [closing the group](#closing-home-groups-and-churches) instead.
-2. **Successor for a church.** Whenever an ADMIN stops being ADMIN (stepping down, or being replaced or revoked), a new ADMIN is appointed in the same step. The new ADMIN must already be a member of that church, in any status from PENDING upwards, and becomes ADMIN directly, without the usual vouches. If they also lead a group, they keep leading it. If the church has no other member, it is closed in the same step.
+1. **Successor for a group.** Whenever a group's leader stops leading it (stepping down, being moved, replaced or revoked, or a handover), the ADMIN (or the OWNER) appoints a new leader in the same step. The new leader must be a member (SEARCHER or above; applicants and revoked people are not members) and becomes VERIFIER unless higher: a member of that group, or, when the group has none, a member of another group in the same church who moves into it in the same step (not someone who leads their own group). An applicant can become the leader only by being admitted first, with the conditions confirmed. If the group has nobody else in it, not even an applicant, and the old leader is leaving it (revoked, moved or leaving Skills), the group is closed in the same step. A leader who is their group's only member and wants to stay in Skills steps down by [closing the group](#closing-home-groups-and-churches) instead.
+2. **Successor for a church.** Whenever an ADMIN stops being ADMIN (stepping down, or being replaced or revoked), a new ADMIN is appointed in the same step. The new ADMIN must already be a member of that church (SEARCHER or above), and becomes ADMIN directly. If they also lead a group, they keep leading it. If nobody else is in the church (applicants included), it is closed in the same step.
 3. **What happens to the person stepping down.** They stay in their own home group and become a PROVIDER (or a SEARCHER, if they prefer), without the usual vouches, because as a leader they could already provide. The change is recorded as set by the verifier above them, so the chain of trust stays unbroken, even when the step-down is self-initiated (a VERIFIER closing their own group is recorded as set by the church's ADMIN). That verifier can later change it like any ordinary admission. This is not a breach of trust, so nobody they admitted is flagged. (Revocation is different: see [Revocation](#revocation).)
-4. **Handing a group on.** An ADMIN or the OWNER who leads their own group can appoint another member of it (PENDING or above) as its leader. They keep their own status.
+4. **Handing a group on.** An ADMIN or the OWNER who leads their own group can appoint another member of it (SEARCHER or above) as its leader. They keep their own status.
+5. **A VERIFIER asks to step down.** A VERIFIER can never leave their group without a leader on their own. While they lead, they cannot move to another group, close the group while others are in it, or close their account. Instead they send a **step-down request** to the church's ADMIN, with an optional reason. The ADMIN is notified and sees it in a list until it is decided, so the decision is always put in front of them. One request per leader can be open at a time, and the VERIFIER can withdraw it while it is open.
+   - The ADMIN (or the OWNER) either **appoints a successor**, as in point 1 (a member of the group, or a member of another group of the church who moves in), and the VERIFIER steps down as in point 3; they can then move or leave as anyone else;
+   - or **declines** the request, and the VERIFIER keeps leading.
+
+   A leader who is the only person in their group (no members, no applicants) can close it themselves instead (see [Closing home groups and churches](#closing-home-groups-and-churches)). Revocation is different: it cannot wait, so whoever revokes a leader appoints the successor in the same step.
 5. **No successor available.** If a leader steps down while staying where they are, and nobody can succeed them, they keep that leadership role, with the matching status (VERIFIER for a group, ADMIN for a church), instead of becoming a PROVIDER. This mainly arises when the OWNER hands over while alone in their church or group.
 
 | Situation | Who acts | Successor appointed in the same step |
 |---|---|---|
-| A VERIFIER steps down, or wants to leave | ADMIN | New leader for the group |
+| A VERIFIER steps down, or wants to move or leave | ADMIN, deciding their step-down request | New leader for the group |
 | A VERIFIER is moved to another group | ADMIN | New leader for the group they leave |
 | A VERIFIER is replaced | ADMIN | The replacement |
 | An ADMIN steps down, or wants to leave | OWNER | New ADMIN, and a new leader for any group they led |
@@ -133,7 +155,7 @@ A VERIFIER sees the members of their home group, an ADMIN sees everyone in their
 ## Closing home groups and churches
 
 1. Closed groups and churches are kept, marked with the date they were closed, so the history and revoked lists that refer to them stay intact. Nobody can join a closed group or church.
-2. A home group can only be closed once its leader is its last member. The other members move to other groups first, by agreement or by the ADMIN.
+2. A home group can only be closed once its leader is its last member. The other members move to other groups first, by agreement or by the ADMIN. Waiting applicants count: the leader admits or declines them first.
 3. **The leader closes the group by transferring out.** The leader moves themselves into another home group in the same church. In one transaction they leave their group, the group is closed, and they join the other group:
    - a VERIFIER no longer leads a group, so they become a PROVIDER or a SEARCHER, as in [Succession](#succession);
    - an ADMIN or the OWNER keeps their status.
@@ -157,7 +179,7 @@ A VERIFIER sees the members of their home group, an ADMIN sees everyone in their
 6. **Finding applicants.** PENDING applicants are not searchable. After signing up, an applicant gets a vouch link to send to people who know them, and vouches are given through that link.
 7. A voucher can withdraw their vouch until the applicant is admitted.
 8. The applicant's home group leader sees the group's PENDING applicants with their vouches, most-vouched first. The leader is expected to know the people in their group, so their decision to admit someone counts as a vouch.
-9. A verifier can admit an applicant once they have the vouches their role needs:
+9. A verifier can admit an applicant once they have the vouches their role needs, and only when the verifier can confirm that the applicant meets the conditions in [What "verified" means](#what-verified-means). Admitting someone is that confirmation:
 
 | Applicant | Vouches needed | Then |
 |---|---|---|
@@ -175,7 +197,7 @@ A searcher has a lighter check than a provider, because a provider is the role o
 
 1. A PENDING applicant, a SEARCHER or a PROVIDER can close their own account. This is not a breach of trust: they are removed from their home group but not put on the revoked list, and nobody they admitted is flagged.
 2. **Closed accounts are kept, not deleted.** A closed account is marked with the date it was closed and can no longer be used, but its history stays, so every chain of trust that runs through that person remains intact. The same applies to declined applications and to accounts closed when a church is closed.
-3. **Leaders step down first.** A VERIFIER or ADMIN cannot close their account while they lead. They step down first, through [succession](#succession), and as a SEARCHER or PROVIDER they can then close their account. A VERIFIER who is their group's only member [closes the group](#closing-home-groups-and-churches) instead. The OWNER hands over (see [Owner succession](#owner-succession)).
+3. **Leaders step down first.** A VERIFIER or ADMIN cannot close their account while they lead. A VERIFIER sends a [step-down request](#succession), and the ADMIN decides and appoints their successor; an ADMIN is replaced by the OWNER, with a successor for any group they lead. As a SEARCHER or PROVIDER they can then close their account. A VERIFIER who is their group's only member [closes the group](#closing-home-groups-and-churches) instead. The OWNER hands over (see [Owner succession](#owner-succession)).
 4. Someone who has left can sign up again later with the same email and phone number. This creates a new account, as PENDING, like any new applicant.
 
 ## Revocation
@@ -210,6 +232,9 @@ A compact, typed restatement of the rules above, for quick reading by people and
 
 ```ts
 // Ordered lowest → highest. A higher status can do everything a lower one can.
+// Verified = SEARCHER or higher (not REVOKED): admitted by a verifier who confirmed that the person
+// attends a home group, is known to its leader, has a credible profession of Christian faith and
+// adheres to their church's constitution (see "What verified means").
 enum Status { REVOKED = 0, PENDING = 1, SEARCHER = 2, PROVIDER = 3, VERIFIER = 4, ADMIN = 5, OWNER = 6 }
 
 type Id = string;
@@ -260,6 +285,7 @@ interface StatusChange {         // permanent history; the chain of trust is bui
   to: Status;
   changedById: Id | null;        // null only for an operator change in the database
   kind: "signup" | "admit" | "appoint" | "step-down" | "revoke" | "reinstate" | "reconfirm" | "handover" | "operator";
+  confirmedConditions: string[] | null; // on every "admit": the wording of each condition the verifier ticked (all current ones); null otherwise
                                  // "reconfirm" clears a re-check flag: from === to, and the verifier becomes the new link in the chain
   at: Date;
 }
@@ -283,11 +309,22 @@ interface HandoverRequest {      // the OWNER proposes, the chosen ADMIN accepts
   id: Id;
   ownerId: Id;                   // the outgoing OWNER
   newOwnerId: Id;                // an ADMIN of another church; stays ADMIN of their own church
-  successorAdminId: Id | null;   // a member (PENDING or above) of the outgoing OWNER's church, becomes its ADMIN; null if nobody else is in the church
-  successorLeaderId: Id | null;  // a member of the outgoing OWNER's group, if they lead it; null if nobody else is in the group
+  successorAdminId: Id | null;   // a member (SEARCHER or above) of the outgoing OWNER's church, becomes its ADMIN; null if no other member is in the church
+  successorLeaderId: Id | null;  // a member (SEARCHER or above) of the outgoing OWNER's group, if they lead it; null if no other member is in the group
   // With no successor, the outgoing OWNER keeps that role: ADMIN of their church and/or leader of their group
   formerOwnerStatus: Status.PROVIDER | Status.SEARCHER;  // what the outgoing OWNER becomes if they keep neither role; chosen when proposing
   acceptedAt: Date | null;
+}
+
+interface StepDownRequest {      // a VERIFIER asking the ADMIN to appoint their successor; the only way they stop leading by choice
+  id: Id;
+  leaderId: Id;                  // the VERIFIER asking; at most one open request per leader
+  groupId: Id;                   // the group they lead
+  reason: string | null;
+  createdAt: Date;
+  decidedById: Id | null;        // the ADMIN (or the OWNER) who appointed a successor or declined
+  decidedAt: Date | null;
+  outcome: "appointed" | "declined" | "withdrawn" | null;  // null while open
 }
 
 interface MoveRequest {          // moving between groups by agreement, no ADMIN needed
@@ -308,7 +345,7 @@ interface MoveRequest {          // moving between groups by agreement, no ADMIN
 3. Every open church (`closedAt === null`) has exactly one ADMIN: `Church.adminId` is the person in that church with `status === ADMIN`, or, in the OWNER's church, the OWNER (which then has no person with `status === ADMIN`). Every person with `status === ADMIN` is the ADMIN of their own church, and the OWNER is always the ADMIN of theirs.
 4. Every open home group has exactly one leader: `HomeGroup.leaderId` is a person with `status >= VERIFIER` whose `homeGroupId` is that group. A person leads at most one group: their own.
 5. Every person with `status === VERIFIER` is the leader of their own home group.
-6. Any operation that ends someone's leadership of a group or church appoints the successor in the same transaction, or closes the group. A group's successor must already be a member of that group, and a church's successor a member of that church (`status >= PENDING`). If none exists, the group or church is closed in the same transaction if the old leader is leaving it; if they are staying, they keep the role with the matching status.
+6. Any operation that ends someone's leadership of a group or church appoints the successor in the same transaction, or closes the group. A group's successor must already be a member of that group, and a church's successor a member of that church (`status >= SEARCHER`: applicants are not members; a group's successor may move in from another group of the church). If nobody else is in the group or church (applicants included), it is closed in the same transaction if the old leader is leaving it; if they are staying, they keep the role with the matching status.
 
 ### Scope and permission check
 
@@ -348,7 +385,9 @@ function canSetStatus(actor: Person, target: Person, to: Status, last: StatusCha
 
 ```ts
 // Live vouches = not withdrawn, and the voucher is not REVOKED.
-// The admitting verifier's own sign-off counts as the home group leader's vouch.
+// The admitting verifier's own sign-off counts as the home group leader's vouch. The request must also
+// confirm every current verification condition (from initial.json), or it is refused; the "admit"
+// history row records the wording confirmed (confirmedConditions).
 function canAdmit(actor: Person, applicant: Person, to: Status.SEARCHER | Status.PROVIDER, liveVouches: Vouch[]): boolean {
   if (to === Status.SEARCHER) return applicant.status === Status.PENDING;
   // PROVIDER, from PENDING or SEARCHER: at least one live vouch from someone admitted, in any church, other than the admitting verifier.
@@ -373,19 +412,22 @@ Every operation marked † appoints a successor in the same transaction (see [Su
 | Sign up | Anyone | Choose church, group, then searcher or provider (`requestedStatus`); creates PENDING person; notifies the group's leader |
 | Change choice | PENDING applicant | Moves to another church or group, or changes `requestedStatus`; vouches kept; notifies new leader |
 | Vouch / withdraw | SEARCHER or above, not REVOKED | Adds or withdraws a `Vouch` via the applicant's vouch link |
-| Admit | Group leader, ADMIN, OWNER | PENDING → SEARCHER/PROVIDER, or SEARCHER → PROVIDER, if `canAdmit` |
+| Admit | Group leader, ADMIN, OWNER | PENDING → SEARCHER/PROVIDER, or SEARCHER → PROVIDER, if `canAdmit` and the verifier confirmed every verification condition (`confirmedConditions`) |
 | Decline | Group leader, ADMIN, OWNER | Sets `closedAt` on the application; not revoked; can sign up again |
 | Apply to provide | SEARCHER | Sets `requestedStatus` to PROVIDER; status unchanged; notifies the group's leader; vouch link as for an applicant |
 | Decline a provider request | Group leader, ADMIN, OWNER | Clears `requestedStatus` on a SEARCHER; status unchanged, no history row, nothing closed; the vouch link ends; notifies the person |
 | Move member | Member + leader of the group they leave + leader of the group they join (`MoveRequest`), or the ADMIN / OWNER directly | Moves an admitted member to another group in the same church. Leaders step down as group leader first †; an ADMIN or the OWNER hands their group on and keeps their status. |
-| Leave | PENDING, SEARCHER or PROVIDER | Sets `closedAt` (account kept for history); not revoked; nobody flagged; can sign up again as a new account. Leaders step down first †; the OWNER hands over |
-| Step down / replace VERIFIER † | ADMIN, OWNER | Old VERIFIER → PROVIDER (or SEARCHER); successor, a member of the same group (PENDING or above) → VERIFIER; if no other member and the old leader is leaving the group, the group closes (otherwise they close it themselves) |
-| Step down / replace ADMIN † | OWNER | Old ADMIN → PROVIDER (or SEARCHER); successor, a member of the same church (PENDING or above) → ADMIN; successor for any group they led; if no other member, the church closes |
-| Hand group on | ADMIN or OWNER leading their own group | Appoints another member of it (PENDING or above) as leader; keeps own status |
+| Leave | PENDING, SEARCHER or PROVIDER | Sets `closedAt` (account kept for history); not revoked; nobody flagged; can sign up again as a new account. Leaders step down first (a VERIFIER through a step-down request) †; the OWNER hands over |
+| Step down / replace VERIFIER † | ADMIN, OWNER | Old VERIFIER → PROVIDER (or SEARCHER); successor, a member of the same group, or one who moves in from another group of the church (SEARCHER or above) → VERIFIER; if nobody else is in the group (applicants included) and the old leader is leaving it, the group closes (otherwise they close it themselves) |
+| Step down / replace ADMIN † | OWNER | Old ADMIN → PROVIDER (or SEARCHER); successor, a member of the same church (SEARCHER or above) → ADMIN; successor for any group they led; if nobody else is in the church (applicants included), it closes |
+| Hand group on | ADMIN or OWNER leading their own group | Appoints another member of it (SEARCHER or above) as leader; keeps own status |
+| Ask to step down | VERIFIER | Opens a `StepDownRequest` (one at a time) and notifies the church's ADMIN; until it is decided they keep leading and cannot move or leave |
+| Decide step-down † | ADMIN of the church, OWNER | Appoint a successor (a member of the group, or one who moves in from another group of the church) → VERIFIER unless higher; the old VERIFIER → PROVIDER (or SEARCHER), recorded as set by the ADMIN; or decline, and they keep leading. The VERIFIER is told |
+| Withdraw step-down | The VERIFIER who asked | Closes their open request (`outcome = "withdrawn"`) |
 | Revoke † | Verifier (OWNER: operators only) | → REVOKED; `homeGroupId = null`, `lastHomeGroupId` set; successor for any group or church they led; anyone whose current status they set is flagged; their vouches stop counting for PENDING applicants |
 | Reinstate | Verifier at the revoker's level or higher | REVOKED → a status and a home group |
 | Clear flag | Verifier at the revoked leader's level or higher | Re-confirms (a `"reconfirm"` history entry) or changes status; becomes the new `statusSetById` |
 | Hand over OWNER † | OWNER proposes a `HandoverRequest`, the chosen ADMIN accepts | Chosen ADMIN → OWNER, still ADMIN of their own church; old OWNER → PROVIDER (or SEARCHER); successor ADMIN for the old OWNER's church; successor leader for any group the old OWNER led. With no possible successor, the old OWNER keeps that role (→ ADMIN) |
 | Operator change † | Platform operators | Same appointments as a handover, for an unavailable or untrustworthy OWNER; if breach, old OWNER → REVOKED |
-| Close group | The group's leader, once they are its last member | One transaction: leader moves to another group in the church, group's `closedAt` is set; a VERIFIER → PROVIDER (or SEARCHER), recorded as set by the ADMIN; an ADMIN or OWNER keeps their status |
+| Close group | The group's leader, once nobody else is in it (applicants included) | One transaction: leader moves to another group in the church, group's `closedAt` is set; a VERIFIER → PROVIDER (or SEARCHER), recorded as set by the ADMIN; an ADMIN or OWNER keeps their status |
 | Close church | OWNER, not for their own church | Sets `closedAt` on the church, its groups and all its members' accounts (all kept for history); nobody revoked or flagged; members can sign up again elsewhere; the revoked list is kept |
