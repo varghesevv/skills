@@ -1,6 +1,6 @@
 ### Background
 
-The web test "searches by name and shows the name as a removable filter" (`frontend/src/pages/person/search/search.test.tsx:84`) fails now and then on CI with:
+The web test "searches by name and shows the name as a removable filter" (`frontend/src/pages/person/search/search.test.tsx`) fails now and then on CI with:
 
 > Unable to find an element with the text: 1 freelancer(s) found
 
