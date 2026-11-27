@@ -39,6 +39,8 @@ export type PersonMe = {
   status_set_by: { name: string } | null
   flagged_for_recheck: boolean
   vouch_count: number
+  /** A temporary password from the initial config: nothing opens until it is changed. */
+  must_change_password: boolean
 }
 
 export type AnyMe = Me | PersonMe

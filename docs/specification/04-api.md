@@ -44,7 +44,8 @@ This file is the **target** contract of the church trust model. `/api/v1` is cha
 | POST | /auth/refresh | rotates refresh token |
 | POST | /auth/logout | revokes refresh token |
 | POST | /auth/forgot-password | always 202, never reveals whether email exists |
-| POST | /auth/reset-password | token + new password |
+| POST | /auth/reset-password | token + new password. Also clears `must_change_password` |
+| POST | /auth/change-password | Any signed-in person (even revoked, or with a temporary password). Body `current_password`, `new_password`. `403 invalid_password` for a wrong current password, `422 same_password` when they are equal. Clears `must_change_password`, ends every session and reset link of the person, and returns new tokens (like login) |
 | POST | /admin-invitations/lookup | Public. The token is in the body, not the address, so it never reaches an access log of the API. The church name and the domain of the invited address only. Rate limited per IP (`LINK_LOOKUP_MAX_PER_HOUR`). `404` for anything wrong (unknown, expired, cancelled, already accepted), alike. |
 | POST | /admin-invitations/accept | Public. Body `token`, `full_name`, `mobile_number`, `password`, `home_group_name` (the email address is the one invited). In one transaction: the church (with the name invited), its first home group, and the person as its ADMIN and the group's leader, with no PENDING stage; their status is recorded as set by the current OWNER (an `appoint` history row from nothing to `admin`); the invitation is closed and its address cleared; the OWNER is told (`church_created`). `201` with the person, the church and `status: admin`. `404` alike as above; `409 church_name_taken`, `409 account_exists` (the number, or the address, is in use by an open account), `409 state_changed`; rate limited per IP like sign-up (`SIGNUP_MAX_PER_HOUR`). Sign in afterwards. |
 
@@ -53,13 +54,14 @@ Auth behaviour:
 - Wrong password and unknown email give the same `401 invalid_credentials`.
 - Throttling: after `LOGIN_MAX_FAILURES` failures within `LOGIN_WINDOW_MINUTES` for the same email and IP, login answers `429` with `Retry-After`. A successful login resets the count.
 - Access token: JWT (HS256, signed with `JWT_SECRET`), `ACCESS_TOKEN_MINUTES`, subject is the person id, no role or status. Refresh token: opaque, stored hashed, `REFRESH_TOKEN_DAYS`, rotated on every use. Using a token that was already rotated or logged out revokes all sessions of that person.
+- Temporary password (story S100): a person created from the initial config has `must_change_password` set. Until they change it, every endpoint except `GET /me`, `POST /auth/change-password` and the public ones answers `403 password_change_required`, and the chat socket closes. Both apps show only a "choose your own password" screen.
 - Password reset: the link (`FRONTEND_BASE_URL/reset-password?token=...`) is written to the server log until email delivery exists (open question Q7). Using it ends all sessions.
 - Behind a reverse proxy the throttle sees the proxy address; start uvicorn with proxy headers.
 
 ### Me
 | Method | Path | Notes |
 |---|---|---|
-| GET | /me | `user_type` (`person`, which tells this answer from the older one), `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count` |
+| GET | /me | `user_type` (`person`, which tells this answer from the older one), `id`, `full_name`, `email`, `mobile_number`, `status`, `requested_status`, church and home group (`id`, `name`), `leader` of the home group (name), `status_set_by` (name), `flagged_for_recheck`, `vouch_count`, `must_change_password` |
 | PUT | /me | `full_name`, `mobile_number` (the same uniqueness as sign-up; `409 account_exists` otherwise). A field left out keeps its value; an explicit null is refused. Not for a revoked person. |
 | DELETE | /me | Closes the account (the stores' "delete account"). Body: `password` (`403 invalid_password` if wrong; wrong passwords are counted and throttled like login, `429` with `Retry-After`). Keeps the row, the history and the vouches given (they stop counting), clears the personal fields, ends every session, reset link and vouch link, and clears the address, network address and browser of the login attempts. A person who leads gets `409 leads_a_group` (VERIFIER) or `409 leads_a_church` (ADMIN, OWNER) until succession or handover is done (S4); a revoked person cannot close their account (`403 account_revoked`). |
 | PUT | /me/application | PENDING only (`409 not_pending` otherwise, also when a leader admits the person at the same moment); an invalid group is `422 invalid_choice` and changes nothing. `home_group_id` and/or `requested_status`; the newly chosen leader is notified, vouches received still count. |

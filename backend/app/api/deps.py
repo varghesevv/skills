@@ -33,10 +33,18 @@ def _decode(credentials: HTTPAuthorizationCredentials | None, settings: Settings
         ) from None
 
 
-def _load_person(db: Session, principal: Principal, *, allow_revoked: bool) -> Person:
+def _load_person(
+    db: Session,
+    principal: Principal,
+    *,
+    allow_revoked: bool,
+    allow_password_change: bool = False,
+) -> Person:
     """The person behind a token, read from the database on every request (ADR-0017).
 
-    The token carries no status, so a status change takes effect on the next request.
+    The token carries no status, so a status change takes effect on the next request. A person
+    who still has a temporary password (`must_change_password`) is refused everywhere except the
+    few endpoints that set `allow_password_change`: `GET /me` and changing the password.
     """
     person = db.get(Person, principal.user_id)
     if person is None or person.closed_at is not None:
@@ -48,6 +56,8 @@ def _load_person(db: Session, principal: Principal, *, allow_revoked: bool) -> P
         )
     if person.status == "revoked" and not allow_revoked:
         raise ApiError(403, "account_revoked", "This account has been revoked")
+    if person.must_change_password and not allow_password_change:
+        raise ApiError(403, "password_change_required", "Choose a new password before you continue")
     return person
 
 
@@ -61,8 +71,19 @@ def get_principal_even_if_revoked(
     Only for the few endpoints a revoked person may use (`/me`). A closed account is still a 401.
     """
     principal = _decode(credentials, settings)
-    _load_person(db, principal, allow_revoked=True)
+    _load_person(db, principal, allow_revoked=True, allow_password_change=True)
     return principal
+
+
+def person_changing_password(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    settings: Settings = Depends(get_settings),
+    db: Session = Depends(get_session),
+) -> Person:
+    """The caller, for changing their own password: also a person who must change a temporary
+    one. A revoked person keeps their account and may change it too; a closed account is a 401."""
+    principal = _decode(credentials, settings)
+    return _load_person(db, principal, allow_revoked=True, allow_password_change=True)
 
 
 def get_principal(

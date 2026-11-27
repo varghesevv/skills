@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/auth/person_me.dart';
 import '../core/session/session_controller.dart';
+import '../features/auth/change_password_screen.dart';
 import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/welcome_screen.dart';
 import '../features/chat/chat_list_screen.dart';
@@ -48,6 +49,9 @@ const _signedOutPrefixes = [
 /// Where a person may be: the router sends them home from any other address.
 @visibleForTesting
 bool personMayVisit(PersonMe person, String path) {
+  // A temporary password (initial config) opens nothing but changing it.
+  if (person.mustChangePassword) return path == personChangePassword;
+  if (path == personChangePassword) return false;
   if (path == personHome) return true;
   // The leader screens: applicants, members, the revoked, the flagged and one person's page.
   final isLeaderPage =
@@ -109,13 +113,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onSignedOut = _signedOutPrefixes.any(path.startsWith);
       if (person == null) return onSignedOut ? null : '/welcome';
       // A person lives below /member; the pages for signing in and up send them home.
-      return personMayVisit(person, path) ? null : personHome;
+      if (personMayVisit(person, path)) return null;
+      return person.mustChangePassword ? personChangePassword : personHome;
     },
     routes: [
       GoRoute(
         path: '/splash',
         builder: (context, state) =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),
+      ),
+      GoRoute(
+        path: personChangePassword,
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(
         path: '/welcome',

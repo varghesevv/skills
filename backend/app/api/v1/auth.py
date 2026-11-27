@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import client_address
+from app.api.deps import client_address, person_changing_password
 from app.core.config import Settings, get_settings
 from app.core.db import get_session
+from app.models.church import Person
 from app.schemas.auth import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
@@ -83,6 +85,25 @@ def forgot_password(
     auth.forgot_password(db, settings, email=body.email)
     # Same answer whether or not the email exists.
     return {"status": "accepted"}
+
+
+@router.post("/change-password")
+def change_password(
+    body: ChangePasswordRequest,
+    person: Person = Depends(person_changing_password),
+    db: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> TokenResponse:
+    """Any signed-in person: choose a new password, giving the current one. Also open to a person
+    who must replace a temporary password (initial config), which nothing else is until then.
+    Every other session ends; the answer is new tokens for this one."""
+    return auth.change_password(
+        db,
+        settings,
+        person,
+        current_password=body.current_password.get_secret_value(),
+        new_password=body.new_password.get_secret_value(),
+    )
 
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,6 +1,10 @@
 /// The home of a person of the church trust model. Until the older accounts go (roadmap S5) the
 /// person screens have their own addresses next to the older ones.
 const personHome = '/member';
+
+/// A person with a temporary password (initial config) is kept here until they change it.
+const personChangePassword =
+    '/member/change-password'; // secret-scan:allow (a route)
 const personVouches = '/member/vouches';
 const personNotifications = '/member/notifications';
 

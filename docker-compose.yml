@@ -45,6 +45,8 @@ services:
       # Empty = test builds off locally. Only the api reads these.
       DOWNLOADS_DIR: ${DOWNLOADS_DIR:-}
       DOWNLOAD_MAX_PER_HOUR: ${DOWNLOAD_MAX_PER_HOUR:-20}
+      # backend/initial.json, read when the API starts (story S100). No file there: none is used.
+      INITIAL_CONFIG_PATH: ${INITIAL_CONFIG_PATH:-/app/initial.json}
     ports:
       - "${API_PORT:?Run make env to create or complete .env}:8000"
     volumes:

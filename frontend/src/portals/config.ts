@@ -1,6 +1,8 @@
 /** Where a person of the church trust model lives, and the screens that lead there. */
 export const PERSON_HOME = '/member'
 export const PERSON_SIGN_IN = '/sign-in'
+/** A person with a temporary password (initial config) is kept here until they change it. */
+export const PERSON_CHANGE_PASSWORD = '/member/change-password' // secret-scan:allow (a route)
 export const PERSON_SIGN_UP = '/sign-up'
 export const PERSON_VOUCHES = '/member/vouches'
 export const PERSON_NOTIFICATIONS = '/member/notifications'

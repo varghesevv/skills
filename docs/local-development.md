@@ -242,7 +242,7 @@ Password for all of them: the value of `DEMO_USER_PASSWORD` in your `.env`. To r
 sed -n 's/^DEMO_USER_PASSWORD=//p' .env
 ```
 
-If an OWNER exists already (you set up Skills first, section 5.3), that OWNER keeps their church and the demo adds to it; no second OWNER is made. The demo is made once: the history of people is append-only, so it cannot be removed row by row. To start over, wipe the database (`make reset-db`).
+If an OWNER exists already (you set up Skills first, section 5.3 or 5.4), that OWNER keeps their church and the demo adds to it; no second OWNER is made. The demo is made once: the history of people is append-only, so it cannot be removed row by row. To start over, wipe the database (`make reset-db`).
 
 ### 5.2 A large realistic data set (about 200 people)
 
@@ -260,7 +260,17 @@ Check it: `wc -l demo-logins.csv` should say `210` (209 people, that is the 200,
 
 `demo-logins.csv` has the columns `status, email, password, name, church, home_group`. **It contains the demo password.** Git ignores files with this name, but never share it. The command refuses when demo people already exist (see 5.1 for starting over). Open the CSV in a spreadsheet and pick any row to log in as that person.
 
-### 5.3 Create your own OWNER account
+### 5.3 Or start from your own initial config (`backend/initial.json`)
+
+Instead of the command in 5.4, you can describe the first people in a file, and the API sets them up when it starts (story S100): the OWNER, each church with its ADMIN, and each home group with its leader. Searchers and providers join through the app as usual.
+
+1. Copy `backend/initial.example.json` to `backend/initial.json` and fill it in. `backend/schema.json` describes every field (editors that read `"$schema"` check the file as you type). Every person needs a name, an email and a mobile number; the OWNER's password is `owner.password`, and everyone else's is on their entry, once.
+2. Start (or restart) the API: `docker compose up -d api`. On an empty database it creates everyone; `docker compose logs api` says `Initial config applied`.
+3. Sign in as any of them with the password from the file. It is temporary: the app asks for a new one straight away and opens nothing else until then.
+
+**The file holds passwords and personal details, and the repository is public: never commit it.** Git and the Docker image ignore `initial.json`. Once the database is set up, every start checks the file against it, and the API **refuses to start** when they differ (the log says what differs). After a change in the app (a handover, a new leader), update the file or delete it. Without a file, the API starts as before.
+
+### 5.4 Create your own OWNER account
 
 ```bash
 docker compose exec api python -m app.cli create-owner --name "Your Name" --email you@example.com --mobile +971500000000 --church "Your church" --group "Your home group"
@@ -268,10 +278,10 @@ docker compose exec api python -m app.cli create-owner --name "Your Name" --emai
 
 It asks for a password twice (you will not see what you type). In `local` the password must be at least 10 characters. It refuses when an OWNER already exists, and the demo data (5.2) makes one. So run it **before** generating the demo data if you want your own OWNER (the demo then adds to your church); otherwise skip it and sign in as the demo OWNER from `demo-logins.csv`.
 
-### 5.4 Log in
+### 5.5 Log in
 
 1. Open <http://localhost:5173> and choose **Sign in** (`/sign-in`). There is one sign-in page for everyone; **Join** (`/sign-up`) is for a new person.
-2. Enter the email and password of one of the people from 5.1 or 5.2 (or your own OWNER from 5.3). The page you land on (`/member`) and its menu depend on that person's status.
+2. Enter the email and password of one of the people from 5.1 or 5.2 (or your own people from 5.3 or 5.4). The page you land on (`/member`) and its menu depend on that person's status.
 3. Try each status to see its pages (a higher status sees what the lower ones see):
    - **Applicant** (`ann.applicant@...`): the application, the vouches received, a vouch link to share, change or leave.
    - **Searcher** (`sam.searcher@...`): find providers, a provider's page, rate, Reveal a number, ratings I gave, vouch for others.

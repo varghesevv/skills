@@ -81,6 +81,10 @@ class Person(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """One account and one status per person (ADR-0017)."""
 
     __tablename__ = "people"
+    # Columns filled by the database (timestamps, must_change_password) are read when first used,
+    # not returned by every INSERT: so the model still writes rows into a database migrated to an
+    # older revision, as the migration tests do.
+    __mapper_args__ = {"eager_defaults": False}
 
     status: Mapped[str] = mapped_column(String(20))
     church_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("churches.id"))
@@ -99,6 +103,9 @@ class Person(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     flagged_for_recheck: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=false()
     )
+    # Set for a person created from the initial config with a temporary password: until they
+    # choose their own, the API refuses everything except changing it (and `GET /me`).
+    must_change_password: Mapped[bool] = mapped_column(Boolean, server_default=false())
 
     # Provider profile.
     whatsapp_availability: Mapped[bool] = mapped_column(

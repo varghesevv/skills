@@ -38,13 +38,15 @@ class Who:
 
 
 def load_who(factory: SessionFactory, person_id: uuid.UUID) -> Who | None:
-    """The person, or None when they may not use chat now (gone, closed, revoked, not admitted)."""
+    """The person, or None when they may not use chat now (gone, closed, revoked, not admitted,
+    or still on a temporary password)."""
     with factory() as db:
         person = db.get(Person, person_id)
         if (
             person is None
             or person.closed_at is not None
             or person.status in ("revoked", "pending")
+            or person.must_change_password  # a temporary password opens nothing but changing it
         ):
             return None
         return Who(person.id, person.status)

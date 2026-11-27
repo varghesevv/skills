@@ -248,6 +248,14 @@ Old app builds cannot sign in any more (their requests name an account type the 
 
 Rollback: restore the backup taken by the deploy (section 6, disaster recovery) and deploy the previous image tag (section 4). The migration's downgrade brings the older tables back empty and is not a rollback of data.
 
+### Set up Skills from an initial config (story S100)
+
+Instead of `create-owner`, the API can set up the OWNER, the churches with their ADMINs and the home groups with their leaders from a JSON file when it starts (`backend/initial.example.json` is an example, `backend/schema.json` the format). It is off unless `INITIAL_CONFIG_PATH` names a file the API container can read; `infra/docker/compose.demo.yml` does not set it yet, so on the server add the variable and mount the file read-only, readable by the container user (uid 10001) and nobody else, before starting the stack.
+
+- Empty database: everyone in the file is created in one transaction (operator rows in the history) and the log says `Initial config applied`. Each person signs in with the temporary password from the file and must change it first.
+- Set-up database: the file is checked against it. When they differ the API does not start, and the log names what differs (no emails, no passwords). Update or remove the file after a legitimate change in the app.
+- The file holds passwords and personal details. Never commit it (the repository is public), and delete it from the server once everyone has changed their password, or keep it only as long as the start-up check is wanted.
+
 ### Set up Skills: the first OWNER (church trust model)
 
 Once per installation, on a database that has the church trust schema (migration `0007` and later), the operators create the OWNER with the first church and home group. The command asks for the password (twice) or reads one line with `--password-stdin`; it is never a command-line argument and is never printed.

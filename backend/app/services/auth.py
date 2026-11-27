@@ -1,4 +1,4 @@
-"""Login, token refresh, logout and password reset.
+"""Login, token refresh, logout, password change and password reset.
 
 Rules: wrong credentials always look the same (no hint whether the email exists), every login
 attempt is recorded, and tokens are stored only as hashes. Secrets are never logged; the one
@@ -267,6 +267,48 @@ def forgot_password(db: Session, settings: Settings, *, email: str) -> None:
     )
 
 
+def change_password(
+    db: Session,
+    settings: Settings,
+    person: Person,
+    *,
+    current_password: str,
+    new_password: str,
+) -> TokenResponse:
+    """The signed-in person chooses a new password, knowing the current one.
+
+    This is how a temporary password from the initial config is replaced: the flag is cleared and
+    the person can use the app. Every other session ends (the temporary password may be known to
+    whoever wrote the file); the answer is a fresh pair of tokens for this one.
+    """
+    stored_hash = person.password_hash
+    if stored_hash is None or not verify_password(stored_hash, current_password):
+        raise ApiError(403, "invalid_password", "The password is not correct")
+    if new_password == current_password:
+        raise ApiError(
+            422,
+            "same_password",
+            "Choose a password that is different from the current one",
+            details={
+                "fields": [
+                    {"field": "new_password", "message": "must differ from the current password"}
+                ]
+            },
+        )
+    now = datetime.now(UTC)
+    person.password_hash = hash_password(new_password)
+    person.must_change_password = False
+    db.execute(
+        update(PasswordResetToken)
+        .where(PasswordResetToken.user_id == person.id, PasswordResetToken.used_at.is_(None))
+        .values(used_at=now)
+    )
+    _revoke_all(db, person.id, now)
+    tokens, _ = _token_response(db, settings, Principal(person.id), now)
+    db.commit()
+    return tokens
+
+
 def reset_password(db: Session, *, token: str, new_password: str) -> None:
     now = datetime.now(UTC)
     row = db.scalar(
@@ -280,6 +322,8 @@ def reset_password(db: Session, *, token: str, new_password: str) -> None:
     if account is None or account.closed_at is not None:
         raise ApiError(400, "invalid_reset_token", "The reset link is invalid or has expired")
     account.password_hash = hash_password(new_password)
+    # A password chosen through a reset link is the person's own: a temporary one is replaced.
+    account.must_change_password = False
     # Use up every outstanding reset link for this user and end all sessions.
     db.execute(
         update(PasswordResetToken)

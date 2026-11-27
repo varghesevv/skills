@@ -99,6 +99,9 @@ class Settings(BaseSettings):
     app_latest_version: str = Field(default="0.0.0", pattern=VERSION_PATTERN)
     jwt_secret: SecretStr | None = None  # required by the API; checked by require_jwt_secret()
     demo_user_password: SecretStr | None = None  # only used by `python -m app.cli seed-demo`
+    # The initial config (story S100), read when the API starts: empty = none. A path to a file
+    # that does not exist is no initial config either. See app/services/initial_config.py.
+    initial_config_path: str = ""
 
     @field_validator("reveal_max_per_day")
     @classmethod

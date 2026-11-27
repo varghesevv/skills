@@ -32,6 +32,20 @@ class SessionController extends AsyncNotifier<PersonMe?> {
     state = AsyncData(person);
   }
 
+  /// Replaces a temporary password (initial config). Throws `ApiException` on a wrong password.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final person = await ref
+        .read(authRepositoryProvider)
+        .changePassword(
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+        );
+    state = AsyncData(person);
+  }
+
   /// A change of the person's own data (the application, for example) came back from the server.
   void setPerson(PersonMe person) => state = AsyncData(person);
 

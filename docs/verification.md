@@ -87,6 +87,7 @@ A VERIFIER sees the members of their home group, an ADMIN sees everyone in their
 ## Creating a church
 
 1. **Setting up Skills.** When the OWNER creates their profile, they also give the name of their church and of their home group. This creates the first church, with that home group inside it. The OWNER is its first member, the group's leader and the church's ADMIN, so the church is complete from the start.
+   - **Or from an initial config.** The platform operators can instead set Skills up from a file read when the server starts (`initial.json`, story S100). It names the OWNER, any number of churches with their ADMIN, and each church's home groups with their leader. Everything is created at once, as one operator change in the history, so nobody's status is recorded as set by a person. The rules are the same as for any church: the OWNER is the ADMIN of their own church; every ADMIN and every leader belongs to one home group of their church (a leader to the group they lead); an ADMIN may also be named as the leader of one of their groups. The OWNER and an ADMIN need not lead a group. Searchers and providers are never in the file: they sign up and are admitted with their vouches, as usual. Every password in the file is temporary, and its owner must choose their own the first time they sign in, before they can do anything else.
 2. **Other churches.** To create a church, the OWNER invites its ADMIN by email, giving the church's name. The church is created when the invitation is accepted, so it never exists without an ADMIN.
 3. The invited person signs up through the invitation and becomes the church's ADMIN directly, with the OWNER recorded as the verifier who set their status. They do not go through PENDING. As part of accepting, they give the name of their home group, which creates it with them as its first member and its leader.
 4. Members then start the church's other home groups, with the ADMIN's approval (see [Home group leaders](#home-group-leaders)).
@@ -239,7 +240,7 @@ interface Person {
   churchId: Id;                  // revoked people stay on this church's revoked list
   homeGroupId: Id | null;        // null if and only if status === REVOKED
   lastHomeGroupId: Id | null;    // set on revocation: the group they were removed from, so its leader keeps them in scope
-  statusSetById: Id | null;      // who set the current status; null for new applicants, the first OWNER, and an OWNER appointed by the operators
+  statusSetById: Id | null;      // who set the current status; null for new applicants, the first OWNER, an OWNER appointed by the operators, and everyone created from the initial config
   requestedStatus: Status.SEARCHER | Status.PROVIDER | null; // chosen at sign-up; also set when a searcher applies to provide
   flaggedForRecheck: boolean;    // set when whoever set their current status is revoked
 }
@@ -364,6 +365,7 @@ Every operation marked † appoints a successor in the same transaction (see [Su
 | Operation | Who | Effect |
 |---|---|---|
 | Set up Skills | First OWNER | Creates OWNER, first church and first home group, with the OWNER as the group's leader and the church's ADMIN |
+| Set up from initial config | Platform operators (`initial.json`, read at server start into an empty installation) | Creates OWNER, churches with their ADMIN, and home groups with their leader (→ VERIFIER unless ADMIN or OWNER), in one transaction; `"operator"` history rows; `statusSetById = null`; every password temporary until changed. A started installation is only checked against the file |
 | Create church | OWNER | Sends an `AdminInvitation`; the church is created when it is accepted |
 | Accept ADMIN invitation | Invitee | Creates the church, the ADMIN, and a named home group they lead |
 | Start home group † | Admitted member, approved by the ADMIN (an ADMIN or the OWNER for themselves, without approval) | `GroupRequest` approved: group created, requester moves in as leader (→ VERIFIER unless higher); successor for their old group if they led it |

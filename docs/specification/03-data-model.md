@@ -74,6 +74,7 @@ One row per person, whatever their status.
 | requested_status | text | CHECK in (searcher, provider); what the applicant applies for, also set when a searcher applies to provide |
 | status_set_by_id | uuid FK people | who set the current status; NULL for new applicants, the first OWNER, and an OWNER appointed by the operators |
 | flagged_for_recheck | boolean NOT NULL default false | set when whoever set their current status is revoked |
+| must_change_password | boolean NOT NULL default false | set for a person created from the initial config (temporary password); cleared when they change or reset it (migration 0022) |
 | whatsapp_availability | boolean NOT NULL default false | provider profile |
 | nationality, primary_language | text | provider profile |
 | rate_per_hour | numeric(10,2) | CHECK >= 0 |

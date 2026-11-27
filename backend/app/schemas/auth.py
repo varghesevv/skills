@@ -50,6 +50,12 @@ class ForgotPasswordRequest(BaseModel):
     email: Email
 
 
+class ChangePasswordRequest(BaseModel):
+    # Not length-checked: a wrong password is a normal refusal, not a validation hint.
+    current_password: Annotated[SecretStr, Field(max_length=1024)]
+    new_password: NewPassword
+
+
 class ResetPasswordRequest(BaseModel):
     token: Annotated[str, Field(min_length=10, max_length=500)]
     new_password: NewPassword

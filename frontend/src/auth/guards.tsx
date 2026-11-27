@@ -1,12 +1,14 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
-import { PERSON_HOME, PERSON_SIGN_IN } from '../portals/config'
+import { PERSON_CHANGE_PASSWORD, PERSON_HOME, PERSON_SIGN_IN } from '../portals/config'
 import { LoadingScreen } from '../shared/ui'
 import { useAuth } from './AuthContext'
 
-/** Everything behind the sign-in: a visitor is sent to sign in and brought back afterwards. */
+/** Everything behind the sign-in: a visitor is sent to sign in and brought back afterwards. A
+ * person with a temporary password (initial config) sees nothing but the change-password page:
+ * the API refuses everything else until they change it. */
 export function RequireAuth() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
   const location = useLocation()
   if (status === 'loading') return <LoadingScreen />
   if (status === 'anonymous') {
@@ -14,6 +16,10 @@ export function RequireAuth() {
       <Navigate to={PERSON_SIGN_IN} replace state={{ from: location.pathname + location.search }} />
     )
   }
+  const mustChange = user?.must_change_password === true
+  const onChangePage = location.pathname === PERSON_CHANGE_PASSWORD
+  if (mustChange && !onChangePage) return <Navigate to={PERSON_CHANGE_PASSWORD} replace />
+  if (!mustChange && onChangePage) return <Navigate to={PERSON_HOME} replace />
   return <Outlet />
 }
 

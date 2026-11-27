@@ -1,0 +1,224 @@
+{
+  "$defs": {
+    "AdminEntry": {
+      "additionalProperties": false,
+      "description": "The church's ADMIN, or the OWNER in the OWNER's own church.",
+      "properties": {
+        "email": {
+          "format": "email",
+          "title": "Email",
+          "type": "string"
+        },
+        "homegroup": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The home group the ADMIN belongs to, when they do not lead one. Needed only when the organisation has more than one home group.",
+          "title": "Homegroup"
+        },
+        "mobile": {
+          "description": "7 to 15 digits, optionally starting with +; spaces and dashes are ignored. Unique across Skills.",
+          "title": "Mobile",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "description": "A temporary password. The person must change it the first time they sign in. In demo and prod it must be at least 16 characters.",
+              "format": "password",
+              "maxLength": 128,
+              "minLength": 10,
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required once for every person except the OWNER, whose password is `owner.password`. A person named twice (ADMIN and leader) gives it once.",
+          "title": "Password"
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "mobile"
+      ],
+      "title": "AdminEntry",
+      "type": "object"
+    },
+    "HomeGroupEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "verifier": {
+          "$ref": "#/$defs/PersonEntry",
+          "description": "The group's leader. May be the organisation's ADMIN (same email)."
+        }
+      },
+      "required": [
+        "name",
+        "verifier"
+      ],
+      "title": "HomeGroupEntry",
+      "type": "object"
+    },
+    "OrganisationEntry": {
+      "additionalProperties": false,
+      "description": "A church.",
+      "properties": {
+        "admin": {
+          "$ref": "#/$defs/AdminEntry"
+        },
+        "homegroups": {
+          "items": {
+            "$ref": "#/$defs/HomeGroupEntry"
+          },
+          "minItems": 1,
+          "title": "Homegroups",
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "admin",
+        "homegroups"
+      ],
+      "title": "OrganisationEntry",
+      "type": "object"
+    },
+    "OwnerEntry": {
+      "additionalProperties": false,
+      "description": "The OWNER. Their name and mobile number are on the `admin` of their own organisation.",
+      "properties": {
+        "email": {
+          "description": "Must be the admin email of one organisation.",
+          "format": "email",
+          "title": "Email",
+          "type": "string"
+        },
+        "password": {
+          "description": "A temporary password. The person must change it the first time they sign in. In demo and prod it must be at least 16 characters.",
+          "format": "password",
+          "maxLength": 128,
+          "minLength": 10,
+          "title": "Password",
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "title": "OwnerEntry",
+      "type": "object"
+    },
+    "PersonEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "format": "email",
+          "title": "Email",
+          "type": "string"
+        },
+        "mobile": {
+          "description": "7 to 15 digits, optionally starting with +; spaces and dashes are ignored. Unique across Skills.",
+          "title": "Mobile",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 2,
+          "title": "Name",
+          "type": "string"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "description": "A temporary password. The person must change it the first time they sign in. In demo and prod it must be at least 16 characters.",
+              "format": "password",
+              "maxLength": 128,
+              "minLength": 10,
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required once for every person except the OWNER, whose password is `owner.password`. A person named twice (ADMIN and leader) gives it once.",
+          "title": "Password"
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "mobile"
+      ],
+      "title": "PersonEntry",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The first people of Skills: the OWNER, the churches with their ADMINs and the home groups\nwith their leaders. Searchers and providers are not in the file: they join through the app.\nA row of demo-logins.csv maps here as: status owner/admin/verifier = where the person is\nnamed, church = organisation name, home_group = home group name.",
+  "properties": {
+    "$schema": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "$Schema"
+    },
+    "organisations": {
+      "items": {
+        "$ref": "#/$defs/OrganisationEntry"
+      },
+      "minItems": 1,
+      "title": "Organisations",
+      "type": "array"
+    },
+    "owner": {
+      "$ref": "#/$defs/OwnerEntry"
+    }
+  },
+  "required": [
+    "owner",
+    "organisations"
+  ],
+  "title": "Skills initial config (initial.json)",
+  "type": "object"
+}

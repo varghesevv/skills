@@ -64,6 +64,7 @@ export function makePerson(overrides: Partial<PersonMe> = {}): PersonMe {
     status_set_by: null,
     flagged_for_recheck: false,
     vouch_count: 0,
+    must_change_password: false,
     ...overrides,
   }
 }

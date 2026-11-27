@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from app.api import health
 from app.api.v1 import api_v1_router
@@ -12,16 +13,20 @@ from app.core.db import get_session_factory
 from app.core.errors import register_error_handlers
 from app.core.logging_config import configure_logging
 from app.core.version import APP_VERSION
+from app.services import initial_config
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Chat: one listener connection per process (ADR-0014). It is started in the background and
-    retried, so a database that is slow or still starting never stops the API; without a database
-    address (some tests) chat is simply not available."""
+    """First the initial config (story S100): applied to an empty database or checked against a
+    set-up one; a file that does not match stops the start-up. Then chat: one listener connection
+    per process (ADR-0014), started in the background and retried, so a database that is slow or
+    still starting never stops the API. Without a database address (some tests) neither runs."""
     settings = get_settings()
     runtime: ChatRuntime | None = None
     if settings.database_url is not None and settings.database_url.get_secret_value():
+        # The initial config first: when it does not match the database the API does not start.
+        await run_in_threadpool(initial_config.run_at_startup, settings, get_session_factory())
         runtime = ChatRuntime(
             settings.require_database_url(),
             get_session_factory(),

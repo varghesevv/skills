@@ -704,6 +704,14 @@ const en = {
   'forgot.done': 'If an account exists for that email, a reset link is on its way.',
   'forgot.back': 'Back to log in',
 
+  'changePassword.title': 'Choose your own password',
+  'changePassword.text':
+    'You signed in with a temporary password. Choose your own before you continue; the temporary one then stops working.',
+  'changePassword.current': 'Temporary password',
+  'changePassword.submit': 'Save and continue',
+  'changePassword.working': 'Saving…',
+  'error.passwordChangeRequired': 'Choose a new password before you continue.',
+  'error.samePassword': 'Choose a password that is different from the current one.',
   'reset.title': 'Choose a new password',
   'reset.submit': 'Save new password',
   'reset.working': 'Saving…',

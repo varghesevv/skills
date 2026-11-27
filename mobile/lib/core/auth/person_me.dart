@@ -49,6 +49,7 @@ class PersonMe {
     required this.statusSetByName,
     required this.flaggedForRecheck,
     required this.vouchCount,
+    this.mustChangePassword = false,
   });
 
   factory PersonMe.fromJson(Map<String, Object?> json) {
@@ -72,6 +73,7 @@ class PersonMe {
       statusSetByName: setBy?['name'] as String?,
       flaggedForRecheck: json['flagged_for_recheck'] as bool,
       vouchCount: json['vouch_count'] as int,
+      mustChangePassword: json['must_change_password'] as bool? ?? false,
     );
   }
 
@@ -92,4 +94,8 @@ class PersonMe {
   final String? statusSetByName;
   final bool flaggedForRecheck;
   final int vouchCount;
+
+  /// A temporary password from the initial config: the app shows only the change-password
+  /// screen, and the server refuses everything else, until it is changed.
+  final bool mustChangePassword;
 }

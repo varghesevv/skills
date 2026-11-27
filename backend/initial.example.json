@@ -1,0 +1,25 @@
+{
+  "$schema": "./schema.json",
+  "owner": { "email": "ray.minister@example.com", "password": "temporary, change on first sign-in (secret-scan:allow)" },
+  "organisations": [
+    {
+      "name": "Fellowship Example",
+      "admin": {
+        "name": "Ray Minister",
+        "email": "ray.minister@example.com",
+        "mobile": "+971500000001"
+      },
+      "homegroups": [
+        {
+          "name": "Deira",
+          "verifier": {
+            "name": "Lena Leader",
+            "email": "lena.leader@example.com",
+            "mobile": "+971500000002",
+            "password": "temporary, change on first sign-in (secret-scan:allow)"
+          }
+        }
+      ]
+    }
+  ]
+}

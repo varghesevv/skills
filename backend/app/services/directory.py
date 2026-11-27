@@ -76,6 +76,7 @@ def person_view(db: Session, person: Person) -> PersonMeResponse:
         leader=NameRef(name=leader.full_name or "") if leader else None,
         status_set_by=NameRef(name=set_by.full_name or "") if set_by else None,
         flagged_for_recheck=person.flagged_for_recheck,
+        must_change_password=person.must_change_password,
         vouch_count=len(live_vouches([(v.voucher_id, v.withdrawn_at) for v in vouches], vouchers)),
     )
 

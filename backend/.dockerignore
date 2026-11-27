@@ -5,3 +5,5 @@ __pycache__
 .ruff_cache
 tests
 .env
+# Passwords and personal details: mounted at run time, never built into the image
+initial.json

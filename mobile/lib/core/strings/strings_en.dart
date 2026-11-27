@@ -97,6 +97,11 @@ const stringsEn = <String, String>{
   'login.submit': 'Log in',
   'login.working': 'Logging in…',
   'login.forgot': 'Forgot your password?',
+  'changePassword.title': 'Choose your own password',
+  'changePassword.text': 'You signed in with a temporary password. Choose your own before you continue; the temporary one then stops working.',
+  'changePassword.current': 'Temporary password',
+  'changePassword.submit': 'Save and continue',
+  'changePassword.working': 'Saving…',
   'forgot.title': 'Reset your password',
   'forgot.text':
       'Enter your email and we will send a reset link if an account exists.',

@@ -236,6 +236,10 @@ frontend/test-results/
 frontend/playwright-report/
 backend.hcl
 
+# The initial config holds temporary passwords and personal details, and the repository is
+# public: only the example is committed (story S100, backend/app/services/initial_config.py)
+initial.json
+
 # Generated demo login lists (they contain the shared demo password)
 demo-logins*.csv
 *-logins.csv

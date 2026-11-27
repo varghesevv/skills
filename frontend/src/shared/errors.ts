@@ -26,6 +26,10 @@ export function errorMessage(error: unknown): string {
         return t('error.notPending')
       case 'invalid_password':
         return t('error.invalidPassword')
+      case 'password_change_required':
+        return t('error.passwordChangeRequired')
+      case 'same_password':
+        return t('error.samePassword')
       case 'rate_limited':
         return t('error.rateLimited', {
           minutes: Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60)),

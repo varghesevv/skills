@@ -43,6 +43,10 @@ String? _byCode(ApiException e) {
       return 'Your application has already been decided.';
     case 'invalid_password':
       return 'The password is not correct.';
+    case 'password_change_required':
+      return 'Choose a new password before you continue.';
+    case 'same_password':
+      return 'Choose a password that is different from the current one.';
     case 'rate_limited':
       return 'Too many requests. Please try again in ${_minutes(e)} minute(s).';
     case 'email_taken':

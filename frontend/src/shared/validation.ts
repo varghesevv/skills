@@ -128,6 +128,12 @@ export const acceptInvitationSchema = z.object({
 
 export const resetPasswordSchema = z.object({ new_password: newPassword })
 
+/** Replacing a temporary password (initial config) or one's own: the current one, then a new one. */
+export const changePasswordSchema = z.object({
+  current_password: z.string().min(1, 'validation.required').max(1024, 'validation.tooLong'),
+  new_password: newPassword,
+})
+
 export type FieldErrors = Record<string, string>
 
 export type ValidationResult<T> = { ok: true; data: T } | { ok: false; errors: FieldErrors }

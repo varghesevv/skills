@@ -49,6 +49,7 @@ import PersonSignIn from './pages/person/PersonSignIn'
 import SignUp from './pages/person/SignUp'
 import VouchPage from './pages/person/VouchPage'
 import ResetPassword from './pages/ResetPassword'
+import ChangePassword from './pages/person/ChangePassword'
 import {
   LEADER_APPLICANTS,
   ADMIN_GROUPS,
@@ -62,6 +63,7 @@ import {
   OWNER_REPORT_HISTORY,
   OWNER_REPORT_SCHEDULES,
   PERSON_ACCOUNT,
+  PERSON_CHANGE_PASSWORD,
   PERSON_DOWNLOADS,
   PERSON_AVAILABILITY,
   PERSON_PROFILE,
@@ -104,6 +106,10 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route element={<RequireAuth />}>
+          {/* Outside the member layout: its menus call endpoints that are closed until then. */}
+          <Route element={<PublicLayout />}>
+            <Route path={PERSON_CHANGE_PASSWORD.slice(1)} element={<ChangePassword />} />
+          </Route>
           <Route element={<PersonLayout />}>
             <Route path={PERSON_HOME.slice(1)} element={<PersonHome />} />
             <Route path={PERSON_GROUP_REQUESTS.slice(1)} element={<GroupRequests />} />

@@ -1,5 +1,5 @@
 import { request } from './http'
-import type { AnyMe } from './types'
+import type { AnyMe, TokenResponse } from './types'
 
 export function logoutRequest(refreshToken: string) {
   return request<void>('/auth/logout', {
@@ -23,4 +23,9 @@ export function resetPasswordRequest(body: { token: string; new_password: string
 
 export function fetchMe() {
   return request<AnyMe>('/me')
+}
+
+/** The signed-in person chooses a new password; every other session ends, these tokens are new. */
+export function changePasswordRequest(body: { current_password: string; new_password: string }) {
+  return request<TokenResponse>('/auth/change-password', { method: 'POST', body })
 }

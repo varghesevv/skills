@@ -42,6 +42,8 @@ MATRIX: dict[tuple[str, str], str] = {
     ("POST", "/auth/refresh"): PUBLIC,
     ("POST", "/auth/reset-password"): PUBLIC,
     ("POST", "/auth/signup"): PUBLIC,
+    # Any token, even of a revoked person or one who must replace a temporary password (S100).
+    ("POST", "/auth/change-password"): ANY,
     ("GET", "/churches"): PUBLIC,
     ("GET", "/churches/{church_id}/home-groups"): PUBLIC,
     ("POST", "/group-invitations/lookup"): PUBLIC,

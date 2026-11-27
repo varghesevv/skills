@@ -50,6 +50,9 @@ class PersonMeResponse(BaseModel):
     status_set_by: NameRef | None  # none for a new applicant
     flagged_for_recheck: bool
     vouch_count: Annotated[int, Field(ge=0)]  # live vouches received
+    # A temporary password from the initial config: the apps show only "choose a new password",
+    # and the API refuses everything else (403 password_change_required) until it is changed.
+    must_change_password: bool = False
 
 
 class CloseAccountRequest(BaseModel):

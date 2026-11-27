@@ -80,6 +80,25 @@ class AuthRepository {
     }
   }
 
+  /// Replaces the password, giving the current one. Every other session ends on the server; the
+  /// answer holds new tokens for this one, saved here. Returns the person as they now are.
+  Future<PersonMe> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final data = await _api.post(
+      '/auth/change-password',
+      body: {'current_password': currentPassword, 'new_password': newPassword},
+    );
+    final (access, refresh) = parseResponse(
+      data,
+      (json) =>
+          (json['access_token'] as String, json['refresh_token'] as String),
+    );
+    await _tokens.save(accessToken: access, refreshToken: refresh);
+    return me();
+  }
+
   /// Revokes the refresh token on the server (best effort) and forgets the tokens here.
   Future<void> logout() async {
     final refreshToken = await _tokens.readRefreshToken();
