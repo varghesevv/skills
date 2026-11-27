@@ -8,8 +8,6 @@ import { t, type StringKey } from '../i18n'
 export const MIN_PASSWORD_LENGTH = 10
 export const MAX_PASSWORD_LENGTH = 128
 
-const userType = z.enum(['freelancer', 'workhost', 'organisation', 'admin'])
-
 const email = z
   .string()
   .trim()
@@ -30,29 +28,6 @@ const newPassword = z
   .max(MAX_PASSWORD_LENGTH, 'validation.passwordLong')
 
 const optionalText = z.string().trim().max(100, 'validation.tooLong')
-
-export const loginSchema = z.object({
-  email,
-  password: z.string().min(1, 'validation.required').max(1024, 'validation.tooLong'),
-  user_type: userType,
-})
-
-const registerBase = { email, mobile_number: mobile, password: newPassword }
-
-export const freelancerRegisterSchema = z.object({
-  full_name: fullName,
-  ...registerBase,
-  nationality: optionalText,
-  primary_language: optionalText,
-  whatsapp_availability: z.boolean(),
-})
-
-export const workhostRegisterSchema = z.object({ full_name: fullName, ...registerBase })
-
-export const organisationRegisterSchema = z.object({
-  ...registerBase,
-  org_name: z.string().trim().min(2, 'validation.orgName').max(200, 'validation.orgName'),
-})
 
 export const freelancerProfileSchema = z
   .object({
