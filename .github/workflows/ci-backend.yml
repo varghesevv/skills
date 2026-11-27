@@ -16,10 +16,9 @@ concurrency:
 jobs:
   test:
     name: backend-test
-    runs-on: [self-hosted, Linux, X64]
-    # Runs on a self-hosted runner (the Raspberry Pi or the Linux x64 container runner). Never run code
-    # from fork pull requests on it. PostgreSQL is started by scripts/ci-postgres.sh because GitHub does
-    # not allow service containers on a runner that runs inside a container.
+    runs-on: ubuntu-latest
+    # Never expose repository secrets to pull requests from forks. PostgreSQL is started by
+    # scripts/ci-postgres.sh.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     defaults:
       run:

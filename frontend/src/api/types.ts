@@ -138,14 +138,9 @@ export type LabelSelection = { label_id: string; level_label_id: string | null }
 
 export type Unavailability = { id: string; unavailable_from: string; unavailable_to: string }
 
-export type VouchStatus = 'pending' | 'approved' | 'revoked'
-
 export type PublicRating = { rating: number; comment: string | null; rated_on: string }
 
 // ---- work host portal ----
-
-export type Day = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
-export const DAYS: readonly Day[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 export type SearchResult = {
   id: string

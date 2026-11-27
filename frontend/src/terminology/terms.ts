@@ -9,27 +9,16 @@ type Profile = Record<string, string>
 const PROFILES = profiles as Record<string, Profile>
 export const DEFAULT_PROFILE = 'default'
 
-let activeName = DEFAULT_PROFILE
 let active: Profile = PROFILES[DEFAULT_PROFILE]
-
-export function profileNames(): string[] {
-  return Object.keys(PROFILES)
-}
-
-export function activeProfile(): string {
-  return activeName
-}
 
 /** Use the named profile; an unknown name falls back to the default one. */
 export function setProfile(name: string | undefined): void {
   const wanted = (name ?? '').trim()
   if (wanted && PROFILES[wanted]) {
-    activeName = wanted
     active = PROFILES[wanted]
     return
   }
   if (wanted) console.warn(`Unknown terminology profile "${wanted}"; using "${DEFAULT_PROFILE}".`)
-  activeName = DEFAULT_PROFILE
   active = PROFILES[DEFAULT_PROFILE]
 }
 
