@@ -102,6 +102,9 @@ class Settings(BaseSettings):
     # The initial config (story S100), read when the API starts: empty = none. A path to a file
     # that does not exist is no initial config either. See app/services/initial_config.py.
     initial_config_path: str = ""
+    # A database with no tables gets them when the API starts (app/services/database_setup.py).
+    # One that has tables is never migrated here. The tests turn this off.
+    create_tables_at_startup: bool = True
 
     @field_validator("reveal_max_per_day")
     @classmethod

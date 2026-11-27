@@ -35,6 +35,9 @@ for _name, _value in {
     "LOGIN_MAX_FAILURES": "5",
     "LOGIN_WINDOW_MINUTES": "15",
     "REPORTS_OUTPUT_DIR": str(Path(tempfile.gettempdir()) / "skills-test-reports"),
+    # The app the tests start must not create tables in the database DATABASE_URL names (the
+    # development one); the tests make their own databases.
+    "CREATE_TABLES_AT_STARTUP": "false",
 }.items():
     os.environ.setdefault(_name, _value)
 # Small reveal limits so the tests can reach them. Set directly, not with setdefault, because
