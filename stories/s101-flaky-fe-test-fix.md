@@ -79,5 +79,3 @@ The search page, and any page found by criterion 3. Do not perform any git push 
 ### Definition of Done
 
 The test suite passes, the regression test fails on the old code and passes on the new, and the search tests pass on CI without a rerun.
-
-Note: story number S101 is also used by `s101-generated-api-types.md` on the `stories/frontend-quality` branch. One of the two should be renumbered before both reach `main`.
