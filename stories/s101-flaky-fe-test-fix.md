@@ -71,7 +71,8 @@ The search page, and any page found by criterion 3. Do not perform any git push 
 
 ### Test Criteria
 
-- **A regression test** in `search.test.tsx` types into "Search by name" the instant the box appears, before React's effects run, and checks the box holds the whole name. Without the fix it fails; with the fix it passes.
+- **A regression test** in a file of its own, `frontend/src/pages/person/search/nameBox.test.tsx`, types into "Search by name" the instant the box appears, before React's effects run. It checks that the box holds the whole name, and that the search uses it. Without the fix it fails; with the fix it passes.
+  - **Why a file of its own:** the gap only opens on the page's first render in a fresh test environment. Vitest gives each test file its own environment, but the tests within a file share it. Placed among the tests in `search.test.tsx`, the same test passed even on the unfixed code (measured: there, React had already run its effects before the box was reported). As the first and only test in its own file it fails every time on the unfixed code (5 of 5, with the box holding `nita`).
 - The existing test at `search.test.tsx:84` is unchanged and passes.
 - `npm run typecheck`, `npm run lint`, `npm test` and the Playwright tests pass.
 
