@@ -56,20 +56,6 @@ def in_church(p: ReportParams, column: Any) -> list[ColumnElement[bool]]:
     return [column == p.church_id] if p.church_id is not None else []
 
 
-def searchable_providers(p: ReportParams) -> list[ColumnElement[bool]]:
-    """Open accounts of PROVIDER or above (the people a search can list) in the chosen church."""
-    return [
-        Person.closed_at.is_(None),
-        Person.status.in_(PROVIDER_OR_ABOVE),
-        exists().where(
-            PersonLabel.person_id == Person.id,
-            PersonLabel.label_id == Label.id,
-            Label.label_type == "skill",
-        ),
-        *in_church(p, Person.church_id),
-    ]
-
-
 # ---- RP-01 ---------------------------------------------------------------------------------
 
 

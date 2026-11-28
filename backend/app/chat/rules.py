@@ -40,10 +40,6 @@ def side_of(conversation: Conversation, person_id: uuid.UUID) -> str | None:
     return None
 
 
-def other_side(side: str) -> str:
-    return "provider" if side == "starter" else "starter"
-
-
 def other_id(conversation: Conversation, side: str) -> uuid.UUID:
     return conversation.provider_id if side == "starter" else conversation.starter_id
 
