@@ -66,10 +66,15 @@ export default function SearchPage() {
     results.data ? t('search.results', { count: results.data.total }) : t('search.title'),
   )
 
+  // The box follows the name in the address (a link, the top bar, a removed chip, back and
+  // forward). It is set during render, not in an effect: an effect runs a little after the first
+  // render and would wipe a letter typed in that moment.
   const [nameText, setNameText] = useState(applied.name)
-  useEffect(() => {
+  const [shownName, setShownName] = useState(applied.name)
+  if (shownName !== applied.name) {
+    setShownName(applied.name)
     setNameText(applied.name)
-  }, [applied.name])
+  }
 
   useEffect(() => {
     if (!panelOpen) return
